@@ -43,11 +43,11 @@ const navigate = useNavigate();
         <img src={authBg} alt="" className="w-[710px] h-[710px] object-cover rounded-[19px]" />
     </div>
     <div className="bg-white flex items-start rounded-[19px] p-6 w-full">
-     <div className="flex flex-col items-center justify-center  w-full">s
+     <div className="flex flex-col items-center justify-center  w-full">
       <img src={auth} alt="orange_logo" className="w-[100px]" />
       <div className=" flex flex-col mt-4 justify-center items-center">
-        <h2 className="text-[32px] font-bold leading-[48px]">Login</h2>
-        <p className="text-[18px] font-normal text-center leading-[27px] text-[#3C3C43D9]">
+        <h2 className="text-[32px] font-[600] leading-[48px]">Log In</h2>
+        <p className="text-[16px] font-normal text-center leading-[27px] text-[#3C3C43D9]">
           Please enter your details to continue
         </p>
       </div>
@@ -152,7 +152,7 @@ const navigate = useNavigate();
       </div>
 
         <div className="w-full h-[49px] flex justify-center items-center">
-          <span className="text-[14px] md:text-[18px] flex gap-1 font-normal leading-[27px] text-[#959393]">
+          <span className="text-[14px] md:text-[16px] flex gap-1 font-normal leading-[27px] text-[#959393]">
            Don’t have an account?
             <NavLink
             to="/auth/signup"

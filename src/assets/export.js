@@ -16,7 +16,16 @@ import emailimag from "./email-security.png";
 import mobile from "./mobile-security.png";
 import accountCreated from "./TickSquare.png";
 import profile from "./profile.png"
+import profilehigh from "./profilehigh.png"
+import ballone from "./ballone.png"
+import balltwo from "./balltwo.png"
+import ballthree from "./ballthree.png"
+import topics from "./topics.png"
+import notes from "./notes.svg"
+import postone from "./postone.png"
 import user from "./user.png"
+
+
 // export {
 //     FILENAME(PASCALCASE)
 // }
@@ -36,4 +45,12 @@ export {
   mobile,
   accountCreated,
   profile,
+  profilehigh,
+  ballone,
+  balltwo,
+  ballthree,
+  notes,
+  topics,
+  postone,
+  
 };

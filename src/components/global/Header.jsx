@@ -94,7 +94,7 @@ const Header = () => {
                     </button>
 
                     {isDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 abg-white border border-gray-200 rounded-lg shadow-lg">
+                        <div className="absolute right-0 mt-2 w-48 abg-white border bg-white border-gray-200 rounded-lg shadow-lg">
                             <div className="px-4 py-3 border-b border-gray-200">
                                 <p className="font-semibold text-sm">Mike Smith</p>
                                 <p className="text-xs text-gray-500">@mikesmith</p>
