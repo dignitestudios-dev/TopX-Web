@@ -16,7 +16,7 @@ export default function VerificationModal({
   const [values, setValues] = useState(Array.from({ length }, () => ""));
   const inputsRef = useRef([]);
   const navigate = useNavigate();
-
+console.log(isOpen);
   useEffect(() => {
     if (!isOpen) setValues(Array.from({ length }, () => ""));
   }, [isOpen, length]);
@@ -64,10 +64,7 @@ export default function VerificationModal({
 
   if (mode === "forget") {
     navigate("/auth/update-password");
-  } else if (mode === "delete") {
-    navigate("/auth/login");
-  }
-  
+  } 
 
   onClose(); // modal close bhi ho jaye
 };

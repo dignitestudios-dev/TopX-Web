@@ -180,6 +180,7 @@ console.log(values);
             disabled={loading}
             variant="orange"
             size="full"
+            className="w-full flex items-center justify-center"
           
           >
             <span>Next Step</span>

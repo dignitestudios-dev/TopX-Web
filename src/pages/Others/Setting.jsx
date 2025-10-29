@@ -51,7 +51,7 @@ const handleResend = () => {
 
   return (
     <div className="bg-[#F2F2F2] w-full h-screen">
-      <Header />
+     
 
       <div className="w-full grid grid-cols-12 px-11 md:px-16 py-4 gap-6">
 

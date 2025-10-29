@@ -45,7 +45,7 @@ export default function SignUp() {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-6 h-full w-full">
+    <div className="grid grid-cols-12 gap-6 h-screen w-full">
       <div className="bg-[#F8F8F8] col-span-12 lg:col-span-4">
         <OnboardingStepper steps={steps} currentStep={currentStep} />
       </div>

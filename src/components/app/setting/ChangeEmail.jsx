@@ -5,8 +5,10 @@ import Button from "../../common/Button";
 import VerificationModal from "../../authentication/VerificationModal";
 import { useState } from "react";
 import { changeEmailSchema } from "../../../schema/authentication/dummyLoginSchema";
+import SuccessModal from "../../common/Modal";
 export default function ChangeEmail() {
   const [openModal, setOpenModal] = useState(false);
+  const [openSuccessModal, setOpenSuccessModal] = useState(false);
   const { values, handleBlur, handleChange, handleSubmit, errors, touched } =
     useFormik({
       initialValues: {
@@ -18,6 +20,10 @@ export default function ChangeEmail() {
         console.log(values);
       },
     });
+    const handleVerificationClose = () => {
+      setOpenModal(false);
+      setOpenSuccessModal(true);
+    };
   return (
     <div className="space-y-6">
       <h1 className="text-[28px] font-bold tracking-[-0.018em]">
@@ -53,7 +59,14 @@ export default function ChangeEmail() {
         isVerifying={false}
         isOpen={openModal}
         length={4}
-        onClose={() => setOpenModal(false)}
+        onClose={handleVerificationClose}
+      />
+      <SuccessModal
+        isOpen={openSuccessModal}
+        onClose={() => setOpenSuccessModal(false)}
+        heading="Email Changed"
+        message="Your email has been changed successfully."
+        autoCloseDuration={2000}
       />
     </div>
   );

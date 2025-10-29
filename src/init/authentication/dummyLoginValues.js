@@ -4,16 +4,20 @@ export const loginValues = {
 };
 
 export const forgotPasswordValues = {
-    email: "",
+  email: "",
 };
 
 export const updatePasswordValues = {
-    password: "",
-    confirm_password: "",
+  password: "",
+  confirm_password: "",
 };
 
 export const changePasswordValues = {
-    old_password: "",
-    password: "",
-    confirm_password: "",
+  old_password: "",
+  password: "",
+  confirm_password: "",
+};
+export const changeDOBGenderValues = {
+  dateOfBirth: "",
+  gender: "",
 };

@@ -5,6 +5,7 @@ const Button = forwardRef(
     {
       children,
       variant = "",
+      type,
       size = "",
       icon, 
       leftIcon, 
@@ -64,6 +65,7 @@ const Button = forwardRef(
     return (
       <button
         ref={ref}
+        type={type}
         className={classes}
         disabled={disabled || loading}
         onClick={onClick}

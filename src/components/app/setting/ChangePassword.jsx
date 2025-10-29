@@ -7,8 +7,11 @@ import { changePasswordValues } from "../../../init/authentication/dummyLoginVal
 import { useState } from "react";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import Button from "../../common/Button";
+import Modal from "../../common/Modal";
+import SuccessModal from "../../common/Modal";
 
 export default function ChangePassword() {
+    const [openModal, setOpenModal] = useState(false);
     const [isOldPasswordVisible, setIsOldPasswordVisible] = useState(false);
      const [isPasswordVisible, setIsPasswordVisible] = useState(false);
       const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
@@ -16,13 +19,15 @@ export default function ChangePassword() {
     initialValues:changePasswordValues,
     validationSchema:changePasswordSchema,
     onSubmit:(values)=>{
+       
         console.log(values);
     }
   })
+  console.log(openModal);
     return (
         <div className="w-full space-y-6">
             <h1 className="text-[28px] font-bold tracking-[-0.018em]">Change Password</h1>
-            <form onSubmit={handleSubmit}>  
+            <form onSubmit= {handleSubmit}>  
             <div className="w-[500px] flex flex-col gap-2 ">
 
             <Input
@@ -49,7 +54,7 @@ export default function ChangePassword() {
                   />
                 )
               }
-            
+            error={errors.old_password}
             touched={touched.old_password}
            
             value={values.old_password}
@@ -83,6 +88,7 @@ export default function ChangePassword() {
                   />
                 )
               }
+            error={errors.password}
             touched={touched.password}
            
             value={values.password}
@@ -113,6 +119,7 @@ export default function ChangePassword() {
                   />
                 )
               }
+            error={errors.confirm_password}
             touched={touched.confirm_password}
            
             value={values.confirm_password}
@@ -120,10 +127,11 @@ export default function ChangePassword() {
             </div>
             </div>
             
-            <Button type="submit" size="full" variant="orange" className="w-full flex justify-center items-center">
+            <Button type="submit" size="full" variant="orange" className="w-full flex justify-center items-center" onClick={() => setOpenModal(!openModal)}>
               Save
               </Button>
             </form>
+            <SuccessModal isOpen={openModal} onClose={() => setOpenModal(!openModal)} heading="Password Changed" message="Your password has been updated successfully." autoCloseDuration={2000}/>
         </div>
     )
 }
