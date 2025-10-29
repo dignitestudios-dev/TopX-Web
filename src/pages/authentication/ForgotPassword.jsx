@@ -62,7 +62,7 @@ export default function ForgotPassword() {
                     Send OTP</Button>
                 </div>
                 </div>
-                <VerificationModal isOpen={openModal}  onClose={() => setOpenModal(false)} email={email}/>
+                <VerificationModal isOpen={openModal}  onClose={() => setOpenModal(false)} email={email} mode="forget"/>
             </form>
         </div>
         </div>

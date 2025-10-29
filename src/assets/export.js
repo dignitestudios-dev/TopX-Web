@@ -16,12 +16,13 @@ import emailimag from "./email-security.png";
 import mobile from "./mobile-security.png";
 import accountCreated from "./TickSquare.png";
 import profile from "./profile.png"
-
+import user from "./user.png"
 // export {
 //     FILENAME(PASCALCASE)
 // }
 
 export {
+  user,
   Logo,
   NoInternetImage,
   verificationColor,

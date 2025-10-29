@@ -6,18 +6,21 @@ const Button = forwardRef(
       children,
       variant = "",
       size = "",
-      icon, // right icon
-      leftIcon, // left icon
+      icon, 
+      leftIcon, 
       disabled = false,
       loading = false,
       className = "",
       onClick,
+      isToggle = false, // 👈 toggle mode
+      isOn, // 👈 current toggle state (true/false)
       ...props
     },
     ref
   ) => {
+    // Normal Variants
     const baseClasses =
-      "inline-flex items-center  font-medium rounded-[12px] transition-all duration-200";
+      "inline-flex items-center font-medium rounded-[12px] transition-all duration-200";
 
     const variants = {
       orange: "bg-[#F85E00] hover:bg-[#e05200] text-white",
@@ -33,8 +36,28 @@ const Button = forwardRef(
       md: "px-4 py-2 text-sm",
       lg: "px-6 py-3 text-base",
       xl: "px-8 py-4 text-lg",
-      full: "w-full h-[48px] md:w-[500px] text-base py-2 mt-3 inline-flex items-center justify-center",
+      full: "w-full h-[48px] md:w-[500px] text-base py-2 mt-3",
     };
+
+    // ✅ If toggle mode enable → ignore normal design
+    if (isToggle) {
+      return (
+        <button
+          ref={ref}
+          onClick={onClick}
+          className={`relative w-[42px] h-[25px] rounded-full transition-all duration-300 flex items-center justify-center ${
+            isOn ? "bg-green-500" : "bg-gray-300"
+          } ${className}`}
+          {...props}
+        >
+          <div
+            className={`absolute w-[20px] h-[20px] bg-white rounded-full shadow-md transition-all duration-300 ${
+              isOn ? "translate-x-2" : "-translate-x-2"
+            }`}
+          />
+        </button>
+      );
+    }
 
     const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
 
@@ -46,23 +69,12 @@ const Button = forwardRef(
         onClick={onClick}
         {...props}
       >
-        {/* Loader */}
         {loading && (
           <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
         )}
-
-        {/* Left Icon */}
-        {leftIcon && !loading && (
-          <span className="mr-2 flex items-center">{leftIcon}</span>
-        )}
-
-        {/* Button Text */}
+        {leftIcon && !loading && <span className="mr-2">{leftIcon}</span>}
         {children}
-
-        {/* Right Icon */}
-        {icon && !loading && (
-          <span className="ml-2 flex items-center">{icon}</span>
-        )}
+        {icon && !loading && <span className="ml-2">{icon}</span>}
       </button>
     );
   }

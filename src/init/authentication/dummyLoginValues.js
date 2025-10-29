@@ -11,3 +11,9 @@ export const updatePasswordValues = {
     password: "",
     confirm_password: "",
 };
+
+export const changePasswordValues = {
+    old_password: "",
+    password: "",
+    confirm_password: "",
+};
