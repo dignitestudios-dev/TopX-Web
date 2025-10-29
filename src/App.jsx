@@ -10,20 +10,21 @@ import UpdatePassword from "./pages/authentication/UpdatePassword";
 import AccountCreated from "./pages/authentication/AccountCreated";
 import Home from "./pages/Others/Home";
 import Setting from "./pages/Others/Setting";
+import MainRoutes from "./routes/MainRoutes";
 
 function App() {
   return (
     <Routes>
-      
+
       <Route path="/" element={<Login />} />
 
       <Route path="app" element={<DashboardLayout />}>
         <Route path="dashboard" element={<DummyHome />} />
       </Route>
 
+      <Route path="/*" element={<MainRoutes />} />
 
-       <Route path="Home" element={<Home />} />
-       <Route path="setting" element={<Setting />} />
+      <Route path="setting" element={<Setting />} />
 
       <Route path="auth" element={<AuthLayout />}>
         <Route path="login" element={<Login />} />

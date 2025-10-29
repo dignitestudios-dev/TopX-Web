@@ -1,0 +1,20 @@
+// src/routes/MainRoutes.jsx
+import { Routes, Route } from "react-router";
+import Home from "../pages/Others/Home";
+import Header from "../components/global/Header";
+
+
+const MainRoutes = () => {
+    return (
+        <>
+            <Header />
+            <main style={{ minHeight: "80vh" }} className="bg-[#F9FAFB]">
+                <Routes>
+                    <Route path="/home" element={<Home />} />
+                </Routes>
+            </main>
+        </>
+    );
+};
+
+export default MainRoutes;
