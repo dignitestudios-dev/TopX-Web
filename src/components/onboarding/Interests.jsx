@@ -99,7 +99,7 @@ export default function Interests({ handleNext, handlePrevious }) {
             
           ))}
             </div>
-            <Button onClick={handleNext} size="full">Next</Button> 
+            <Button onClick={handleNext} size="full" variant="orange" className="w-full flex items-center justify-center">Next</Button> 
             </div>
       </div>
     </div>

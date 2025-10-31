@@ -1,18 +1,15 @@
 import { TbFileText } from "react-icons/tb";
-import Button from "../common/Button";
-import { auth } from "../../assets/export";
+import { auth } from "../../../assets/export";
 
 
 
-const SubcriptionCard = ({img,title,description ,tags ,Follows,className,buttonText,header,headerbutton, ...props}) => {
+
+const TopicPageCard = ({img,title,description ,tags ,Follows,className,}) => {
    const baseClasses =
     `  rounded-[12px] border border-[0.8px] flex flex-col p-3 space-y-2 ${className}`;
     return (
-        <div  >
-<div className={`w-full flex items-center justify-between p-2 `}  >
-    <h2 className="text-[14px] font-[600] text-[##000000]">{header}</h2>
-    <button className="text-[13px] font-[400] text-[#DE4B12]">{headerbutton}</button>
-</div>
+      
+
         <div className={baseClasses} >
            
 
@@ -35,13 +32,10 @@ const SubcriptionCard = ({img,title,description ,tags ,Follows,className,buttonT
                     <p className="text-[14px] font-[500]  text-[#ADADAD]">Follows</p>
                 </div>
             </div>
-            <Button className="w-full py-[6px] font-[600] text-[14px] flex items-center justify-center "   >
-                {buttonText}
-            </Button>
+           
           </div>
         </div>  
-        </div>
     )
 }
-SubcriptionCard.displayName = "SubcriptionCard";
-export default SubcriptionCard 
+TopicPageCard.displayName = "TopicPageCard";
+export default TopicPageCard

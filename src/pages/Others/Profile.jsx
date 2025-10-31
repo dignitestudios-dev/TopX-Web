@@ -1,0 +1,114 @@
+import { useState } from "react";
+import LargeProfile from "../../components/app/profile/LargeProfile";
+import MySubscription from "../../components/homepage/MySubscription";
+import { BookOpen, Lightbulb } from "lucide-react";
+import { FiPlus } from "react-icons/fi";
+
+import { auth } from "../../assets/export";
+import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
+import TopicPageCard from "../../components/app/profile/TopicPageCard";
+import EditedProfile from "../../components/app/profile/EditedProfile";
+
+
+export default function Profile() {
+  const [activeTab, setActiveTab] = useState("topics");
+  const [isEditProfile, setIsEditProfile] = useState(false);
+
+  return (
+    <div className="flex flex-col md:flex-row min-h-screen max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3">
+
+      {/* Left Side */}
+      <div className="w-full md:w-1/4">
+        <MySubscription />
+      </div>
+
+      {/* Right Side */}
+      <div className="w-full md:w-3/4 flex flex-col gap-3">
+
+        {/* Edit OR Profile View */}
+        {isEditProfile ? (
+          <EditedProfile />
+        ) : (
+          <>
+            <LargeProfile setIsEditProfile={setIsEditProfile} />
+
+            {/* Tabs */}
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-2 border-b border-gray-200">
+
+                {/* My Topic Pages */}
+                <button
+                  onClick={() => setActiveTab("topics")}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                    activeTab === "topics" ? "text-orange-600" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded ${
+                      activeTab === "topics" ? "bg-orange-600" : "bg-gray-400"
+                    }`}
+                  >
+                    <BookOpen className="text-white" size={16} />
+                  </div>
+                  <span>My Topic Pages</span>
+                  {activeTab === "topics" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
+                  )}
+                </button>
+
+                {/* My Knowledge Post */}
+                <button
+                  onClick={() => setActiveTab("knowledge")}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                    activeTab === "knowledge"
+                      ? "text-orange-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded ${
+                      activeTab === "knowledge" ? "bg-orange-600" : "bg-gray-400"
+                    }`}
+                  >
+                    <Lightbulb className="text-white" size={16} />
+                  </div>
+                  <span>My Knowledge Post</span>
+                  {activeTab === "knowledge" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
+                  )}
+                </button>
+              </div>
+
+              {/* Create Post Button */}
+              <div className="w-full h-[40px] flex justify-between items-center bg-white rounded-[12px] border border-[#B9B9B9] px-1">
+                <p className="text-[14px] font-[500] text-[#18181899] pl-2">Create Post</p>
+                <button className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41] text-white w-[34px] h-[34px] rounded-[10px] flex items-center justify-center">
+                  <FiPlus size={24} className="text-white" />
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === "topics" ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <TopicPageCard
+                      key={index}
+                      img={auth}
+                      title="Topic Page"
+                      description="Description"
+                      tags="Tags"
+                      Follows="50"
+                      className="bg-white"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <KnowledgePostCard />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

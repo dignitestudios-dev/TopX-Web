@@ -10,13 +10,13 @@ const Header = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const navItems = [
-        { icon: Home, label: 'Home', active: true },
-        { icon: BookOpen, label: 'Subscriptions' },
-        { icon: TrendingUp, label: 'Trending' },
-        { icon: Users, label: 'Knowledge' },
-        { icon: Radio, label: 'Go Live' },
-        { icon: DollarSign, label: 'Affiliates' },
-        { icon: Bell, label: 'Notifications' },
+        { icon: Home, to: "/home", label: 'Home', active: true },
+        { icon: BookOpen, to: "/subscriptions", label: 'Subscriptions' },
+        { icon: TrendingUp, to: "/trending", label: 'Trending' },
+        { icon: Users, to: "/knowledge", label: 'Knowledge' },
+        { icon: Radio, to: "/go-live", label: 'Go Live' },
+        { icon: DollarSign, to: "/affiliates", label: 'Affiliates' },
+        { icon: Bell, to: "/notifications", label: 'Notifications' },
     ];
 
     return (
@@ -44,12 +44,13 @@ const Header = () => {
                     {navItems.map((item, index) => {
                         const Icon = item.icon;
                         return (
-                            <div
+                            <Link
                                 key={index}
                                 className={`flex flex-col items-center cursor-pointer group ${item.active
                                     ? 'border-t-4 border-orange-500 pt-2'
                                     : 'border-t-4 border-transparent pt-2'
                                     }`}
+                                to={item.to}
                             >
                                 <Icon
                                     size={24}
@@ -64,7 +65,7 @@ const Header = () => {
                                     }`}>
                                     {item.label}
                                 </span>
-                            </div>
+                            </Link>
                         );
                     })}
                 </nav>
@@ -99,7 +100,9 @@ const Header = () => {
                                 <p className="font-semibold text-sm">Mike Smith</p>
                                 <p className="text-xs text-gray-500">@mikesmith</p>
                             </div>
+                            <Link to="/profile">
                             <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Profile</button>
+                            </Link>
                             <Link to="/setting">
                             <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Settings</button>
                             </Link>
@@ -117,7 +120,7 @@ const Header = () => {
 
             {/* Mobile Menu */}
             {isMobileMenuOpen && (
-                <div className="lg:hidden border-t border-gray-200 bg-white">
+                <div className="lg:hidden border-t border-gray-200 bg-white overflow-hidden w-full">
                     {/* Mobile Search */}
                     <div className="px-4 py-3 border-b border-gray-200">
                         <div className="relative">

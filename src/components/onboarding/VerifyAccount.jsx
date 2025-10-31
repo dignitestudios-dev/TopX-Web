@@ -47,7 +47,7 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
                 <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full"><IoIosArrowForward /></button>
                </Card>
                </div>
-               <Button onClick={handleNext} variant="orange" size="full" loading={loading}>
+               <Button onClick={handleNext} variant="orange" size="full" loading={loading} className="w-full flex items-center justify-center">
                 Next
                </Button>
        

@@ -29,7 +29,7 @@ export default function AddStore({handleNext,handlePrevious}) {
         <div className="w-full grid grid-cols-12 gap-4 py-6 overflow-y-scroll h-[500px] ">
           <div className="col-span-6">
             <SubcriptionCard
-              className=""
+              className=" bg-[#F8F9F9]"
               img={auth}
               title="Funny"
               description="Based on the topics you like, we think you’ll want to check out a few of these topic pages."
@@ -82,7 +82,7 @@ export default function AddStore({handleNext,handlePrevious}) {
             />
           </div> */}
         </div>
-        <Button variant="orange" size="full" onClick={handleNext} >
+        <Button variant="orange" size="full" onClick={handleNext} className="w-full flex items-center justify-center">
             Next
         </Button>
       </div>

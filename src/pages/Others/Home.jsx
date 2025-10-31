@@ -38,12 +38,12 @@ export default function Home() {
     ];
 
     return (
-        <div className="flex !bg-gray-300 min-h-screen max-w-7xl mx-auto">
+        <div className="flex  min-h-screen max-w-7xl mx-auto">
             {/* Left Sidebar - 1/4 width */}
             <div className="w-1/4  !bg-[#F9FAFB] overflow-y-auto pt-3">
                 {/* Profile Card */}
 
-                <Profilecard />
+                <Profilecard  smallcard={true}/>
 
                 {/* My Subscription */}
                 <div className='pt-4'>

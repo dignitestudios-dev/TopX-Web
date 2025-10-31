@@ -50,16 +50,16 @@ const handleResend = () => {
   const [selected, setSelected] = useState(buttons[0]); // default first
 
   return (
-    <div className="bg-[#F2F2F2] w-full h-screen">
+    <div className="flex  min-h-screen lg:max-w-7xl mx-auto pt-3 w-full px-3 ">
      
 
-      <div className="w-full grid grid-cols-12 px-11 md:px-16 py-4 gap-6">
+      <div className="w-full grid grid-cols-12  gap-6">
 
         {/* Left Menu */}
-        <div className="col-span-3 bg-white p-4 rounded-[15px] h-[500px]">
+        <div className="md:col-span-3 col-span-12 bg-white p-4 rounded-[15px] md:h-[500px] h-auto"  >
        
 
-          <div className="flex flex-col gap-6 py-6">
+          <div className="flex flex-col md:gap-6 gap-2 py-4">
            {buttons.map((item, index) => (
   <Button
     key={index}
@@ -81,7 +81,7 @@ const handleResend = () => {
         </div>
 
         {/* Right Dynamic Content */}
-        <div className="col-span-9 bg-white py-6 px-10  rounded-[15px] h-[630px]">
+        <div className="w-full md:col-span-9 col-span-12 bg-white py-6 px-10  rounded-[15px] md:h-[630px] h-auto">
           {selected?.component ? selected.component : <h1 className="text-[16px] font-[500]">Select a setting</h1>}
           
    

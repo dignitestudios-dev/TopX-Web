@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router";
 import Home from "../pages/Others/Home";
 import Header from "../components/global/Header";
 import Setting from "../pages/Others/Setting";
+import Profile from "../pages/Others/Profile";
 
 
 const MainRoutes = () => {
@@ -13,6 +14,7 @@ const MainRoutes = () => {
                 <Routes>
                     <Route path="/home" element={<Home />} />
                       <Route path="/setting" element={<Setting />} />
+                      <Route path="/profile" element={<Profile />} />
                 </Routes>
             </main>
         </>

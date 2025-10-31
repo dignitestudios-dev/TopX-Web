@@ -140,7 +140,7 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
               ></textarea>
             </div>
           </div>
-          <Button type="submit" disabled={loading} size="full" onClick={handleNext}>
+          <Button type="submit" disabled={loading} size="full" onClick={handleNext} className="w-full flex items-center justify-center" variant="orange">
             Next
           </Button>
         </form>
