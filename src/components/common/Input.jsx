@@ -19,6 +19,7 @@ const Input = forwardRef(
       preview,
       options = [], // radio ya select ke liye
       showCountrySelector = false, // 👈 manually control kar sakta hai
+      fileClassName = "",
       ...props
     },
     ref
@@ -45,11 +46,11 @@ const Input = forwardRef(
     };
 
     const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
-
+const fileClasses = ` ${fileClassName}`;
     // 📁 File Upload Input
     if (type === "file") {
       return (
-        <div className="flex flex-col items-center gap-2">
+        <div className={`flex flex-col  gap-2 `}>
           {label && (
             <label className="text-[14px] font-[500] text-gray-800">
               {label}
@@ -58,7 +59,7 @@ const Input = forwardRef(
 
           <label
             htmlFor={props.id || "file-input"}
-            className="w-[100px] h-[100px] flex items-center justify-center border-2 border-dashed border-orange-400 rounded-full bg-[#FFF5F2] cursor-pointer overflow-hidden"
+            className={`${fileClasses} flex items-center justify-center border-2 border-dashed border-orange-400 rounded-full bg-[#FFF5F2] cursor-pointer overflow-hidden`}
           >
             {preview ? (
               <img
@@ -173,8 +174,7 @@ const Input = forwardRef(
             placeholder={placeholder}
             onChange={onChange}
             value={value}
-            className={`${classes} ${iconLeft ? "pl-10" : ""} ${
-              iconRight ? "pr-10" : ""
+            className={`${classes} ${iconLeft ? "pl-10" : ""} ${iconRight ? "pr-10" : ""
             }`}
             {...props}
           />

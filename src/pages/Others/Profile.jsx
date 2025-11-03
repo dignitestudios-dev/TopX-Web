@@ -8,11 +8,13 @@ import { auth } from "../../assets/export";
 import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
+import CreatePostModal from "../../components/app/profile/CreatePostModal";
 
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState("topics");
   const [isEditProfile, setIsEditProfile] = useState(false);
+  const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3">
@@ -80,15 +82,17 @@ export default function Profile() {
               </div>
 
               {/* Create Post Button */}
-              <div className="w-full h-[40px] flex justify-between items-center bg-white rounded-[12px] border border-[#B9B9B9] px-1">
+             
+
+              {/* Tab Content */}
+              {activeTab === "topics" ? (
+               <div className="flex flex-col gap-3">
+                 <div onClick={() => setIsCreatePostModalOpen(true)} className="w-full h-[40px] flex justify-between items-center bg-white rounded-[12px] border border-[#B9B9B9] px-1">
                 <p className="text-[14px] font-[500] text-[#18181899] pl-2">Create Post</p>
                 <button className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41] text-white w-[34px] h-[34px] rounded-[10px] flex items-center justify-center">
                   <FiPlus size={24} className="text-white" />
                 </button>
               </div>
-
-              {/* Tab Content */}
-              {activeTab === "topics" ? (
                 <div className="grid grid-cols-3 gap-3">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <TopicPageCard
@@ -102,6 +106,8 @@ export default function Profile() {
                     />
                   ))}
                 </div>
+                 
+                </div>
               ) : (
                 <KnowledgePostCard />
               )}
@@ -109,6 +115,7 @@ export default function Profile() {
           </>
         )}
       </div>
+      <CreatePostModal isOpen={isCreatePostModalOpen} setIsOpen={setIsCreatePostModalOpen} />
     </div>
   );
 }

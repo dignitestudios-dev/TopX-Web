@@ -2,7 +2,7 @@ import React from "react";
 import { MoreHorizontal, ChevronRight, Layers } from "lucide-react";
 import { ballone, ballthree, balltwo } from "../../assets/export";
 
-const MySubscription = () => {
+const   MySubscription = () => {
   const subscriptions = [
     { title: "My Basketball" },
     { title: "My Fitness" },

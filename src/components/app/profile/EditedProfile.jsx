@@ -8,6 +8,7 @@ import { useState } from "react";
 export default function EditedProfile() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategories, setActiveCategories] = useState([]);
+  const [preview, setPreview] = useState(null);
   const categories = [
     "Funny",
     "Jokes",
@@ -49,8 +50,29 @@ export default function EditedProfile() {
       setActiveCategories([...activeCategories, category]);
     }
   };
+   const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPreview(e.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
   return (
     <div className="w-full flex flex-col gap-4 bg-white rounded-[12px] p-4">
+      <Input
+        size="md"
+        type="file"
+        placeholder="Upload Profile Picture"
+        value={searchQuery}
+        onChange={handleImageChange}
+        label=""
+        preview={preview}
+        fileClassName="w-[100px] h-[100px] "
+      />
+        
       <div className="w-full flex  gap-4 ">
         <Input
           size="md"
@@ -62,11 +84,11 @@ export default function EditedProfile() {
         />
         <Input
           size="md"
-          type="text"
-          placeholder="@username"
+          type="email"
+          placeholder="Email"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          label="Username"
+          label="Email"
         />
       </div>
       <div className="w-full flex flex-col gap-2 py-3">
@@ -76,7 +98,6 @@ export default function EditedProfile() {
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
         />
       </div>
-
       <div className="w-full flex flex-col  px-4 space-y-4">
         <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
         <div className="space-y-3 flex flex-wrap gap-2 w-full text-center justify-start ">
