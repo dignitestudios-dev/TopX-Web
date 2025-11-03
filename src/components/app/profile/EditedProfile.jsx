@@ -51,6 +51,7 @@ export default function EditedProfile() {
   };
   return (
     <div className="w-full flex flex-col gap-4 bg-white rounded-[12px] p-4">
+        
       <div className="w-full flex  gap-4 ">
         <Input
           size="md"
@@ -76,7 +77,6 @@ export default function EditedProfile() {
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
         />
       </div>
-
       <div className="w-full flex flex-col  px-4 space-y-4">
         <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
         <div className="space-y-3 flex flex-wrap gap-2 w-full text-center justify-start ">

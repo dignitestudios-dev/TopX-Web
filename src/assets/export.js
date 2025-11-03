@@ -24,7 +24,16 @@ import topics from "./topics.png"
 import notes from "./notes.svg"
 import postone from "./postone.png"
 import user from "./user.png"
-
+import dollar from "./dollar.svg"
+import carddesign from "./carddesign.png"
+import cup from "./cup.svg"
+import dollaricons from "./dollaricons.svg"
+import speaker from "./speaker.svg"
+import earbuds from "./bi_earbuds.svg"
+import watch from "./watch.svg"
+import gamingconsole from "./gamingconsole.svg"
+import tshirt from "./tshirt.svg"
+import maindollar from "./maindollar.svg"
 
 // export {
 //     FILENAME(PASCALCASE)
@@ -52,5 +61,14 @@ export {
   notes,
   topics,
   postone,
-  
+  dollar,
+  carddesign,
+  cup,
+  speaker,
+  dollaricons,
+  earbuds,
+  watch,
+  gamingconsole,
+  tshirt,
+  maindollar,
 };
