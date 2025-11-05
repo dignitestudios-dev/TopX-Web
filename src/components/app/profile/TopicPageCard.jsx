@@ -4,13 +4,13 @@ import { auth } from "../../../assets/export";
 
 
 
-const TopicPageCard = ({img,title,description ,tags ,Follows,className,}) => {
+const TopicPageCard = ({img,title,description ,tags ,Follows,className, onClick}) => {
    const baseClasses =
     `  rounded-[12px] border border-[0.8px] flex flex-col p-3 space-y-2 ${className}`;
     return (
       
 
-        <div className={baseClasses} >
+        <div className={baseClasses} onClick={onClick} >
            
 
             <div className="flex items-center gap-2  ">

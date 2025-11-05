@@ -331,7 +331,7 @@ Makeup: [
   {!selectedBrand && Object.entries(knowledgePost).map(([categoryName, posts]) => (
     <div
       key={categoryName}
-      className="bg-white rounded-[15px] drop-shadow-[0px_0px_10px_rgba(0,0,0,0.2)] p-4"
+      className="bg-white rounded-[15px] border border-[#ecebeb] p-4"
     >
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-[14px] font-[600] text-[#000000] capitalize">

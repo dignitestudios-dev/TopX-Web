@@ -9,23 +9,28 @@ import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
 import CreatePostModal from "../../components/app/profile/CreatePostModal";
+import ProfilePost from "../../components/app/profile/ProfilePost";
 
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState("topics");
   const [isEditProfile, setIsEditProfile] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [isProfilePostOpen, setIsProfilePostOpen] = useState(false);
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3">
+    <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden  ">
 
       {/* Left Side */}
-      <div className="w-full md:w-1/4">
+      <div className="w-full md:w-1/4  sticky top-0  overflow-hidden ">
         <MySubscription />
       </div>
 
       {/* Right Side */}
-      <div className="w-full md:w-3/4 flex flex-col gap-3">
+      <div className="overflow-y-auto scrollbar-hide w-full md:w-3/4">
+
+{!isProfilePostOpen ?(
+      <div className=" flex flex-col gap-3  ">
 
         {/* Edit OR Profile View */}
         {isEditProfile ? (
@@ -96,6 +101,7 @@ export default function Profile() {
                 <div className="grid grid-cols-3 gap-3">
                   {Array.from({ length: 5 }).map((_, index) => (
                     <TopicPageCard
+                    onClick={() => setIsProfilePostOpen(true)}
                       key={index}
                       img={auth}
                       title="Topic Page"
@@ -114,6 +120,11 @@ export default function Profile() {
             </div>
           </>
         )}
+      </div>
+     ): (
+  <ProfilePost setIsProfilePostOpen={setIsProfilePostOpen} />
+
+      )}
       </div>
       <CreatePostModal isOpen={isCreatePostModalOpen} setIsOpen={setIsCreatePostModalOpen} />
     </div>
