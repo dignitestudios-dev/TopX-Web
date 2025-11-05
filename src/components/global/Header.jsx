@@ -14,7 +14,7 @@ import {
     Layers
 } from 'lucide-react';
 import { Logo, profile } from "../../assets/export";
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import NotificationPopup from './NotificationPopup';
 import { RiMoneyDollarCircleFill } from "react-icons/ri";
 
@@ -24,7 +24,8 @@ const Header = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-const [notificationCount, setNotificationCount] = useState(5);
+    const [notificationCount, setNotificationCount] = useState(5);
+    const navigate = useNavigate("");
 
     const navItems = [
         { icon: Home, to: "/home", label: 'Home' },
@@ -42,7 +43,8 @@ const [notificationCount, setNotificationCount] = useState(5);
 
                 {/* Logo */}
                 <div className="flex-shrink-0 pt-3">
-                    <img src={Logo} loading="lazy" alt="logo-organization" className="h-[2.9em]" />
+
+                    <img src={Logo} loading="lazy" onClick={() => {navigate("/home") }} alt="logo-organization" className="h-[2.9em] cursor-pointer" />
                 </div>
 
                 {/* ✅ Search Bar - Desktop */}
@@ -59,59 +61,56 @@ const [notificationCount, setNotificationCount] = useState(5);
 
                 {/* Navigation Items - Desktop */}
                 <nav className="hidden lg:flex items-center gap-8">
-                   {navItems.map((item, index) => {
-    const Icon = item.icon;
-    const isActive = location.pathname === item.to;
+                    {navItems.map((item, index) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.to;
 
-    // 🟠 Handle Notification Popup
-    if (item.label === "Notifications") {
-        return (
-            <div key={index} className="relative">
-                <button
-                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                    className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${
-                        isNotificationOpen
-                            ? "border-orange-500 text-orange-500"
-                            : "border-transparent text-gray-600 hover:text-orange-500"
-                    }`}
-                >
-                    <Icon size={24} />
-                    <span className="text-xs mt-1">Notifications</span>
+                        // 🟠 Handle Notification Popup
+                        if (item.label === "Notifications") {
+                            return (
+                                <div key={index} className="relative">
+                                    <button
+                                        onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen
+                                                ? "border-orange-500 text-orange-500"
+                                                : "border-transparent text-gray-600 hover:text-orange-500"
+                                            }`}
+                                    >
+                                        <Icon size={24} />
+                                        <span className="text-xs mt-1">Notifications</span>
 
-                  
-                </button>
 
-                {/* ✅ Notification Popup */}
-                {isNotificationOpen && (
-                    <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
-                )}
-            </div>
-        );
-    }
+                                    </button>
 
-    // 🧩 All other nav items
-    return (
-        <Link
-            key={index}
-            to={item.to}
-            className={`flex flex-col items-center cursor-pointer group ${
-                isActive
-                    ? "border-t-4 border-orange-500 pt-2"
-                    : "border-t-4 border-transparent pt-2"
-            }`}
-        >
-            <Icon
-                size={24}
-                className={`transition-colors ${
-                    isActive
-                        ? "text-orange-500"
-                        : "text-gray-600 group-hover:text-orange-500"
-                }`}
-            />
-            <span className="text-xs mt-1 text-black">{item.label}</span>
-        </Link>
-    );
-})}
+                                    {/* ✅ Notification Popup */}
+                                    {isNotificationOpen && (
+                                        <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        // 🧩 All other nav items
+                        return (
+                            <Link
+                                key={index}
+                                to={item.to}
+                                className={`flex flex-col items-center cursor-pointer group ${isActive
+                                        ? "border-t-4 border-orange-500 pt-2"
+                                        : "border-t-4 border-transparent pt-2"
+                                    }`}
+                            >
+                                <Icon
+                                    size={24}
+                                    className={`transition-colors ${isActive
+                                            ? "text-orange-500"
+                                            : "text-gray-600 group-hover:text-orange-500"
+                                        }`}
+                                />
+                                <span className="text-xs mt-1 text-black">{item.label}</span>
+                            </Link>
+                        );
+                    })}
 
                 </nav>
 
@@ -187,8 +186,8 @@ const [notificationCount, setNotificationCount] = useState(5);
                                     key={index}
                                     to={item.to}
                                     className={`flex items-center gap-4 px-4 py-3 text-sm transition-colors border-b border-gray-100 last:border-b-0 ${isActive
-                                            ? 'text-orange-500 bg-orange-50 font-semibold'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        ? 'text-orange-500 bg-orange-50 font-semibold'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     <Icon size={20} />
