@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Search,
     Home,
@@ -14,15 +14,24 @@ import {
     Layers
 } from 'lucide-react';
 import { Logo, profile } from "../../assets/export";
-import { Link, useLocation } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import NotificationPopup from './NotificationPopup';
+import { RiMoneyDollarCircleFill } from "react-icons/ri";
+import RecentActivityPopup from './RecentActivityPopup';
+
 
 const Header = () => {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-const [notificationCount, setNotificationCount] = useState(5);
+    const [notificationCount, setNotificationCount] = useState(5);
+    const [isRecentOpen, setIsRecentOpen] = useState(false);
+
+    const dropdownRef = useRef(null);
+    const notificationRef = useRef(null);
+
+    const navigate = useNavigate("");
 
     const navItems = [
         { icon: Home, to: "/home", label: 'Home' },
@@ -30,9 +39,38 @@ const [notificationCount, setNotificationCount] = useState(5);
         { icon: TrendingUp, to: "/trending", label: 'Trending' },
         { icon: Users, to: "/knowledge", label: 'Knowledge' },
         { icon: Radio, to: "/go-live", label: 'Go Live' },
-        { icon: DollarSign, to: "/affiliates", label: 'Affiliates' },
+        { icon: RiMoneyDollarCircleFill, to: "/affiliates", label: 'Affiliates' },
         { icon: Bell, to: "/notifications", label: 'Notifications' },
     ];
+
+    // Click outside handler
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Dropdown close kro agar click outside ho
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false);
+            }
+            
+            // Notification close kro agar click outside ho
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsNotificationOpen(false);
+            }
+
+               if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setIsRecentOpen(false);
+            }
+        };
+
+        // Jab koi bhi open ho tab listener add kro
+        if (isDropdownOpen || isNotificationOpen || isRecentOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isDropdownOpen, isNotificationOpen,isRecentOpen]);
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -40,7 +78,8 @@ const [notificationCount, setNotificationCount] = useState(5);
 
                 {/* Logo */}
                 <div className="flex-shrink-0 pt-3">
-                    <img src={Logo} loading="lazy" alt="logo-organization" className="h-[2.9em]" />
+
+                    <img src={Logo} loading="lazy" onClick={() => { navigate("/home") }} alt="logo-organization" className="h-[2.9em] cursor-pointer" />
                 </div>
 
                 {/* ✅ Search Bar - Desktop */}
@@ -57,59 +96,56 @@ const [notificationCount, setNotificationCount] = useState(5);
 
                 {/* Navigation Items - Desktop */}
                 <nav className="hidden lg:flex items-center gap-8">
-                   {navItems.map((item, index) => {
-    const Icon = item.icon;
-    const isActive = location.pathname === item.to;
+                    {navItems.map((item, index) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.to;
 
-    // 🟠 Handle Notification Popup
-    if (item.label === "Notifications") {
-        return (
-            <div key={index} className="relative">
-                <button
-                    onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                    className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${
-                        isNotificationOpen
-                            ? "border-orange-500 text-orange-500"
-                            : "border-transparent text-gray-600 hover:text-orange-500"
-                    }`}
-                >
-                    <Icon size={24} />
-                    <span className="text-xs mt-1">Notifications</span>
+                        // 🟠 Handle Notification Popup
+                        if (item.label === "Notifications") {
+                            return (
+                                <div key={index} className="relative" ref={notificationRef}>
+                                    <button
+                                        onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen
+                                            ? "border-orange-500 text-orange-500"
+                                            : "border-transparent text-gray-600 hover:text-orange-500"
+                                            }`}
+                                    >
+                                        <Icon size={24} />
+                                        <span className="text-xs mt-1">Notifications</span>
 
-                  
-                </button>
 
-                {/* ✅ Notification Popup */}
-                {isNotificationOpen && (
-                    <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
-                )}
-            </div>
-        );
-    }
+                                    </button>
 
-    // 🧩 All other nav items
-    return (
-        <Link
-            key={index}
-            to={item.to}
-            className={`flex flex-col items-center cursor-pointer group ${
-                isActive
-                    ? "border-t-4 border-orange-500 pt-2"
-                    : "border-t-4 border-transparent pt-2"
-            }`}
-        >
-            <Icon
-                size={24}
-                className={`transition-colors ${
-                    isActive
-                        ? "text-orange-500"
-                        : "text-gray-600 group-hover:text-orange-500"
-                }`}
-            />
-            <span className="text-xs mt-1 text-black">{item.label}</span>
-        </Link>
-    );
-})}
+                                    {/* ✅ Notification Popup */}
+                                    {isNotificationOpen && (
+                                        <NotificationPopup onClose={() => setIsNotificationOpen(false)} />
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        // 🧩 All other nav items
+                        return (
+                            <Link
+                                key={index}
+                                to={item.to}
+                                className={`flex flex-col items-center cursor-pointer group ${isActive
+                                    ? "border-t-4 border-orange-500 pt-2"
+                                    : "border-t-4 border-transparent pt-2"
+                                    }`}
+                            >
+                                <Icon
+                                    size={24}
+                                    className={`transition-colors ${isActive
+                                        ? "text-orange-500"
+                                        : "text-gray-600 group-hover:text-orange-500"
+                                        }`}
+                                />
+                                <span className="text-xs mt-1 text-black">{item.label}</span>
+                            </Link>
+                        );
+                    })}
 
                 </nav>
 
@@ -122,7 +158,7 @@ const [notificationCount, setNotificationCount] = useState(5);
                 </button>
 
                 {/* User Profile Dropdown */}
-                <div className="flex-shrink-0 relative pt-3">
+                <div className="flex-shrink-0 relative pt-3" ref={dropdownRef}>
                     <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -135,16 +171,23 @@ const [notificationCount, setNotificationCount] = useState(5);
                     </button>
 
                     {isDropdownOpen && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg">
-                            <div className="px-4 py-3 border-b border-gray-200">
-                                <p className="font-semibold text-sm">Mike Smith</p>
-                                <p className="text-xs text-gray-500">@mikesmith</p>
-                            </div>
+                        <div className="absolute right-0 mt-3 w-[10em] bg-white border border-gray-200 rounded-lg shadow-lg">
                             <Link to="/profile">
                                 <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                                     Profile
                                 </button>
                             </Link>
+                            <Link to="/my-posts">
+                                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
+                                    My Posts
+                                </button>
+                            </Link>
+                                <button
+                                    onClick={() => setIsRecentOpen(true)}
+                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                                >
+                                    Recent Activity
+                                </button>
                             <Link to="/setting">
                                 <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                                     Settings
@@ -185,8 +228,8 @@ const [notificationCount, setNotificationCount] = useState(5);
                                     key={index}
                                     to={item.to}
                                     className={`flex items-center gap-4 px-4 py-3 text-sm transition-colors border-b border-gray-100 last:border-b-0 ${isActive
-                                            ? 'text-orange-500 bg-orange-50 font-semibold'
-                                            : 'text-gray-600 hover:bg-gray-50'
+                                        ? 'text-orange-500 bg-orange-50 font-semibold'
+                                        : 'text-gray-600 hover:bg-gray-50'
                                         }`}
                                 >
                                     <Icon size={20} />
@@ -197,6 +240,10 @@ const [notificationCount, setNotificationCount] = useState(5);
                     </nav>
                 </div>
             )}
+
+
+            {isRecentOpen && <RecentActivityPopup onClose={() => setIsRecentOpen(false)} />}
+
         </header>
     );
 };

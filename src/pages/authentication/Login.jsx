@@ -38,6 +38,8 @@ const navigate = useNavigate();
     });
 
   return (
+    <>
+  <div className="h-full w-full  bg-[#F8F8F8] p-3 ">
    <div className="  grid md:grid-cols-2 grid-cols-1  overflow-hidden h-full w-full  bg-[#F8F8F8]  ">
     <div className="hidden md:block  ">
         <img src={authBg} alt="" className="w-[710px] h-[710px] object-cover rounded-[19px]" />
@@ -78,7 +80,7 @@ const navigate = useNavigate();
         <div className="w-full mt-1  flex items-center justify-end">
           <NavLink
             to={"/auth/forgot-password"}
-            className="text-blue-500 hover:no-underline hover:text-black text-[16px] font-normal leading-[20.4px]"
+            className="text-blue-500 hover:no-underline hover:text-black text-[14px] font-normal leading-[20.4px]"
           >
             Forgot Password?
           </NavLink>
@@ -167,6 +169,8 @@ const navigate = useNavigate();
     </div>
     </div>
    </div>
+   </div>
+     </>
   );
 };
 

@@ -7,9 +7,17 @@ import Profile from "../pages/Others/Profile";
 import Subscriptions from "../pages/Others/Subscriptions";
 import Knowledge from "../pages/Others/knowledge";
 import Golive from "../pages/Others/Golive";
+import Affiliates from "../pages/Others/Affiliates";
+import Trending from "../pages/Others/Trending";
+import Mypost from "../pages/Others/Mypost";
+import { useState } from "react";
+import FloatingChatButton from '../components/global/ChatWidget';
+
 
 
 const MainRoutes = () => {
+        const [open, setOpen] = useState(false);
+    
     return (
         <>
             <Header />
@@ -21,8 +29,13 @@ const MainRoutes = () => {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/knowledge" element={<Knowledge />} />
                     <Route path="/go-live" element={<Golive />} />
+                    <Route path="/affiliates" element={<Affiliates />} />
+                    <Route path="/trending" element={<Trending />} />
+                    <Route path="/my-posts" element={<Mypost />} />
 
                 </Routes>
+                  {open && <ChatWidget />} {/* Your actual chat panel */}
+                    <FloatingChatButton onClick={() => setOpen(!open)} />
             </main>
         </>
     );
