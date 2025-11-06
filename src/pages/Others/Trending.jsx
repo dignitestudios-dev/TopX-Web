@@ -8,6 +8,7 @@ import { FaAngleRight, FaChevronRight } from "react-icons/fa6";
 import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
+import PostCard from '../../components/global/PostCard';
 
 
 export default function Trending() {
@@ -60,26 +61,35 @@ export default function Trending() {
             gradient: "from-pink-500 via-orange-500 to-yellow-500",
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
             stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar:
-                "https://randomuser.me/api/portraits/men/12.jpg",
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage : postone
         },
         {
             id: "post2",
             user: "Peter’s Basketball",
-            username: "@mikesmith35",
+            username: "@petersmith35",
             time: "5mins ago",
-            tag: "Finance",
             gradient: "from-blue-600 to-blue-400",
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
             stats: { likes: "8,205", comments: "420", shares: "67" },
-            avatar:
-                "https://randomuser.me/api/portraits/men/32.jpg",
+            avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+        },
+            {
+            id: "post3",
+            user: "Mike’s Basketball",
+            username: "@mikesmith35",
+            time: "5mins ago",
+            tag: "Cars: Ferrari",
+            gradient: "from-pink-500 via-orange-500 to-yellow-500",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "10,403", comments: "500", shares: "105" },
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage : postone
         },
     ];
 
-
     return (
-        <div className="flex min-h-screen max-w-7xl mx-auto">
+        <div className="flex max-w-7xl mx-auto">
             {/* Left Sidebar - 25% width */}
             <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto pt-3">
                 <Profilecard smallcard={true} />
@@ -87,9 +97,8 @@ export default function Trending() {
                     <MySubscription />
                 </div>
             </div>
-
             {/* Main Feed - 65% width */}
-            <div className="w-[74%] bg-gray-50  p-3 overflow-y-auto h-[40em] scrollbar-hide">
+            <div className="w-[74%]   p-3 overflow-y-auto h-[40em] scrollbar-hide">
                 <div>
                     <div className='flex justify-between p-3'>
                         <h1 className='font-bold text-[18px]'>Suggestions based on your Interests/Activity</h1>
@@ -99,7 +108,6 @@ export default function Trending() {
                         </div>
                     </div>
                     <div className='flex overflow-x-auto'>
-
                         {trending.map((item, idx) => (
                             <div
                                 key={idx}
@@ -154,7 +162,7 @@ export default function Trending() {
                                                         className="w-6 h-6 rounded-full border-2 border-white"
                                                     />
                                                 </div>
-                                                
+
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -183,7 +191,7 @@ export default function Trending() {
                         </div>
                     </div>
                     <div className='flex overflow-x-auto'>
-                     {trending.map((item, idx) => (
+                        {trending.map((item, idx) => (
                             <div
                                 key={idx}
                                 className="border-b rounded-2xl  border-gray-200 bg-white  m-1 p-4 pb-4 last:border-0 last:pb-0"
@@ -237,7 +245,7 @@ export default function Trending() {
                                                         className="w-6 h-6 rounded-full border-2 border-white"
                                                     />
                                                 </div>
-                                                
+
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -258,6 +266,19 @@ export default function Trending() {
                     </div>
                 </div>
 
+
+
+                {/*Post*/}
+                <div className="mr-[15em] mx-auto p-4 space-y-4">
+                    {posts.map((post) => (
+                        <PostCard
+                            key={post.id}
+                            post={post}
+                            liked={liked}
+                            toggleLike={toggleLike}
+                        />
+                    ))}
+                </div>
 
             </div>
         </div>

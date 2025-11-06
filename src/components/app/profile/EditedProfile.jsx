@@ -50,7 +50,7 @@ export default function EditedProfile() {
       setActiveCategories([...activeCategories, category]);
     }
   };
-   const handleImageChange = (e) => {
+  const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -72,7 +72,6 @@ export default function EditedProfile() {
         preview={preview}
         fileClassName="w-[100px] h-[100px] "
       />
-        
       <div className="w-full flex  gap-4 ">
         <Input
           size="md"
@@ -98,18 +97,17 @@ export default function EditedProfile() {
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
         />
       </div>
-      <div className="w-full flex flex-col  px-4 space-y-4">
+      <div className="w-full flex flex-col px-4 space-y-4">
         <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
-        <div className="space-y-3 flex flex-wrap gap-2 w-full text-center justify-start ">
+        <div className="flex flex-wrap gap-4 w-full">
           {categories.map((category, index) => (
             <button
               key={index}
               onClick={() => toggleCategory(category)}
-              className={`px-5 py-2 rounded-full font-medium transition-all duration-200 ${
-                activeCategories.includes(category)
-                  ? "bg-orange-600 text-white hover:bg-orange-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${activeCategories.includes(category)
+                ? "bg-orange-600 text-white hover:bg-orange-700"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
               {category}
             </button>

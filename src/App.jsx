@@ -24,7 +24,6 @@ function App() {
 
       <Route path="/*" element={<MainRoutes />} />
 
-    
       <Route path="auth" element={<AuthLayout />}>
         <Route path="login" element={<Login />} />
         <Route path="signup" element={<SignUp />} />

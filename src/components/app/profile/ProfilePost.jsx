@@ -1,11 +1,58 @@
-import React from 'react';
-import { Plus, MoreVertical, Backpack } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, MoreVertical, Backpack, Lightbulb, BookOpen } from 'lucide-react';
 import { IoChevronBackOutline } from 'react-icons/io5';
-import { auth, authBg } from '../../../assets/export';
+import { auth, authBg, postone } from '../../../assets/export';
+import Button from '../../common/Button';
+import PostCard from '../../global/PostCard';
+import { BsFileEarmarkTextFill } from 'react-icons/bs';
 
 
 export default function ProfilePost({setIsProfilePostOpen}) {
+    const [activeTab, setActiveTab] = useState("post");
+   const posts = [
+        {
+            id: "post1",
+            user: "Mike’s Basketball",
+            username: "@mikesmith35",
+            time: "5mins ago",
+            tag: "Cars: Ferrari",
+            gradient: "from-pink-500 via-orange-500 to-yellow-500",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "10,403", comments: "500", shares: "105" },
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage : postone
+        },
+        {
+            id: "post2",
+            user: "Peter’s Basketball",
+            username: "@petersmith35",
+            time: "5mins ago",
+            gradient: "from-blue-600 to-blue-400",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "8,205", comments: "420", shares: "67" },
+            avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+        },
+            {
+            id: "post3",
+            user: "Mike’s Basketball",
+            username: "@mikesmith35",
+            time: "5mins ago",
+            tag: "Cars: Ferrari",
+            gradient: "from-pink-500 via-orange-500 to-yellow-500",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "10,403", comments: "500", shares: "105" },
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage : postone
+        },
+    ];
+ const [liked, setLiked] = useState({});
 
+    const toggleLike = (postId) => {
+        setLiked(prev => ({
+            ...prev,
+            [postId]: !prev[postId]
+        }));
+    };
   return (
     <div className="">
       <div className="">
@@ -73,13 +120,65 @@ export default function ProfilePost({setIsProfilePostOpen}) {
               <p className="text-gray-500 text-sm leading-relaxed flex-1">
                 Lorem ipsum dolor sit amet consectetur. Et blandit ut enim potenti orci. Massa cursus integer enim ac id pretium etiam. Eleifend ornare dictumst ut bibendum ipsum. Etiam condimentum vitae vel id amet.
               </p>
-              
-              <button className="px-6 py-2.5 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition-colors shadow-md whitespace-nowrap">
-                Create Post
-              </button>
+              {activeTab === "post" && (
+                <Button className="px-5 flex items-center justify-center" variant="orange" size="md">
+                  Create Post
+                </Button>
+              )}
             </div>
           </div>
         </div>
+         <div className="flex gap-2 border-b border-gray-200">
+
+                {/* My Topic Pages */}
+                <button
+                  onClick={() => setActiveTab("post")}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                    activeTab === "post" ? "text-orange-600" : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  
+                    <BsFileEarmarkTextFill size={19} className={`  ${activeTab === "post" ? "text-orange-600" : "text-gray-500 hover:text-gray-700"}`} />
+           
+                  <span className="text-[14px] font-[500] ">Post</span>
+                  {activeTab === "post" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
+                  )}
+                </button>
+
+                {/* My Knowledge Post */}
+                <button
+                  onClick={() => setActiveTab("postrequest")}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                    activeTab === "postrequest"
+                      ? "text-orange-600"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded ${
+                      activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"
+                    }`}
+                  >
+                    <Lightbulb className="text-white" size={16} />
+                  </div>
+                  <span className="text-[13px] font-[500] ">Post Request</span>
+                  {activeTab === "postrequest" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
+                  )}
+                </button>
+              </div>
+         <div className="mr-[15em] mx-auto p-4 space-y-4">
+                    {posts.map((post) => (
+                        <PostCard
+                        activeTab={activeTab}
+                            key={post.id}
+                            post={post}
+                            liked={liked}
+                            toggleLike={toggleLike}
+                        />
+                    ))}
+                </div>
       </div>
     </div>
   );

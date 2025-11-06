@@ -8,6 +8,7 @@ import { FaChevronRight } from "react-icons/fa6";
 import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
+import PostCard from '../../components/global/PostCard';
 
 
 export default function Home() {
@@ -20,7 +21,7 @@ export default function Home() {
         }));
     };
 
-      const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(false);
 
     const trending = [
         {
@@ -35,18 +36,50 @@ export default function Home() {
         },
     ];
 
+    const posts = [
+        {
+            id: "post1",
+            user: "Mike’s Basketball",
+            username: "@mikesmith35",
+            time: "5mins ago",
+            tag: "Cars: Ferrari",
+            gradient: "from-pink-500 via-orange-500 to-yellow-500",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "10,403", comments: "500", shares: "105" },
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage: postone
+        },
+        {
+            id: "post2",
+            user: "Peter’s Basketball",
+            username: "@petersmith35",
+            time: "5mins ago",
+            gradient: "from-blue-600 to-blue-400",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "8,205", comments: "420", shares: "67" },
+            avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+        },
+        {
+            id: "post3",
+            user: "Mike’s Basketball",
+            username: "@mikesmith35",
+            time: "5mins ago",
+            tag: "Cars: Ferrari",
+            gradient: "from-pink-500 via-orange-500 to-yellow-500",
+            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+            stats: { likes: "10,403", comments: "500", shares: "105" },
+            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            postimage: postone
+        },
+    ];
+
     return (
-        <div className="flex  min-h-screen max-w-7xl mx-auto">
-            {/* Left Sidebar - 1/4 width */}
-            <div className="w-1/4  !bg-[#F9FAFB] overflow-y-auto pt-3">
-                {/* Profile Card */}
-
-                <Profilecard  smallcard={true}/>
-
-                {/* My Subscription */}
-                <div className='pt-4'>
+        <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
+            {/* Left Sidebar */}
+            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto pt-3 scrollbar-hide">
+                <Profilecard smallcard={true} />
+                <div className="pt-4">
                     <MySubscription />
-
                 </div>
 
                 {/* Topic Pages */}
@@ -59,7 +92,7 @@ export default function Home() {
                         {[1, 2, 3].map((item, idx) => (
                             <div key={idx} className="pb-4 border-b border-gray-200 last:border-0">
                                 <div className="flex items-center gap-1 mb-1">
-                                    <div className="w-10 h-10  rounded-full  text-lg flex items-center justify-center flex-shrink-0">
+                                    <div className="w-10 h-10 rounded-full text-lg flex items-center justify-center flex-shrink-0">
                                         <img src={topics} alt="" />
                                     </div>
                                     <div className="flex gap-2">
@@ -67,8 +100,12 @@ export default function Home() {
                                         <img src={notes} alt="" />
                                     </div>
                                 </div>
-                                <p className="text-[14px] text-gray-600 leading-snug">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.</p>
-                                <p className="text-[14px] text-gray-700 mt-1"><span className="text-black font-[600]">50+</span> Follows</p>
+                                <p className="text-[14px] text-gray-600 leading-snug">
+                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                                </p>
+                                <p className="text-[14px] text-gray-700 mt-1">
+                                    <span className="text-black font-[600]">50+</span> Follows
+                                </p>
                             </div>
                         ))}
                     </div>
@@ -79,183 +116,22 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Middle Feed - 1/2 width */}
-            <div className="w-1/2 bg-gray-50 ">
-                <div className="max-w-2xl mx-auto p-4 space-y-4 overflow-y-auto h-[70em] scrollbar-hide">
-                    {/* Post 1 - With Image */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 flex items-start justify-between border-b border-gray-100">
-                            <div className="flex items-center gap-3 flex-1">
-                                <div className="relative">
-                                    {/* Background / Topic Image */}
-                                    <img
-                                        src={topics}
-                                        alt="Topic"
-                                        className="w-[3em] h-[3em] rounded-full object-cover"
-                                    />
-
-                                    {/* Profile Image Overlay */}
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full  overflow-hidden">
-                                        <img
-                                            src={profile}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <p className="font-bold text-sm">Mike's Basketball</p>
-                                    <p className="text-xs text-gray-600">@mikesmith35 • 5mins ago</p>
-                                </div>
-                            </div>
-                            <MoreHorizontal className="w-5 h-5 text-gray-400" />
-                        </div>
-
-                        <div className="bg-gradient-to-b p-3 h-80 flex items-center justify-center">
-                            <img src={postone} alt="Basketball" className="w-full h-full object-cover rounded-2xl" />
-                        </div>
-
-                        <div className="p-4">
-                            <p className="text-sm text-gray-700 mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-
-                            <div className="flex items-center gap-8 text-sm text-orange-500 mb-4 pb-4 border-b border-gray-200">
-                                <button onClick={() => toggleLike('post1')} className="flex items-center gap-2 hover:text-orange-600">
-                                    <Heart className={`w-5 h-5 ${liked['post1'] ? 'fill-orange-500' : ''}`} />
-                                    <span>10,403</span>
-                                </button>
-                                <button className="flex items-center gap-2 hover:text-orange-600">
-                                    <MessageCircle className="w-5 h-5" />
-                                    <span>500</span>
-                                </button>
-                                <button className="flex items-center gap-2 hover:text-orange-600">
-                                    <Share2 className="w-5 h-5" />
-                                    <span>105</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Post 2 - No Image */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 flex items-start justify-between border-b border-gray-100">
-                            <div className="flex items-center gap-3 flex-1">
-                                <div className="relative">
-                                    {/* Background / Topic Image */}
-                                    <img
-                                        src={topics}
-                                        alt="Topic"
-                                        className="w-[3em] h-[3em] rounded-full object-cover"
-                                    />
-
-                                    {/* Profile Image Overlay */}
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full  overflow-hidden">
-                                        <img
-                                            src={profile}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm">Mike's Basketball</p>
-                                    <p className="text-xs text-gray-600">@mikesmith35 • 5mins ago</p>
-                                </div>
-                            </div>
-                            <MoreHorizontal className="w-5 h-5 text-gray-400" />
-                        </div>
-
-                        <div className="p-4">
-                            <p className="text-sm text-gray-700 mb-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-
-                            <div className="flex items-center gap-8 text-sm text-orange-500">
-                                <button onClick={() => toggleLike('post2')} className="flex items-center gap-2 hover:text-orange-600">
-                                    <Heart className={`w-5 h-5 ${liked['post2'] ? 'fill-orange-500' : ''}`} />
-                                    <span>10,403</span>
-                                </button>
-                                <button className="flex items-center gap-2 hover:text-orange-600">
-                                    <MessageCircle className="w-5 h-5" />
-                                    <span>500</span>
-                                </button>
-                                <button className="flex items-center gap-2 hover:text-orange-600">
-                                    <Share2 className="w-5 h-5" />
-                                    <span>105</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Post 3 */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 flex items-start justify-between border-b border-gray-100">
-                            <div className="flex items-center gap-3 flex-1">
-                                <div className="relative">
-                                    {/* Background / Topic Image */}
-                                    <img
-                                        src={topics}
-                                        alt="Topic"
-                                        className="w-[3em] h-[3em] rounded-full object-cover"
-                                    />
-
-                                    {/* Profile Image Overlay */}
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full  overflow-hidden">
-                                        <img
-                                            src={profile}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm">Peter's Basketball</p>
-                                    <p className="text-xs text-gray-600">@petersmith35 • 5mins ago</p>
-                                </div>
-                            </div>
-                            <MoreHorizontal className="w-5 h-5 text-gray-400" />
-                        </div>
-
-                        <div className="bg-gradient-to-b p-3 h-80 flex items-center justify-center">
-                            <img src={postone} alt="Basketball" className="w-full h-full object-cover rounded-2xl" />
-                        </div>
-                    </div>
-                    {/* Post 4 */}
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="p-4 flex items-start justify-between border-b border-gray-100">
-                            <div className="flex items-center gap-3 flex-1">
-                                <div className="relative">
-                                    {/* Background / Topic Image */}
-                                    <img
-                                        src={topics}
-                                        alt="Topic"
-                                        className="w-[3em] h-[3em] rounded-full object-cover"
-                                    />
-
-                                    {/* Profile Image Overlay */}
-                                    <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full  overflow-hidden">
-                                        <img
-                                            src={profile}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm">Peter's Basketball</p>
-                                    <p className="text-xs text-gray-600">@petersmith35 • 5mins ago</p>
-                                </div>
-                            </div>
-                            <MoreHorizontal className="w-5 h-5 text-gray-400" />
-                        </div>
-
-                        <div className="bg-gradient-to-b p-3 h-80 flex items-center justify-center">
-                            <img src={postone} alt="Basketball" className="w-full h-full object-cover rounded-2xl" />
-                        </div>
-                    </div>
-                </div>
+            {/* Middle Feed */}
+            <div className="w-1/2 bg-gray-50 overflow-y-auto px-3 py-4 scrollbar-hide">
+                {posts.map((post) => (
+                    <PostCard
+                        key={post.id}
+                        post={post}
+                        liked={liked}
+                        toggleLike={toggleLike}
+                    />
+                ))}
             </div>
 
+
+
             {/* Right Sidebar - 1/4 width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto  border-gray-200">
+            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto border-gray-200 scrollbar-hide">
                 <div className="p-0">
 
 
@@ -443,11 +319,6 @@ export default function Home() {
 
                         </div>
                     </div>
-
-                    {open && <ChatWidget />} {/* Your actual chat panel */}
-                    <FloatingChatButton onClick={() => setOpen(!open)} />
-
-
 
                 </div>
             </div>

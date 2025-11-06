@@ -1,6 +1,7 @@
 import React from "react";
 import { MoreHorizontal, ChevronRight, Layers } from "lucide-react";
 import { ballone, ballthree, balltwo } from "../../assets/export";
+import { Link } from "react-router";
 
 const   MySubscription = () => {
   const subscriptions = [
@@ -59,7 +60,9 @@ const   MySubscription = () => {
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-5 text-black cursor-pointer font-semibold text-sm">
+        <Link to="/subscriptions">
         <span>View All</span>
+        </Link>
         <ChevronRight className="w-4 h-4" />
       </div>
     </div>
