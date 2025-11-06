@@ -17,7 +17,6 @@ export default function Interests({ handleNext, handlePrevious }) {
       "Fails",
       "Weird",
       "Confessions & stories",
-   
       "Opinions",
       "Lifehacks",
       "Oddly satisfying",
@@ -25,7 +24,6 @@ export default function Interests({ handleNext, handlePrevious }) {
       "Animals",
       "Learn something",
       "Space",
-   
       "History",
       "Nature",
       "Science",
