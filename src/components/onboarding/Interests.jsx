@@ -4,6 +4,7 @@ import { BiArrowBack } from "react-icons/bi";
 import Input from "../common/Input";
 import { IoSearch } from "react-icons/io5";
 import Button from "../common/Button";
+import { ErrorToast } from "../global/Toaster";
 
 export default function Interests({ handleNext, handlePrevious }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,6 +45,21 @@ export default function Interests({ handleNext, handlePrevious }) {
       setActiveCategories([...activeCategories, category]);
     }
   };
+  const handleNextClick = () => {
+    if(activeCategories.length == 0){
+      ErrorToast("Please select at least 4 category to proceed.");
+    }
+    else if(activeCategories.length < 4){
+      ErrorToast("Please select at least 4 category to proceed.");
+    }
+    else if(activeCategories.length > 4){
+      ErrorToast("Please select only 4 .");
+    }
+    else{
+      handleNext();
+    }
+    
+  }
   return (
     <div className="bg-white flex items-center justify-center rounded-[19px] w-full p-6 relative">
       <div className="absolute left-4 top-8 transform -translate-y-1/2">
@@ -78,7 +94,7 @@ export default function Interests({ handleNext, handlePrevious }) {
         </div>
 
         {/* Category Buttons */}
-        <div className="space-y-3 flex flex-wrap gap-2 w-full text-center justify-center ">
+        <div className=" flex flex-wrap gap-2 w-full   ">
           {categories.map((category, index) => (
             
              
@@ -97,7 +113,7 @@ export default function Interests({ handleNext, handlePrevious }) {
             
           ))}
             </div>
-            <Button onClick={handleNext} size="full" variant="orange" className="w-full flex items-center justify-center">Next</Button> 
+            <Button onClick={handleNextClick} size="full" variant="orange" className="w-full flex items-center justify-center">Next</Button> 
             </div>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { useState } from "react";
 
 export default function EditedProfile() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [email, setEmail] = useState("");
   const [activeCategories, setActiveCategories] = useState([]);
   const [preview, setPreview] = useState(null);
   const categories = [
@@ -18,7 +19,6 @@ export default function EditedProfile() {
     "Fails",
     "Weird",
     "Confessions & stories",
-
     "Opinions",
     "Lifehacks",
     "Oddly satisfying",
@@ -85,8 +85,8 @@ export default function EditedProfile() {
           size="md"
           type="email"
           placeholder="Email"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           label="Email"
         />
       </div>

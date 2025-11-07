@@ -9,6 +9,7 @@ import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import PostCard from '../../components/global/PostCard';
+import { Link } from 'react-router';
 
 
 export default function Home() {
@@ -19,6 +20,21 @@ export default function Home() {
             ...prev,
             [postId]: !prev[postId]
         }));
+    };
+
+    // Manage active indexes for multiple subscribe buttons
+    const [activeIndexes, setActiveIndexes] = useState([]);
+
+    const handleClick = (index) => {
+        // Toggle the active state for the clicked button
+        setActiveIndexes((prevActiveIndexes) => {
+            // If the index is already active, remove it, otherwise add it
+            if (prevActiveIndexes.includes(index)) {
+                return prevActiveIndexes.filter(i => i !== index);
+            } else {
+                return [...prevActiveIndexes, index];
+            }
+        });
     };
 
     const [open, setOpen] = useState(false);
@@ -46,7 +62,7 @@ export default function Home() {
             gradient: "from-pink-500 via-orange-500 to-yellow-500",
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
             stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            avatar: "https://randomuser.me/api/portraits/men/34.jpg",
             postimage: postone
         },
         {
@@ -68,7 +84,7 @@ export default function Home() {
             gradient: "from-pink-500 via-orange-500 to-yellow-500",
             text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
             stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
+            avatar: "https://randomuser.me/api/portraits/men/20.jpg",
             postimage: postone
         },
     ];
@@ -76,7 +92,7 @@ export default function Home() {
     return (
         <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
             {/* Left Sidebar */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto pt-3 scrollbar-hide">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto pt-3 scrollbar-hide">
                 <Profilecard smallcard={true} />
                 <div className="pt-4">
                     <MySubscription />
@@ -109,15 +125,17 @@ export default function Home() {
                             </div>
                         ))}
                     </div>
+                    <Link to="/profile">
                     <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
                         View All
                         <ChevronRight className="w-4 h-4" />
                     </div>
+                    </Link>
                 </div>
             </div>
 
             {/* Middle Feed */}
-            <div className="w-1/2 bg-gray-50 overflow-y-auto px-3 py-4 scrollbar-hide">
+            <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
                 {posts.map((post) => (
                     <PostCard
                         key={post.id}
@@ -131,10 +149,8 @@ export default function Home() {
 
 
             {/* Right Sidebar - 1/4 width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto border-gray-200 scrollbar-hide">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
                 <div className="p-0">
-
-
                     <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
                         {/* Header */}
                         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -208,7 +224,10 @@ export default function Home() {
                                         </div>
 
                                         <div>
-                                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold">
+                                            <button
+                                                onClick={() => handleClick(idx)}
+                                                className={`bg-orange-500 ${activeIndexes.includes(idx) ? "bg-slate-400" : "hover:bg-orange-600"} text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold`}
+                                            >
                                                 Subscribe
                                             </button>
 
@@ -218,13 +237,15 @@ export default function Home() {
                             ))}
                         </div>
 
-
                         {/* Footer */}
-                        <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
-                            <span>View All</span>
-                            <FaChevronRight color='orange' />
+                        <Link to="/trending">
+                            <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
 
-                        </div>
+                                <span>View All</span>
+                                <FaChevronRight color='orange' />
+                            </div>
+                        </Link>
+
                     </div>
 
 
@@ -301,7 +322,10 @@ export default function Home() {
                                         </div>
 
                                         <div>
-                                            <button className="bg-orange-500 hover:bg-orange-600 text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold">
+                                            <button
+                                                onClick={() => handleClick(idx)}
+                                                className={`bg-orange-500 ${activeIndexes.includes(idx) ? "bg-slate-400" : "hover:bg-orange-600"} text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold`}
+                                            >
                                                 Subscribe
                                             </button>
 
@@ -314,9 +338,10 @@ export default function Home() {
 
                         {/* Footer */}
                         <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
-                            <span>View All</span>
+                            <Link to="/profile">
+                                <span>View All</span>
+                            </Link>
                             <FaChevronRight color='orange' />
-
                         </div>
                     </div>
 

@@ -25,7 +25,7 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
              <div className="flex flex-col w-full items-center justify-center gap-4 lg:gap-8">
                <img src={auth} alt="orange_logo" className="w-[100px]" />
                <div className=" flex flex-col  justify-center items-center text-center">
-                 <h2 className="text-[24px] md:text-[32px] font-bold ">Verify your account</h2>
+                 <h2 className="text-[24px] md:text-[32px] font-bold ">Verify Your Account</h2>
                  <p className="text-[14px] font-normal text-center leading-[27px] text-[#565656]">
                   To secure your account, please verify your identity. <br /> Choose one of the options below:
                  </p>

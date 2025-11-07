@@ -9,6 +9,7 @@ import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import PostCard from '../../components/global/PostCard';
+import { Link } from 'react-router';
 
 
 export default function Trending() {
@@ -91,7 +92,7 @@ export default function Trending() {
     return (
         <div className="flex max-w-7xl mx-auto">
             {/* Left Sidebar - 25% width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto pt-3">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto pt-3">
                 <Profilecard smallcard={true} />
                 <div className="pt-4">
                     <MySubscription />
@@ -103,7 +104,9 @@ export default function Trending() {
                     <div className='flex justify-between p-3'>
                         <h1 className='font-bold text-[18px]'>Suggestions based on your Interests/Activity</h1>
                         <div className='flex items-center gap-2 text-sm'>
+                            <Link to="/suggested-pages">
                             <button>View all</button>
+                            </Link>
                             <FaAngleRight color='#F97316' />
                         </div>
                     </div>
@@ -186,7 +189,9 @@ export default function Trending() {
                     <div className='flex justify-between p-3'>
                         <h1 className='font-bold text-[18px]'>Trending Pages</h1>
                         <div className='flex items-center gap-2 text-sm'>
+                            <Link to="/suggested-pages">
                             <button>View all</button>
+                            </Link>
                             <FaAngleRight color='#F97316' />
                         </div>
                     </div>

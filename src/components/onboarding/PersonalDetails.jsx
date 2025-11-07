@@ -51,12 +51,10 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
       <div className="flex flex-col w-full items-center justify-center gap-4 lg:gap-4">
         <img src={auth} alt="orange_logo" className="w-[100px]" />
         <h2 className="text-[24px] md:text-[32px] font-bold ">
-          Add personal details
+          Add Personal Details
         </h2>
         <form onSubmit={handleSubmit}>
           <div className=" flex flex-col  justify-center items-center text-center gap-3">
-           
-              
               <Input
                 id="file"
                 size="md"
@@ -66,11 +64,10 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
                 preview={image}
                 name="profileImage"
                 value={values.profileImage}
-         
                 onBlur={handleBlur}
                 touched={touched.profileImage}
                 error={errors.profileImage}
-                
+                fileClassName="w-[120px] h-[120px]"
               />
             
             <p className="text-[14px] font-[500] text-[#f85e00]">
@@ -81,7 +78,7 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
             <div className="flex flex-col">
               
               <Input
-               label="Name"
+               label="Username"
               type="text"
               name="name"
               value={values.name}
@@ -96,13 +93,13 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
             </div>
             <div className="flex flex-col">
               <Input
-              label="Date of birth"
+              label="Date Of Birth"
                 type="date"
                 name="dateOfBirth"
                 value={values.dateOfBirth}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Date of birth"
+                placeholder="Date of Birth"
                error={errors.dateOfBirth}
                touched={touched.dateOfBirth}
                size="md"
@@ -132,11 +129,13 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
                 My Bio <span>(optional)</span>
               </label>
               <textarea
+              placeholder="My Bio"
                 name=""
                 id=""
                 cols="30"
-                rows="10"
-                className="w-full h-[143px] border-[0.8px] bg-[#F8F8F899] outline-none rounded-[12px] px-3 text-[16px]"
+                rows="20"
+                maxLength={250}
+                className="w-full h-[143px] border-[0.8px] bg-[#F8F8F899] outline-none rounded-[12px] p-2 text-[16px] resize-none"
               ></textarea>
             </div>
           </div>
