@@ -3,7 +3,6 @@ import LargeProfile from "../../components/app/profile/LargeProfile";
 import MySubscription from "../../components/homepage/MySubscription";
 import { BookOpen, Lightbulb } from "lucide-react";
 import { FiPlus } from "react-icons/fi";
-
 import { auth } from "../../assets/export";
 import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";

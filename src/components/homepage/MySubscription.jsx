@@ -3,11 +3,11 @@ import { MoreHorizontal, ChevronRight, Layers } from "lucide-react";
 import { ballone, ballthree, balltwo } from "../../assets/export";
 import { Link } from "react-router";
 
-const   MySubscription = () => {
+const MySubscription = () => {
   const subscriptions = [
-    { title: "My Basketball" },
-    { title: "My Fitness" },
-    { title: "My Cooking" },
+    { title: "My Basketball", url: "/subscriptions-category" },
+    { title: "My Fitness", url: "/subscriptions-category" },
+    { title: "My Cooking", url: "/subscriptions-category" },
   ];
 
   return (
@@ -27,10 +27,12 @@ const   MySubscription = () => {
           >
             <div className="flex items-start gap-3">
               <div>
+                <Link to={item.url}>
                 <p className="font-medium text-gray-900 flex items-center gap-1">
                   {item.title}
                   <Layers className="w-4 h-4 text-gray-500" />
                 </p>
+                </Link>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex -space-x-2">
                     <img
@@ -61,7 +63,7 @@ const   MySubscription = () => {
       {/* Footer */}
       <div className="flex items-center justify-between mt-5 text-black cursor-pointer font-semibold text-sm">
         <Link to="/subscriptions">
-        <span>View All</span>
+          <span>View All</span>
         </Link>
         <ChevronRight className="w-4 h-4" />
       </div>

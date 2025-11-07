@@ -1,62 +1,83 @@
 import axios from "axios";
-import { ErrorToast } from "./components/global/Toaster"; // Import your toaster functions
+import { ErrorToast } from "./components/global/Toaster";
 import Cookies from "js-cookie";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
-export const baseUrl = "https://necessi.erdumadnan.com/api";
-// export const baseUrl = "https://155e-45-199-187-86.ngrok-free.app";
+// ================= BASE URL =================
+export const baseUrl = "http://3.80.71.34";
 
-async function getDeviceFingerprint() {
-  const fp = await FingerprintJS.load();
-  const result = await fp.get();
-  console.log(result.visitorId); // Unique device ID
-  return result.visitorId;
+// ================= DEVICE FINGERPRINT =================
+// Load once (not on every request = faster)
+let deviceFingerprint = null;
+
+async function loadFingerprintOnce() {
+  if (!deviceFingerprint) {
+    const fp = await FingerprintJS.load();
+    const result = await fp.get();
+    deviceFingerprint = result.visitorId;
+  }
+  return deviceFingerprint;
 }
 
+// ================= AXIOS INSTANCE =================
 const instance = axios.create({
   baseURL: baseUrl,
-  headers: {
-    devicemodel: getDeviceFingerprint(),
-    deviceuniqueid: getDeviceFingerprint(),
-  },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
 });
 
-instance.interceptors.request.use((request) => {
-  const token = Cookies.get("token");
-  if (!navigator.onLine) {
-    // No internet connection
-    ErrorToast(
-      "No internet connection. Please check your network and try again."
-    );
-    return;
-    // return Promise.reject(new Error("No internet connection"));
-  }
+// Bypass Ngrok warning HTML pages
+instance.defaults.headers.common["ngrok-skip-browser-warning"] = "true";
 
-  // Merge existing headers with token
-  request.headers = {
-    ...request.headers, // Keep existing headers like devicemodel and deviceuniqueid
-    Accept: "application/json, text/plain, */*",
-    ...(token && { Authorization: `Bearer ${token}` }), // Add Authorization only if token exists
-  };
+// ================= REQUEST INTERCEPTOR =================
+instance.interceptors.request.use(
+  async (request) => {
+    const token = Cookies.get("access_token");
 
-  return request;
-});
-
-instance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.code === "ECONNABORTED") {
-      // Slow internet or request timeout
-      ErrorToast("Your internet connection is slow. Please try again.");
+    // Internet check
+    if (!navigator.onLine) {
+      ErrorToast("No internet connection. Please check your network.");
+      return Promise.reject(new Error("No internet connection"));
     }
 
-    if (error.response && error.response.status === 401) {
-      // Unauthorized error
-      Cookies.remove("token");
-      Cookies.remove("user");
-      ErrorToast("Session expired. Please relogin");
-      window.location.href = "/";
+    // Device fingerprint (cached)
+    const fingerprint = await loadFingerprintOnce();
+
+    request.headers = {
+      ...request.headers,
+      Accept: "application/json, text/plain, */*",
+      devicemodel: fingerprint,
+      deviceuniqueid: fingerprint,
+      ...(token && { Authorization: `Bearer ${token}` }),
+      "ngrok-skip-browser-warning": "true",
+    };
+
+    return request;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ================= RESPONSE INTERCEPTOR =================
+instance.interceptors.response.use(
+  (response) => {
+    // Check if Ngrok returned HTML instead of JSON
+    const ct = response.headers?.["content-type"] || "";
+    if (!ct.includes("application/json")) {
+      return Promise.reject(
+        new Error("Unexpected response (HTML instead of JSON).")
+      );
+    }
+    return response;
+  },
+  (error) => {
+    // Timeout
+    if (error.code === "ECONNABORTED") {
+      ErrorToast("Slow internet connection. Please try again.");
+    }
+
+    // 401 auto-logout
+    if (error.response?.status === 401) {
+      Cookies.remove("access_token");
+      ErrorToast("Session expired. Please log in again.");
     }
 
     return Promise.reject(error);

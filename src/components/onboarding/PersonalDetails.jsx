@@ -55,8 +55,6 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
         </h2>
         <form onSubmit={handleSubmit}>
           <div className=" flex flex-col  justify-center items-center text-center gap-3">
-           
-              
               <Input
                 id="file"
                 size="md"
@@ -66,11 +64,9 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
                 preview={image}
                 name="profileImage"
                 value={values.profileImage}
-         
                 onBlur={handleBlur}
                 touched={touched.profileImage}
                 error={errors.profileImage}
-                
               />
             
             <p className="text-[14px] font-[500] text-[#f85e00]">

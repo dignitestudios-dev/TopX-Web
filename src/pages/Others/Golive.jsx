@@ -53,7 +53,7 @@ export default function Golive() {
     return (
         <div className="flex  min-h-screen max-w-7xl mx-auto">
             {/* Left Sidebar - 1/4 width */}
-            <div className="w-1/4  !bg-[#F9FAFB] overflow-y-auto pt-3">
+            <div className="w-1/4  !bg-[#F2F2F2] overflow-y-auto pt-3">
                 {/* Profile Card */}
 
                 <Profilecard  smallcard={true}/>
@@ -66,7 +66,7 @@ export default function Golive() {
             </div>
 
             {/* Middle Feed - 1/2 width */}
-          <div className="w-1/2 bg-gray-50 min-h-screen p-6">
+          <div className="w-1/2 bg-[#F2F2F2] min-h-screen p-6">
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Header + Search */}
         <div className="flex items-center justify-between">
@@ -115,7 +115,7 @@ export default function Golive() {
     </div>
 
             {/* Right Sidebar - 1/4 width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto  border-gray-200">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
                 <div className="p-0">
 
 
