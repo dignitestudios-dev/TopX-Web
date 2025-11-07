@@ -6,6 +6,38 @@ import SubcriptionCard from "./SubcriptionCard";
 import Button from "../common/Button";
 export default function AddStore({handleNext,handlePrevious}) {
   const [searchQuery, setSearchQuery] = useState("");
+  const trending = [
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+];
   return (
     <div className="bg-white flex items-center justify-center rounded-[19px] w-full p-6">
       <div className="flex flex-col  items-center justify-center md:w-[700px] w-full">
@@ -27,41 +59,17 @@ export default function AddStore({handleNext,handlePrevious}) {
           />
         </div>
         <div className="w-full grid grid-cols-12 gap-4 py-6 overflow-y-scroll h-[500px] ">
-          <div className="col-span-6">
-            <SubcriptionCard
-              className=" bg-[#F8F9F9]"
-              img={auth}
-              title="Funny"
-              description="Based on the topics you like, we think you’ll want to check out a few of these topic pages."
-              tags="#Funny"
-              Follows="2"
-              buttonText="Subscribe"
-              headerbutton="View All"
-              header="TopX"
-            />
-          </div>
-          <div className="col-span-6">
-            <SubcriptionCard
-              className=""
-              img={auth}
-              title="Funny"
-              description="Based on the topics you like, we think you’ll want to check out a few of these topic pages."
-              tags="#Funny"
-              Follows="2"
-              buttonText="Subscribe"
-              header="TopX"
-            />
-          </div>
-          {[1,2,3,4].map((item) => (
+         
+          {trending.map((item) => (
             <div   key={item} className="col-span-6">
             <SubcriptionCard
             
               className=""
               img={auth}
-              title="Funny"
-              description="Based on the topics you like, we think you’ll want to check out a few of these topic pages."
-              tags="#Funny"
-              Follows="2"
+              title={item.title}
+              description={item.desc}
+              tags={item.hashtags}
+              Follows={item.follows}
               buttonText="Subscribe"
               headerbutton="View All"
               header="To"

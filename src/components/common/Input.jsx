@@ -46,7 +46,7 @@ const Input = forwardRef(
     };
 
     const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
-const fileClasses = ` ${fileClassName}`;
+    const fileClasses = ` ${fileClassName}`;
     // 📁 File Upload Input
     if (type === "file") {
       return (
@@ -65,11 +65,12 @@ const fileClasses = ` ${fileClassName}`;
               <img
                 src={preview}
                 alt="Preview"
-                className="w-full h-full object-cover rounded-full"
+                className="object-fill rounded-full max-w-[160px] max-h-[70px]" // Restrict size
               />
             ) : (
               <span className="text-orange-400 text-3xl">+</span>
             )}
+
             <input
               id={props.id || "file-input"}
               ref={ref}
@@ -164,7 +165,11 @@ const fileClasses = ` ${fileClassName}`;
           </label>
         )}
         <div className="relative flex items-center gap-2">
-          {showCountrySelector && <CountrySelector />} {/* 👈 manual toggle */}
+          {showCountrySelector && 
+          <div className="flex items-center gap-1 px-4 py-2 bg-white border border-gray-300 rounded-[12px] hover:border-gray-400 transition-colors">
+           <img src="https://flagcdn.com/w40/us.png" alt="" />
+            <p>+1</p>
+          </div>} {/* 👈 manual toggle */}
           {iconLeft && (
             <span className="absolute left-3 ">{iconLeft}</span>
           )}
@@ -175,7 +180,7 @@ const fileClasses = ` ${fileClassName}`;
             onChange={onChange}
             value={value}
             className={`${classes} ${iconLeft ? "pl-10" : ""} ${iconRight ? "pr-10" : ""
-            }`}
+              }`}
             {...props}
           />
           {iconRight && <span className="absolute right-3">{iconRight}</span>}

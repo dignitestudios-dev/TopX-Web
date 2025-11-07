@@ -50,7 +50,7 @@ export default function ChangeEmail() {
           variant="orange"
           className="w-full flex justify-center items-center"
         >
-          Save
+          Send OTP
         </Button>
       </form>
       <VerificationModal

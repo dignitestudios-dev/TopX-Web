@@ -8,10 +8,13 @@ import { FaChevronRight } from "react-icons/fa6";
 import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
+import CreateKnowledgePostModal from '../../components/global/CreateKnowledgePostModal';
 
 
 export default function Knowledge() {
     const [liked, setLiked] = useState({});
+    const [showCreateModal, setShowCreateModal] = useState(false);
+
 
     const toggleLike = (postId) => {
         setLiked(prev => ({
@@ -71,7 +74,7 @@ export default function Knowledge() {
     return (
         <div className="flex  min-h-screen max-w-7xl mx-auto">
             {/* Left Sidebar - 1/4 width */}
-            <div className="w-1/4  !bg-[#F9FAFB] overflow-y-auto pt-3">
+            <div className="w-1/4  !bg-[#F2F2F2] overflow-y-auto pt-3">
                 {/* Profile Card */}
 
                 <Profilecard smallcard={true} />
@@ -85,18 +88,22 @@ export default function Knowledge() {
             </div>
 
             {/* Middle Feed - 1/2 width */}
-            <div className="w-1/2 bg-gray-50 overflow-y-auto h-[40em] scrollbar-hide">
+            <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto h-[40em] scrollbar-hide">
                 <div className="max-w-2xl mx-auto p-4 space-y-5 overflow-y-auto h-[70em] scrollbar-hide">
                     {/* Create Post Input */}
-                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-full px-4 py-3">
+                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-2">
                         <input
                             type="text"
                             placeholder="Create Knowledge Post"
                             className="flex-1 text-sm text-gray-600 focus:outline-none"
                         />
-                        <button className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition">
+                        <button
+                            className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition"
+                            onClick={() => setShowCreateModal(true)}
+                        >
                             <Plus size={20} />
                         </button>
+
                     </div>
 
                     {/* Posts */}
@@ -127,12 +134,13 @@ export default function Knowledge() {
 
                             {/* Post Content */}
                             <div
-                                className={`p-[6em] bg-gradient-to-br ${post.gradient} flex items-center justify-center text-center rounded-2xl m-3`}
+                                className={`bg-gradient-to-br ${post.gradient}  rounded-2xl m-3 p-4`}
                             >
-                                <div>
-                                    <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full">
+                                  <span className="bg-white/20 text-white mt-[1em] text-xs px-3 py-1 rounded-full">
                                         {post.tag}
                                     </span>
+                                <div className='p-[5em] flex items-center justify-center text-center'>
+                                  
                                     <p className="text-white text-lg font-semibold mt-4 leading-snug">
                                         {post.text}
                                     </p>
@@ -168,7 +176,7 @@ export default function Knowledge() {
             </div>
 
             {/* Right Sidebar - 1/4 width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto  border-gray-200">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
                 <div className="p-0">
 
 
@@ -260,12 +268,12 @@ export default function Knowledge() {
                         </div>
                     </div>
 
-
-
-                    {open && <ChatWidget />} {/* Your actual chat panel */}
+                    {open && <ChatWidget />}
                     <FloatingChatButton onClick={() => setOpen(!open)} />
 
-
+                    {showCreateModal && (
+                        <CreateKnowledgePostModal onClose={() => setShowCreateModal(false)} />
+                    )}
 
                 </div>
             </div>

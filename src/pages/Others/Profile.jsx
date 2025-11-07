@@ -3,8 +3,7 @@ import LargeProfile from "../../components/app/profile/LargeProfile";
 import MySubscription from "../../components/homepage/MySubscription";
 import { BookOpen, Lightbulb } from "lucide-react";
 import { FiPlus } from "react-icons/fi";
-
-import { auth } from "../../assets/export";
+import { auth, topics } from "../../assets/export";
 import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
@@ -18,8 +17,41 @@ export default function Profile() {
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isProfilePostOpen, setIsProfilePostOpen] = useState(false);
 
+
+  const trending = [
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+    {
+        title: "Justin’s Basketball",
+        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+    },
+];
   return (
-    <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden  ">
+    <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 p-3 overflow-y-hidden  ">
 
       {/* Left Side */}
       <div className="w-full md:w-1/4  sticky top-0  overflow-hidden ">
@@ -98,15 +130,15 @@ export default function Profile() {
                   <FiPlus size={24} className="text-white" />
                 </button>
               </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {Array.from({ length: 5 }).map((_, index) => (
+                <div className="w-full grid grid-cols-3 gap-3 ">
+                  {trending.map((post, index) => (
                     <TopicPageCard
                     onClick={() => setIsProfilePostOpen(true)}
                       key={index}
-                      img={auth}
+                      img={topics}
                       title="Topic Page"
-                      description="Description"
-                      tags="Tags"
+                      description={post.desc}
+                      tags={post.hashtags}
                       Follows="50"
                       className="bg-white"
                     />

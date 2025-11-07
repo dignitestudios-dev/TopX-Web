@@ -76,7 +76,7 @@ export default function Mypost() {
     return (
         <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
             {/* Left Sidebar */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto pt-3 scrollbar-hide">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto pt-3 scrollbar-hide">
                 <Profilecard smallcard={true} />
                 <div className="pt-4">
                     <MySubscription />
@@ -132,7 +132,7 @@ export default function Mypost() {
 
 
             {/* Right Sidebar - 1/4 width */}
-            <div className="w-1/4 bg-[#F9FAFB] overflow-y-auto border-gray-200 scrollbar-hide">
+            <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
                 <div className="p-0">
 
 

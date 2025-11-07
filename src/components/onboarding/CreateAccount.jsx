@@ -44,7 +44,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
     },
   });
   console.log(errors);
-console.log(values);
+  console.log(values);
   return (
     <div className="bg-white flex items-center justify-center rounded-[19px] w-full p-6">
       <div className="flex flex-col w-full items-center justify-center">
@@ -94,26 +94,35 @@ console.log(values);
 
           {/* Contact No. */}
           <div className="w-full flex flex-col">
-            
-          
-            
-              <Input
+            <Input
               label="Contact No."
-                type="tel"
-                name="phone"
-                value={values.phone}
-                onChange={(e) => {
-                  const onlyNums = e.target.value.replace(/\D/g, "");
-                  setFieldValue("phone", onlyNums);
-                }}
-                onBlur={handleBlur}
-                placeholder="Contact No."
-                touched={touched.phone}
-                error={errors.phone}
-                showCountrySelector={true}
-                size="md"
-              />
-           
+              type="tel"
+              name="phone"
+              value={values.phone}
+              onChange={(e) => {
+                let nums = e.target.value.replace(/\D/g, ""); // sirf numbers
+                if (nums.length > 10) nums = nums.slice(0, 10); // max 10 digits for US
+                // format as (123) 456-7890
+                let formatted = nums;
+                if (nums.length > 6) {
+                  formatted = `(${nums.slice(0, 3)}) ${nums.slice(
+                    3,
+                    6
+                  )}-${nums.slice(6)}`;
+                } else if (nums.length > 3) {
+                  formatted = `(${nums.slice(0, 3)}) ${nums.slice(3)}`;
+                } else if (nums.length > 0) {
+                  formatted = `(${nums}`;
+                }
+                setFieldValue("phone", formatted);
+              }}
+              onBlur={handleBlur}
+              placeholder="(123) 456-7890"
+              touched={touched.phone}
+              error={errors.phone}
+              showCountrySelector={true}
+              size="md"
+            />
           </div>
 
           {/* Password */}
@@ -181,9 +190,8 @@ console.log(values);
             variant="orange"
             size="full"
             className="w-full flex items-center justify-center"
-          
           >
-            <span>Next Step</span>
+            <span>Sign Up</span>
             {loading && <FiLoader className="animate-spin text-lg" />}
           </Button>
 
@@ -193,7 +201,7 @@ console.log(values);
               Already have an account?
               <NavLink
                 className="font-semibold hover:no-underline hover:text-[#F85E00] text-[#F85E00] text-[14px]"
-                to={"/login"}
+                to={"/auth/login"}
               >
                 Log In
               </NavLink>

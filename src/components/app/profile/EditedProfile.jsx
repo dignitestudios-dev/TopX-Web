@@ -7,6 +7,7 @@ import { useState } from "react";
 
 export default function EditedProfile() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [email, setEmail] = useState("");
   const [activeCategories, setActiveCategories] = useState([]);
   const [preview, setPreview] = useState(null);
   const categories = [
@@ -18,7 +19,6 @@ export default function EditedProfile() {
     "Fails",
     "Weird",
     "Confessions & stories",
-
     "Opinions",
     "Lifehacks",
     "Oddly satisfying",
@@ -76,24 +76,24 @@ export default function EditedProfile() {
         <Input
           size="md"
           type="text"
-          placeholder="Name"
+          placeholder="Text goes here"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           label="Name"
         />
         <Input
           size="md"
-          type="email"
-          placeholder="Email"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          label="Email"
+          type="text"
+          placeholder="Text goes here"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          label="Username"
         />
       </div>
       <div className="w-full flex flex-col gap-2 py-3">
         <label>My Bio</label>
         <textarea
-          placeholder="My Bio"
+          placeholder="Text goes here   "
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
         />
       </div>
