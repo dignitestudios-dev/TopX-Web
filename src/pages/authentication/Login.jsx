@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { login, resetAuth } from "../../redux/slices/auth.slice";
 import { useFormik } from "formik";
 import { loginValues } from "../../init/authentication/dummyLoginValues";
 import { signInSchema } from "../../schema/authentication/dummyLoginSchema";
-import { login, resetAuth } from "../../redux/slices/auth.slice"
 import { NavLink, useNavigate } from "react-router";
 import { FiLoader } from "react-icons/fi";
 import { auth, authBg } from "../../assets/export";
@@ -12,14 +12,18 @@ import { FcGoogle } from "react-icons/fc";
 import Input from "../../components/common/Input";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
+import Cookies from "js-cookie";
 
 const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isLoading, error, success } = useSelector((state) => state.auth);
+  const { isLoading, error, success, accessToken,user } = useSelector((state) => state.auth);
 
+  console.log(accessToken, "accessToken")
+
+  console.log(user,"useralldata")
 
   const { values, handleBlur, handleChange, handleSubmit, errors, touched } =
     useFormik({
@@ -33,16 +37,19 @@ const Login = () => {
           password: values.password,
           role: "user",
         };
-
         const result = await dispatch(login(payload));
-
         if (result.payload?.accessToken) {
+          Cookies.set("access_token", result.payload.accessToken, {
+            expires: 7,
+            secure: false,   // localhost ke liye false rakhna zaroori
+            sameSite: "lax",
+          });
+
           navigate("/Home");
         }
       },
     });
 
-  // 🔥 Show error toast one-time
   useEffect(() => {
     if (error) {
       ErrorToast(error);
@@ -50,7 +57,6 @@ const Login = () => {
     }
   }, [error]);
 
-  // 🔥 Show success toast one-time
   useEffect(() => {
     if (success) {
       SuccessToast(success);
@@ -73,6 +79,7 @@ const Login = () => {
           <div className="bg-white flex items-start rounded-[19px] p-2 w-full">
             <div className="flex flex-col items-center justify-center w-full">
               <img src={auth} alt="orange_logo" className="w-[100px]" />
+
               <div className="flex flex-col mt-4 justify-center items-center">
                 <h2 className="text-[32px] font-[600] leading-[48px]">Log In</h2>
                 <p className="text-[16px] font-normal text-center leading-[27px] text-[#3C3C43D9]">
