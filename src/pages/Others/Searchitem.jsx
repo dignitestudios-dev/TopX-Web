@@ -9,6 +9,7 @@ import PostCard from '../../components/global/PostCard';
 
 
 
+
 const trending = [
     {
         title: "Justin’s Basketball",
