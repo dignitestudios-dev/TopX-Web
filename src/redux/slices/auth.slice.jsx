@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
-
+ 
 const initialState = {
   isLoading: false,
   error: null,
@@ -8,37 +8,27 @@ const initialState = {
   user: null,
   accessToken: null,
 };
-
-
-// LOGIN
+ 
+// ================= LOGIN =================
 export const login = createAsyncThunk(
   "auth/login",
   async (payload, thunkAPI) => {
     try {
-      const res = await axios.post("/login", payload);
-
-      const {
-        message,
-        token,
-        access_token,
-        user,
-        user_data,
-        data,
-      } = res.data || {};
-
-      const foundToken =
-        token ?? access_token ?? data?.token ?? data?.access_token ?? null;
-
-      const foundUser = user ?? user_data ?? data?.user ?? null;
-
-      if (!foundToken) {
-        return thunkAPI.rejectWithValue("Token not found");
+      const res = await axios.post("/auth/signIn", payload);
+ 
+      const api = res.data; // full API response
+      const token = api?.data?.token || null;
+      const user = api?.data?.user || null;
+      const message = api?.message || "Login successful";
+ 
+      if (!token) {
+        return thunkAPI.rejectWithValue("Token not found in response");
       }
-
+ 
       return {
-        message: message || "Login successful",
-        accessToken: foundToken,
-        user: foundUser,
+        message,
+        accessToken: token,
+        user,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -47,8 +37,8 @@ export const login = createAsyncThunk(
     }
   }
 );
-
-// GET PROFILE
+ 
+// ================= GET PROFILE =================
 export const getProfile = createAsyncThunk(
   "auth/getProfile",
   async (_, thunkAPI) => {
@@ -62,8 +52,8 @@ export const getProfile = createAsyncThunk(
     }
   }
 );
-
-// LOGOUT
+ 
+// ================= LOGOUT =================
 export const logout = createAsyncThunk(
   "auth/logout",
   async (_, thunkAPI) => {
@@ -75,7 +65,7 @@ export const logout = createAsyncThunk(
     }
   }
 );
-
+ 
 // ================= SLICE =================
 const authSlice = createSlice({
   name: "auth",
@@ -98,12 +88,13 @@ const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
         state.success = action.payload.message;
+ 
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
-
+ 
       // GET PROFILE
       .addCase(getProfile.pending, (state) => {
         state.isLoading = true;
@@ -116,7 +107,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
-
+ 
       // LOGOUT
       .addCase(logout.pending, (state) => {
         state.isLoading = true;
@@ -129,15 +120,16 @@ const authSlice = createSlice({
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
-
-        // even if API fails, clear locally
+ 
+        // even if API call fails → clear local session
         state.user = null;
         state.accessToken = null;
-
+ 
         state.error = action.payload;
       });
   },
 });
-
+ 
 export const { resetAuth } = authSlice.actions;
 export default authSlice.reducer;
+  

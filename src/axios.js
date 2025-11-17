@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 // ================= BASE URL =================
-export const baseUrl = "baseurl";
+export const baseUrl = "http://3.80.71.34";
 
 // ================= DEVICE FINGERPRINT =================
 // Load once (not on every request = faster)
