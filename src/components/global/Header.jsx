@@ -13,14 +13,17 @@ import {
     X,
     Layers
 } from 'lucide-react';
-import { Logo, profile } from "../../assets/export";
+import { dummyprofile, Logo, profile } from "../../assets/export";
 import { Link, useLocation, useNavigate } from 'react-router';
 import NotificationPopup from './NotificationPopup';
 import { RiMoneyDollarCircleFill } from "react-icons/ri";
 import RecentActivityPopup from './RecentActivityPopup';
+import { useDispatch, useSelector } from 'react-redux';
+import { logout } from '../../redux/slices/auth.slice';
 
 
 const Header = () => {
+    const dispatch = useDispatch();
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const location = useLocation();
@@ -32,7 +35,10 @@ const Header = () => {
     const notificationRef = useRef(null);
 
     const navigate = useNavigate("");
-
+const handleLogout = () => {
+    dispatch(logout());
+    navigate("/auth/login");
+}
     const navItems = [
         { icon: Home, to: "/home", label: 'Home' },
         { icon: Layers, to: "/subscriptions", label: 'Subscriptions' },
@@ -42,7 +48,7 @@ const Header = () => {
         { icon: RiMoneyDollarCircleFill, to: "/affiliates", label: 'Affiliates' },
         { icon: Bell, to: "/notifications", label: 'Notifications' },
     ];
-
+const {user} = useSelector((state)=>state.auth);
     // Click outside handler
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -166,9 +172,9 @@ const Header = () => {
                         className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
                     >
                         <div className="w-8 h-8">
-                            <img src={profile} loading="lazy" alt="profile" className="h-8 w-8 rounded-full" />
+                            <img src={user.profilePicture || dummyprofile} loading="lazy" alt="profile" className="h-8 w-8 rounded-full" />
                         </div>
-                        <span className="text-black font-[500] text-sm">Mike Smith</span>
+                        <span className="text-black font-[500] text-sm">{user.name || "Not Avaiable"}</span>
                         <ChevronDown size={16} className="text-gray-600 hidden sm:block" />
                     </button>
 
@@ -195,11 +201,12 @@ const Header = () => {
                                     Settings
                                 </button>
                             </Link>
-                            <Link to="/auth/login">
-                                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600">
-                                    Logout
-                                </button>
-                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                            >
+                                Logout
+                            </button>
                         </div>
                     )}
                 </div>

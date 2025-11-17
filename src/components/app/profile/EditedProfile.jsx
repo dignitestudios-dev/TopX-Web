@@ -4,12 +4,16 @@ import Input from "../../common/Input";
 import { BiArrowBack } from "react-icons/bi";
 import { auth } from "../../../assets/export";
 import { useState } from "react";
+import { useSelector } from "react-redux";
+
 
 export default function EditedProfile() {
   const [searchQuery, setSearchQuery] = useState("");
   const [email, setEmail] = useState("");
   const [activeCategories, setActiveCategories] = useState([]);
   const [preview, setPreview] = useState(null);
+  const {user} = useSelector((state) => state.auth);
+  console.log(user,"user123");
   const categories = [
     "Funny",
     "Jokes",

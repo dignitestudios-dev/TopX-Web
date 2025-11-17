@@ -34,13 +34,10 @@ import watch from "./watch.svg"
 import gamingconsole from "./gamingconsole.svg"
 import tshirt from "./tshirt.svg"
 import maindollar from "./maindollar.svg"
-
-// export {
-//     FILENAME(PASCALCASE)
-// }
-
+import dummyprofile from "./dummyprofile.avif"
 export {
   user,
+  dummyprofile,
   Logo,
   NoInternetImage,
   verificationColor,
