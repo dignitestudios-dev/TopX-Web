@@ -14,7 +14,7 @@ import PersonalDetails from "../../components/onboarding/PersonalDetails";
 import Interests from "../../components/onboarding/Interests";
 import AccountCreated from "../../components/onboarding/AccountCreated";
 export default function SignUp() {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(4);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 

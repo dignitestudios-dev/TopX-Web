@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
- 
+
 const initialState = {
   isLoading: false,
   error: null,
@@ -8,23 +8,23 @@ const initialState = {
   user: null,
   accessToken: null,
 };
- 
+
 // ================= LOGIN =================
 export const login = createAsyncThunk(
   "auth/login",
   async (payload, thunkAPI) => {
     try {
       const res = await axios.post("/auth/signIn", payload);
- 
+
       const api = res.data; // full API response
       const token = api?.data?.token || null;
       const user = api?.data?.user || null;
       const message = api?.message || "Login successful";
- 
+
       if (!token) {
         return thunkAPI.rejectWithValue("Token not found in response");
       }
- 
+
       return {
         message,
         accessToken: token,
@@ -37,7 +37,38 @@ export const login = createAsyncThunk(
     }
   }
 );
- 
+
+
+export const signUp = createAsyncThunk(
+  "auth/signUp",
+  async (formData, thunkAPI) => {
+    try {
+      const res = await axios.post("/auth/signUp", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const api = res.data;
+      const token = api?.data?.token || null;
+      const user = api?.data?.user || null;
+
+      if (!token) {
+        return thunkAPI.rejectWithValue("Token missing");
+      }
+
+      return {
+        message: api?.message || "Signup successful",
+        accessToken: token,
+        user,
+      };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Signup failed"
+      );
+    }
+  }
+);
+
+
 // ================= GET PROFILE =================
 export const getProfile = createAsyncThunk(
   "auth/getProfile",
@@ -52,7 +83,7 @@ export const getProfile = createAsyncThunk(
     }
   }
 );
- 
+
 // ================= LOGOUT =================
 export const logout = createAsyncThunk(
   "auth/logout",
@@ -65,7 +96,7 @@ export const logout = createAsyncThunk(
     }
   }
 );
- 
+
 // ================= SLICE =================
 const authSlice = createSlice({
   name: "auth",
@@ -88,13 +119,29 @@ const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
         state.success = action.payload.message;
- 
+
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
- 
+      // SIGNUP
+      .addCase(signUp.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+        state.success = null;
+      })
+      .addCase(signUp.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.accessToken = action.payload.accessToken;
+        state.user = action.payload.user;
+        state.success = action.payload.message;
+      })
+      .addCase(signUp.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload || "Signup failed";
+      })
+
       // GET PROFILE
       .addCase(getProfile.pending, (state) => {
         state.isLoading = true;
@@ -107,7 +154,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       })
- 
+
       // LOGOUT
       .addCase(logout.pending, (state) => {
         state.isLoading = true;
@@ -120,16 +167,16 @@ const authSlice = createSlice({
       })
       .addCase(logout.rejected, (state, action) => {
         state.isLoading = false;
- 
+
         // even if API call fails → clear local session
         state.user = null;
         state.accessToken = null;
- 
+
         state.error = action.payload;
       });
   },
 });
- 
+
 export const { resetAuth } = authSlice.actions;
 export default authSlice.reducer;
-  
+

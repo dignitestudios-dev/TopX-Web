@@ -6,7 +6,7 @@ import { loginValues } from "../../init/authentication/dummyLoginValues";
 import { signInSchema } from "../../schema/authentication/dummyLoginSchema";
 import { NavLink, useNavigate } from "react-router";
 import { FiLoader } from "react-icons/fi";
-import { auth, authBg } from "../../assets/export";
+import { authlogo, authBg } from "../../assets/export";
 import { IoLogoApple } from "react-icons/io";
 import { FcGoogle } from "react-icons/fc";
 import Input from "../../components/common/Input";
@@ -78,7 +78,7 @@ const Login = () => {
 
           <div className="bg-white flex items-start rounded-[19px] p-2 w-full">
             <div className="flex flex-col items-center justify-center w-full">
-              <img src={auth} alt="orange_logo" className="w-[100px]" />
+              <img src={authlogo} alt="orange_logo" className="w-[100px]" />
 
               <div className="flex flex-col mt-4 justify-center items-center">
                 <h2 className="text-[32px] font-[600] leading-[48px]">Log In</h2>

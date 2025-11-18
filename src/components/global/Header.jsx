@@ -35,10 +35,10 @@ const Header = () => {
     const notificationRef = useRef(null);
 
     const navigate = useNavigate("");
-const handleLogout = () => {
-    dispatch(logout());
-    navigate("/auth/login");
-}
+    const handleLogout = () => {
+        dispatch(logout());
+        navigate("/auth/login");
+    }
     const navItems = [
         { icon: Home, to: "/home", label: 'Home' },
         { icon: Layers, to: "/subscriptions", label: 'Subscriptions' },
@@ -48,7 +48,7 @@ const handleLogout = () => {
         { icon: RiMoneyDollarCircleFill, to: "/affiliates", label: 'Affiliates' },
         { icon: Bell, to: "/notifications", label: 'Notifications' },
     ];
-const {user} = useSelector((state)=>state.auth);
+    const { user } = useSelector((state) => state.auth);
     // Click outside handler
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -56,13 +56,13 @@ const {user} = useSelector((state)=>state.auth);
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsDropdownOpen(false);
             }
-            
+
             // Notification close kro agar click outside ho
             if (notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setIsNotificationOpen(false);
             }
 
-               if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setIsRecentOpen(false);
             }
         };
@@ -76,7 +76,7 @@ const {user} = useSelector((state)=>state.auth);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isDropdownOpen, isNotificationOpen,isRecentOpen]);
+    }, [isDropdownOpen, isNotificationOpen, isRecentOpen]);
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -92,12 +92,12 @@ const {user} = useSelector((state)=>state.auth);
                 <div className="hidden md:flex flex-1 max-w-md pt-3">
                     <div className="relative w-full">
                         <Link to="/search-items">
-                        <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            className="w-[22em] pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
-                        />
+                            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search"
+                                className="w-[22em] pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
+                            />
                         </Link>
                     </div>
                 </div>
@@ -172,9 +172,35 @@ const {user} = useSelector((state)=>state.auth);
                         className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
                     >
                         <div className="w-8 h-8">
-                            <img src={user.profilePicture || dummyprofile} loading="lazy" alt="profile" className="h-8 w-8 rounded-full" />
+                            {
+                                user?.profilePicture
+                                    ? (
+                                        <img
+                                            src={user.profilePicture}
+                                            loading="lazy"
+                                            alt="profile"
+                                            className="h-8 w-8 rounded-full"
+                                        />
+                                    )
+                                    : dummyprofile
+                                        ? (
+                                            <img
+                                                src={dummyprofile}
+                                                loading="lazy"
+                                                alt="profile"
+                                                className="h-8 w-8 rounded-full"
+                                            />
+                                        )
+                                        : (
+                                            <span>No Data</span>
+                                        )
+                            }
+
                         </div>
-                        <span className="text-black font-[500] text-sm">{user.name || "Not Avaiable"}</span>
+                        <span className="text-black font-[500] text-sm">
+                            {user?.name?.trim() ? user.name : "Not Available"}
+                        </span>
+
                         <ChevronDown size={16} className="text-gray-600 hidden sm:block" />
                     </button>
 
@@ -190,12 +216,12 @@ const {user} = useSelector((state)=>state.auth);
                                     My Posts
                                 </button>
                             </Link>
-                                <button
-                                    onClick={() => setIsRecentOpen(true)}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                                >
-                                    Recent Activity
-                                </button>
+                            <button
+                                onClick={() => setIsRecentOpen(true)}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                            >
+                                Recent Activity
+                            </button>
                             <Link to="/setting">
                                 <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                                     Settings

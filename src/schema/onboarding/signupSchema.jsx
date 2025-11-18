@@ -19,9 +19,11 @@ export const signupSchema = Yup.object().shape({
     .matches(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, "Invalid email format."),
 
   phone: Yup.string()
-    .transform((value) => value.replace(/\D/g, ""))
-    .matches(/^[0-9]{10}$/, "Phone number must be exactly 10 digits.")
-    .required("Please enter your phone number"),
+    .required("Phone number is required")
+    .matches(
+      /^\(\d{3}\)\s\d{3}-\d{4}$/,
+      "Please enter a valid phone number in (123) 456-7890 format"
+    ),
 
 
   password: Yup.string()
