@@ -16,7 +16,7 @@ export default function LargeProfile({ setIsEditProfile }) {
             <div className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41]  ">
                 <div className='flex relative -bottom-[62px]  px-4 gap-3'>
                     <div className='relative '>
-                        <img src={profilehigh} alt="" className='w-[135px] h-[135px] rounded-full' />
+                        <img src={user.profilePicture} alt="" className='w-[135px] h-[135px] rounded-full' />
                         <button onClick={() => setIsEditProfile(true)} className='absolute bottom-1 right-2 w-9 h-9 bg-gradient-to-l from-[#DE4B12] to-[#E56F41] rounded-full flex items-center justify-center'>
                             <Edit className="w-6 h-6 text-white" />
                         </button>

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Plus, Image } from 'lucide-react';
 import Button from '../../common/Button';
 import Input from '../../common/Input';
+import { useDispatch, useSelector } from 'react-redux';
+import { gettopics } from '../../../redux/slices/topics.slice';
 
-export default function PageCreateModal({ setIsOpen, isOpen ,setSelectedType }) {
-  
+export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) {
+
   const [formData, setFormData] = useState({
     name: '',
     about: '',
@@ -35,17 +37,26 @@ export default function PageCreateModal({ setIsOpen, isOpen ,setSelectedType }) 
     setFormData({ name: '', about: '', topic: '', keywords: '', pageType: 'public' });
     setUploadedImage(null);
   };
+  const dispatch = useDispatch();
+
+  const { alltopics, isLoading } = useSelector((state) => state.topics);
+
+  useEffect(() => {
+    dispatch(gettopics());
+  }, [dispatch])
+
+  console.log(alltopics, "alltopics")
 
   return (
     <div >
 
       {isOpen && (
         <>
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        
+
           />
-          
+
           <div className="fixed inset-0 z-50 flex items-center justify-center p-8">
             <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl animate-slideUp overflow-hidden">
               <div className="p-8">
@@ -60,73 +71,93 @@ export default function PageCreateModal({ setIsOpen, isOpen ,setSelectedType }) 
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mb-6">
-               
-                    <Input
-                      label="Name"
-                      size="md"
-                      type="text"
-                      placeholder="Text goes here"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
-                   
-                    />
-             
 
-                  
-                    <Input
-                      label="About"
-                      size="md"
-                      type="text"
-                      placeholder="Text goes here"
-                      value={formData.about}
-                      onChange={(e) => handleInputChange('about', e.target.value)}
-                   
-                    />
-                 
+                  <Input
+                    label="Name"
+                    size="md"
+                    type="text"
+                    placeholder="Text goes here"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+
+                  />
+
+
+
+                  <Input
+                    label="About"
+                    size="md"
+                    type="text"
+                    placeholder="Text goes here"
+                    value={formData.about}
+                    onChange={(e) => handleInputChange('about', e.target.value)}
+
+                  />
+
                 </div>
 
                 <div className="grid grid-cols-2 gap-6 mb-8">
-                 
-                    <Input
-                      label="Topic/ Category"
-                      size="md"
-                      type="text"
-                      placeholder="Text goes here"
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Topic / Category
+                    </label>
+
+                    <select
+                      disabled={isLoading}
+                      className={`w-full border rounded-lg px-4 py-2 text-gray-700 focus:ring-2 
+      focus:ring-orange-500 focus:outline-none 
+      ${isLoading ? "bg-gray-100 cursor-not-allowed" : ""}`}
                       value={formData.topic}
-                      onChange={(e) => handleInputChange('topic', e.target.value)}
-                     
-                    />
-                  
-                    <Input
-                      label="Keywords"
-                      size="md"
-                      type="text"
-                      placeholder="Text goes here"
-                      value={formData.keywords}
-                      onChange={(e) => handleInputChange('keywords', e.target.value)}
-                    
-                    />
+                      onChange={(e) => handleInputChange("topic", e.target.value)}
+                    >
+                      {isLoading ? (
+                        <option>Loading topics...</option>
+                      ) : (
+                        <>
+                          <option value="">Select Topic</option>
+                          {alltopics?.map((item) => (
+                            <option key={item._id} value={item.name}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </>
+                      )}
+                    </select>
                   </div>
-              
+
+
+
+                  <Input
+                    label="Keywords"
+                    size="md"
+                    type="text"
+                    placeholder="Text goes here"
+                    value={formData.keywords}
+                    onChange={(e) => handleInputChange('keywords', e.target.value)}
+
+                  />
+                </div>
+
 
                 <div className="grid grid-cols-2 gap-6 mb-8">
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-4">
                       Topic Page Type
                     </label>
-                  
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                       fileClassName="w-[100px] h-[100px]"
-                       preview={uploadedImage} 
-                      />
-                      
-                         
-                    
 
-                    
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      fileClassName="w-[100px] h-[100px]"
+                      preview={uploadedImage}
+                    />
+
+
+
+
+
                   </div>
 
                   <div>
@@ -172,7 +203,7 @@ export default function PageCreateModal({ setIsOpen, isOpen ,setSelectedType }) 
                 </div>
 
                 <Button
-                type="button"
+                  type="button"
                   onClick={handleCreatePage}
                   className="w-full flex  justify-center" size="lg" variant="orange"
                 >
@@ -184,7 +215,7 @@ export default function PageCreateModal({ setIsOpen, isOpen ,setSelectedType }) 
         </>
       )}
 
-     
+
     </div>
   );
 }
