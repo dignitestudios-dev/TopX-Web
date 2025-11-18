@@ -13,7 +13,6 @@ import CreateKnowledgePostModal from '../../components/global/CreateKnowledgePos
 
 export default function Knowledge() {
     const [liked, setLiked] = useState({});
-    const [showCreateModal, setShowCreateModal] = useState(false);
 
 
     const toggleLike = (postId) => {
@@ -90,21 +89,7 @@ export default function Knowledge() {
             {/* Middle Feed - 1/2 width */}
             <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto h-[40em] scrollbar-hide">
                 <div className="max-w-2xl mx-auto p-4 space-y-5 overflow-y-auto h-[70em] scrollbar-hide">
-                    {/* Create Post Input */}
-                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-2">
-                        <input
-                            type="text"
-                            placeholder="Create Knowledge Post"
-                            className="flex-1 text-sm text-gray-600 focus:outline-none"
-                        />
-                        <button
-                            className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition"
-                            onClick={() => setShowCreateModal(true)}
-                        >
-                            <Plus size={20} />
-                        </button>
-
-                    </div>
+                   
 
                     {/* Posts */}
                     {posts.map((post) => (
@@ -271,10 +256,7 @@ export default function Knowledge() {
                     {open && <ChatWidget />}
                     <FloatingChatButton onClick={() => setOpen(!open)} />
 
-                    {showCreateModal && (
-                        <CreateKnowledgePostModal onClose={() => setShowCreateModal(false)} />
-                    )}
-
+               
                 </div>
             </div>
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "react-modal";
+import { useSelector } from "react-redux";
 
 export default function VerificationModal({
   isOpen = false,
@@ -10,11 +11,40 @@ export default function VerificationModal({
   onVerify,
   onResend,
   isVerifying = false,
-  length = 4,
-isType,
+  length = 5,
+  isType,
 }) {
   const [values, setValues] = useState(Array.from({ length }, () => ""));
+  const [timer, setTimer] = useState(0);
+
+  const{user} = useSelector((state)=>state.auth);
+
+  console.log(user,"user")
+
   const inputsRef = useRef([]);
+
+
+  const handleResendClick = async () => {
+    if (onResend) onResend();
+    setTimer(30); // start 15 sec timer
+  };
+
+
+  useEffect(() => {
+    if (timer === 0) return;
+
+    const interval = setInterval(() => {
+      setTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timer]);
 
 
 
@@ -87,7 +117,7 @@ isType,
         aria-label="Close"
         className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-7 h-7"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
 
       <div className="px-8 pt-12 pb-8 text-center">
@@ -110,11 +140,10 @@ isType,
                   onChange={(e) => handleChange(i, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   onPaste={(e) => handlePaste(i, e)}
-                  className={`w-full h-full text-center text-xl md:text-2xl font-semibold rounded-[16px] border transition focus:outline-none ${
-                    v
+                  className={`w-full h-full text-center text-xl md:text-2xl font-semibold rounded-[16px] border transition focus:outline-none ${v
                       ? "bg-[#FFF2EB] border-transparent text-[#F85E00]"
                       : "bg-[#F9FAFA] border-[#E5E7EB] text-[#111]"
-                  } ${isFocused ? "ring-2 ring-[#F85E00]" : ""}`}
+                    } ${isFocused ? "ring-2 ring-[#F85E00]" : ""}`}
                 />
               </div>
             );
@@ -125,11 +154,14 @@ isType,
           <span className="text-[#111]">Didn’t receive code? </span>
           <button
             type="button"
-            onClick={onResend}
-            className="text-[#F85E00] font-semibold hover:underline"
+            onClick={handleResendClick}
+            disabled={timer > 0}
+            className={`font-semibold ${timer > 0 ? "text-gray-400 cursor-not-allowed" : "text-[#F85E00] hover:underline"
+              }`}
           >
-            Resend now
+            {timer > 0 ? `Resend in ${timer}s` : "Resend now"}
           </button>
+
         </div>
 
         <button

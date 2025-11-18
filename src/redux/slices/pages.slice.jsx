@@ -2,10 +2,15 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 
 const initialState = {
-  isLoading: false,
+  pagesLoading: false,
   error: null,
   success: null,
-  pages: null, // yahan save hoga created page
+  pages: null,       // createPage response
+  myPages: [],       // <-- list of pages from GET API
+  pagination: null,  // <-- pagination info
+  // NEW
+  pageDetailLoading: false,
+  pageDetail: null,
 };
 
 // ================= CREATE PAGE =================
@@ -25,6 +30,37 @@ export const createPage = createAsyncThunk(
   }
 );
 
+export const getPageDetail = createAsyncThunk(
+  "pages/getPageDetail",
+  async (pageId, thunkAPI) => {
+    try {
+      const res = await axios.get(`/pages/${pageId}`);
+      return res.data?.data; // returns page object
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch page detail"
+      );
+    }
+  }
+);
+
+
+// ================= FETCH MY PAGES =================
+export const fetchMyPages = createAsyncThunk(
+  "pages/fetchMyPages",
+  async ({ page = 1, limit = 10 }, thunkAPI) => {
+    try {
+      const res = await axios.get(`/pages/my?page=${page}&limit=${limit}`);
+      return res.data; // full response with pagination + data
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch pages"
+      );
+    }
+  }
+);
+
+
 // ================= SLICE =================
 const pagesSlice = createSlice({
   name: "pages",
@@ -39,15 +75,40 @@ const pagesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(createPage.pending, (state) => {
-        state.isLoading = true;
+        state.pagesLoading = true;
       })
       .addCase(createPage.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.pagesLoading = false;
         state.pages = action.payload; // CORRECT
         state.success = true;
       })
       .addCase(createPage.rejected, (state, action) => {
-        state.isLoading = false;
+        state.pagesLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(getPageDetail.pending, (state) => {
+        state.pageDetailLoading = true;
+      })
+      .addCase(getPageDetail.fulfilled, (state, action) => {
+        state.pageDetailLoading = false;
+        state.pageDetail = action.payload;
+      })
+      .addCase(getPageDetail.rejected, (state, action) => {
+        state.pageDetailLoading = false;
+        state.error = action.payload;
+      })
+      // ******** FETCH MY PAGES ********
+      .addCase(fetchMyPages.pending, (state) => {
+        state.pagesLoading = true;
+      })
+      .addCase(fetchMyPages.fulfilled, (state, action) => {
+        state.pagesLoading = false;
+        state.myPages = action.payload.data; // array of pages
+        state.pagination = action.payload.pagination;
+        state.success = true;
+      })
+      .addCase(fetchMyPages.rejected, (state, action) => {
+        state.pagesLoading = false;
         state.error = action.payload;
       });
   },

@@ -84,45 +84,46 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           setSelectedType={setSelectedType}
         />
       )}
-      {selectedType === "upload Post" && (
+   {selectedType?.type === "upload Post" && (
         <UploadPostStory
           setIsOpen={setSelectedOption}
           isOpen={selectedOption}
           title={title}
           setSelectedType={setSelectedType}
-          />
-        )}
+          selectedPages={selectedType.pages}   // 📌 IDs yahan aa rahi hain
+        />
+      )}
 
       {selectedType === "Done" && title === "Create Post" && (
-  <SuccessModal
-    setIsOpen={setSelectedOption}
-    isOpen={selectedOption}
-    title={"Post Created!"}
-  />
-)}
-{selectedType === "Create New Page"  && (
-  <PageCreateModal
-    setIsOpen={setSelectedOption}
-    isOpen={selectedOption}
-    setSelectedType={setSelectedType}
-   
-  />
-)}
-{selectedType === "Page done" && title === "Create New Page" && (
-  <SuccessModal
-    setIsOpen={setSelectedOption}
-    isOpen={selectedOption}
-    title={"Page Created!"}
-  />
-)}
-{selectedType === "Start Live Streaming (Go Live)" && (
-  <LiveStreaming
-    setIsOpen={setSelectedOption}
-    isOpen={selectedOption}
-    setSelectedType={setSelectedType}
-    title={title}
-  />
-)}
+        <SuccessModal
+          setIsOpen={setSelectedOption}
+          isOpen={selectedOption}
+          title={"Post Created!"}
+        />
+      )}
+      {selectedType === "Create New Page" && (
+        <PageCreateModal
+          setIsOpen={setSelectedOption}
+          isOpen={selectedOption}
+          setSelectedType={setSelectedType}
+
+        />
+      )}
+      {selectedType === "Page done" && title === "Create New Page" && (
+        <SuccessModal
+          setIsOpen={setSelectedOption}
+          isOpen={selectedOption}
+          title={"Page Created!"}
+        />
+      )}
+      {selectedType === "Start Live Streaming (Go Live)" && (
+        <LiveStreaming
+          setIsOpen={setSelectedOption}
+          isOpen={selectedOption}
+          setSelectedType={setSelectedType}
+          title={title}
+        />
+      )}
     </div>
   );
 }

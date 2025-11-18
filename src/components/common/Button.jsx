@@ -5,24 +5,26 @@ const Button = forwardRef(
     {
       children,
       variant = "",
-      type,
+      type = "button",
       size = "",
-      icon, 
-      leftIcon, 
+      icon,
+      leftIcon,
       disabled = false,
       loading = false,
       className = "",
       onClick,
-      isToggle = false, // 👈 toggle mode
-      isOn, // 👈 current toggle state (true/false)
+      isToggle = false,
+      isOn,
       ...props
     },
     ref
   ) => {
-    // Normal Variants
-    const baseClasses =
-      "inline-flex items-center font-medium rounded-[12px] transition-all duration-200";
 
+    // BASE STYLES
+    const baseClasses =
+      "inline-flex items-center justify-center font-medium rounded-[12px] transition-all duration-200";
+
+    // VARIANTS
     const variants = {
       orange: "bg-[#F85E00] hover:bg-[#e05200] text-white",
       primary: "bg-blue-600 hover:bg-blue-700 text-white",
@@ -32,15 +34,20 @@ const Button = forwardRef(
       outline: "border border-gray-300 text-gray-700 hover:bg-gray-50",
     };
 
+    // SIZES (FIXED)
     const sizes = {
       sm: "px-3 py-1.5 text-sm",
       md: "px-4 py-2 text-sm",
       lg: "px-6 py-3 text-base",
       xl: "px-8 py-4 text-lg",
-      full: "w-full h-[48px] md:w-[500px] text-base py-2 mt-3",
+
+      // FIXED FULL SIZE → Always responsive + no text breaking
+      full: "w-full h-[48px] text-base py-2 mt-3",
     };
 
-    // ✅ If toggle mode enable → ignore normal design
+    // =======================
+    // 🔘 TOGGLE SWITCH BUTTON
+    // =======================
     if (isToggle) {
       return (
         <button
@@ -60,6 +67,7 @@ const Button = forwardRef(
       );
     }
 
+    // NORMAL BUTTON CLASSES
     const classes = `${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`;
 
     return (
@@ -74,8 +82,11 @@ const Button = forwardRef(
         {loading && (
           <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
         )}
+
         {leftIcon && !loading && <span className="mr-2">{leftIcon}</span>}
+
         {children}
+
         {icon && !loading && <span className="ml-2">{icon}</span>}
       </button>
     );

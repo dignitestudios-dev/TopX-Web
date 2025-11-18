@@ -51,7 +51,7 @@ const PostStoryModal = ({ onClose }) => {
                 <Plus size={18} className="text-orange-500" />
               </div>
               <span className="text-[15px] font-medium text-gray-800">
-                Create New Page
+                Create New PageS
               </span>
             </div>
           </div>

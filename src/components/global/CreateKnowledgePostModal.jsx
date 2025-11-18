@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, Plus } from "lucide-react";
 
-const CreateKnowledgePostModal = ({ onClose }) => {
+const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }) => {
   const [text, setText] = useState("");
   const [mainCategory, setMainCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -11,6 +11,9 @@ const CreateKnowledgePostModal = ({ onClose }) => {
   const [postStyle, setPostStyle] = useState("Classic");
   const [fontSize, setFontSize] = useState("base");
   const [isBold, setIsBold] = useState(false);
+
+  console.log(selectedPageId, "selectedPageId");
+  console.log(selectedSubTopics, "selectedSubTopics");
 
   const backgrounds = [
     "https://images.unsplash.com/photo-1557683316-973673baf926?w=600",
@@ -88,9 +91,8 @@ const CreateKnowledgePostModal = ({ onClose }) => {
                   <div
                     key={idx}
                     onClick={() => setSelectedBg(bg)}
-                    className={`relative rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                      selectedBg === bg ? "border-orange-500" : "border-gray-300"
-                    }`}
+                    className={`relative rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${selectedBg === bg ? "border-orange-500" : "border-gray-300"
+                      }`}
                   >
                     <img src={bg} alt="bg" className="w-full h-14 object-cover" />
                   </div>
@@ -103,11 +105,10 @@ const CreateKnowledgePostModal = ({ onClose }) => {
               <button
                 onClick={() => setShowPreview(true)}
                 disabled={!text || !selectedBg || !mainCategory}
-                className={`w-full py-2 rounded-lg font-semibold transition-all ${
-                  !text || !selectedBg || !mainCategory
+                className={`w-full py-2 rounded-lg font-semibold transition-all ${!text || !selectedBg || !mainCategory
                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                     : "bg-orange-500 hover:bg-orange-600 text-white"
-                }`}
+                  }`}
               >
                 Preview
               </button>
