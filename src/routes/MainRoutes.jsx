@@ -1,4 +1,3 @@
-// src/routes/MainRoutes.jsx
 import { Routes, Route } from "react-router";
 import Home from "../pages/Others/Home";
 import Header from "../components/global/Header";
@@ -10,39 +9,131 @@ import Golive from "../pages/Others/Golive";
 import Affiliates from "../pages/Others/Affiliates";
 import Trending from "../pages/Others/Trending";
 import Mypost from "../pages/Others/Mypost";
-import { useState } from "react";
-import FloatingChatButton from '../components/global/ChatWidget';
 import SubscriptionsCategory from "../pages/Others/SubscriptionsCategory";
 import OtherProfile from "../pages/Others/OtherProfile";
 import Suggestpage from "../pages/Others/Suggestpage";
 import Searchitem from "../pages/Others/Searchitem";
-
-
+import { useState } from "react";
+import FloatingChatButton from '../components/global/ChatWidget';
+import ProtectedRoute from "./ProtectedRoute";
 
 const MainRoutes = () => {
-        const [open, setOpen] = useState(false);
-    
+    const [open, setOpen] = useState(false);
+
     return (
         <>
             <Header />
             <main style={{ minHeight: "80vh" }} className="bg-[#F2F2F2]">
                 <Routes>
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/setting" element={<Setting />} />
-                    <Route path="/subscriptions" element={<Subscriptions />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/knowledge" element={<Knowledge />} />
-                    <Route path="/go-live" element={<Golive />} />
-                    <Route path="/affiliates" element={<Affiliates />} />
-                    <Route path="/trending" element={<Trending />} />
-                    <Route path="/my-posts" element={<Mypost />} />
-                    <Route path="/subscriptions-category" element={<SubscriptionsCategory />} />
-                    <Route path="/other-profile" element={<OtherProfile />} />
-                    <Route path="/suggested-pages" element={<Suggestpage />} />
-                    <Route path="/search-items" element={<Searchitem />} />
+                    <Route
+                        path="/home"
+                        element={
+                            <ProtectedRoute>
+                                <Home />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/setting"
+                        element={
+                            <ProtectedRoute>
+                                <Setting />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/subscriptions"
+                        element={
+                            <ProtectedRoute>
+                                <Subscriptions />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <Profile />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/knowledge"
+                        element={
+                            <ProtectedRoute>
+                                <Knowledge />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/go-live"
+                        element={
+                            <ProtectedRoute>
+                                <Golive />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/affiliates"
+                        element={
+                            <ProtectedRoute>
+                                <Affiliates />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/trending"
+                        element={
+                            <ProtectedRoute>
+                                <Trending />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/my-posts"
+                        element={
+                            <ProtectedRoute>
+                                <Mypost />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/subscriptions-category"
+                        element={
+                            <ProtectedRoute>
+                                <SubscriptionsCategory />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/other-profile"
+                        element={
+                            <ProtectedRoute>
+                                <OtherProfile />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/suggested-pages"
+                        element={
+                            <ProtectedRoute>
+                                <Suggestpage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/search-items"
+                        element={
+                            <ProtectedRoute>
+                                <Searchitem />
+                            </ProtectedRoute>
+                        }
+                    />
                 </Routes>
-                  {open && <ChatWidget />} {/* Your actual chat panel */}
-                    <FloatingChatButton onClick={() => setOpen(!open)} />
+
+                {open && <ChatWidget />}
+                <FloatingChatButton onClick={() => setOpen(!open)} />
+
             </main>
         </>
     );

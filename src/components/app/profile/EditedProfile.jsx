@@ -3,9 +3,15 @@ import Button from "../../common/Button";
 import Input from "../../common/Input";
 import { BiArrowBack } from "react-icons/bi";
 import { auth } from "../../../assets/export";
+<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router";
+=======
+import { useState } from "react";
+import { useSelector } from "react-redux";
+
+>>>>>>> 2b9d448a3d41c9634a25eab6864e5898781f1f7c
 
 export default function EditedProfile() {
   const navigate = useNavigate();
