@@ -1,4 +1,4 @@
-import { profilehigh } from '../../assets/export'
+import { dummyprofile, profilehigh } from '../../assets/export'
 import { useSelector } from 'react-redux'
 
 const Profilecard = () => {
@@ -15,7 +15,7 @@ const Profilecard = () => {
                     <div className="flex items-center gap-4 mb-0">
                         <div className='flex items-center -mb-[60px] gap-4 pb-10'>
                             <img
-                                src={profilehigh}
+                                src={user.profilePicture || dummyprofile}
                                 alt="Profile"
                                 className="w-20 h-20 rounded-full"
                             />
