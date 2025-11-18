@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 
 const initialState = {
-  isLoading: false,
+  pagesLoading: false,
   error: null,
   success: null,
   pages: null, // yahan save hoga created page
@@ -39,15 +39,15 @@ const pagesSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(createPage.pending, (state) => {
-        state.isLoading = true;
+        state.pagesLoading = true;
       })
       .addCase(createPage.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.pagesLoading = false;
         state.pages = action.payload; // CORRECT
         state.success = true;
       })
       .addCase(createPage.rejected, (state, action) => {
-        state.isLoading = false;
+        state.pagesLoading = false;
         state.error = action.payload;
       });
   },

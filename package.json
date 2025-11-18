@@ -18,6 +18,7 @@
     "axios": "^1.7.9",
     "crypto-js": "^4.2.0",
     "f": "^1.4.0",
+    "firebase": "^12.6.0",
     "formik": "^2.4.6",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.548.0",

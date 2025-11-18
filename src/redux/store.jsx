@@ -2,6 +2,8 @@ import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import authReducer from "./slices/auth.slice";
 import topicsReducer from "./slices/topics.slice";
 import pagesReducer from "./slices/pages.slice";
+import onboardingReducer from "./slices/onboarding.slice"
+import collectionReducer from "./slices/collection.slice"
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -13,8 +15,10 @@ const persistConfig = {
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  topics :topicsReducer,
-  pages : pagesReducer,
+  topics: topicsReducer,
+  pages: pagesReducer,
+  onboarding: onboardingReducer,
+  collections: collectionReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
