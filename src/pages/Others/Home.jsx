@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp } from 'lucide-react';
-import { notes, postone, profile, profilehigh, topics } from '../../assets/export';
+import { nofound, notes, postone, profile, profilehigh, topics } from '../../assets/export';
 import Profilecard from '../../components/homepage/Profilecard';
 import MySubscription from '../../components/homepage/MySubscription';
 import { TbNotes } from "react-icons/tb";
@@ -10,25 +10,37 @@ import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import PostCard from '../../components/global/PostCard';
 import { Link } from 'react-router';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchpostfeed } from '../../redux/slices/postfeed.slice';
+import PostSkeleton from '../../components/global/PostSkeleton';
+import HomePostFeed from '../../components/global/HomePostFeed';
 
 export default function Home() {
     const [liked, setLiked] = useState({});
+    const dispatch = useDispatch();
+
+    const { allfeedposts, postsLoading } = useSelector((state) => state.postsfeed);
+
+    console.log(allfeedposts, "allfeedposts");
+
+    useEffect(() => {
+        dispatch(fetchpostfeed({ page: 1, limit: 10 }));
+    }, [dispatch]);
 
     const toggleLike = (postId) => {
         setLiked(prev => ({
             ...prev,
-            [postId]: !prev[postId]
+            [postId]: !prev[postId]  // Toggling like based on the postId
         }));
     };
 
-    // Manage active indexes for multiple subscribe buttons
+
+    console.log(allfeedposts, "allfeedposts")
+
     const [activeIndexes, setActiveIndexes] = useState([]);
 
     const handleClick = (index) => {
-        // Toggle the active state for the clicked button
         setActiveIndexes((prevActiveIndexes) => {
-            // If the index is already active, remove it, otherwise add it
             if (prevActiveIndexes.includes(index)) {
                 return prevActiveIndexes.filter(i => i !== index);
             } else {
@@ -41,53 +53,39 @@ export default function Home() {
 
     const trending = [
         {
-            title: "Justin’s Basketball",
+            title: "Justin's Basketball",
             desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
             hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
         },
         {
-            title: "Justin’s Basketball",
+            title: "Justin's Basketball",
             desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
             hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
         },
     ];
 
-    const posts = [
-        {
-            id: "post1",
-            user: "Mike’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Cars: Ferrari",
-            gradient: "from-pink-500 via-orange-500 to-yellow-500",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/34.jpg",
-            postimage: postone
+    console.log(allfeedposts,"allfeedposts")
+
+    // Transform API data into PostCard format
+    const transformedPosts = Array.isArray(allfeedposts) ? allfeedposts.map(post => ({
+        id: post._id,
+        user: post.page?.name || post.author?.name || "Unknown User",
+        username: `@${post.page?.user?.username || post.author?.username || 'user'}`,
+        time: new Date(post.createdAt).toLocaleDateString(),
+        tag: post.page?.topic || "",
+        gradient: "from-pink-500 via-orange-500 to-yellow-500",
+        text: post.bodyText || "No description available",
+        stats: {
+            likes: post.likesCount?.toString() || "0",
+            comments: post.commentsCount?.toString() || "0",
+            shares: post.sharesCount?.toString() || "0"
         },
-        {
-            id: "post2",
-            user: "Peter’s Basketball",
-            username: "@petersmith35",
-            time: "5mins ago",
-            gradient: "from-blue-600 to-blue-400",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "8,205", comments: "420", shares: "67" },
-            avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-        },
-        {
-            id: "post3",
-            user: "Mike’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Cars: Ferrari",
-            gradient: "from-pink-500 via-orange-500 to-yellow-500",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/20.jpg",
-            postimage: postone
-        },
-    ];
+        postlike : post.isLiked,
+        avatar: post.page?.user?.profilePicture || post.author?.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg",
+        postimage: post.media?.map(m => m.fileUrl) || []
+    })) : [];
+
+    console.log(transformedPosts, "transformedPosts")
 
     return (
         <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -126,27 +124,42 @@ export default function Home() {
                         ))}
                     </div>
                     <Link to="/profile">
-                    <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
-                        View All
-                        <ChevronRight className="w-4 h-4" />
-                    </div>
+                        <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
+                            View All
+                            <ChevronRight className="w-4 h-4" />
+                        </div>
                     </Link>
                 </div>
             </div>
 
             {/* Middle Feed */}
             <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
-                {posts.map((post) => (
-                    <PostCard
-                        key={post.id}
-                        post={post}
-                        liked={liked}
-                        toggleLike={toggleLike}
-                    />
-                ))}
+                {postsLoading ? (
+                    // Show skeleton loaders while loading
+                    <div>
+                        {[1, 2, 3, 4, 5].map((item) => (
+                            <PostSkeleton key={item} />
+                        ))}
+                    </div>
+                ) : transformedPosts.length > 0 ? (
+                    // Show actual posts when loaded
+                    transformedPosts.map((post) => (
+                        <HomePostFeed
+                            key={post.id}
+                            post={post}
+                            liked={liked}
+                            toggleLike={toggleLike}
+                        />
+                    ))
+                ) : (
+                    // Show empty state
+                    <div className="flex items-center justify-center h-full text-gray-500">
+                        <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
+                            <img src={nofound} alt="" />
+                        </p>
+                    </div>
+                )}
             </div>
-
-
 
             {/* Right Sidebar - 1/4 width */}
             <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
@@ -166,11 +179,8 @@ export default function Home() {
                                     className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-
                                         <img src={topics} alt="" className="w-12 h-12 rounded-full object-cover" />
                                         <div>
-
-
                                             <div className="flex gap-2">
                                                 <p className="font-[400] text-[14px]"> {item.title}</p>
                                                 <img src={notes} alt="" />
@@ -194,7 +204,6 @@ export default function Home() {
 
                                     <div className='flex justify-between items-center'>
                                         <div>
-                                            {/* Followers + Subscribe */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex -space-x-2">
@@ -214,9 +223,7 @@ export default function Home() {
                                                             className="w-6 h-6 rounded-full border-2 border-white"
                                                         />
                                                     </div>
-
                                                 </div>
-
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -230,7 +237,6 @@ export default function Home() {
                                             >
                                                 Subscribe
                                             </button>
-
                                         </div>
                                     </div>
                                 </div>
@@ -240,14 +246,11 @@ export default function Home() {
                         {/* Footer */}
                         <Link to="/trending">
                             <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
-
                                 <span>View All</span>
                                 <FaChevronRight color='orange' />
                             </div>
                         </Link>
-
                     </div>
-
 
                     <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
                         {/* Header */}
@@ -264,11 +267,8 @@ export default function Home() {
                                     className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-
                                         <img src={topics} alt="" className="w-12 h-12 rounded-full object-cover" />
                                         <div>
-
-
                                             <div className="flex gap-2">
                                                 <p className="font-[400] text-[14px]"> {item.title}</p>
                                                 <img src={notes} alt="" />
@@ -292,7 +292,6 @@ export default function Home() {
 
                                     <div className='flex justify-between items-center'>
                                         <div>
-                                            {/* Followers + Subscribe */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex -space-x-2">
@@ -312,9 +311,7 @@ export default function Home() {
                                                             className="w-6 h-6 rounded-full border-2 border-white"
                                                         />
                                                     </div>
-
                                                 </div>
-
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -328,13 +325,11 @@ export default function Home() {
                                             >
                                                 Subscribe
                                             </button>
-
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
-
 
                         {/* Footer */}
                         <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
@@ -344,7 +339,6 @@ export default function Home() {
                             <FaChevronRight color='orange' />
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

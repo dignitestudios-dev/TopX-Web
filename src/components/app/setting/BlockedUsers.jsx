@@ -5,7 +5,6 @@ import ErrorModal from "../../common/ErrorModal";
 
 export default function BlockedUsers() {
     const [openModal, setOpenModal] = useState(false);
-    console.log(openModal);
     return (
         <div className="space-y-6">
             <h1 className="text-[28px] font-bold tracking-[-0.018em]">Blocked Users</h1>

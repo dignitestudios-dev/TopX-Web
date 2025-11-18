@@ -1,29 +1,31 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { login, resetAuth } from "../../redux/slices/auth.slice";
+import { login, resetAuth, socialLogin } from "../../redux/slices/auth.slice";
 import { useFormik } from "formik";
 import { loginValues } from "../../init/authentication/dummyLoginValues";
 import { signInSchema } from "../../schema/authentication/dummyLoginSchema";
 import { NavLink, useNavigate } from "react-router";
 import { FiLoader } from "react-icons/fi";
-import { auth, authBg } from "../../assets/export";
+import { authlogo, authBg } from "../../assets/export";
 import { IoLogoApple } from "react-icons/io";
 import { FcGoogle } from "react-icons/fc";
 import Input from "../../components/common/Input";
 import { HiEye, HiEyeOff } from "react-icons/hi";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import Cookies from "js-cookie";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../../firebase/firebase";
 
 const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isLoading, error, success, accessToken,user } = useSelector((state) => state.auth);
+  const { isLoading, error, success, accessToken, user } = useSelector((state) => state.auth);
 
   console.log(accessToken, "accessToken")
 
-  console.log(user,"useralldata")
+  console.log(user, "useralldata")
 
   const { values, handleBlur, handleChange, handleSubmit, errors, touched } =
     useFormik({
@@ -64,6 +66,34 @@ const Login = () => {
     }
   }, [success]);
 
+  // GOOGLE LOGIN FUNCTION
+  const handleGoogleLogin = async () => {
+    try {
+     const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      const response = await dispatch(
+        socialLogin({
+          idToken,
+          role: "user",
+        })
+      );
+
+      if (response?.payload?.accessToken) {
+        Cookies.set("access_token", response.payload.accessToken, {
+          expires: 7,
+          secure: false,
+          sameSite: "lax",
+        });
+
+        navigate("/Home");
+      }
+    } catch (error) {
+      ErrorToast("Google Login Failed");
+    }
+  };
+
+
+
   return (
     <>
       <div className="h-full w-full bg-[#F8F8F8] p-3">
@@ -78,7 +108,7 @@ const Login = () => {
 
           <div className="bg-white flex items-start rounded-[19px] p-2 w-full">
             <div className="flex flex-col items-center justify-center w-full">
-              <img src={auth} alt="orange_logo" className="w-[100px]" />
+              <img src={authlogo} alt="orange_logo" className="w-[100px]" />
 
               <div className="flex flex-col mt-4 justify-center items-center">
                 <h2 className="text-[32px] font-[600] leading-[48px]">Log In</h2>
@@ -156,7 +186,8 @@ const Login = () => {
                 </button>
 
                 <div className="w-full flex flex-col gap-4 pt-8">
-                  <button className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]">
+                  <button className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]"
+                    onClick={handleGoogleLogin}>
                     <FcGoogle className="w-[24px] h-[24px]" />
                     <span className="text-[#000] w-full text-center">
                       Continue With Google

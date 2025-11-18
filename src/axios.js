@@ -5,6 +5,8 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 // ================= BASE URL =================
 export const baseUrl = "http://3.80.71.34";
+// export const baseUrl = "http://192.168.10.174:8080";
+
 
 // ================= DEVICE FINGERPRINT =================
 // Load once (not on every request = faster)

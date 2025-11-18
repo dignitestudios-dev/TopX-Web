@@ -35,6 +35,12 @@ import gamingconsole from "./gamingconsole.svg"
 import tshirt from "./tshirt.svg"
 import maindollar from "./maindollar.svg"
 import dummyprofile from "./dummyprofile.avif"
+import authlogo from "./auth.png";
+import bg from "./landingpage/bg.png"
+import Mask from "./landingpage/Mask.png"
+import topxlogout from "./landingpage/topx-logo.png"
+import nofound from "../assets/nopost.png"
+
 export {
   user,
   dummyprofile,
@@ -59,6 +65,7 @@ export {
   topics,
   postone,
   dollar,
+  authlogo,
   carddesign,
   cup,
   speaker,
@@ -68,4 +75,8 @@ export {
   gamingconsole,
   tshirt,
   maindollar,
+  topxlogout,
+  Mask,
+  bg,
+  nofound,
 };

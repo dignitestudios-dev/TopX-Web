@@ -11,12 +11,19 @@ import AccountCreated from "./pages/authentication/AccountCreated";
 import Home from "./pages/Others/Home";
 import Setting from "./pages/Others/Setting";
 import MainRoutes from "./routes/MainRoutes";
+import Referrals from "./pages/landingpage/referrals";
+import PrivacyPolicy from "./pages/landingpage/PrivacyPolicy";
+import Termsandconditions from "./pages/landingpage/Termsandconditions";
 
 function App() {
   return (
     <Routes>
 
       <Route path="/" element={<Login />} />
+      <Route path="/referrals" element={<Referrals />} />
+      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/terms-conditons" element={<Termsandconditions />} />
+
 
       <Route path="app" element={<DashboardLayout />}>
         <Route path="dashboard" element={<DummyHome />} />

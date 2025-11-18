@@ -65,7 +65,7 @@ const Input = forwardRef(
               <img
                 src={preview}
                 alt="Preview"
-                className="object-fill rounded-full max-w-[160px] max-h-[70px]" // Restrict size
+                className="object-fill rounded-full " // Restrict size
               />
             ) : (
               <span className="text-orange-400 text-3xl">+</span>

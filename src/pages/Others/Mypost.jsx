@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp } from 'lucide-react';
-import { notes, postone, profile, profilehigh, topics } from '../../assets/export';
+import React, { useEffect, useState } from 'react';
+import { ChevronRight, TrendingUp } from 'lucide-react';
+import { nofound, notes, topics } from '../../assets/export';
 import Profilecard from '../../components/homepage/Profilecard';
 import MySubscription from '../../components/homepage/MySubscription';
 import { TbNotes } from "react-icons/tb";
@@ -9,10 +9,74 @@ import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import PostCard from '../../components/global/PostCard';
-
+import { getMyPosts } from '../../redux/slices/posts.slice';
+import { useDispatch, useSelector } from 'react-redux';
+import SkeletonPost from '../../components/global/SkeletonPost';
 
 export default function Mypost() {
-    const [liked, setLiked] = useState({});
+    const [open, setOpen] = useState(false);
+    const [page, setPage] = useState(1);
+    const limit = 10;
+
+    const dispatch = useDispatch();
+    const { postsLoading, posts } = useSelector((state) => state.posts);
+
+    const trending = [
+        {
+            title: "Justin's Basketball",
+            desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+            hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+        },
+        {
+            title: "Justin's Basketball",
+            desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+            hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+        },
+    ];
+
+    // API call
+    useEffect(() => {
+        dispatch(getMyPosts({ page, limit }));
+    }, [dispatch, page]);
+
+
+    console.log(posts,"posts")
+
+    // API -> UI mapping
+    const mapApiPostToUiPost = (p) => {
+        const firstMedia = p.media && p.media.length > 0 ? p.media : [];
+
+        let postImages = [];
+        let videoUrl = null;
+
+        firstMedia.forEach((media) => {
+            if (media.type === 'image') {
+                postImages.push(media.fileUrl);
+            } else if (media.type === 'video') {
+                videoUrl = media.fileUrl;
+            }
+        });
+
+        return {
+            _id: p._id, // ✅ Important: use _id for Redux
+            id: p._id, // Also keep id for backward compatibility
+            user: p.page?.name || p.author?.name || '',
+            username: p.author?.username ? `@${p.author.username}` : '',
+            avatar: p.author?.profilePicture,
+            time: new Date(p.createdAt).toLocaleString(),
+            postImages,
+            videoUrl,
+            tag: p.page?.topic || '',
+            gradient: 'from-orange-400 to-orange-600',
+            text: p.bodyText,
+            stats: {
+                likes: p.likesCount,
+                comments: p.commentsCount,
+                shares: p.sharesCount,
+            },
+            isLiked: p.isLiked,
+        };
+    };
 
     const toggleLike = (postId) => {
         setLiked(prev => ({
@@ -20,58 +84,6 @@ export default function Mypost() {
             [postId]: !prev[postId]
         }));
     };
-
-    const [open, setOpen] = useState(false);
-
-    const trending = [
-        {
-            title: "Justin’s Basketball",
-            desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-            hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-        },
-        {
-            title: "Justin’s Basketball",
-            desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-            hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-        },
-    ];
-
-    const posts = [
-        {
-            id: "post1",
-            user: "Mike’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Cars: Ferrari",
-            gradient: "from-pink-500 via-orange-500 to-yellow-500",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
-            postimage: postone
-        },
-        {
-            id: "post2",
-            user: "Peter’s Basketball",
-            username: "@petersmith35",
-            time: "5mins ago",
-            gradient: "from-blue-600 to-blue-400",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "8,205", comments: "420", shares: "67" },
-            avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-        },
-        {
-            id: "post3",
-            user: "Mike’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Cars: Ferrari",
-            gradient: "from-pink-500 via-orange-500 to-yellow-500",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar: "https://randomuser.me/api/portraits/men/12.jpg",
-            postimage: postone
-        },
-    ];
 
     return (
         <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -117,33 +129,49 @@ export default function Mypost() {
             </div>
 
             {/* Middle Feed */}
-            <div className="w-1/2 bg-gray-50 overflow-y-auto px-3 py-4 scrollbar-hide">
-            <h1 className='text-3xl font-semibold pb-4 pl-1'>My Posts</h1>
-                {posts.map((post) => (
-                    <PostCard
-                        key={post.id}
-                        post={post}
-                        liked={liked}
-                        toggleLike={toggleLike}
-                    />
-                ))}
+            <div className="w-1/2 overflow-y-auto px-3 py-4 scrollbar-hide">
+                <h1 className="text-3xl font-semibold pb-4 pl-1">My Posts</h1>
+
+                {postsLoading && (!posts || posts.length === 0) ? (
+                    <>
+                        <SkeletonPost />
+                        <SkeletonPost />
+                        <SkeletonPost />
+                    </>
+                ) : (
+                    <>
+                        {Array.isArray(posts) && posts.length > 0 ? (
+                            posts.map((p) => {
+                                const mappedPost = mapApiPostToUiPost(p);
+                                return (
+                                    <div key={mappedPost._id} className="mb-4">
+                                        <PostCard
+                                            post={mappedPost}
+                                            activeTab="feed"
+                                        />
+
+                                    </div>
+                                );
+                            })
+                        ) : (
+                            <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
+                                <img src={nofound} alt="" />
+                            </p>
+                        )}
+                    </>
+                )}
             </div>
 
-
-
-            {/* Right Sidebar - 1/4 width */}
+            {/* Right Sidebar */}
             <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
                 <div className="p-0">
-
-
+                    {/* Trending Pages */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
-                        {/* Header */}
                         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-orange-500" />
                             <span className="text-gray-900">Trending Pages</span>
                         </h3>
 
-                        {/* Trending List */}
                         <div className="space-y-6">
                             {trending.map((item, idx) => (
                                 <div
@@ -151,24 +179,21 @@ export default function Mypost() {
                                     className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-
-                                        <img src={topics} alt="" className="w-12 h-12 rounded-full object-cover" />
-                                        <div>
-
-
-                                            <div className="flex gap-2">
-                                                <p className="font-[400] text-[14px]"> {item.title}</p>
-                                                <img src={notes} alt="" />
-                                            </div>
+                                        <img
+                                            src={topics}
+                                            alt=""
+                                            className="w-12 h-12 rounded-full object-cover"
+                                        />
+                                        <div className="flex gap-2">
+                                            <p className="font-[400] text-[14px]">{item.title}</p>
+                                            <img src={notes} alt="" />
                                         </div>
                                     </div>
 
-                                    {/* Description */}
                                     <p className="text-sm text-gray-600 mb-2 leading-snug">
                                         {item.desc}
                                     </p>
 
-                                    {/* Hashtags */}
                                     <p className="text-xs text-gray-700 mb-3">
                                         {item.hashtags.map((tag, i) => (
                                             <span key={i} className="mr-1 text-gray-500">
@@ -177,9 +202,8 @@ export default function Mypost() {
                                         ))}
                                     </p>
 
-                                    <div className='flex justify-between items-center'>
+                                    <div className="flex justify-between items-center">
                                         <div>
-                                            {/* Followers + Subscribe */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex -space-x-2">
@@ -199,9 +223,7 @@ export default function Mypost() {
                                                             className="w-6 h-6 rounded-full border-2 border-white"
                                                         />
                                                     </div>
-
                                                 </div>
-
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -212,31 +234,27 @@ export default function Mypost() {
                                             <button className="bg-orange-500 hover:bg-orange-600 text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold">
                                                 Subscribe
                                             </button>
-
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-
-                        {/* Footer */}
                         <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
                             <span>View All</span>
-                            <FaChevronRight color='orange' />
-
+                            <FaChevronRight color="orange" />
                         </div>
                     </div>
 
-
+                    {/* Suggestions */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
-                        {/* Header */}
                         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-orange-500" />
-                            <span className="text-gray-900">Suggestions based on your Interests/Activity</span>
+                            <span className="text-gray-900">
+                                Suggestions based on your Interests/Activity
+                            </span>
                         </h3>
 
-                        {/* Trending List */}
                         <div className="space-y-6">
                             {trending.map((item, idx) => (
                                 <div
@@ -244,24 +262,21 @@ export default function Mypost() {
                                     className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-
-                                        <img src={topics} alt="" className="w-12 h-12 rounded-full object-cover" />
-                                        <div>
-
-
-                                            <div className="flex gap-2">
-                                                <p className="font-[400] text-[14px]"> {item.title}</p>
-                                                <img src={notes} alt="" />
-                                            </div>
+                                        <img
+                                            src={topics}
+                                            alt=""
+                                            className="w-12 h-12 rounded-full object-cover"
+                                        />
+                                        <div className="flex gap-2">
+                                            <p className="font-[400] text-[14px]">{item.title}</p>
+                                            <img src={notes} alt="" />
                                         </div>
                                     </div>
 
-                                    {/* Description */}
                                     <p className="text-sm text-gray-600 mb-2 leading-snug">
                                         {item.desc}
                                     </p>
 
-                                    {/* Hashtags */}
                                     <p className="text-xs text-gray-700 mb-3">
                                         {item.hashtags.map((tag, i) => (
                                             <span key={i} className="mr-1 text-gray-500">
@@ -270,9 +285,8 @@ export default function Mypost() {
                                         ))}
                                     </p>
 
-                                    <div className='flex justify-between items-center'>
+                                    <div className="flex justify-between items-center">
                                         <div>
-                                            {/* Followers + Subscribe */}
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <div className="flex -space-x-2">
@@ -292,9 +306,7 @@ export default function Mypost() {
                                                             className="w-6 h-6 rounded-full border-2 border-white"
                                                         />
                                                     </div>
-
                                                 </div>
-
                                             </div>
                                             <p className="text-xs text-gray-600 font-medium">
                                                 50+ Follows
@@ -305,27 +317,20 @@ export default function Mypost() {
                                             <button className="bg-orange-500 hover:bg-orange-600 text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold">
                                                 Subscribe
                                             </button>
-
                                         </div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-
-                        {/* Footer */}
                         <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
                             <span>View All</span>
-                            <FaChevronRight color='orange' />
-
+                            <FaChevronRight color="orange" />
                         </div>
                     </div>
 
-                    {open && <ChatWidget />} {/* Your actual chat panel */}
+                    {open && <ChatWidget />}
                     <FloatingChatButton onClick={() => setOpen(!open)} />
-
-
-
                 </div>
             </div>
         </div>

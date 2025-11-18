@@ -9,14 +9,14 @@ export default function VerificationModal({
   onVerify, // will run verification API
   onResend,
   isVerifying = false,
-  length = 4,
+  length = 5,
   isType,
-  mode = "", // <-- "forget" OR "delete"
+  mode = "", // <-- "forget" OR "delete" OR "onboarding"
 }) {
   const [values, setValues] = useState(Array.from({ length }, () => ""));
   const inputsRef = useRef([]);
   const navigate = useNavigate();
-console.log(isOpen);
+
   useEffect(() => {
     if (!isOpen) setValues(Array.from({ length }, () => ""));
   }, [isOpen, length]);
@@ -59,15 +59,22 @@ console.log(isOpen);
     inputsRef.current[Math.min(i + text.length, length - 1)]?.focus();
   };
 
-  const submit = () => {
-  if (code.length !== length) return;
+  const submit = async () => {
+    if (code.length !== length) return;
 
-  if (mode === "forget") {
-    navigate("/auth/update-password");
-  } 
+    // 🔥 Call onVerify callback - WAIT for it to complete
+    if (onVerify) {
+      await onVerify(code);
+    }
 
-  onClose(); // modal close bhi ho jaye
-};
+    // 🔥 For "forget" mode, navigate after a delay
+    if (mode === "forget") {
+      setTimeout(() => {
+        navigate("/auth/update-password");
+      }, 500);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -109,7 +116,7 @@ console.log(isOpen);
         </div>
         <div className="mt-6 text-[15px]">
           {" "}
-          <span className="text-[#111]">Didn’t receive code? </span>{" "}
+          <span className="text-[#111]">Didn't receive code? </span>{" "}
           <button
             type="button"
             onClick={onResend}

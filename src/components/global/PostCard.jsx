@@ -11,6 +11,11 @@ import {
 import EditPostModal from "./EditPostModal";
 import DeletePostModal from "./DeletePostModal";
 import { Link } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import { likePost, getMyPosts, getcommentsofpost, commentonpost, deleteComment } from "../../redux/slices/posts.slice";
+import { FaRegTrashCan } from "react-icons/fa6";
+import { SuccessToast } from "./Toaster";
+
 
 const Button = ({ size = "md", variant = "orange", children, onClick }) => {
     const sizeClasses = {
@@ -40,20 +45,23 @@ const PostCard = ({
         username: "@mikesmith35",
         avatar: "https://randomuser.me/api/portraits/men/32.jpg",
         time: "5 mins ago",
-        postimage: "https://images.unsplash.com/photo-1546519638-68711109d298?w=500&h=500&fit=crop",
+        postimage:
+            "https://images.unsplash.com/photo-1546519638-68711109d298?w=500&h=500&fit=crop",
         tag: "Sports",
         gradient: "from-orange-400 to-orange-600",
         text: "Just finished an amazing basketball session! Feel the energy! 🏀",
-        stats: { likes: 234, comments: 45, shares: 12 }
+        stats: { likes: 234, comments: 45, shares: 12 },
+        isLiked: false,
     },
     liked = {},
     toggleLike = () => { },
-    activeTab = "feed"
+    activeTab = "feed",
 }) => {
     const [showComments, setShowComments] = useState(false);
     const [commentInput, setCommentInput] = useState("");
     const [commentLikes, setCommentLikes] = useState({});
     const [showImageModal, setShowImageModal] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [sharepost, setSharepost] = useState(false);
     const [showpopup, setShowpopup] = useState(false);
     const [editModal, setEditModal] = useState(false);
@@ -70,47 +78,21 @@ const PostCard = ({
         "Share in Group Chats",
     ];
 
-    const [commentList, setCommentList] = useState([
-        {
-            id: 1,
-            name: "Merry James✦",
-            avatar: "https://randomuser.me/api/portraits/women/79.jpg",
-            comment: "Amazing. Keep it up!",
-            time: "1 hr ago",
-            likes: 2,
-        },
-        {
-            id: 2,
-            name: "David Laid",
-            avatar: "https://randomuser.me/api/portraits/men/22.jpg",
-            comment: "It very a really bad experience.",
-            time: "1w ago",
-            likes: 2,
-        },
-        {
-            id: 3,
-            name: "Peter Parker",
-            role: "Admin",
-            avatar: "https://randomuser.me/api/portraits/men/41.jpg",
-            comment: "It very a really bad experience.",
-            time: "1w ago",
-            likes: 2,
-        },
-        {
-            id: 4,
-            name: "Victoria James",
-            avatar: "https://randomuser.me/api/portraits/women/56.jpg",
-            comment: "I've been using their services 2 years ago.",
-            time: "2w ago",
-            likes: 2,
-        },
-    ]);
+    const { comments, commentsLoading } = useSelector((state) => state.posts);
 
-    // Close popup when clicking outside
+    console.log(comments, "comments")
+
+
+
+
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (popupRef.current && !popupRef.current.contains(e.target) &&
-                buttonRef.current && !buttonRef.current.contains(e.target)) {
+            if (
+                popupRef.current &&
+                !popupRef.current.contains(e.target) &&
+                buttonRef.current &&
+                !buttonRef.current.contains(e.target)
+            ) {
                 setShowpopup(false);
             }
         };
@@ -126,18 +108,88 @@ const PostCard = ({
     };
 
     const handleAddComment = () => {
-        if (commentInput.trim() === "") return;
-        const newComment = {
-            id: Date.now(),
-            name: "You",
-            avatar: "https://randomuser.me/api/portraits/lego/1.jpg",
-            comment: commentInput,
-            time: "Just now",
-            likes: 0,
-        };
-        setCommentList([newComment, ...commentList]);
+        if (!commentInput.trim()) return;
+
+        dispatch(
+            commentonpost({
+                postId: post._id,
+                text: commentInput,
+            })
+        ).then(() => {
+            dispatch(getcommentsofpost({ postId: post._id }));
+        });
+
         setCommentInput("");
     };
+
+
+    const isPostLiked = liked[post.id] ?? post.isLiked;
+    const images = post.postImages && post.postImages.length > 0 ? post.postImages : [];
+    const firstImage = images.length > 0 ? images[0] : null;
+
+    const openImageModal = () => {
+        setCurrentImageIndex(0);
+        setShowImageModal(true);
+    };
+
+    const nextImage = () => {
+        setCurrentImageIndex((prev) => (prev + 1) % images.length);
+    };
+
+    const prevImage = () => {
+        setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    };
+
+    const dispatch = useDispatch();
+    const { likeLoading } = useSelector((state) => state.posts);
+
+    // ✅ FIXED: Proper like toggle handler
+    const handleLikeToggle = () => {
+        if (likeLoading) return; // Prevent multiple clicks while loading
+
+        const postId = post._id || post.id; // Use MongoDB _id if available, fallback to id
+        const currentLikeStatus = isPostLiked;
+        const newLikeStatus = !currentLikeStatus;
+
+        // Dispatch the likePost action
+        dispatch(likePost({
+            id: postId,
+            likeToggle: newLikeStatus,
+            isPost: true
+        }));
+        dispatch(getMyPosts({ page: 1, limit: 100 }));
+    };
+
+
+    const handleDeleteComment = (commentId) => {
+        dispatch(deleteComment({ commentId }))
+            .then((res) => {
+                if (res.payload?.success) {
+                    SuccessToast("Comment deleted successfully!");
+                }
+
+                dispatch(getcommentsofpost({ postId: post._id }));
+            });
+    };
+
+
+    const handleLikeComment = (comment) => {
+        const newLikeStatus = !comment.isLiked;
+
+        dispatch(
+            likePost({
+                id: comment._id,      // comment ID
+                likeToggle: newLikeStatus,
+                isPost: false         // IMPORTANT
+            })
+        ).then(() => {
+            // Refresh comments after like
+            dispatch(getcommentsofpost({ postId: post._id }));
+        });
+    };
+
+
+
 
     return (
         <>
@@ -154,13 +206,15 @@ const PostCard = ({
                             <p className="font-bold text-sm flex items-center gap-2">
                                 {post.user}
                                 {activeTab === "postrequest" && (
-                                    <span className="text-xs text-black"><Pin size={16} /></span>
+                                    <span className="text-xs text-black">
+                                        <Pin size={16} />
+                                    </span>
                                 )}
                             </p>
                             <Link to="/other-profile">
-                            <p className="text-xs text-gray-600">
-                                {post.username} • {post.time}
-                            </p>
+                                <p className="text-xs text-gray-600">
+                                    {post.username} • {post.time}
+                                </p>
                             </Link>
                         </div>
                     </div>
@@ -198,18 +252,35 @@ const PostCard = ({
                                 >
                                     Delete
                                 </button>
-
                             </div>
                         )}
                     </button>
                 </div>
 
-                {post?.postimage && post?.postimage.length > 0 && (
-                    <div className="m-4 cursor-pointer" onClick={() => setShowImageModal(true)}>
-                        <img
-                            src={post?.postimage}
-                            alt="Post"
-                            className="w-full rounded-lg hover:opacity-90 transition-opacity"
+                {/* Image Section - Show Only First Image */}
+                {firstImage && (
+                    <div className="m-4 cursor-pointer" onClick={openImageModal}>
+                        <div className="relative">
+                            <img
+                                src={firstImage}
+                                alt="Post"
+                                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
+                            />
+                            {images.length > 1 && (
+                                <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
+                                    1/{images.length}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {post.videoUrl && !firstImage && (
+                    <div className="m-4">
+                        <video
+                            src={post.videoUrl}
+                            controls
+                            className="w-full rounded-lg"
                         />
                     </div>
                 )}
@@ -230,23 +301,38 @@ const PostCard = ({
                     {/* Actions */}
                     {activeTab !== "postrequest" ? (
                         <div className="flex items-center gap-4 text-sm text-orange-500 mb-2 pb-2">
+                            {/* ✅ LIKE BUTTON - WITH LOADING STATE */}
                             <button
-                                onClick={() => toggleLike(post.id)}
-                                className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
+                                onClick={handleLikeToggle}
+                                disabled={likeLoading}
+                                className={`flex items-center gap-2 rounded-full p-1 transition-all ${likeLoading
+                                    ? "opacity-50 cursor-not-allowed"
+                                    : "hover:text-orange-600 bg-orange-400/10"
+                                    }`}
                             >
                                 <Heart
-                                    className={`w-5 h-5 ${liked[post.id] ? "fill-orange-500 text-orange-500" : ""
+                                    className={`w-5 h-5 transition-all ${isPostLiked
+                                        ? "fill-orange-500 text-orange-500"
+                                        : likeLoading
+                                            ? "text-gray-400"
+                                            : "text-orange-500"
                                         }`}
                                 />
-                                <span>{post.stats.likes}</span>
+                                <span className="text-orange-500">{post.stats?.likes || 0}</span>
                             </button>
 
                             <button
-                                onClick={() => setShowComments((prev) => !prev)}
+                                onClick={() => {
+                                    setShowComments((prev) => !prev);
+                                    if (!showComments) {
+                                        dispatch(getcommentsofpost({ postId: post._id }));
+                                    }
+                                }}
+
                                 className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
                             >
                                 <MessageCircle className="w-5 h-5" />
-                                <span>{post.stats.comments}</span>
+                                <span>{post?.stats?.comments || 0}</span>
                             </button>
 
                             <button
@@ -254,7 +340,7 @@ const PostCard = ({
                                 className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
                             >
                                 <Share2 className="w-5 h-5" />
-                                <span>{post.stats.shares}</span>
+                                <span>{post?.stats?.shares || 0}</span>
                             </button>
                         </div>
                     ) : (
@@ -299,53 +385,158 @@ const PostCard = ({
 
                             {/* Comment List */}
                             <div className="space-y-4">
-                                {commentList.map((comment) => (
-                                    <div key={comment.id} className="flex items-start gap-3">
+                                {commentsLoading && (
+                                    <div className="flex justify-center py-4">
+                                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent"></div>
+                                    </div>
+                                )}
+
+
+                                {!commentsLoading && comments.length === 0 && (
+                                    <p className="text-gray-500 text-sm">No comments yet.</p>
+                                )}
+
+                                {comments.map((comment) => (
+                                    <div key={comment._id} className="flex items-start gap-3 relative">
+
+                                        {/* Avatar */}
                                         <img
-                                            src={comment.avatar}
-                                            alt={comment.name}
+                                            src={comment.user?.profilePicture}
+                                            alt={comment.user?.name}
                                             className="w-8 h-8 rounded-full object-cover"
                                         />
+
+                                        {/* Comment Content */}
                                         <div className="flex-1">
                                             <div className="bg-gray-50 rounded-xl px-3 py-2 inline-block">
                                                 <p className="text-sm font-semibold">
-                                                    {comment.name}{" "}
-                                                    {comment.role && (
-                                                        <span className="text-xs text-gray-500">
-                                                            {comment.role}
-                                                        </span>
-                                                    )}
+                                                    {comment.user?.name}{" "}
+                                                    <span className="text-xs text-gray-500">@{comment.user?.username}</span>
                                                 </p>
-                                                <p className="text-sm text-gray-700">{comment.comment}</p>
+                                                <p className="text-sm text-gray-700">
+                                                    {comment.text}
+                                                </p>
                                             </div>
+
                                             <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                                                 <button
-                                                    onClick={() => handleCommentLike(comment.id)}
-                                                    className="flex items-center gap-1 text-orange-500 hover:text-orange-600"
+                                                    onClick={() => !likeLoading && handleLikeComment(comment)}
+                                                    disabled={likeLoading}
+                                                    className={`flex items-center gap-1 transition-all 
+        ${likeLoading ? "opacity-50 cursor-not-allowed" : "hover:text-orange-600 text-orange-500"}
+    `}
                                                 >
-                                                    <Heart
-                                                        className={`w-4 h-4 ${commentLikes[comment.id]
-                                                            ? "fill-orange-500 text-orange-500"
-                                                            : ""
-                                                            }`}
-                                                    />
-                                                    <span>{comment.likes}</span>
+                                                    {likeLoading ? (
+                                                        // 🔄 Small Loading Spinner
+                                                        <svg
+                                                            className="animate-spin h-4 w-4 text-orange-500"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            fill="none"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <circle
+                                                                className="opacity-25"
+                                                                cx="12"
+                                                                cy="12"
+                                                                r="10"
+                                                                stroke="currentColor"
+                                                                strokeWidth="4"
+                                                            ></circle>
+                                                            <path
+                                                                className="opacity-75"
+                                                                fill="currentColor"
+                                                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                                            ></path>
+                                                        </svg>
+                                                    ) : (
+                                                        <Heart
+                                                            className={`w-4 h-4 transition-all ${comment.isLiked ? "fill-orange-500 text-orange-500" : ""
+                                                                }`}
+                                                        />
+                                                    )}
+
+                                                    <span>{comment.likesCount}</span>
                                                 </button>
+
+
+
                                                 <button className="hover:text-orange-600">Reply</button>
-                                                <span>{comment.time}</span>
+
+                                                <span>{new Date(comment.createdAt).toLocaleString()}</span>
                                             </div>
                                         </div>
-                                        <MoreHorizontal className="w-4 h-4 text-gray-400 cursor-pointer" />
+
+                                        {/* DELETE COMMENT BUTTON */}
+                                        <button
+                                            onClick={() => handleDeleteComment(comment._id)}
+                                            className="absolute right-0 top-6 text-gray-400 hover:text-red-500 transition"
+                                            title="Delete Comment"
+                                        >
+                                            <FaRegTrashCan color="#FB903A" size={16} />
+
+                                        </button>
+
                                     </div>
                                 ))}
+
+                                {/* REPLIES */}
+{comment.replies && comment.replies.length > 0 && (
+    <div className="ml-10 mt-2 space-y-3">
+
+        {comment.replies.map((reply) => (
+            <div key={reply._id} className="flex items-start gap-3">
+
+                {/* Reply Avatar */}
+                <img
+                    src={reply.user?.profilePicture}
+                    alt={reply.user?.name}
+                    className="w-7 h-7 rounded-full object-cover"
+                />
+
+                {/* Reply Content */}
+                <div className="flex-1">
+                    <div className="bg-gray-100 rounded-xl px-3 py-2 inline-block">
+                        <p className="text-sm font-semibold">
+                            {reply.user?.name}{" "}
+                            <span className="text-xs text-gray-500">
+                                @{reply.user?.username}
+                            </span>
+                        </p>
+
+                        <p className="text-sm text-gray-700">
+                            {reply.text}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                        <button className="flex items-center gap-1 text-orange-500 hover:text-orange-600">
+                            <Heart
+                                className={`w-4 h-4 ${reply.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
+                            />
+                            <span>{reply.likesCount}</span>
+                        </button>
+
+                        <span>{new Date(reply.createdAt).toLocaleString()}</span>
+                    </div>
+                </div>
+
+            </div>
+        ))}
+
+    </div>
+)}
+
+
+
+
                             </div>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Image Modal */}
-            {showImageModal && (
+            {/* Image Modal - Show All Images */}
+            {showImageModal && images.length > 0 && (
                 <div
                     className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
                     onClick={() => setShowImageModal(false)}
@@ -357,7 +548,7 @@ const PostCard = ({
                         <X size={32} />
                     </button>
 
-                    <div className="absolute top-6 left-30 max-w-6xl text-white z-10">
+                    <div className="absolute top-6 left-8 max-w-6xl text-white z-10">
                         <div className="flex items-center gap-3">
                             <img
                                 src={post.avatar}
@@ -366,7 +557,9 @@ const PostCard = ({
                             />
                             <div>
                                 <p className="font-bold text-base">{post.user}</p>
-                                <p className="text-xs text-gray-300">{post.username} • {post.time}</p>
+                                <p className="text-xs text-gray-300">
+                                    {post.username} • {post.time}
+                                </p>
                             </div>
                         </div>
                         <p className="text-sm pt-2">{post.text}</p>
@@ -377,10 +570,39 @@ const PostCard = ({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <img
-                            src={post.postimage}
+                            src={images[currentImageIndex]}
                             alt="Fullscreen"
                             className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
                         />
+
+                        {/* Previous Button */}
+                        {images.length > 1 && (
+                            <button
+                                onClick={prevImage}
+                                className="absolute left-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
+                            >
+                                ◀
+                            </button>
+                        )}
+
+                        {/* Next Button */}
+                        {images.length > 1 && (
+                            <button
+                                onClick={nextImage}
+                                className="absolute right-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
+                            >
+                                ▶
+                            </button>
+                        )}
+
+                        {/* Image Counter */}
+                        {images.length > 1 && (
+                            <div className="absolute bottom-8 text-white text-center z-20">
+                                <p className="text-lg font-semibold">
+                                    {currentImageIndex + 1} / {images.length}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -427,8 +649,6 @@ const PostCard = ({
                 </div>
             )}
 
-
-
             {/* Edit Modal for post */}
             {editModal && (
                 <EditPostModal
@@ -444,8 +664,6 @@ const PostCard = ({
                     onConfirm={() => console.log("✅ Post deleted")}
                 />
             )}
-
-
         </>
     );
 };

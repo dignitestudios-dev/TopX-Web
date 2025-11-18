@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp, Plus } from 'lucide-react';
-import { notes, postone, profile, profilehigh, topics } from '../../assets/export';
+import React, { useEffect, useState, useRef } from 'react';
+import { Heart, MessageCircle, Share2, MoreHorizontal, TrendingUp, Plus } from 'lucide-react';
+import { nofound, notes, postone, profile, profilehigh, topics } from '../../assets/export';
 import Profilecard from '../../components/homepage/Profilecard';
 import MySubscription from '../../components/homepage/MySubscription';
 import { TbNotes } from "react-icons/tb";
@@ -9,12 +9,44 @@ import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import CreateKnowledgePostModal from '../../components/global/CreateKnowledgePostModal';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchKnowledgeFeed } from '../../redux/slices/knowledgepost.slice';
 
 export default function Knowledge() {
     const [liked, setLiked] = useState({});
-    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [open, setOpen] = useState(false);
+    const dispatch = useDispatch();
+    const observerTarget = useRef(null);
+    const [page, setPage] = useState(1);
 
+    useEffect(() => {
+        dispatch(fetchKnowledgeFeed({ page: page, limit: 10 }));
+    }, [dispatch, page]);
+
+    const {
+        knowledgeFeed,
+        knowledgeFeedPagination,
+        knowledgeFeedLoading,
+        error
+    } = useSelector((state) => state.knowledgepost);
+
+    // Infinite scroll observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            entries => {
+                if (entries[0].isIntersecting && !knowledgeFeedLoading && knowledgeFeedPagination?.hasNextPage) {
+                    setPage(prev => prev + 1);
+                }
+            },
+            { threshold: 0.5 }
+        );
+
+        if (observerTarget.current) {
+            observer.observe(observerTarget.current);
+        }
+
+        return () => observer.disconnect();
+    }, [knowledgeFeedLoading, knowledgeFeedPagination]);
 
     const toggleLike = (postId) => {
         setLiked(prev => ({
@@ -23,109 +55,85 @@ export default function Knowledge() {
         }));
     };
 
-    const [open, setOpen] = useState(false);
+    const getGradient = (index) => {
+        const gradients = [
+            "from-pink-500 via-orange-500 to-yellow-500",
+            "from-blue-600 to-blue-400",
+            "from-purple-500 to-pink-400",
+            "from-green-400 to-blue-500",
+            "from-orange-400 to-red-500"
+        ];
+        return gradients[index % gradients.length];
+    };
+
+    const timeAgo = (createdAt) => {
+        const now = new Date();
+        const then = new Date(createdAt);
+        const seconds = Math.floor((now - then) / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) return `${days}d ago`;
+        if (hours > 0) return `${hours}h ago`;
+        if (minutes > 0) return `${minutes}m ago`;
+        return 'just now';
+    };
 
     const trending = [
         {
-            title: "Justin’s Basketball",
+            title: "Justin's Basketball",
             desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
             hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
         },
         {
-            title: "Justin’s Basketball",
+            title: "Justin's Basketball",
             desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
             hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
         },
         {
-            title: "Justin’s Basketball",
+            title: "Justin's Basketball",
             desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
             hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
         },
     ];
-
-    const posts = [
-        {
-            id: "post1",
-            user: "Mike’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Cars: Ferrari",
-            gradient: "from-pink-500 via-orange-500 to-yellow-500",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "10,403", comments: "500", shares: "105" },
-            avatar:
-                "https://randomuser.me/api/portraits/men/12.jpg",
-        },
-        {
-            id: "post2",
-            user: "Peter’s Basketball",
-            username: "@mikesmith35",
-            time: "5mins ago",
-            tag: "Finance",
-            gradient: "from-blue-600 to-blue-400",
-            text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-            stats: { likes: "8,205", comments: "420", shares: "67" },
-            avatar:
-                "https://randomuser.me/api/portraits/men/32.jpg",
-        },
-    ];
-
 
     return (
         <div className="flex  min-h-screen max-w-7xl mx-auto">
             {/* Left Sidebar - 1/4 width */}
             <div className="w-1/4  !bg-[#F2F2F2] overflow-y-auto pt-3">
                 {/* Profile Card */}
-
                 <Profilecard smallcard={true} />
 
                 {/* My Subscription */}
                 <div className='pt-4'>
                     <MySubscription />
-
                 </div>
-
             </div>
 
-            {/* Middle Feed - 1/2 width */}
+            {/* Middle Feed */}
             <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto h-[40em] scrollbar-hide">
                 <div className="max-w-2xl mx-auto p-4 space-y-5 overflow-y-auto h-[70em] scrollbar-hide">
-                    {/* Create Post Input */}
-                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-4 py-2">
-                        <input
-                            type="text"
-                            placeholder="Create Knowledge Post"
-                            className="flex-1 text-sm text-gray-600 focus:outline-none"
-                        />
-                        <button
-                            className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 transition"
-                            onClick={() => setShowCreateModal(true)}
-                        >
-                            <Plus size={20} />
-                        </button>
 
-                    </div>
-
-                    {/* Posts */}
-                    {posts.map((post) => (
+                    {knowledgeFeed && knowledgeFeed.length > 0 && knowledgeFeed.map((post, index) => (
                         <div
-                            key={post.id}
+                            key={post._id}
                             className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
                         >
                             {/* Header */}
                             <div className="p-4 flex items-start justify-between border-b border-gray-100">
                                 <div className="flex items-center gap-3 flex-1">
                                     <img
-                                        src={post.avatar}
+                                        src={post.author.profilePicture}
                                         alt="User"
                                         className="w-10 h-10 rounded-full object-cover"
                                     />
                                     <div>
                                         <p className="font-semibold text-sm text-gray-800">
-                                            {post.user}
+                                            {post.author.name}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            {post.username} • {post.time}
+                                            @{post.author.username} • {timeAgo(post.createdAt)}
                                         </p>
                                     </div>
                                 </div>
@@ -134,52 +142,71 @@ export default function Knowledge() {
 
                             {/* Post Content */}
                             <div
-                                className={`bg-gradient-to-br ${post.gradient}  rounded-2xl m-3 p-4`}
+                                className={`bg-gradient-to-br ${getGradient(index)} rounded-2xl m-3 p-[10em] min-h-[200px] flex items-center justify-center relative`}
+                                style={post.background ? {
+                                    backgroundImage: `url(${post.background})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                } : {}}
                             >
-                                  <span className="bg-white/20 text-white mt-[1em] text-xs px-3 py-1 rounded-full">
-                                        {post.tag}
-                                    </span>
-                                <div className='p-[5em] flex items-center justify-center text-center'>
-                                  
-                                    <p className="text-white text-lg font-semibold mt-4 leading-snug">
-                                        {post.text}
-                                    </p>
-                                </div>
+                                <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full absolute top-6 left-6">
+                                    {post.page.topic}
+                                </span>
+                                <p className="text-white text-lg font-semibold text-center leading-snug">
+                                    {post.text}
+                                </p>
                             </div>
 
                             {/* Stats */}
                             <div className="flex items-center gap-10 text-sm text-orange-500 p-4 border-t border-gray-100">
                                 <button
-                                    onClick={() => toggleLike(post.id)}
+                                    onClick={() => toggleLike(post._id)}
                                     className="flex items-center gap-2 hover:text-orange-600"
                                 >
                                     <Heart
-                                        className={`w-5 h-5 ${liked[post.id] ? "fill-orange-500" : ""
-                                            }`}
+                                        className={`w-5 h-5 ${liked[post._id] ? "fill-orange-500" : ""}`}
                                     />
-                                    <span>{post.stats.likes}</span>
+                                    <span>{post.likesCount}</span>
                                 </button>
 
                                 <button className="flex items-center gap-2 hover:text-orange-600">
                                     <MessageCircle className="w-5 h-5" />
-                                    <span>{post.stats.comments}</span>
+                                    <span>{post.commentsCount}</span>
                                 </button>
 
                                 <button className="flex items-center gap-2 hover:text-orange-600">
                                     <Share2 className="w-5 h-5" />
-                                    <span>{post.stats.shares}</span>
+                                    <span>{post.sharesCount}</span>
                                 </button>
                             </div>
                         </div>
                     ))}
+
+                    {/* Loading Indicator */}
+                    {knowledgeFeedLoading && (
+                        <div className="flex justify-center items-center py-8">
+                            <div className="flex gap-2">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Infinite Scroll Trigger */}
+                    <div ref={observerTarget} className="h-0 -mt-[1.4em]" />
+
+                    {!knowledgeFeedLoading && knowledgeFeed?.length === 0 && (
+                        <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
+                            <img src={nofound} alt="" />
+                        </p>
+                    )}
                 </div>
             </div>
 
             {/* Right Sidebar - 1/4 width */}
             <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
                 <div className="p-0">
-
-
                     <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
                         {/* Header */}
                         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
@@ -195,11 +222,8 @@ export default function Knowledge() {
                                     className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
                                 >
                                     <div className="flex items-center gap-3 mb-3">
-
                                         <img src={topics} alt="" className="w-12 h-12 rounded-full object-cover" />
                                         <div>
-
-
                                             <div className="flex gap-2">
                                                 <p className="font-[400] text-[14px]"> {item.title}</p>
                                                 <img src={notes} alt="" />
@@ -243,38 +267,26 @@ export default function Knowledge() {
                                                             className="w-6 h-6 rounded-full border-2 border-white"
                                                         />
                                                     </div>
-
                                                 </div>
-
                                             </div>
                                             <p className="text-[13px] text-black font-bold">
                                                 50+ <span className='text-slate-600 font-normal'>Follows</span>
-
                                             </p>
                                         </div>
-
-
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-
                         {/* Footer */}
                         <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
                             <span>View All</span>
                             <FaChevronRight color='orange' />
-
                         </div>
                     </div>
 
                     {open && <ChatWidget />}
                     <FloatingChatButton onClick={() => setOpen(!open)} />
-
-                    {showCreateModal && (
-                        <CreateKnowledgePostModal onClose={() => setShowCreateModal(false)} />
-                    )}
-
                 </div>
             </div>
         </div>

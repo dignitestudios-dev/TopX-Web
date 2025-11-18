@@ -19,7 +19,8 @@ import NotificationPopup from './NotificationPopup';
 import { RiMoneyDollarCircleFill } from "react-icons/ri";
 import RecentActivityPopup from './RecentActivityPopup';
 import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../../redux/slices/auth.slice';
+import { getAllUserData, logout } from '../../redux/slices/auth.slice';
+import Cookies from "js-cookie";
 
 
 const Header = () => {
@@ -33,12 +34,36 @@ const Header = () => {
 
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
+    const { user, accessToken, allUserData, isLoading, success, logoutLoading } = useSelector((state) => state.auth);
+
+
+
+    useEffect(() => {
+        dispatch(getAllUserData())
+    }, [])
+
 
     const navigate = useNavigate("");
-const handleLogout = () => {
-    dispatch(logout());
-    navigate("/auth/login");
-}
+    // const handleLogout = () => {
+    //     Cookies.remove("access_token");
+    //     dispatch(logout(accessToken));
+    //     navigate("/auth/login");
+    // }
+
+
+    const handleLogout = () => {
+        Cookies.remove("access_token");
+        dispatch(logout(accessToken));
+    };
+
+    // ✅ When logout success = true → navigate
+    useEffect(() => {
+        if (success === "Logout successful") {
+            navigate("/auth/login"); // Navigate after successful logout
+        }
+    }, [success]); // Dependency on success state
+
+
     const navItems = [
         { icon: Home, to: "/home", label: 'Home' },
         { icon: Layers, to: "/subscriptions", label: 'Subscriptions' },
@@ -48,7 +73,6 @@ const handleLogout = () => {
         { icon: RiMoneyDollarCircleFill, to: "/affiliates", label: 'Affiliates' },
         { icon: Bell, to: "/notifications", label: 'Notifications' },
     ];
-const {user} = useSelector((state)=>state.auth);
     // Click outside handler
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -56,13 +80,13 @@ const {user} = useSelector((state)=>state.auth);
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsDropdownOpen(false);
             }
-            
+
             // Notification close kro agar click outside ho
             if (notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setIsNotificationOpen(false);
             }
 
-               if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
                 setIsRecentOpen(false);
             }
         };
@@ -76,7 +100,7 @@ const {user} = useSelector((state)=>state.auth);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isDropdownOpen, isNotificationOpen,isRecentOpen]);
+    }, [isDropdownOpen, isNotificationOpen, isRecentOpen]);
 
     return (
         <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -92,12 +116,12 @@ const {user} = useSelector((state)=>state.auth);
                 <div className="hidden md:flex flex-1 max-w-md pt-3">
                     <div className="relative w-full">
                         <Link to="/search-items">
-                        <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search"
-                            className="w-[22em] pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
-                        />
+                            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Search"
+                                className="w-[22em] pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
+                            />
                         </Link>
                     </div>
                 </div>
@@ -114,16 +138,19 @@ const {user} = useSelector((state)=>state.auth);
                                 <div key={index} className="relative" ref={notificationRef}>
                                     <button
                                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen
-                                            ? "border-orange-500 text-orange-500"
-                                            : "border-transparent text-gray-600 hover:text-orange-500"
-                                            }`}
+                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen ? "border-orange-500 text-orange-500" : "border-transparent text-gray-600 hover:text-orange-500"}`}
                                     >
-                                        <Icon size={24} />
+                                        <div className="relative">
+                                            <Icon size={24} />
+                                            {/* Show the dot by default, hide when isNotificationOpen is true */}
+                                            {!isNotificationOpen && (
+                                                <div className="absolute top-0 right-1 bg-red-500 w-2 h-2 rounded-full"></div>
+                                            )}
+                                        </div>
+
                                         <span className="text-xs mt-1">Notifications</span>
-
-
                                     </button>
+
 
                                     {/* ✅ Notification Popup */}
                                     {isNotificationOpen && (
@@ -172,9 +199,35 @@ const {user} = useSelector((state)=>state.auth);
                         className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
                     >
                         <div className="w-8 h-8">
-                            <img src={user.profilePicture || dummyprofile} loading="lazy" alt="profile" className="h-8 w-8 rounded-full" />
+                            {
+                                allUserData?.profilePicture
+                                    ? (
+                                        <img
+                                            src={allUserData.profilePicture}
+                                            loading="lazy"
+                                            alt="profile"
+                                            className="h-8 w-8 rounded-full"
+                                        />
+                                    )
+                                    : dummyprofile
+                                        ? (
+                                            <img
+                                                src={dummyprofile}
+                                                loading="lazy"
+                                                alt="profile"
+                                                className="h-8 w-8 rounded-full"
+                                            />
+                                        )
+                                        : (
+                                            <span>No Data</span>
+                                        )
+                            }
+
                         </div>
-                        <span className="text-black font-[500] text-sm">{user.name || "Not Avaiable"}</span>
+                        <span className="text-black font-[500] text-sm">
+                            {allUserData?.name?.trim() ? allUserData.name : "Not Available"}
+                        </span>
+
                         <ChevronDown size={16} className="text-gray-600 hidden sm:block" />
                     </button>
 
@@ -190,12 +243,12 @@ const {user} = useSelector((state)=>state.auth);
                                     My Posts
                                 </button>
                             </Link>
-                                <button
-                                    onClick={() => setIsRecentOpen(true)}
-                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                                >
-                                    Recent Activity
-                                </button>
+                            <button
+                                onClick={() => setIsRecentOpen(true)}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                            >
+                                Recent Activity
+                            </button>
                             <Link to="/setting">
                                 <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                                     Settings
@@ -204,9 +257,18 @@ const {user} = useSelector((state)=>state.auth);
                             <button
                                 onClick={handleLogout}
                                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                                disabled={logoutLoading} // Disable the button while loading
                             >
-                                Logout
+                                {logoutLoading ? (
+                                    <div className="flex justify-center items-center">
+                                        <div className="spinner-border animate-spin border-t-2 border-b-2 border-orange-500 w-4 h-4 rounded-full"></div>
+                                        <span className="ml-2">Logging out...</span>
+                                    </div>
+                                ) : (
+                                    "Logout"
+                                )}
                             </button>
+
                         </div>
                     )}
                 </div>

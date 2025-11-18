@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp, Plus, ChevronsRight, ArrowLeft } from "lucide-react";
 import { notes, postone, profile, profilehigh, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
@@ -10,10 +10,53 @@ import FloatingChatWidget from "../../components/global/ChatWidget";
 import FloatingChatButton from "../../components/global/ChatWidget";
 import PostCard from "../../components/global/PostCard";
 import { useNavigate } from "react-router";
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchRecommendedPages } from '../../redux/slices/trending.slice';
+import CollectionModal from "../../components/global/CollectionModal";
+import { addPageToCollections, getMyCollections, removePageFromCollections } from "../../redux/slices/collection.slice";
 
 export default function Suggestpage() {
   const [liked, setLiked] = useState({});
+  const [page, setPage] = useState(1);
+  const [open, setOpen] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedPage, setSelectedPage] = useState(null);
+  const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
   const navigation = useNavigate();
+  const observerTarget = useRef(null);
+  const dispatch = useDispatch();
+
+  const {
+    trendingPagination,
+    recommendedPages,
+    recommendedLoading,
+    recommendedPagination,
+    error,
+  } = useSelector((state) => state.trending);
+
+  const { removepageLoading } = useSelector((state) => state.collections);
+
+  useEffect(() => {
+    dispatch(fetchRecommendedPages({ page: page, limit: 12 }));
+  }, [dispatch, page]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && !recommendedLoading && recommendedPagination?.hasNextPage) {
+          setPage(prev => prev + 1);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [recommendedLoading, recommendedPagination]);
 
   const toggleLike = (postId) => {
     setLiked((prev) => ({
@@ -22,135 +65,198 @@ export default function Suggestpage() {
     }));
   };
 
-  const [open, setOpen] = useState(false);
+  const handleSaveToCollection = ({ selectedCollections }) => {
+    dispatch(addPageToCollections({
+      collections: selectedCollections,
+      page: selectedPage._id,
+    })).then(() => {
+      dispatch(getMyCollections({ page: 1, limit: 100 }));
+      dispatch(fetchRecommendedPages({ page: 1, limit: 12 }));
+      setOpenModal(false);
+    });
+  };
 
-  const trending = [
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-     {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-  ];
+  const handleUnsubscribe = (pageItem) => {
+    setUnsubscribingPageId(pageItem._id);
+
+    dispatch(removePageFromCollections({
+      collections: pageItem.collections || [],
+      page: pageItem._id,
+    })).then(() => {
+      dispatch(fetchRecommendedPages({ page: 1, limit: 12 }));
+      setUnsubscribingPageId(null);
+    });
+  };
+
+  const handleSubscribeClick = (pageItem) => {
+    setSelectedPage(pageItem);
+    setOpenModal(true);
+  };
 
   return (
-    <div className="flex max-w-7xl mx-auto">
+    <div className="flex max-w-7xl mx-auto min-h-screen">
       {/* Left Sidebar - 25% width (Fixed) */}
-      <div className="w-1/4 bg-[#F2F2F2] pt-3 pb-3">
+      <div className="w-1/4 bg-[#F2F2F2] pt-3 pb-3 overflow-y-auto">
         <Profilecard smallcard={true} />
         <div className="pt-4">
           <MySubscription />
         </div>
       </div>
 
-      {/* Main Feed - 65% width (Scrollable) */}
-      <div className="w-[64%] p-3 h-[40em] overflow-y-auto scrollbar-hide">
-        <div>
-          <div className="flex gap-2 items-center p-3">
-            <ArrowLeft className="cursor-pointer" onClick={()=>{
-                navigation(-1)
-            }}/>
-            <h1 className="font-bold text-[18px]">Suggested Page</h1>
+      {/* Main Feed - 75% width (Scrollable) */}
+      <div className="w-3/4 bg-transparent overflow-y-auto">
+        <div className="p-0">
+          {/* Header */}
+          <div className="flex gap-3 items-center p-4 bg-[#F2F2F2] rounded-xl mb-0">
+            <button
+              onClick={() => navigation(-1)}
+              className="hover:bg-gray-300 p-2 rounded-full transition-colors"
+            >
+              <ArrowLeft size={24} className="text-gray-700" />
+            </button>
+            <h1 className="font-bold text-[22px] text-gray-900">Suggested Pages</h1>
           </div>
 
-          {/* Display trending posts in a 2-column grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {trending.map((item, idx) => (
-              <div
-                key={idx}
-                className="border-b rounded-2xl border-gray-200 bg-white m-1 p-4 pb-4 last:border-0 last:pb-0"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <img
-                    src={topics}
-                    alt=""
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <div className="flex gap-2">
-                      <p className="font-[400] text-[14px]"> {item.title}</p>
-                      <img src={notes} alt="" />
+          {/* Loading State */}
+          {recommendedLoading && page === 1 && (
+            <div className="flex justify-center items-center py-12">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-3 h-3 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            </div>
+          )}
+
+          {/* Display trending pages in a 3-column grid */}
+          {recommendedPages && recommendedPages.length > 0 ? (
+            <>
+              <div className="grid grid-cols-3 gap-6 px-8 py-6">
+                {recommendedPages.map((item, idx) => (
+                  <div
+                    key={item._id || idx}
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <img
+                        src={item.image || item.user?.profilePicture || topics}
+                        alt={item.name}
+                        className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex gap-2 items-center">
+                          <p className="font-semibold text-[14px] text-gray-900 truncate">{item.name}</p>
+                          <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
+                        </div>
+                        <p className="text-[12px] text-gray-500 mt-1 truncate">{item.topic}</p>
+                      </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Description */}
-                <p className="text-sm text-gray-600 mb-2 leading-snug">
-                  {item.desc}
-                </p>
+                    {/* Description */}
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {item.about}
+                    </p>
 
-                {/* Hashtags */}
-                <p className="text-xs text-gray-700 mb-3">
-                  {item.hashtags.map((tag, i) => (
-                    <span key={i} className="mr-1 text-gray-500">
-                      {tag}
-                    </span>
-                  ))}
-                </p>
+                    {/* Keywords/Hashtags */}
+                    {item.keywords && item.keywords.length > 0 && (
+                      <p className="text-xs text-gray-500 mb-4 line-clamp-1">
+                        {item.keywords.slice(0, 3).join(' ')}
+                      </p>
+                    )}
 
-                <div className="flex justify-between items-center">
-                  <div>
-                    {/* Followers + Subscribe */}
-                    <div className="flex items-center justify-between">
+                    {/* Footer - Followers and Subscribe */}
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-100">
                       <div className="flex items-center gap-2">
                         <div className="flex -space-x-2">
-                          <img
-                            src="https://randomuser.me/api/portraits/women/1.jpg"
-                            alt=""
-                            className="w-6 h-6 rounded-full border-2 border-white"
-                          />
-                          <img
-                            src="https://randomuser.me/api/portraits/men/2.jpg"
-                            alt=""
-                            className="w-6 h-6 rounded-full border-2 border-white"
-                          />
-                          <img
-                            src="https://randomuser.me/api/portraits/women/3.jpg"
-                            alt=""
-                            className="w-6 h-6 rounded-full border-2 border-white"
-                          />
+                          {item.followers && item.followers.slice(0, 3).map((img, i) => (
+                            img ? (
+                              <img
+                                key={i}
+                                src={img}
+                                alt="follower"
+                                className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                              />
+                            ) : (
+                              <div
+                                key={i}
+                                className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
+                              />
+                            )
+                          ))}
                         </div>
+                        <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
+                          {item.followersCount}+ Follows
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-600 font-medium">
-                        50+ Follows
-                      </p>
+
+                      {item.isSubscribed ? (
+                        <button
+                          onClick={() => handleUnsubscribe(item)}
+                          disabled={unsubscribingPageId === item._id}
+                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
+                            ${unsubscribingPageId === item._id
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : "bg-gray-200 text-gray-700"
+                            }`}
+                        >
+                          {unsubscribingPageId === item._id ? (
+                            <span className="flex items-center gap-2">
+                              <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
+                              Removing...
+                            </span>
+                          ) : (
+                            "Unsubscribe"
+                          )}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSubscribeClick(item)}
+                          className="bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white px-5 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                        >
+                          Subscribe
+                        </button>
+                      )}
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div>
-                    <button className="bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:bg-orange-600 text-white px-6 py-1.5 rounded-[10px] text-sm font-semibold">
-                      Subscribe
-                    </button>
+              {/* Loading Indicator for pagination */}
+              {recommendedLoading && page > 1 && (
+                <div className="flex justify-center items-center py-8 mt-8">
+                  <div className="flex gap-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              )}
+
+              {/* Infinite Scroll Trigger */}
+              <div ref={observerTarget} className="h-10 mt-8" />
+            </>
+          ) : (
+            <div className="text-center py-16">
+              <TrendingUp size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">No pages available</p>
+            </div>
+          )}
         </div>
+
+        {/* Collection Modal */}
+        {openModal && (
+          <CollectionModal
+            isOpen={openModal}
+            onClose={() => setOpenModal(false)}
+            page={selectedPage}
+            onSave={handleSaveToCollection}
+          />
+        )}
+
+        {/* Chat Widget */}
+        {open && <ChatWidget />}
+        <FloatingChatButton onClick={() => setOpen(!open)} />
       </div>
     </div>
   );
