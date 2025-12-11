@@ -43,9 +43,7 @@ const filteredCategories = interestsList?.filter((item) =>
     if (activeCategories.length < 4) {
       return ErrorToast("Please select at least 4 categories.");
     }
-    if (activeCategories.length > 4) {
-      return ErrorToast("Please select only 4 categories.");
-    }
+  
 
     // SEND SELECTED CATEGORIES TO BACKEND
     const res = await dispatch(updateInterests(activeCategories));

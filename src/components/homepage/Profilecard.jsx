@@ -69,11 +69,11 @@ const Profilecard = () => {
                                     <div className="text-xs">Posts</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-[17px] font-[600]">{allUserData?.followingCount || "0"}</div>
+                                    <div className="text-[17px] font-[600]">{allUserData?.followersCount || "0"}</div>
                                     <div className="text-xs">Followers</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-[17px] font-[600]">{allUserData?.followersCount || "0"}</div>
+                                    <div className="text-[17px] font-[600]">{allUserData?.followingCount || "0"}</div>
                                     <div className="text-xs">Following</div>
                                 </div>
                             </div>

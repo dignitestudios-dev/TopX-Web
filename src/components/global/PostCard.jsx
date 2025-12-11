@@ -264,7 +264,7 @@ const PostCard = ({
                             <img
                                 src={firstImage}
                                 alt="Post"
-                                className="w-full rounded-lg hover:opacity-90 transition-opacity"
+                                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
                             />
                             {images.length > 1 && (
                                 <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">

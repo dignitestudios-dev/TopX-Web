@@ -8,6 +8,7 @@ import KnowledgePostSkeleton from "../../global/KnowledgePostSkeleton";
 import CreateKnowledgePageModal from "../../global/CreateKnowledgePageModal";
 import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
 import PageCategorySelector from "./PageCategorySelector";
+import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
 
 export default function KnowledgePostCard() {
   const dispatch = useDispatch();
@@ -17,6 +18,10 @@ export default function KnowledgePostCard() {
   const [openPostModal, setOpenPostModal] = useState(false);
   const [selectedPageId, setSelectedPageId] = useState(null);
   const [selectedSubTopics, setSelectedSubTopics] = useState([]);
+  const [isKnowledgePageOpen, setIsKnowledgePageOpen] = useState(false);
+  const [selectedPage, setSelectedPage] = useState(null);
+
+
 
   const { knowledgePages, loading } = useSelector(
     (state) => state.knowledgepost
@@ -35,7 +40,8 @@ export default function KnowledgePostCard() {
   return (
     <div className="py-4">
       <div className="space-y-6">
-
+ {!isKnowledgePageOpen ? (
+          <>
         {/* CREATE KNOWLEDGE POST (TOP INPUT) */}
         <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-3 py-1">
           <input
@@ -68,13 +74,33 @@ export default function KnowledgePostCard() {
         )}
 
         {/* DATA */}
-        {!loading && knowledgePages?.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {knowledgePages?.map((item) => (
-              <KnowledgeAllPostCard key={item._id} item={item} />
-            ))}
-          </div>
+       
+            {!loading && knowledgePages?.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {knowledgePages?.map((item) => (
+                  <div
+                    key={item._id}
+                    onClick={() => {
+                      setSelectedPage(item._id);
+                      setIsKnowledgePageOpen(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <KnowledgeAllPostCard item={item} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <KnowledgePostPageDetail
+            pageId={selectedPage}
+            setIsKnowledgePageOpen={setIsKnowledgePageOpen}
+          />
         )}
+
+
+
 
         {/* EMPTY */}
         {!loading && knowledgePages?.length === 0 && (
@@ -192,6 +218,8 @@ export default function KnowledgePostCard() {
             </div>
           </div>
         )}
+
+
 
       </div>
     </div>

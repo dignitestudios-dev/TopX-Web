@@ -35,7 +35,7 @@ export default function LargeProfile({ setIsEditProfile }) {
                 <div className='flex relative -bottom-[62px] px-4 gap-3'>
                     <div className='relative'>
                         <img 
-                            src={allUserData?.profilePicture || profilehigh} 
+                            src={allUserData?.profilePicture || "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"} 
                             alt="" 
                             className='w-[135px] h-[135px] rounded-full object-cover'
                         />

@@ -34,7 +34,7 @@ const Header = () => {
 
     const dropdownRef = useRef(null);
     const notificationRef = useRef(null);
-    const { user, accessToken, allUserData, isLoading, success,logoutLoading } = useSelector((state) => state.auth);
+    const { user, accessToken, allUserData, isLoading, success, logoutLoading } = useSelector((state) => state.auth);
 
 
 
@@ -138,16 +138,19 @@ const Header = () => {
                                 <div key={index} className="relative" ref={notificationRef}>
                                     <button
                                         onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen
-                                            ? "border-orange-500 text-orange-500"
-                                            : "border-transparent text-gray-600 hover:text-orange-500"
-                                            }`}
+                                        className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen ? "border-orange-500 text-orange-500" : "border-transparent text-gray-600 hover:text-orange-500"}`}
                                     >
-                                        <Icon size={24} />
+                                        <div className="relative">
+                                            <Icon size={24} />
+                                            {/* Show the dot by default, hide when isNotificationOpen is true */}
+                                            {!isNotificationOpen && (
+                                                <div className="absolute top-0 right-1 bg-red-500 w-2 h-2 rounded-full"></div>
+                                            )}
+                                        </div>
+
                                         <span className="text-xs mt-1">Notifications</span>
-
-
                                     </button>
+
 
                                     {/* ✅ Notification Popup */}
                                     {isNotificationOpen && (
