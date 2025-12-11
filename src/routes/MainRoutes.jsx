@@ -16,6 +16,7 @@ import Searchitem from "../pages/Others/Searchitem";
 import { useState } from "react";
 import FloatingChatButton from '../components/global/ChatWidget';
 import ProtectedRoute from "./ProtectedRoute";
+import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
 
 const MainRoutes = () => {
     const [open, setOpen] = useState(false);
@@ -118,6 +119,14 @@ const MainRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <Suggestpage />
+                            </ProtectedRoute>
+                        }
+                    />
+                     <Route
+                        path="/trendingsuggested-pages"
+                        element={
+                            <ProtectedRoute>
+                                <Trendingsuggestpage />
                             </ProtectedRoute>
                         }
                     />

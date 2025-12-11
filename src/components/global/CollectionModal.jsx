@@ -40,6 +40,7 @@ export default function CollectionModal({
     };
 
 
+    console.log(allcollections, "allcollections")
 
     // Load collections when opened
     useEffect(() => {
