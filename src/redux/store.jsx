@@ -6,9 +6,12 @@ import onboardingReducer from "./slices/onboarding.slice"
 import collectionReducer from "./slices/collection.slice"
 import postsReducer from "./slices/posts.slice";
 import subscriptionsReducer from "./slices/Subscription.slice";
-import knowledgepostReducer from "./slices/knowledgepost.slice"
 import affiliateReducer from "./slices/affiliate.slice"
 import profileSettingsReducer from "./slices/profileSetting.slice"
+import knowledgepostReducer from "./slices/knowledgepost.slice"
+import notificationsReducer from  "./slices/notifications.slice";
+import postsfeedReducer from "./slices/postfeed.slice";
+import trendingReducer from "./slices/trending.slice"
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -29,6 +32,9 @@ const rootReducer = combineReducers({
   affiliate: affiliateReducer,
   profileSetting: profileSettingsReducer,
   knowledgepost: knowledgepostReducer,
+  trending: trendingReducer,
+  notifications: notificationsReducer,
+  postsfeed: postsfeedReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

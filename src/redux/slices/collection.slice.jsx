@@ -10,6 +10,7 @@ const initialState = {
   pagination: null,
   savedCollections: [],
   savedCollectionsPagination: null,
+  removePageLoading: false,
 };
 
 // =============================
@@ -428,12 +429,12 @@ const collectionSlice = createSlice({
       })
 
       .addCase(removePageFromCollections.pending, (state) => {
-        state.isLoading = true;
+        state.removePageLoading = true;
         state.error = null;
         state.success = null;
       })
       .addCase(removePageFromCollections.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.removePageLoading = false;
         state.success = action.payload.message;
 
         const affected = action.payload.collections;
@@ -449,7 +450,7 @@ const collectionSlice = createSlice({
         });
       })
       .addCase(removePageFromCollections.rejected, (state, action) => {
-        state.isLoading = false;
+        state.removePageLoading = false;
         state.error = action.payload;
       });
   },
