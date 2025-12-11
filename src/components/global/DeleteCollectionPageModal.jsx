@@ -1,8 +1,9 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
+import { useSelector } from "react-redux";
 
-const DeletePostModal = ({ onClose, onConfirm }) => {
-  
+const DeleteCollectionPageModal = ({ onClose, onConfirm }) => {
+  const { isLoading } = useSelector((state) => state.collections);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white w-[350px] rounded-2xl shadow-xl p-6 text-center">
@@ -14,9 +15,11 @@ const DeletePostModal = ({ onClose, onConfirm }) => {
         </div>
 
         {/* Title & Text */}
-        <h2 className="text-lg font-semibold text-gray-900">Delete Post</h2>
+        <h2 className="text-lg font-semibold text-gray-900">
+          Delete Subscription
+        </h2>
         <p className="text-sm text-gray-600 mt-1 mb-5">
-          Are you sure you want to delete this post?
+          Are you sure you want to delete this subscription?
         </p>
 
         {/* Buttons */}
@@ -35,7 +38,7 @@ const DeletePostModal = ({ onClose, onConfirm }) => {
             }}
             className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded-lg transition-colors"
           >
-            Delete Now
+            {isLoading ? "Deleting..." : "Delete Now"}
           </button>
         </div>
       </div>
@@ -43,4 +46,4 @@ const DeletePostModal = ({ onClose, onConfirm }) => {
   );
 };
 
-export default DeletePostModal;
+export default DeleteCollectionPageModal;

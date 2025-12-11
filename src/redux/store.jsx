@@ -5,7 +5,10 @@ import pagesReducer from "./slices/pages.slice";
 import onboardingReducer from "./slices/onboarding.slice"
 import collectionReducer from "./slices/collection.slice"
 import postsReducer from "./slices/posts.slice";
+import subscriptionsReducer from "./slices/Subscription.slice";
 import knowledgepostReducer from "./slices/knowledgepost.slice"
+import affiliateReducer from "./slices/affiliate.slice"
+import profileSettingsReducer from "./slices/profileSetting.slice"
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -22,6 +25,9 @@ const rootReducer = combineReducers({
   onboarding: onboardingReducer,
   collections: collectionReducer,
   posts: postsReducer,
+  subscriptions: subscriptionsReducer,
+  affiliate: affiliateReducer,
+  profileSetting: profileSettingsReducer,
   knowledgepost: knowledgepostReducer,
 });
 
