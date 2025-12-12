@@ -153,7 +153,7 @@ export default function Home() {
                     ))
                 ) : (
                     // Show empty state
-                    <div className="flex items-center justify-center h-full text-gray-500">
+                    <div className="pl-3 pr-3">
                         <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
                             <img src={nofound} alt="" />
                         </p>
