@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import { X } from 'lucide-react';
-import Button from '../../common/Button';
-import Input from '../../common/Input';
+import React, { useState } from "react";
+import { X } from "lucide-react";
+import Button from "../../common/Button";
+import Input from "../../common/Input";
 import { useDispatch } from "react-redux";
-import { createPost } from "../../../redux/slices/posts.slice";
+import { createPost, createStory } from "../../../redux/slices/posts.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
 
-export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, title, selectedPages }) {
+export default function UploadPostStory({
+  setIsOpen,
+  isOpen,
+  setSelectedType,
+  title,
+  selectedPages,
+}) {
   const dispatch = useDispatch();
-
-  const [bodyText, setBodyText] = useState('');
+  console.log(title, "selectedTYpe");
+  const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
   const MAX_IMAGES = 6;
-
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -25,21 +30,24 @@ export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, ti
 
     const filesToAdd = files.slice(0, remainingSlots);
 
-    filesToAdd.forEach(file => {
+    filesToAdd.forEach((file) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImages(prev => [...prev, {
-          id: Date.now() + Math.random(),
-          url: reader.result,
-          fileObject: file
-        }]);
+        setImages((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            url: reader.result,
+            fileObject: file,
+          },
+        ]);
       };
       reader.readAsDataURL(file);
     });
   };
 
   const removeImage = (id) => {
-    setImages(prev => prev.filter(img => img.id !== id));
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   // ======================
@@ -74,13 +82,13 @@ export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, ti
       fd.append("media", img.fileObject);
     });
 
-    dispatch(createPost(fd))
+    dispatch(title == "Create Story" ? createStory(fd) : createPost(fd))
       .unwrap()
       .then(() => {
-        SuccessToast("Post Created Successfully!");
+        SuccessToast(title + " Successfully!");
 
         // reset
-        setBodyText('');
+        setBodyText("");
         setImages([]);
         setSelectedType("Done");
       })
@@ -97,7 +105,6 @@ export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, ti
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-slideUp overflow-hidden">
-
               <div className="p-5 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-900">{title}</h2>
@@ -111,7 +118,6 @@ export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, ti
               </div>
 
               <div className="p-5 max-h-[70vh] overflow-y-auto">
-
                 {/* BODY TEXT */}
                 <div className="mb-5">
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -175,7 +181,6 @@ export default function UploadPostStory({ setIsOpen, isOpen, setSelectedType, ti
                 >
                   Post Now
                 </Button>
-
               </div>
             </div>
           </div>

@@ -17,7 +17,6 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
     { label: "Start Live Streaming (Go Live)", icon: Plus },
   ];
 
-
   return (
     <div>
       {isOpen && (
@@ -84,13 +83,14 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           setSelectedType={setSelectedType}
         />
       )}
-   {selectedType?.type === "upload Post" && (
+      {(selectedType?.type === "upload Post" ||
+        selectedType?.type === "upload story") && (
         <UploadPostStory
           setIsOpen={setSelectedOption}
           isOpen={selectedOption}
           title={title}
           setSelectedType={setSelectedType}
-          selectedPages={selectedType.pages}   // 📌 IDs yahan aa rahi hain
+          selectedPages={selectedType.pages} // 📌 IDs yahan aa rahi hain
         />
       )}
 
@@ -106,7 +106,6 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           setIsOpen={setSelectedOption}
           isOpen={selectedOption}
           setSelectedType={setSelectedType}
-
         />
       )}
       {selectedType === "Page done" && title === "Create New Page" && (

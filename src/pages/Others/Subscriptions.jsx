@@ -1,9 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Heart,
-  MessageCircle,
-  Share2,
-  MoreHorizontal,
   ChevronRight,
   TrendingUp,
   Plus,
@@ -12,19 +8,11 @@ import {
   Bookmark,
   Layers,
 } from "lucide-react";
-import {
-  notes,
-  postone,
-  profile,
-  profilehigh,
-  topics,
-} from "../../assets/export";
+import { notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
-import MySubscription from "../../components/homepage/MySubscription";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
 import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatWidget from "../../components/global/ChatWidget";
 import FloatingChatButton from "../../components/global/ChatWidget";
 import CreateSubscriptionModal from "../../components/global/CreateSubscriptionModal";
 import { useDispatch, useSelector } from "react-redux";
@@ -36,6 +24,7 @@ import {
   RemoveSubscriptionCollection,
   updateSavedCollections,
 } from "../../redux/slices/collection.slice";
+import { useNavigate } from "react-router";
 
 export default function Subscriptions() {
   const [liked, setLiked] = useState({});
@@ -43,7 +32,9 @@ export default function Subscriptions() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const dispatch = useDispatch();
   const { mySubscriptions } = useSelector((state) => state.subscriptions);
-  const { savedCollections,isLoading } = useSelector((state) => state.collections);
+  const { savedCollections, isLoading } = useSelector(
+    (state) => state.collections
+  );
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [SelectedCollection, setSelectedCollection] = useState(null);
   const dropdownRef = useRef(null);
@@ -51,7 +42,7 @@ export default function Subscriptions() {
   const [search, setSearch] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-
+  const navigate = useNavigate();
   // 🔥 Debounce search so API doesn't call on every key press
   useEffect(() => {
     const delay = setTimeout(() => {
@@ -136,7 +127,7 @@ export default function Subscriptions() {
     }
   };
   const savedCollection = async (id) => {
-    console.log(id,"idesss")
+    console.log(id, "idesss");
     await dispatch(updateSavedCollections(id)).unwrap();
   };
   console.log(subscriptions, "item-pages-->");
@@ -282,10 +273,17 @@ export default function Subscriptions() {
           {subscriptions?.map((item) => (
             <div
               key={item._id}
-              className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+              className="bg-white cursor-pointer border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
             >
               <div className="flex justify-between items-start">
-                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1">
+                <h3
+                  onClick={() =>
+                    navigate(`/subscriptions-category`, {
+                      state: { id: item._id },
+                    })
+                  }
+                  className="text-sm font-semibold text-gray-800 flex items-center gap-1"
+                >
                   {item.name}
                   <span className="text-gray-400 pl-1">
                     <Layers size={16} />
@@ -323,7 +321,7 @@ export default function Subscriptions() {
                 ) : (
                   <Bookmark
                     size={18}
-                    onClick={()=>savedCollection(item._id)}
+                    onClick={() => savedCollection(item._id)}
                     className="text-orange-500 cursor-pointer"
                     fill="#F97316"
                   />

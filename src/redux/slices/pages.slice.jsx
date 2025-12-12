@@ -5,9 +5,10 @@ const initialState = {
   pagesLoading: false,
   error: null,
   success: null,
-  pages: null,       // createPage response
-  myPages: [],       // <-- list of pages from GET API
-  pagination: null,  // <-- pagination info
+  pages: null, // createPage response
+  myPages: [], // <-- list of pages from GET API
+  recommendationPages: [], // <-- list of recommended pages
+  pagination: null, // <-- pagination info
   // NEW
   pageDetailLoading: false,
   pageDetail: null,
@@ -44,7 +45,6 @@ export const getPageDetail = createAsyncThunk(
   }
 );
 
-
 // ================= FETCH MY PAGES =================
 export const fetchMyPages = createAsyncThunk(
   "pages/fetchMyPages",
@@ -59,7 +59,22 @@ export const fetchMyPages = createAsyncThunk(
     }
   }
 );
-
+// ================= FETCH Other PAGES =================
+export const fetchOtherPages = createAsyncThunk(
+  "pages/recommendations",
+  async ({ page = 1, limit = 10 }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/pages/recommendations?page=${page}&limit=${limit}`
+      );
+      return res.data; // full response with pagination + data
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch pages"
+      );
+    }
+  }
+);
 
 // ================= SLICE =================
 const pagesSlice = createSlice({
@@ -108,6 +123,19 @@ const pagesSlice = createSlice({
         state.success = true;
       })
       .addCase(fetchMyPages.rejected, (state, action) => {
+        state.pagesLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(fetchOtherPages.pending, (state) => {
+        state.pagesLoading = true;
+      })
+      .addCase(fetchOtherPages.fulfilled, (state, action) => {
+        state.pagesLoading = false;
+        state.recommendationPages = action.payload.data; // array of pages
+        state.pagination = action.payload.pagination;
+        state.success = true;
+      })
+      .addCase(fetchOtherPages.rejected, (state, action) => {
         state.pagesLoading = false;
         state.error = action.payload;
       });

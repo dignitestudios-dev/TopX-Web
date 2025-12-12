@@ -6,7 +6,10 @@ const initialState = {
   success: false,
   subcriptionLoading: false,
   mySubscriptions: null,
+  CollectionFeeds: null,
+  PageStories: null,
   mySubscriptionspagaintion: null,
+  pagination: null,
   isLoading: false,
 };
 // ====================================================
@@ -29,6 +32,41 @@ export const getMySubsctiptions = createAsyncThunk(
 );
 
 // =============================
+// get Collections Feeds By Id
+// =============================
+
+export const getCollectionFeed = createAsyncThunk(
+  "subscriptions/getCollectionFeed",
+  async ({ id, page = 1, limit = 10, search = "" }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/posts/feed/collection/${id}?page=${page}&limit=${limit}&search=${search}`
+      );
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch subscriptions"
+      );
+    }
+  }
+);
+export const getPageStories = createAsyncThunk(
+  "/stories/page/id",
+  async ({ id, page = 1, limit = 10, search = "" }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/stories/page/${id}?page=${page}&limit=${limit}&search=${search}`
+      );
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch subscriptions"
+      );
+    }
+  }
+);
+
+// =============================
 // ADD PAGE TO COLLECTIONS (SUBSCRIBE)
 // =============================
 export const createPageToCollections = createAsyncThunk(
@@ -36,7 +74,7 @@ export const createPageToCollections = createAsyncThunk(
   async ({ pages, collectionId }, thunkAPI) => {
     try {
       const token = Cookies.get("access_token");
-      if (!token) return thunkAPI.rejectWithValue("No access token found");     
+      if (!token) return thunkAPI.rejectWithValue("No access token found");
       const res = await axios.post(
         `/collections/addPages/${collectionId}`,
         { pages },
@@ -46,6 +84,35 @@ export const createPageToCollections = createAsyncThunk(
           },
         }
       );
+
+      if (!res.data?.success) {
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Failed to add page"
+        );
+      }
+
+      return {
+        message: res.data.message,
+      };
+    } catch (error) {
+      console.log("API ERROR:", error.response?.data);
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to add page"
+      );
+    }
+  }
+);
+export const LikeOtherStories = createAsyncThunk(
+  "stories/id/like",
+  async ({ storyId }, thunkAPI) => {
+    try {
+      const token = Cookies.get("access_token");
+      if (!token) return thunkAPI.rejectWithValue("No access token found");
+      const res = await axios.post(`/stories/${storyId}/like`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
@@ -97,6 +164,30 @@ const subscriptionsSlice = createSlice({
         state.subcriptionLoading = false;
         state.error = action.payload;
       })
+      .addCase(getCollectionFeed.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getCollectionFeed.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.CollectionFeeds = action.payload.data;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(getCollectionFeed.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(getPageStories.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getPageStories.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.PageStories = action.payload.data;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(getPageStories.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
       // ------------------
       // Add Pages  To Collections
       // ------------------
@@ -107,6 +198,16 @@ const subscriptionsSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(createPageToCollections.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(LikeOtherStories.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(LikeOtherStories.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(LikeOtherStories.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

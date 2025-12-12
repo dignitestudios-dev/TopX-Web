@@ -3,10 +3,17 @@ import { X, Search } from "lucide-react";
 import Input from "../../common/Input";
 import Button from "../../common/Button";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchMyPages } from "../../../redux/slices/pages.slice";
+import {
+  fetchMyPages,
+} from "../../../redux/slices/pages.slice";
 import { ErrorToast } from "../../global/Toaster";
 
-export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedType }) {
+export default function PostStoryModal({
+  setIsOpen,
+  isOpen,
+  title,
+  setSelectedType,
+}) {
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
   const [selectedPages, setSelectedPages] = useState([]);
@@ -21,7 +28,7 @@ export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedTy
   // Combine Create New Page with API data
   const pages = [
     { _id: 0, name: "Create New Page", isNew: true, image: null },
-    ...(myPages || [])
+    ...(myPages || []),
   ];
 
   const togglePageSelection = (pageId) => {
@@ -33,7 +40,7 @@ export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedTy
     );
   };
 
-  const filteredPages = pages.filter((page) =>
+  const filteredPages = myPages.filter((page) =>
     page.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -49,11 +56,10 @@ export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedTy
     }
 
     setSelectedType({
-      type: "upload Post",
+      type: "upload story",
       pages: selectedPages,
     });
   };
-
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -111,8 +117,9 @@ export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedTy
                       <div
                         key={page._id}
                         onClick={() => togglePageSelection(page._id)}
-                        className={`flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer ${page.isNew ? "hover:bg-gray-50" : "hover:bg-orange-50"
-                          }`}
+                        className={`flex items-center justify-between p-3 rounded-xl transition-all cursor-pointer ${
+                          page.isNew ? "hover:bg-gray-50" : "hover:bg-orange-50"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           {page.isNew ? (
@@ -141,10 +148,11 @@ export default function PostStoryModal({ setIsOpen, isOpen, title, setSelectedTy
                         </div>
                         {!page.isNew && (
                           <div
-                            className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${selectedPages.includes(page._id)
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${
+                              selectedPages.includes(page._id)
                                 ? "bg-orange-500 border-orange-500"
                                 : "border-gray-300"
-                              }`}
+                            }`}
                           >
                             {selectedPages.includes(page._id) && (
                               <svg

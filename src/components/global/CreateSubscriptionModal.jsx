@@ -8,8 +8,8 @@ import {
   createPageToCollections,
   getMySubsctiptions,
 } from "../../redux/slices/Subscription.slice";
-import { fetchMyPages } from "../../redux/slices/pages.slice";
 import Button from "../common/Button";
+import { fetchOtherPages } from "../../redux/slices/pages.slice";
 
 const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [subscriptionName, setSubscriptionName] = useState("");
@@ -27,14 +27,14 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const dispatch = useDispatch();
   useEffect(() => {
     if (isOpen) {
-      dispatch(fetchMyPages({ page: 1, limit: 20 }));
+      dispatch(fetchOtherPages({ page: 1, limit: 20 }));
     }
   }, [dispatch]);
   const { isLoading, error } = useSelector((state) => state.collections);
   const { isLoading: addPageToCollectionLoading } = useSelector(
     (state) => state.subscriptions
   );
-  const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  const { recommendationPages, pagesLoading } = useSelector((state) => state.pages);
 
   // FINAL SAVE
   const handleFinalSave = async () => {
@@ -227,8 +227,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   {/* Data */}
                   {!pagesLoading && (
                     <>
-                      {myPages && myPages.length > 0 ? (
-                        myPages.map((col) => (
+                      {recommendationPages && recommendationPages.length > 0 ? (
+                        recommendationPages.map((col) => (
                           <div
                             key={col._id}
                             className="flex justify-between items-center cursor-pointer p-2 border rounded-lg"

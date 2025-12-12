@@ -36,6 +36,21 @@ export const createPost = createAsyncThunk(
     }
   }
 );
+export const createStory = createAsyncThunk(
+  "posts/createStory",
+  async (formData, thunkAPI) => {
+    try {
+      const res = await axios.post("/stories", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data?.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to create post"
+      );
+    }
+  }
+);
 
 // ====================================================
 // 🚀 GET POSTS BY PAGE ID (GET /posts/page/:id)
@@ -44,7 +59,9 @@ export const getPostsByPageId = createAsyncThunk(
   "posts/getPostsByPageId",
   async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
     try {
-      const res = await axios.get(`/posts/page/${pageId}?page=${page}&limit=${limit}`);
+      const res = await axios.get(
+        `/posts/page/${pageId}?page=${page}&limit=${limit}`
+      );
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -122,8 +139,6 @@ export const deleteComment = createAsyncThunk(
   }
 );
 
-
-
 // ====================================================
 // 🚀 GET COMMENTS FOR A POST (GET /comments/post/:id)
 // ====================================================
@@ -131,7 +146,9 @@ export const getcommentsofpost = createAsyncThunk(
   "posts/getcommentsofpost",
   async ({ postId, page = 1, limit = 10 }, thunkAPI) => {
     try {
-      const res = await axios.get(`/comments/post/${postId}?page=${page}&limit=${limit}`);
+      const res = await axios.get(
+        `/comments/post/${postId}?page=${page}&limit=${limit}`
+      );
       return res.data; // { success, message, pagination, data: [] }
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -140,7 +157,6 @@ export const getcommentsofpost = createAsyncThunk(
     }
   }
 );
-
 
 // ====================================================
 // SLICE
@@ -175,6 +191,23 @@ const postsSlice = createSlice({
       })
 
       .addCase(createPost.rejected, (state, action) => {
+        state.postsLoading = false;
+        state.error = action.payload;
+      })
+      // ------------------
+      // CREATE Story
+      // ------------------
+      .addCase(createStory.pending, (state) => {
+        state.postsLoading = true;
+        state.success = false;
+      })
+
+      .addCase(createStory.fulfilled, (state, action) => {
+        state.postsLoading = false;
+        state.success = true;
+      })
+
+      .addCase(createStory.rejected, (state, action) => {
         state.postsLoading = false;
         state.error = action.payload;
       })
@@ -217,17 +250,17 @@ const postsSlice = createSlice({
               ...state.posts[postIndex],
               ...post,
             };
-
           }
 
           // Update in getPostsByPageId posts
-          const pagePostIndex = state.pagepost.findIndex((p) => p._id === post._id);
+          const pagePostIndex = state.pagepost.findIndex(
+            (p) => p._id === post._id
+          );
           if (pagePostIndex !== -1) {
             state.pagepost[pagePostIndex] = {
               ...state.pagepost[pagePostIndex],
               ...post,
             };
-
           }
         }
       })
@@ -279,7 +312,9 @@ const postsSlice = createSlice({
           }
 
           // 🔥 2) Update post in Page Posts
-          const pagePostIndex = state.pagepost.findIndex((p) => p._id === post._id);
+          const pagePostIndex = state.pagepost.findIndex(
+            (p) => p._id === post._id
+          );
           if (pagePostIndex !== -1) {
             state.pagepost[pagePostIndex] = {
               ...state.pagepost[pagePostIndex],
@@ -300,12 +335,11 @@ const postsSlice = createSlice({
         state.error = action.payload;
       })
 
-
       // ------------------
       // GET COMMENTS BY POST ID
       // ------------------
       .addCase(getcommentsofpost.pending, (state) => {
-        state.commentsLoading = true; 
+        state.commentsLoading = true;
         state.commentsError = null;
       })
 
@@ -320,31 +354,27 @@ const postsSlice = createSlice({
         state.commentsError = action.payload;
       })
       // ------------------
-// DELETE COMMENT
-// ------------------
-.addCase(deleteComment.pending, (state) => {
-  state.commentsLoading = true;
-})
+      // DELETE COMMENT
+      // ------------------
+      .addCase(deleteComment.pending, (state) => {
+        state.commentsLoading = true;
+      })
 
-.addCase(deleteComment.fulfilled, (state, action) => {
-  state.commentsLoading = false;
+      .addCase(deleteComment.fulfilled, (state, action) => {
+        state.commentsLoading = false;
 
-  const deletedId = action.payload?.data?.commentId;
+        const deletedId = action.payload?.data?.commentId;
 
-  if (deletedId) {
-    // 🔥 Remove from comments list
-    state.comments = state.comments.filter(
-      (c) => c._id !== deletedId
-    );
-  }
-})
+        if (deletedId) {
+          // 🔥 Remove from comments list
+          state.comments = state.comments.filter((c) => c._id !== deletedId);
+        }
+      })
 
-.addCase(deleteComment.rejected, (state, action) => {
-  state.commentsLoading = false;
-  state.commentsError = action.payload;
-})
-
-
+      .addCase(deleteComment.rejected, (state, action) => {
+        state.commentsLoading = false;
+        state.commentsError = action.payload;
+      });
   },
 });
 

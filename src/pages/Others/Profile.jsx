@@ -22,7 +22,7 @@ export default function Profile() {
   const [selectedPageId, setSelectedPageId] = useState(null);
 
   const dispatch = useDispatch();
-  const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  const {myPages, pagesLoading } = useSelector((state) => state.pages);
 
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 100 }));
