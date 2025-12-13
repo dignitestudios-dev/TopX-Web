@@ -54,7 +54,7 @@ export default function Profile() {
             ) : (
               <>
                 <LargeProfile setIsEditProfile={setIsEditProfile} />
-
+ 
                 {/* Tabs */}
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-2 border-b border-gray-200">

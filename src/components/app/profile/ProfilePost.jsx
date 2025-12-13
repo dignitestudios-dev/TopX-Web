@@ -1,24 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import { Plus, MoreVertical, Lightbulb } from 'lucide-react';
-import { IoChevronBackOutline } from 'react-icons/io5';
-import { useDispatch, useSelector } from 'react-redux';
-import { getPageDetail } from '../../../redux/slices/pages.slice';
-import { BsFileEarmarkTextFill } from 'react-icons/bs';
-import Button from '../../common/Button';
-import PostCard from '../../global/PostCard';
-import PagePosts from './PagePosts';
+import React, { useEffect, useState } from "react";
+import { Plus, MoreVertical, Lightbulb, X, Heart, Share2 } from "lucide-react";
+import { IoChevronBackOutline } from "react-icons/io5";
+import { useDispatch, useSelector } from "react-redux";
+import { getPageDetail } from "../../../redux/slices/pages.slice";
+import { BsFileEarmarkTextFill } from "react-icons/bs";
+import Button from "../../common/Button";
+import PagePosts from "./PagePosts";
+import {
+  getPageStories,
+  LikeOtherStories,
+} from "../../../redux/slices/Subscription.slice";
+import { timeAgo } from "../../../lib/helpers";
+import ActiveStoryModal from "./ActiveStoryModal";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
+  // ✅ ALL hooks at top
   const [activeTab, setActiveTab] = useState("post");
+  const [activeStory, setActiveStory] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [liked, setLiked] = useState(false);
 
   const dispatch = useDispatch();
   const { pageDetail, pageDetailLoading } = useSelector((state) => state.pages);
+  const { PageStories, isLoading } = useSelector(
+    (state) => state.subscriptions
+  );
+  console.log(PageStories, "stories");
 
+  // ✅ useEffect #1
   useEffect(() => {
-    if (pageId) dispatch(getPageDetail(pageId));
+    if (pageId) {
+      dispatch(getPageStories({ id: pageId }));
+      dispatch(getPageDetail(pageId));
+    }
   }, [pageId]);
 
-  // Loading State
+
+
+  // ✅ NOW early return (SAFE)
   if (pageDetailLoading || !pageDetail) {
     return (
       <div className="p-5 text-center font-semibold text-gray-500">
@@ -27,15 +47,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     );
   }
 
+
   const page = pageDetail;
   const user = page?.user;
-
 
   return (
     <div className="">
       <div className="">
         <div className="bg-white rounded-[15px] overflow-hidden ">
-
           {/* HEADER */}
           <div className="h-28 bg-gradient-to-l from-[#DE4B12] to-[#E56F41] p-2">
             <div
@@ -49,15 +68,20 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           {/* PROFILE SECTION */}
           <div className="px-4 pb-6">
             <div className="flex items-start justify-between -mt-12">
-
               {/* IMAGE + NAME */}
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className='w-[135px] h-[135px] rounded-full'>
+                  <div
+                    onClick={() => {
+                      setActiveStory(PageStories);
+                      setProgress(0);
+                    }}
+                    className="w-[135px] cursor-pointer h-[135px] rounded-full p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
+                  >
                     <img
                       src={page?.image}
                       alt="Page"
-                      className='w-[135px] h-[135px] rounded-full object-cover'
+                      className="w-full h-full rounded-full object-cover bg-white"
                     />
                   </div>
 
@@ -74,16 +98,29 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
                   <div className="flex items-center gap-[70px] relative">
                     <div className="flex items-center">
-
                       {/* Followers Avatars (using user profile only as sample) */}
-                      <img src={user?.profilePicture} alt="" className="w-[24px] h-[24px] rounded-full absolute top-0 left-0" />
-                      <img src={user?.profilePicture} alt="" className="w-[24px] h-[24px] rounded-full absolute top-0 left-5" />
-                      <img src={user?.profilePicture} alt="" className="w-[24px] h-[24px] rounded-full absolute top-0 left-10" />
-
+                      <img
+                        src={user?.profilePicture}
+                        alt=""
+                        className="w-[24px] h-[24px] rounded-full absolute top-0 left-0"
+                      />
+                      <img
+                        src={user?.profilePicture}
+                        alt=""
+                        className="w-[24px] h-[24px] rounded-full absolute top-0 left-5"
+                      />
+                      <img
+                        src={user?.profilePicture}
+                        alt=""
+                        className="w-[24px] h-[24px] rounded-full absolute top-0 left-10"
+                      />
                     </div>
 
                     <span className="text-gray-600 font-medium text-sm">
-                      <span className="text-[#000000]">{page?.followersCount}+</span> Follows
+                      <span className="text-[#000000]">
+                        {page?.followersCount}+
+                      </span>{" "}
+                      Follows
                     </span>
                   </div>
                 </div>
@@ -116,7 +153,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               </p>
 
               {activeTab === "post" && (
-                <Button className="px-5 flex items-center justify-center" variant="orange" size="md">
+                <Button
+                  className="px-5 flex items-center justify-center"
+                  variant="orange"
+                  size="md"
+                >
                   Create Post
                 </Button>
               )}
@@ -128,7 +169,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         <div className="flex gap-2 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("post")}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "post" ? "text-orange-600" : "text-gray-500 hover:text-gray-700"}`}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+              activeTab === "post"
+                ? "text-orange-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
             <BsFileEarmarkTextFill size={19} />
             <span className="text-[14px] font-[500]">Post</span>
@@ -139,9 +184,17 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
           <button
             onClick={() => setActiveTab("postrequest")}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest" ? "text-orange-600" : "text-gray-500 hover:text-gray-700"}`}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+              activeTab === "postrequest"
+                ? "text-orange-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
           >
-            <div className={`p-1.5 rounded ${activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"}`}>
+            <div
+              className={`p-1.5 rounded ${
+                activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"
+              }`}
+            >
               <Lightbulb className="text-white" size={16} />
             </div>
             <span className="text-[13px] font-[500]">Post Request</span>
@@ -157,6 +210,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <PagePosts pageId={pageId} />
         </div>
       </div>
+      {/* Story Modal - Full Screen Mobile Optimized */}
+      <ActiveStoryModal PageStories={PageStories} activeStory={activeStory}  setActiveStory={setActiveStory} />
     </div>
   );
 }

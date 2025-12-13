@@ -25,7 +25,7 @@ export default function SubscriptionsCategory() {
       // You can dispatch an action here to fetch data if needed
     }
   }, [location.state]);
-  console.log(CollectionFeeds, "list-collection-feed");
+  console.log(CollectionFeeds,location.state.id ,"list-collection-feed");
   const mySubscriptions = [
     { title: "My Basketball", pages: "50+" },
     { title: "My Fitness", pages: "50+" },
@@ -105,7 +105,7 @@ export default function SubscriptionsCategory() {
       hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
   ];
-
+console.log(CollectionFeeds?.[0],"collection-feeds")
   return (
     <div className="flex h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -182,7 +182,7 @@ export default function SubscriptionsCategory() {
 
       {/* Middle Feed - 1/2 width */}
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
-        <SubscriptionStories pageId={CollectionFeeds?.[0]?.page?._id || null} />
+        <SubscriptionStories pageId={location.state.id || null} />
 
         <div className="mt-6">
           {CollectionFeeds?.map((post) => (

@@ -65,6 +65,21 @@ export const getPageStories = createAsyncThunk(
     }
   }
 );
+export const getCollectionStories = createAsyncThunk(
+  "/stories/collection/id",
+  async ({ id, page = 1, limit = 10, search = "" }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/stories/collection/${id}?page=${page}&limit=${limit}&search=${search}`
+      );
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch subscriptions"
+      );
+    }
+  }
+);
 
 // =============================
 // ADD PAGE TO COLLECTIONS (SUBSCRIBE)
@@ -185,6 +200,18 @@ const subscriptionsSlice = createSlice({
         state.pagination = action.payload.pagination;
       })
       .addCase(getPageStories.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(getCollectionStories.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getCollectionStories.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.PageStories = action.payload.data;
+        state.pagination = action.payload.pagination;
+      })
+      .addCase(getCollectionStories.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
