@@ -20,6 +20,10 @@ const initialState = {
     trendingPostsPagination: null,
     trendingPostsLoading: false,
 
+    // ✅ NEW — SINGLE PAGE DETAIL
+    pageDetail: null,
+    pageDetailLoading: false,
+
     error: null,
 };
 
@@ -95,6 +99,26 @@ export const fetchTrendingPosts = createAsyncThunk(
 );
 
 
+/* ===============================
+    FETCH PAGE DETAIL BY ID
+    API → /pages/:id
+================================*/
+export const fetchPageById = createAsyncThunk(
+    "trending/fetchPageById",
+    async (pageId, thunkAPI) => {
+        try {
+            const res = await axios.get(`/pages/${pageId}`);
+            return res.data?.data; // 👈 sirf page ka data
+        } catch (error) {
+            return thunkAPI.rejectWithValue(
+                error.response?.data?.message || "Failed to fetch page detail"
+            );
+        }
+    }
+);
+
+
+
 
 /* ===============================
              SLICE
@@ -156,7 +180,21 @@ const trendingSlice = createSlice({
             .addCase(fetchTrendingPosts.rejected, (state, action) => {
                 state.trendingPostsLoading = false;
                 state.error = action.payload;
-            });
+            })
+
+            /* ===== PAGE DETAIL ===== */
+            .addCase(fetchPageById.pending, (state) => {
+                state.pageDetailLoading = true;
+            })
+            .addCase(fetchPageById.fulfilled, (state, action) => {
+                state.pageDetailLoading = false;
+                state.pageDetail = action.payload;
+            })
+            .addCase(fetchPageById.rejected, (state, action) => {
+                state.pageDetailLoading = false;
+                state.error = action.payload;
+            })
+
     },
 });
 

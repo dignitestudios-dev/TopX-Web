@@ -7,7 +7,7 @@ import { FaAngleRight } from "react-icons/fa6";
 import ChatWidget from '../../components/global/ChatWidget';
 import FloatingChatButton from '../../components/global/ChatWidget';
 import TrendingPostCard from '../../components/global/TrendingPostCard';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchRecommendedPages, fetchTrendingPages, fetchTrendingPosts } from '../../redux/slices/trending.slice';
 import CollectionModal from '../../components/global/CollectionModal';
@@ -23,6 +23,7 @@ export default function Trending() {
     const [openModal, setOpenModal] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
+    const navigate = useNavigate();
 
 
     const {
@@ -173,7 +174,9 @@ export default function Trending() {
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex gap-2 items-center">
-                                                    <p className="font-semibold text-[14px] text-gray-900 truncate">
+                                                    <p className="font-semibold text-[14px] cursor-pointer text-gray-900 truncate" onClick={() => {
+                                                        navigate(`/trending-page-detail/${item._id}`)
+                                                    }}>
                                                         {item.name}
                                                     </p>
                                                     <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
@@ -307,7 +310,9 @@ export default function Trending() {
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex gap-2 items-center">
-                                                    <p className="font-semibold text-[14px] text-gray-900 truncate">
+                                                    <p className="font-semibold text-[14px] cursor-pointer text-gray-900 truncate" onClick={() => {
+                                                        navigate(`/trending-page-detail/${item._id}`)
+                                                    }}>
                                                         {item.name}
                                                     </p>
                                                     <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
@@ -359,7 +364,7 @@ export default function Trending() {
                                                     onClick={() => handleUnsubscribe(item)}
                                                     disabled={unsubscribingPageId === item._id}
                                                     className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-            ${unsubscribingPageId === item._id
+                                             ${unsubscribingPageId === item._id
                                                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                                             : "bg-gray-200 text-gray-700"
                                                         }`}
