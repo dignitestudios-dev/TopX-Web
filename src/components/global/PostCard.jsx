@@ -256,23 +256,23 @@ const PostCard = ({
           </button>
         </div>
 
-        {/* Image Section - Show Only First Image */}
-        {firstImage && (
-          <div className="m-4 cursor-pointer" onClick={openImageModal}>
-            <div className="relative">
-              <img
-                src={firstImage}
-                alt="Post"
-                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
-              />
-              {images.length > 1 && (
-                <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
-                  1/{images.length}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+                {/* Image Section - Show Only First Image */}
+                {firstImage && (
+                    <div className="m-4 cursor-pointer" onClick={openImageModal}>
+                        <div className="relative">
+                            <img
+                                src={firstImage}
+                                alt="Post"
+                                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
+                            />
+                            {images.length > 1 && (
+                                <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
+                                    1/{images.length}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
         {post.videoUrl && !firstImage && (
           <div className="m-4">
