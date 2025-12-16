@@ -12,6 +12,7 @@ import knowledgepostReducer from "./slices/knowledgepost.slice"
 import notificationsReducer from  "./slices/notifications.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
 import trendingReducer from "./slices/trending.slice"
+import reportsReducder from "./slices/reports.slice";
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -35,6 +36,7 @@ const rootReducer = combineReducers({
   trending: trendingReducer,
   notifications: notificationsReducer,
   postsfeed: postsfeedReducer,
+  reports: reportsReducder,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

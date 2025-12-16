@@ -20,6 +20,16 @@ const initialState = {
     trendingPostsPagination: null,
     trendingPostsLoading: false,
 
+    // ✅ NEW — SINGLE PAGE DETAIL
+    pageDetail: null,
+    pageDetailLoading: false,
+
+    // 🆕 PAGE POSTS
+    pagePosts: [],
+    pagePostsPagination: null,
+    pagePostsLoading: false,
+
+
     error: null,
 };
 
@@ -70,6 +80,31 @@ export const fetchRecommendedPages = createAsyncThunk(
     }
 );
 
+/* ===============================
+    🆕 FETCH PAGE POSTS
+    API → /posts/page/:pageId
+================================*/
+export const fetchPagePosts = createAsyncThunk(
+    "trending/fetchPagePosts",
+    async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
+        try {
+            const res = await axios.get(
+                `/posts/page/${pageId}?page=${page}&limit=${limit}`
+            );
+
+            return {
+                posts: res.data?.data?.posts || [],
+                pagination: res.data?.pagination,
+            };
+
+        } catch (error) {
+            return thunkAPI.rejectWithValue(
+                error.response?.data?.message || "Failed to fetch page posts"
+            );
+        }
+    }
+);
+
 
 /* ===============================
     🔥 NEW — FETCH TRENDING POSTS
@@ -93,6 +128,26 @@ export const fetchTrendingPosts = createAsyncThunk(
         }
     }
 );
+
+
+/* ===============================
+    FETCH PAGE DETAIL BY ID
+    API → /pages/:id
+================================*/
+export const fetchPageById = createAsyncThunk(
+    "trending/fetchPageById",
+    async (pageId, thunkAPI) => {
+        try {
+            const res = await axios.get(`/pages/${pageId}`);
+            return res.data?.data; // 👈 sirf page ka data
+        } catch (error) {
+            return thunkAPI.rejectWithValue(
+                error.response?.data?.message || "Failed to fetch page detail"
+            );
+        }
+    }
+);
+
 
 
 
@@ -156,7 +211,36 @@ const trendingSlice = createSlice({
             .addCase(fetchTrendingPosts.rejected, (state, action) => {
                 state.trendingPostsLoading = false;
                 state.error = action.payload;
-            });
+            })
+
+            /* ===== PAGE DETAIL ===== */
+            .addCase(fetchPageById.pending, (state) => {
+                state.pageDetailLoading = true;
+            })
+            .addCase(fetchPageById.fulfilled, (state, action) => {
+                state.pageDetailLoading = false;
+                state.pageDetail = action.payload;
+            })
+            .addCase(fetchPageById.rejected, (state, action) => {
+                state.pageDetailLoading = false;
+                state.error = action.payload;
+            })
+
+            /* ===== PAGE POSTS ===== */
+            .addCase(fetchPagePosts.pending, (state) => {
+                state.pagePostsLoading = true;
+            })
+            .addCase(fetchPagePosts.fulfilled, (state, action) => {
+                state.pagePostsLoading = false;
+                state.pagePosts = action.payload.posts;
+                state.pagePostsPagination = action.payload.pagination;
+            })
+            .addCase(fetchPagePosts.rejected, (state, action) => {
+                state.pagePostsLoading = false;
+                state.error = action.payload;
+            })
+
+
     },
 });
 

@@ -275,7 +275,6 @@ export default function Home() {
                                             </div>
                                         </div>
                                     </div>
-
                                     {/* Description */}
                                     <p className="text-sm text-gray-600 mb-2 leading-snug">
                                         {item.desc}

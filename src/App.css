@@ -43,6 +43,7 @@ body {
   animation: slideUp 0.3s ease-out;
 }
 
+
 /* Skeleton styles */
 .skeleton-box {
   position: relative;
@@ -50,7 +51,7 @@ body {
 }
 
 .skeleton-box::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: -100%;
@@ -58,16 +59,6 @@ body {
   height: 100%;
   background: linear-gradient(to right, #e0e0e0 8%, #f4f4f4 18%, #e0e0e0 33%);
   animation: loading 1.5s infinite linear;
-}
-
-.border-gradient {
-  border: 10px solid;
-  border-image-slice: 1;
-  border-width: 5px;
-  border-radius: 50%;
-}
-.border-gradient {
-  border-image-source: linear-gradient(to left, #00c853, #b2ff59);
 }
 
 @keyframes loading {
