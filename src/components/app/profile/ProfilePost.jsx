@@ -9,6 +9,7 @@ import PagePosts from "./PagePosts";
 import {
   getPageStories,
   LikeOtherStories,
+  viewOtherStories,
 } from "../../../redux/slices/Subscription.slice";
 import { timeAgo } from "../../../lib/helpers";
 import ActiveStoryModal from "./ActiveStoryModal";
@@ -36,8 +37,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     }
   }, [pageId]);
 
-
-
+  const handleViewStory = async (storyId) => {
+    await dispatch(viewOtherStories({ storyId }));
+  };
   // ✅ NOW early return (SAFE)
   if (pageDetailLoading || !pageDetail) {
     return (
@@ -46,7 +48,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       </div>
     );
   }
-
 
   const page = pageDetail;
   const user = page?.user;
@@ -74,7 +75,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   <div
                     onClick={() => {
                       setActiveStory(PageStories);
-                      setProgress(0);
+                      handleViewStory(PageStories[0]?._id);
                     }}
                     className="w-[135px] cursor-pointer h-[135px] rounded-full p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
                   >
@@ -211,7 +212,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         </div>
       </div>
       {/* Story Modal - Full Screen Mobile Optimized */}
-      <ActiveStoryModal PageStories={PageStories} activeStory={activeStory}  setActiveStory={setActiveStory} />
+      <ActiveStoryModal
+        PageStories={PageStories}
+        activeStory={activeStory}
+        setActiveStory={setActiveStory}
+        handleViewStory={handleViewStory}
+      />
     </div>
   );
 }

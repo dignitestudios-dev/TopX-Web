@@ -1,17 +1,23 @@
 import { useEffect, useState } from "react";
 import { Heart, Share2, X } from "lucide-react";
 import { timeAgo } from "../../../lib/helpers";
+import { LikeOtherStories } from "../../../redux/slices/Subscription.slice";
+import { useDispatch } from "react-redux";
 
 export default function ActiveStoryModal({
   activeStory, // ARRAY of stories
   setActiveStory,
+  handleViewStory,
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-
+  const dispatch = useDispatch();
   const currentStory = activeStory?.[currentIndex];
-
+  const handleStoryLike = async () => {
+    // Implement like functionality here
+    await dispatch(LikeOtherStories({ storyId: currentStory._id }));
+  };
   /* ---------------- AUTO PROGRESS ---------------- */
   useEffect(() => {
     if (!currentStory || isPaused) return;
@@ -38,6 +44,12 @@ export default function ActiveStoryModal({
       closeStory();
     }
   };
+
+  useEffect(() => {
+    if (currentStory?._id) {
+      handleViewStory(currentStory._id);
+    }
+  }, [currentIndex]);
 
   const prevStory = () => {
     if (currentIndex > 0) {
@@ -149,6 +161,7 @@ export default function ActiveStoryModal({
             <Share2 size={20} />
           </button>
           <button
+            onClick={handleStoryLike}
             className={`p-3 rounded-full ${
               currentStory.hasLiked
                 ? "bg-red-500 text-white"

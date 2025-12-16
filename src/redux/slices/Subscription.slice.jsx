@@ -146,6 +146,35 @@ export const LikeOtherStories = createAsyncThunk(
     }
   }
 );
+export const viewOtherStories = createAsyncThunk(
+  "stories/id/view",
+  async ({ storyId }, thunkAPI) => {
+    try {
+      const token = Cookies.get("access_token");
+      if (!token) return thunkAPI.rejectWithValue("No access token found");
+      const res = await axios.post(`/stories/${storyId}/view`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.data?.success) {
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Failed to add page"
+        );
+      }
+
+      return {
+        message: res.data.message,
+      };
+    } catch (error) {
+      console.log("API ERROR:", error.response?.data);
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to add page"
+      );
+    }
+  }
+);
 
 // ====================================================
 // SLICE
@@ -235,6 +264,16 @@ const subscriptionsSlice = createSlice({
         state.isLoading = false;
       })
       .addCase(LikeOtherStories.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(viewOtherStories.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(viewOtherStories.fulfilled, (state) => {
+        state.isLoading = false;
+      })
+      .addCase(viewOtherStories.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

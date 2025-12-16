@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {
   getCollectionStories,
   LikeOtherStories,
+  viewOtherStories,
 } from "../../redux/slices/Subscription.slice";
 import { timeAgo } from "../../lib/helpers";
 import ActiveStoryModal from "../app/profile/ActiveStoryModal";
@@ -20,7 +21,9 @@ const SubscriptionStories = ({ pageId }) => {
   }, [pageId, dispatch]);
 
   const [activeStory, setActiveStory] = useState(null);
-
+  const handleViewStory = async (storyId) => {
+    await dispatch(viewOtherStories({ storyId }));
+  };
   console.log(PageStories, "pages-storiess->");
   return (
     <div className="w-full p-4 md:p-0">
@@ -34,7 +37,7 @@ const SubscriptionStories = ({ pageId }) => {
               key={story._id}
               onClick={() => {
                 setActiveStory(PageStories);
-                setProgress(0);
+                handleViewStory(story._id);
               }}
               className="flex flex-col items-center cursor-pointer flex-shrink-0"
             >
@@ -70,7 +73,7 @@ const SubscriptionStories = ({ pageId }) => {
       {/* Story Modal - Full Screen Mobile Optimized */}
       <ActiveStoryModal
         activeStory={activeStory}
-        setActiveStory={setActiveStory }
+        setActiveStory={setActiveStory}
       />
     </div>
   );

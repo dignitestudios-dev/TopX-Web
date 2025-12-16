@@ -20,12 +20,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     // Check if postimage is array and has images
     const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
     const firstImage = hasImages ? post.postimage[0] : null;
-
+    
+     
 
      const handleLikeClick = (postId, currentLikeStatus) => {
         // Optimistic update: Toggle like status immediately
         toggleLike(postId);
-
         // Dispatch the like/unlike API call
         dispatch(likePost({ postId, likeToggle: !currentLikeStatus }));
     };
