@@ -4,16 +4,15 @@ import { profilehigh } from '../../../assets/export';
 import { useDispatch, useSelector } from 'react-redux';
 import { getAllUserData } from '../../../redux/slices/auth.slice';
 
-export default function LargeProfile({ setIsEditProfile }) {
+export default function LargeProfile({ setIsEditProfile,profileData }) {
 
     const dispatch = useDispatch();
     
     const { allUserData } = useSelector((state) => state.auth);
-
+    const userRecord=profileData || allUserData
     useEffect(()=>{
         dispatch(getAllUserData())
     },[])
-
     // ========================
     // NO DATA FOUND UI
     // ========================
@@ -35,7 +34,7 @@ export default function LargeProfile({ setIsEditProfile }) {
                 <div className='flex relative -bottom-[62px] px-4 gap-3'>
                     <div className='relative'>
                         <img 
-                            src={allUserData?.profilePicture || "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"} 
+                            src={userRecord?.profilePicture || "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"} 
                             alt="" 
                             className='w-[135px] h-[135px] rounded-full object-cover'
                         />
@@ -54,31 +53,31 @@ export default function LargeProfile({ setIsEditProfile }) {
                         {/* Name Section */}
                         <div>
                             <h2 className="text-[18px] font-[500] text-[#000000]">
-                                {allUserData.name || "No Name"}
+                                {userRecord.name || "No Name"}
                             </h2>
                             <p className="text-[14px] font-[400] text-[#18181899]">
-                                {allUserData.username || "No Username"}
+                                {userRecord.username || "No Username"}
                             </p>
                         </div>
 
                         {/* Stats Section */}
                         <div className="text-center">
                             <div className="text-[18px] font-[500] text-[#000000]">
-                                {allUserData.postsCount || "0"}
+                                {userRecord.postsCount || "0"}
                             </div>
                             <div className="text-[14px] font-[400] text-[#18181899]">Posts</div>
                         </div>
 
                         <div className="text-center">
                             <div className="text-[18px] font-[500] text-[#000000]">
-                                {allUserData.followersCount || "0"}
+                                {userRecord.followersCount || "0"}
                             </div>
                             <div className="text-[14px] font-[400] text-[#18181899]">Followers</div>
                         </div>
 
                         <div className="text-center">
                             <div className="text-[18px] font-[500] text-[#000000]">
-                                {allUserData.followingCount || "0"}
+                                {userRecord.followingCount || "0"}
                             </div>
                             <div className="text-[14px] font-[400] text-[#18181899]">Following</div>
                         </div>
@@ -89,7 +88,7 @@ export default function LargeProfile({ setIsEditProfile }) {
                 {/* Bottom White Section - Bio */}
                 <div className="pt-20 px-8 pb-8 bg-slate-50">
                     <p className="text-[14px] font-[400] text-[#413b3b99]">
-                        {allUserData.bio || "No Bio Available"}
+                        {userRecord.bio || "No Bio Available"}
                     </p>
                 </div>
             </div>
