@@ -19,6 +19,7 @@ import ReportModal from '../../components/global/ReportModal';
 import { sendReport, resetReportState } from '../../redux/slices/reports.slice';
 import { SuccessToast } from '../../components/global/Toaster';
 import { FaArrowLeft } from 'react-icons/fa6';
+import PagePostsComponent from '../../components/global/PagePostsComponent';
 
 const Trendingpagedetail = () => {
     const dispatch = useDispatch();
@@ -38,11 +39,11 @@ const Trendingpagedetail = () => {
     const { pagePosts } = useSelector((state) => state.trending)
 
 
-    useEffect(()=>{
-        dispatch(fetchPagePosts({pageId:id}))
+    useEffect(() => {
+        dispatch(fetchPagePosts({ pageId: id }))
     }, [dispatch, id]);
 
-    console.log(pagePosts,"pagePosts")
+    console.log(pagePosts, "pagePosts")
 
     const { reportSuccess, reportLoading } = useSelector((state) => state.reports)
 
@@ -164,15 +165,17 @@ const Trendingpagedetail = () => {
                     <div className="px-8 pb-6">
 
                         <div className="flex items-end gap-4 -mt-16 mb-0">
-                            {/* Profile Image */}
+                             {pageDetail.image ? (
                             <img
-                                src={
-                                    pageDetail.image ||
-                                    'https://www.w3schools.com/w3images/avatar2.png'
-                                }
-                                alt="Profile"
-                                className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
+                              src={pageDetail.image}
+                              alt={pageDetail.image}
+                              className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
                             />
+                          ) : (
+                            <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                              {pageDetail.name?.charAt(0).toUpperCase()}
+                            </div>
+                          )}
 
                             {/* Info */}
                             <div className="flex-1 pb-2">
@@ -206,10 +209,6 @@ const Trendingpagedetail = () => {
 
                                 </div>
                             </div>
-
-
-
-
 
                             {/* Subscribe Button */}
                             <div className="mb-[0em]">
@@ -283,6 +282,13 @@ const Trendingpagedetail = () => {
                     </div>
                 )}
 
+                <div
+                    className={`${isPrivateAndNotSubscribed ? 'hidden' : ''
+                        }`}
+                >
+
+                    <PagePostsComponent pageId={id} />
+                </div>
 
 
 

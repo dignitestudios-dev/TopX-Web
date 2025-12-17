@@ -8,6 +8,7 @@ import postsReducer from "./slices/posts.slice";
 import subscriptionsReducer from "./slices/Subscription.slice";
 import affiliateReducer from "./slices/affiliate.slice"
 import profileSettingsReducer from "./slices/profileSetting.slice"
+import OtherProfileReducer from "./slices/otherprofile.slice"
 import knowledgepostReducer from "./slices/knowledgepost.slice"
 import notificationsReducer from  "./slices/notifications.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
@@ -32,6 +33,7 @@ const rootReducer = combineReducers({
   subscriptions: subscriptionsReducer,
   affiliate: affiliateReducer,
   profileSetting: profileSettingsReducer,
+  otherProfile: OtherProfileReducer,
   knowledgepost: knowledgepostReducer,
   trending: trendingReducer,
   notifications: notificationsReducer,

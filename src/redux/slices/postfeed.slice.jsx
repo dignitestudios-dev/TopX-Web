@@ -54,6 +54,29 @@ export const likePost = createAsyncThunk(
   }
 );
 
+// utils/localLikes.js
+export const getLocalLikes = () => {
+  return JSON.parse(localStorage.getItem("postLikes") || "{}");
+};
+
+export const saveLocalLike = (postId, isLiked, likesCount) => {
+  const likes = getLocalLikes();
+  likes[postId] = { isLiked, likesCount };
+  localStorage.setItem("postLikes", JSON.stringify(likes));
+};
+
+export const mergeLikesWithAPI = (posts) => {
+  const localLikes = getLocalLikes();
+  return posts.map((post) => {
+    const local = localLikes[post._id];
+    return {
+      ...post,
+      isLiked: local?.isLiked ?? post.isLiked,
+      likesCount: local?.likesCount ?? post.likesCount,
+    };
+  });
+};
+
 // Comment
 
 export const createComment = createAsyncThunk(
@@ -115,6 +138,28 @@ export const getComment = createAsyncThunk(
   }
 );
 
+export const likeComment = createAsyncThunk(
+  "posts/likeComment",
+  async ({ commentId, likeToggle }, thunkAPI) => {
+    try {
+      const res = await axios.post("/likes/post", {
+        comment: commentId,
+        likeToggle, // true or false
+      });
+
+      return {
+        commentId,
+        likeToggle: res.data.data.likeToggle,
+        likesCount: res.data.data.likesCount,
+      };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to like/unlike comment"
+      );
+    }
+  }
+);
+
 /* ===============================
              SLICE
 ================================*/
@@ -135,8 +180,21 @@ const postFeedSlice = createSlice({
         state.postsLoading = true;
       })
       .addCase(fetchpostfeed.fulfilled, (state, action) => {
+        const postsFromAPI = action.payload.posts;
+
         state.postsLoading = false;
-        state.allfeedposts = action.payload.posts; // Storing fetched posts in "allfeedposts"
+        state.allfeedposts = postsFromAPI.map((post) => {
+          const localLikes = JSON.parse(
+            localStorage.getItem("postLikes") || "{}"
+          );
+          const local = localLikes[post._id];
+
+          return {
+            ...post,
+            isLiked: local?.isLiked ?? post.isLiked,
+            likesCount: local?.likesCount ?? post.likesCount,
+          };
+        });
         state.pagination = action.payload.pagination;
       })
       .addCase(fetchpostfeed.rejected, (state, action) => {
@@ -187,19 +245,115 @@ const postFeedSlice = createSlice({
       })
       // Like/Unlike Post
       .addCase(likePost.pending, (state, action) => {
-        // Don't update the UI optimistically
-      })
-      .addCase(likePost.fulfilled, (state, action) => {
-        // Use the API response to update the like status and count
-        const postIndex = state.allfeedposts.findIndex(
-          (post) => post._id === action.payload.postId
-        );
-        if (postIndex !== -1) {
-          state.allfeedposts[postIndex].isLiked = action.payload.likeToggle;
-          state.allfeedposts[postIndex].likesCount = action.payload.likesCount; // Use the correct likes count from the API response
+        const { postId, likeToggle } = action.meta.arg;
+
+        // Optimistic update
+        const post = state.allfeedposts.find((p) => p._id === postId);
+        if (post) {
+          post.isLiked = likeToggle;
+          post.likesCount = likeToggle
+            ? post.likesCount + 1
+            : post.likesCount - 1;
+
+          // Save to localStorage
+          const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+          likes[postId] = {
+            isLiked: post.isLiked,
+            likesCount: post.likesCount,
+          };
+          localStorage.setItem("postLikes", JSON.stringify(likes));
         }
       })
+      .addCase(likePost.fulfilled, (state, action) => {
+        const { postId, likeToggle, likesCount: apiLikes } = action.payload;
+
+        const post = state.allfeedposts.find((p) => p._id === postId);
+        if (post) {
+          // Merge API likes with local increment/decrement
+          const localLikes = JSON.parse(
+            localStorage.getItem("postLikes") || "{}"
+          );
+          const local = localLikes[postId];
+
+          post.isLiked = likeToggle;
+          post.likesCount = local?.likesCount ?? apiLikes; // Use local increment if exists
+
+          // Save merged to localStorage
+          localLikes[postId] = {
+            isLiked: post.isLiked,
+            likesCount: post.likesCount,
+          };
+          localStorage.setItem("postLikes", JSON.stringify(localLikes));
+        }
+      })
+
       .addCase(likePost.rejected, (state, action) => {
+        state.error = action.payload;
+      })
+      .addCase(likeComment.pending, (state, action) => {
+        const { commentId, likeToggle } = action.meta.arg;
+        const updateLike = (commentsList) => {
+          commentsList.forEach((c) => {
+            if (c._id === commentId) {
+              const prevLiked = c.isLiked ?? false;
+              c.isLiked = likeToggle;
+
+              // Correct likesCount, never negative
+              if (likeToggle && !prevLiked) {
+                // Like: increment
+                c.likesCount = (c.likesCount ?? 0) + 1;
+              } else if (!likeToggle && prevLiked) {
+                // Unlike: decrement, but minimum 0
+                c.likesCount = Math.max((c.likesCount ?? 1) - 1, 0);
+              }
+
+              // Save to localStorage
+              const localLikes = JSON.parse(
+                localStorage.getItem("commentLikes") || "{}"
+              );
+              localLikes[commentId] = {
+                isLiked: c.isLiked,
+                likesCount: c.likesCount,
+              };
+              localStorage.setItem("commentLikes", JSON.stringify(localLikes));
+            }
+
+            // Recurse into replies
+            if (c.replies && c.replies.length > 0) updateLike(c.replies);
+          });
+        };
+
+        updateLike(state.postComments);
+      })
+      .addCase(likeComment.fulfilled, (state, action) => {
+        const { commentId, likeToggle, likesCount } = action.payload;
+
+        const updateLike = (commentsList) => {
+          commentsList.forEach((c) => {
+            if (c._id === commentId) {
+              const localLikes = JSON.parse(
+                localStorage.getItem("commentLikes") || "{}"
+              );
+              const local = localLikes[commentId];
+
+              // Merge API likes with local optimistic value
+              c.isLiked = likeToggle;
+              c.likesCount = local?.likesCount ?? likesCount;
+
+              localLikes[commentId] = {
+                isLiked: c.isLiked,
+                likesCount: c.likesCount,
+              };
+              localStorage.setItem("commentLikes", JSON.stringify(localLikes));
+            }
+
+            if (c.replies && c.replies.length > 0) updateLike(c.replies);
+          });
+        };
+
+        updateLike(state.postComments);
+      })
+      .addCase(likeComment.rejected, (state, action) => {
         state.error = action.payload;
       });
   },
