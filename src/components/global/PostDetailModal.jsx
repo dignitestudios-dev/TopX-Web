@@ -9,18 +9,35 @@ export default function PostImageViewerModal({
   onClose,
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  if (!isOpen) return null;
-  console.log(post, "post-record");
-  // Handle both array and string formats
-  const images = Array.isArray(post)
-    ? post.filter((img) => img?.fileUrl)
-    : post
-    ? [post]
-    : [];
-  console.log(images, "images");
-  if (images?.length === 0) return null;
+
+  const images = React.useMemo(() => {
+    if (!post) return [];
+
+    if (Array.isArray(post)) {
+      return post.map((item) => item?.fileUrl).filter(Boolean);
+    }
+
+    if (Array.isArray(post?.postimage)) {
+      return post.postimage.filter(Boolean);
+    }
+
+    if (post?.fileUrl) {
+      return [post.fileUrl];
+    }
+
+    return [];
+  }, [post]);
 
   const currentImage = images[currentImageIndex];
+
+  useEffect(() => {
+    if (currentImageIndex >= images.length) {
+      setCurrentImageIndex(0);
+    }
+  }, [images, currentImageIndex]);
+
+  // ✅ RETURN ALWAYS AFTER ALL HOOKS
+  if (!isOpen) return null;
 
   const goToPrevious = (e) => {
     e.stopPropagation();
@@ -55,16 +72,14 @@ export default function PostImageViewerModal({
         <div className="p-4 border-b border-gray-700 flex items-center justify-between bg-black">
           <div className="flex items-center gap-3">
             <img
-              src={author.profilePicture}
-              alt={author.user}
+              src={post?.profilePicture}
+              alt={post?.user}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
-              <h3 className="font-semibold text-white text-sm">
-                {author.name}
-              </h3>
+              <h3 className="font-semibold text-white text-sm">{post?.name}</h3>
               <p className="text-gray-500 text-xs">
-                {author.username} · {timeAgo(author.createdAt)}
+                {post?.username} · {timeAgo(post?.createdAt)}
               </p>
             </div>
           </div>
@@ -84,7 +99,7 @@ export default function PostImageViewerModal({
         {/* Image Container */}
         <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
           <img
-            src={currentImage?.fileUrl}
+            src={currentImage}
             alt="post"
             className="max-w-full max-h-full object-contain"
           />

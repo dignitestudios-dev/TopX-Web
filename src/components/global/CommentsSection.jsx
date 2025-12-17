@@ -6,8 +6,10 @@ import {
   deleteComment,
   elevateComment,
   getComment,
+  likeComment,
 } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
+import { likePost } from "../../redux/slices/posts.slice";
 
 export default function CommentsSection({ postId }) {
   const [comments, setComments] = useState([
@@ -58,7 +60,7 @@ export default function CommentsSection({ postId }) {
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed
   );
-  
+
   const [newComment, setNewComment] = useState("");
   const dispatch = useDispatch();
   console.log(postComments, "postComments");
@@ -95,28 +97,18 @@ export default function CommentsSection({ postId }) {
   };
 
   const toggleLike = (commentId) => {
-    setComments(
-      comments.map((comment) => ({
-        ...comment,
-        isLiked: comment.id === commentId ? !comment.isLiked : comment.isLiked,
-        likes:
-          comment.id === commentId
-            ? comment.isLiked
-              ? comment.likes - 1
-              : comment.likes + 1
-            : comment.likes,
-        replies: comment.replies.map((reply) => ({
-          ...reply,
-          isLiked: reply.id === commentId ? !reply.isLiked : reply.isLiked,
-          likes:
-            reply.id === commentId
-              ? reply.isLiked
-                ? reply.likes - 1
-                : reply.likes + 1
-              : reply.likes,
-        })),
-      }))
-    );
+    const comment = postComments.find((c) => c._id === commentId);
+    if (!comment) return;
+
+    const newLikeStatus = !comment.isLiked;
+
+    // Optimistic update is handled in slice, no need to calculate newLikesCount here
+    dispatch({
+      type: "posts/likeComment/pending",
+      meta: { arg: { commentId, likeToggle: newLikeStatus } },
+    });
+
+    dispatch(likeComment({ commentId, likeToggle: newLikeStatus }));
   };
 
   const handleDeleteComment = async (commentId) => {
@@ -211,7 +203,7 @@ export default function CommentsSection({ postId }) {
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <button
-                onClick={() => toggleLike(comment.id)}
+                onClick={() => toggleLike(comment._id)}
                 className="flex items-center gap-1 hover:text-orange-500 transition"
               >
                 <Heart
@@ -224,7 +216,7 @@ export default function CommentsSection({ postId }) {
                     comment.isLiked ? "text-orange-500 font-medium" : ""
                   }
                 >
-                  {comment.likes}
+                  {Number(comment.likesCount ?? 0)}
                 </span>
               </button>
               <button
