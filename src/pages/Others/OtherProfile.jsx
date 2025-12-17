@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router";
 import LargeProfile from "../../components/app/profile/LargeProfile";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -11,6 +11,11 @@ import EditedProfile from "../../components/app/profile/EditedProfile";
 import CreatePostModal from "../../components/app/profile/CreatePostModal";
 import ProfilePost from "../../components/app/profile/ProfilePost";
 import MySubscriptiononprofile from "../../components/homepage/MySubscriptiononprofile";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  getUserCollections,
+  getUserTopicPages,
+} from "../../redux/slices/otherprofile.slice";
 
 export default function OtherProfile() {
   const [activeTab, setActiveTab] = useState("topics");
@@ -20,38 +25,67 @@ export default function OtherProfile() {
 
   const location = useLocation();
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
-const trending = [
+  const trending = [
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
     {
-        title: "Justin’s Basketball",
-        desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-        hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
+      title: "Justin’s Basketball",
+      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
+      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
-];
+  ];
+
+  const dispatch = useDispatch();
+  const { topicPages, userCollections } = useSelector(
+    (state) => state.otherProfile
+  );
+  const authorData = location?.state?.id;
+  const handleGetUserProfile = async () => {
+    await dispatch(
+      getUserTopicPages({
+        id: authorData?._id,
+        page: 1,
+        limit: 10,
+        search: "",
+      })
+    ).unwrap();
+    await dispatch(
+      getUserCollections({
+        id: authorData?._id,
+        page: 1,
+        limit: 10,
+        search: "",
+      })
+    ).unwrap();
+  };
+  useEffect(() => {
+    handleGetUserProfile();
+  }, [location?.state?.id]);
+
+  console.log(authorData, "topicPagesotherprofile");
   return (
     <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden">
       {/* Left Side */}
@@ -68,7 +102,10 @@ const trending = [
               <EditedProfile />
             ) : (
               <>
-                <LargeProfile setIsEditProfile={setIsEditProfile} />
+                <LargeProfile
+                  profileData={authorData}
+                  setIsEditProfile={setIsEditProfile}
+                />
 
                 {/* Tabs */}
                 <div className="flex flex-col gap-3">
@@ -91,13 +128,11 @@ const trending = [
                       >
                         <BookOpen className="text-white" size={16} />
                       </div>
-                      <span>My Topic Pages</span>
+                      <span> Topic Pages</span>
                       {activeTab === "topics" && (
                         <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
                       )}
                     </button>
-
-                 
 
                     {/* My Subscriptions (only visible on /other-profile) */}
                     {isFromOtherProfile && (
@@ -118,15 +153,14 @@ const trending = [
                         >
                           <Users className="text-white" size={16} />
                         </div>
-                        <span>My Subscriptions</span>
+                        <span> Subscriptions</span>
                         {activeTab === "subscriptions" && (
                           <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
                         )}
                       </button>
                     )}
 
-
-                       {/* My Knowledge Post */}
+                    {/* My Knowledge Post */}
                     <button
                       onClick={() => setActiveTab("knowledge")}
                       className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
@@ -144,7 +178,7 @@ const trending = [
                       >
                         <Lightbulb className="text-white" size={16} />
                       </div>
-                      <span>My Knowledge Post</span>
+                      <span> Knowledge Post</span>
                       {activeTab === "knowledge" && (
                         <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
                       )}
@@ -154,30 +188,17 @@ const trending = [
                   {/* Tab Content */}
                   {activeTab === "topics" ? (
                     <div className="flex flex-col gap-3">
-                      {/* Create Post */}
-                      <div
-                        onClick={() => setIsCreatePostModalOpen(true)}
-                        className="w-full h-[40px] flex justify-between items-center bg-white rounded-[12px] border border-[#B9B9B9] px-1"
-                      >
-                        <p className="text-[14px] font-[500] text-[#18181899] pl-2">
-                          Create Post
-                        </p>
-                        <button className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41] text-white w-[34px] h-[34px] rounded-[10px] flex items-center justify-center">
-                          <FiPlus size={24} className="text-white" />
-                        </button>
-                      </div>
-
                       {/* Topic Page Cards */}
                       <div className="grid grid-cols-3 gap-3">
-                        {trending.map((_, index) => (
+                        {topicPages?.map((_, index) => (
                           <TopicPageCard
                             onClick={() => setIsProfilePostOpen(true)}
                             key={index}
-                            img={topics}
-                            title={_.title}
-                            description={_.desc}
-                            tags={_.hashtags}
-                            Follows="50"
+                            img={_?.image}
+                            title={_.name}
+                            description={_.about}
+                            tags={_.keywords}
+                            Follows={_.followersCount}
                             className="bg-white"
                           />
                         ))}
@@ -187,7 +208,11 @@ const trending = [
                     <KnowledgePostCard />
                   ) : (
                     // ✅ Show only when on /other-profile route
-                    isFromOtherProfile && <MySubscriptiononprofile />
+                    isFromOtherProfile && (
+                      <MySubscriptiononprofile
+                        userCollections={userCollections}
+                      />
+                    )
                   )}
                 </div>
               </>
