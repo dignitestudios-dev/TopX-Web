@@ -24,6 +24,12 @@ const initialState = {
     pageDetail: null,
     pageDetailLoading: false,
 
+    // 🆕 PAGE POSTS
+    pagePosts: [],
+    pagePostsPagination: null,
+    pagePostsLoading: false,
+
+
     error: null,
 };
 
@@ -69,6 +75,31 @@ export const fetchRecommendedPages = createAsyncThunk(
         } catch (error) {
             return thunkAPI.rejectWithValue(
                 error.response?.data?.message || "Failed to fetch recommended pages"
+            );
+        }
+    }
+);
+
+/* ===============================
+    🆕 FETCH PAGE POSTS
+    API → /posts/page/:pageId
+================================*/
+export const fetchPagePosts = createAsyncThunk(
+    "trending/fetchPagePosts",
+    async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
+        try {
+            const res = await axios.get(
+                `/posts/page/${pageId}?page=${page}&limit=${limit}`
+            );
+
+            return {
+                posts: res.data?.data?.posts || [],
+                pagination: res.data?.pagination,
+            };
+
+        } catch (error) {
+            return thunkAPI.rejectWithValue(
+                error.response?.data?.message || "Failed to fetch page posts"
             );
         }
     }
@@ -194,6 +225,21 @@ const trendingSlice = createSlice({
                 state.pageDetailLoading = false;
                 state.error = action.payload;
             })
+
+            /* ===== PAGE POSTS ===== */
+            .addCase(fetchPagePosts.pending, (state) => {
+                state.pagePostsLoading = true;
+            })
+            .addCase(fetchPagePosts.fulfilled, (state, action) => {
+                state.pagePostsLoading = false;
+                state.pagePosts = action.payload.posts;
+                state.pagePostsPagination = action.payload.pagination;
+            })
+            .addCase(fetchPagePosts.rejected, (state, action) => {
+                state.pagePostsLoading = false;
+                state.error = action.payload;
+            })
+
 
     },
 });

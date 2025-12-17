@@ -170,7 +170,7 @@ export default function Trending() {
                                             <img
                                                 src={item.image || item.user?.profilePicture || topics}
                                                 alt={item.name}
-                                                className="w-14 h-14 rounded-full object-contain flex-shrink-0"
+                                                className="w-14 h-14 rounded-full object-cover flex-shrink-0"
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex gap-2 items-center">
