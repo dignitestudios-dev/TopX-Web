@@ -10,7 +10,7 @@ import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
 import PageCategorySelector from "./PageCategorySelector";
 import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
 
-export default function KnowledgePostCard({ userKnowledgePost }) {
+export default function OtherProfileKnowledgePostCard({ userKnowledgePost,loading }) {
   const dispatch = useDispatch();
   const [selectoption, setSelectoption] = useState(false);
   const [createpage, setCreatepage] = useState(false);
@@ -21,15 +21,6 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
   const [isKnowledgePageOpen, setIsKnowledgePageOpen] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
 
-
-
-  const { knowledgePages, loading } = useSelector(
-    (state) => state.knowledgepost
-  );
-
-  useEffect(() => {
-    dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
-  }, [dispatch]);
 
   const handleNextStep = (data) => {
     setSelectedPageId(data.pageId);
@@ -75,9 +66,9 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
 
         {/* DATA */}
        
-            {!loading && knowledgePages?.length > 0 && (
+            {!loading && userKnowledgePost?.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {knowledgePages?.map((item) => (
+                {userKnowledgePost?.map((item) => (
                   <div
                     key={item._id}
                     onClick={() => {
@@ -103,7 +94,7 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
 
 
         {/* EMPTY */}
-        {!loading && knowledgePages?.length === 0 && (
+        {!loading && userKnowledgePost?.length === 0 && (
           <p className="text-center text-gray-500">No knowledge pages found.</p>
         )}
 

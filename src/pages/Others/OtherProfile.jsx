@@ -14,8 +14,10 @@ import MySubscriptiononprofile from "../../components/homepage/MySubscriptiononp
 import { useDispatch, useSelector } from "react-redux";
 import {
   getUserCollections,
+  getUserKnowledgePost,
   getUserTopicPages,
 } from "../../redux/slices/otherprofile.slice";
+import OtherProfileKnowledgePostCard from "../../components/app/profile/OtherProfileKnowledgePostCard";
 
 export default function OtherProfile() {
   const [activeTab, setActiveTab] = useState("topics");
@@ -59,7 +61,7 @@ export default function OtherProfile() {
   ];
 
   const dispatch = useDispatch();
-  const { topicPages, userCollections } = useSelector(
+  const { topicPages, userCollections,userKnowledgePost,isLoading } = useSelector(
     (state) => state.otherProfile
   );
   const authorData = location?.state?.id;
@@ -74,6 +76,14 @@ export default function OtherProfile() {
     ).unwrap();
     await dispatch(
       getUserCollections({
+        id: authorData?._id,
+        page: 1,
+        limit: 10,
+        search: "",
+      })
+    ).unwrap();
+    await dispatch(
+      getUserKnowledgePost({
         id: authorData?._id,
         page: 1,
         limit: 10,
@@ -205,7 +215,7 @@ export default function OtherProfile() {
                       </div>
                     </div>
                   ) : activeTab === "knowledge" ? (
-                    <KnowledgePostCard />
+                    <OtherProfileKnowledgePostCard loading={isLoading} userKnowledgePost={userKnowledgePost} />
                   ) : (
                     // ✅ Show only when on /other-profile route
                     isFromOtherProfile && (
