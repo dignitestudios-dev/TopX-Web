@@ -172,7 +172,7 @@ const Trendingpagedetail = () => {
                               className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
                             />
                           ) : (
-                            <div className="w-[6em] h-[6em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                            <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
                               {pageDetail.name?.charAt(0).toUpperCase()}
                             </div>
                           )}
@@ -209,10 +209,6 @@ const Trendingpagedetail = () => {
 
                                 </div>
                             </div>
-
-
-
-
 
                             {/* Subscribe Button */}
                             <div className="mb-[0em]">

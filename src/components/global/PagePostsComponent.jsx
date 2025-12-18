@@ -11,7 +11,7 @@ export default function PagePostsComponent({ pageId }) {
     const dispatch = useDispatch();
     const { pagePosts, pagePostsLoading, pagePostsPagination } = useSelector((state) => state.trending);
     const { reportSuccess, reportLoading } = useSelector((state) => state.reports);
-    
+
     const [currentMediaIndex, setCurrentMediaIndex] = useState({});
     const [loadingMedia, setLoadingMedia] = useState({});
     const [reportmodal, setReportmodal] = useState(false);
@@ -303,7 +303,7 @@ export default function PagePostsComponent({ pageId }) {
                             {pagePosts[0]?.page?.topic && (
                                 <div>
                                     <p className="text-xs text-gray-500 uppercase tracking-wider">Topic</p>
-                                    <p className="text-sm font-medium text-blue-600 mt-1">{pagePosts[0].page.topic}</p>
+                                    <p className="text-sm font-medium text-black mt-1">{pagePosts[0].page.topic}</p>
                                 </div>
                             )}
 
@@ -327,7 +327,7 @@ export default function PagePostsComponent({ pageId }) {
                                         {pagePosts[0].author.interests.map((interest, idx) => (
                                             <span
                                                 key={idx}
-                                                className="inline-block bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1 rounded-full"
+                                                className="inline-block bg-orange-100 text-orange-700 text-xs font-medium px-3 py-1 rounded-full"
                                             >
                                                 {interest}
                                             </span>
@@ -353,10 +353,7 @@ export default function PagePostsComponent({ pageId }) {
                                 </div>
                             )}
 
-                            {/* Follow Button */}
-                            <button className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 rounded-lg transition">
-                                Follow Page
-                            </button>
+                         
                         </div>
                     )}
                 </div>
