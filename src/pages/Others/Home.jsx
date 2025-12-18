@@ -1,46 +1,30 @@
-import React, { useEffect, useState } from "react";
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  MoreHorizontal,
-  ChevronRight,
-  TrendingUp,
-} from "lucide-react";
-import {
-  nofound,
-  notes,
-  postone,
-  profile,
-  profilehigh,
-  topics,
-} from "../../assets/export";
+import { useEffect, useState } from "react";
+import { ChevronRight, TrendingUp } from "lucide-react";
+import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
-import PostCard from "../../components/global/PostCard";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchpostfeed } from "../../redux/slices/postfeed.slice";
 import PostSkeleton from "../../components/global/PostSkeleton";
 import HomePostFeed from "../../components/global/HomePostFeed";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
+import { fetchMyPages } from "../../redux/slices/pages.slice";
 
 export default function Home() {
   const [liked, setLiked] = useState({});
   const dispatch = useDispatch();
-
+  const navigate = useNavigate();
   const { allfeedposts, postsLoading } = useSelector(
     (state) => state.postsfeed
   );
-
-  console.log(allfeedposts, "allfeedposts");
-
+  const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  useEffect(() => {
+    dispatch(fetchMyPages({ page: 1, limit: 10 }));
+  }, [dispatch]);
   useEffect(() => {
     dispatch(fetchpostfeed({ page: 1, limit: 10 }));
   }, [dispatch]);
@@ -51,8 +35,6 @@ export default function Home() {
       [postId]: !prev[postId], // Toggling like based on the postId
     }));
   };
-
-  console.log(allfeedposts, "allfeedposts");
 
   const [activeIndexes, setActiveIndexes] = useState([]);
 
@@ -66,8 +48,6 @@ export default function Home() {
     });
   };
 
-  const [open, setOpen] = useState(false);
-
   const trending = [
     {
       title: "Justin's Basketball",
@@ -80,8 +60,6 @@ export default function Home() {
       hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
     },
   ];
-
-  console.log(allfeedposts, "allfeedposts");
 
   // Get localStorage likes for merge
   const storedLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
@@ -119,8 +97,6 @@ export default function Home() {
       })
     : [];
 
-  console.log(transformedPosts, "transformedPosts");
-
   return (
     <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
       {/* Left Sidebar */}
@@ -137,31 +113,76 @@ export default function Home() {
             Topic Pages
           </h3>
           <div className="space-y-4">
-            {[1, 2, 3].map((item, idx) => (
-              <div
-                key={idx}
-                className="pb-4 border-b border-gray-200 last:border-0"
-              >
-                <div className="flex items-center gap-1 mb-1">
-                  <div className="w-10 h-10 rounded-full text-lg flex items-center justify-center flex-shrink-0">
-                    <img src={topics} alt="" />
+            {pagesLoading
+              ? Array.from({ length: 3 }).map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gray-300" />
+
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 w-32 bg-gray-300 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                      </div>
+                    </div>
+
+                    {/* About */}
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-gray-200 rounded" />
+                      <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                    </div>
+
+                    {/* Followers */}
+                    <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
                   </div>
-                  <div className="flex gap-2">
-                    <p className="font-[400] text-[14px]">
-                      Justin's Basketball
+                ))
+              : myPages?.slice(0, 3).map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt=""
+                        />
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <p
+                          onClick={() =>
+                            navigate(`/profile`, {
+                              state: { id: item._id },
+                            })
+                          }
+                          className="cursor-pointer font-[400] text-[14px]"
+                        >
+                          {item?.name}
+                        </p>
+                        <img src={notes} alt="" />
+                      </div>
+                    </div>
+
+                    <p className="text-[14px] text-gray-600 leading-snug">
+                      {item?.about}
                     </p>
-                    <img src={notes} alt="" />
+
+                    <p className="text-[14px] text-gray-700 mt-1">
+                      <span className="text-black font-[600]">
+                        {item?.followersCount}+
+                      </span>{" "}
+                      Follows
+                    </p>
                   </div>
-                </div>
-                <p className="text-[14px] text-gray-600 leading-snug">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                </p>
-                <p className="text-[14px] text-gray-700 mt-1">
-                  <span className="text-black font-[600]">50+</span> Follows
-                </p>
-              </div>
-            ))}
+                ))}
           </div>
+
           <Link to="/profile">
             <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
               View All

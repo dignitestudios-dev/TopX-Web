@@ -47,7 +47,7 @@ export const getUserKnowledgePost = createAsyncThunk(
   async ({ id, page = 1, limit = 10, search = "" }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/pages/knowledge/${id}?page=${page}&limit=${limit}&search=${search}`
+        `/pages/knowledge?user=${id}&type=knowledge&page=${page}&limit=${limit}&search=${search}`
       );
       return res.data;
     } catch (error) {

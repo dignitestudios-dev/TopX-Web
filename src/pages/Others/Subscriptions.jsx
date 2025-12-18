@@ -24,7 +24,10 @@ import {
   RemoveSubscriptionCollection,
   updateSavedCollections,
 } from "../../redux/slices/collection.slice";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
+import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
+import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
+import { fetchMyPages } from "../../redux/slices/pages.slice";
 
 export default function Subscriptions() {
   const [liked, setLiked] = useState({});
@@ -59,6 +62,13 @@ export default function Subscriptions() {
   }, [dispatch, activeTab]);
 
   const subscriptions = activeTab === "my" ? mySubscriptions : savedCollections;
+
+
+  const { myPages, pagesLoading } = useSelector((state) => state.pages);
+
+  useEffect(() => {
+    dispatch(fetchMyPages({ page: 1, limit: 10 }));
+  }, [dispatch]);
 
   const toggleLike = (postId) => {
     setLiked((prev) => ({
@@ -139,69 +149,90 @@ export default function Subscriptions() {
 
         <Profilecard smallcard={true} />
 
-        <h3 className="font-[500] text-lg mb-4 flex items-center gap-2 pt-4">
-          <TbNotes className="w-5 h-5 text-orange-500" />
-          Topic Pages
-        </h3>
+       
         {/* Topic Pages */}
-        <div className="px-0 py-0  mt-4  mb-4">
+        <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
+          <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
+            <TbNotes className="w-5 h-5 text-orange-500" />
+            Topic Pages
+          </h3>
           <div className="space-y-4">
-            {[1, 2, 3].map((item, idx) => (
-              <div
-                key={idx}
-                className="pb-4 border-b bg-white border p-3 rounded-xl border-gray-200 last:border-0"
-              >
-                <div className="flex items-center gap-1 mb-1">
-                  <div className="w-10 h-10  rounded-full  text-lg flex items-center justify-center flex-shrink-0">
-                    <img src={topics} alt="" />
-                  </div>
-                  <div className="flex gap-2">
-                    <p className="font-[400] text-[14px]">
-                      Justin's Basketball
-                    </p>
-                    <img src={notes} alt="" />
-                  </div>
-                </div>
-                <p className="text-[14px] text-gray-600 leading-snug">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed
-                  do eiusmod tempor.
-                </p>
-                <p className="text-[14px] text-gray-400 leading-snug gap-3 pt-2">
-                  #Lorem ipsum #Lorem ipsum <br></br> #Lorem ipsum
-                </p>
-                <div className="flex gap-2 pt-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        <img
-                          src="https://randomuser.me/api/portraits/women/1.jpg"
-                          alt=""
-                          className="w-6 h-6 rounded-full border-2 border-white"
-                        />
-                        <img
-                          src="https://randomuser.me/api/portraits/men/2.jpg"
-                          alt=""
-                          className="w-6 h-6 rounded-full border-2 border-white"
-                        />
-                        <img
-                          src="https://randomuser.me/api/portraits/women/3.jpg"
-                          alt=""
-                          className="w-6 h-6 rounded-full border-2 border-white"
-                        />
-                      </div>
+            {pagesLoading
+              ? Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    {/* Avatar */}
+                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 w-32 bg-gray-300 rounded" />
+                      <div className="h-3 w-20 bg-gray-200 rounded" />
                     </div>
                   </div>
+
+                  {/* About */}
+                  <div className="space-y-2">
+                    <div className="h-3 w-full bg-gray-200 rounded" />
+                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                  </div>
+
+                  {/* Followers */}
+                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                </div>
+              ))
+              : myPages?.slice(0, 3).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="pb-4 border-b border-gray-200 last:border-0"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-10 h-10 flex-shrink-0">
+                      <img
+                        src={item?.image}
+                        className="w-full h-full object-cover rounded-full"
+                        alt=""
+                      />
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      <p
+                        onClick={() =>
+                          navigate(`/profile`, {
+                            state: { id: item._id },
+                          })
+                        }
+                        className="cursor-pointer font-[400] text-[14px]"
+                      >
+                        {item?.name}
+                      </p>
+                      <img src={notes} alt="" />
+                    </div>
+                  </div>
+
+                  <p className="text-[14px] text-gray-600 leading-snug">
+                    {item?.about}
+                  </p>
+
                   <p className="text-[14px] text-gray-700 mt-1">
-                    <span className="text-black font-[600]">50+</span> Follows
+                    <span className="text-black font-[600]">
+                      {item?.followersCount}+
+                    </span>{" "}
+                    Follows
                   </p>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
-          <div className="flex items-center pl-3 gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
-            View All
-            <ChevronRight className="w-4 h-4" />
-          </div>
+
+          <Link to="/profile">
+            <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
+              View All
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </Link>
         </div>
       </div>
 
@@ -226,21 +257,19 @@ export default function Subscriptions() {
 
             <div className="flex bg-white p-1 rounded-full overflow-hidden">
               <button
-                className={`px-4 py-2 rounded-l-full text-sm font-medium ${
-                  activeTab === "my"
+                className={`px-4 py-2 rounded-l-full text-sm font-medium ${activeTab === "my"
                     ? "bg-orange-500 text-white"
                     : "text-gray-600 hover:bg-gray-200"
-                }`}
+                  }`}
                 onClick={() => setActiveTab("my")}
               >
                 My Subscriptions
               </button>
               <button
-                className={`px-4 py-2 text-sm rounded-r-full font-medium ${
-                  activeTab === "saved"
+                className={`px-4 py-2 text-sm rounded-r-full font-medium ${activeTab === "saved"
                     ? "bg-orange-500 text-white"
                     : "text-gray-600 hover:bg-gray-200"
-                }`}
+                  }`}
                 onClick={() => setActiveTab("saved")}
               >
                 Saved Subscriptions
@@ -270,7 +299,10 @@ export default function Subscriptions() {
 
         {/* Subscription Cards Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {subscriptions?.map((item) => (
+           {subscriptions?.length === 0 ? (
+    <p className="text-center text-gray-500 text-[18px] w-[33em]">No Saved Subscriptions</p> // Display this message if there are no subscriptions
+  ) : (
+          subscriptions?.map((item) => (
             <div
               key={item._id}
               className="bg-white cursor-pointer border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
@@ -337,7 +369,7 @@ export default function Subscriptions() {
                       .map((page, i) => (
                         <img
                           key={page?._id || i}
-                          src={page?.image || page}
+                          src={page?.image || page || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"}
                           alt=""
                           className="w-6 h-6 rounded-full border border-white object-cover"
                         />
@@ -355,7 +387,8 @@ export default function Subscriptions() {
                 </p>
               </div>
             </div>
-          ))}
+          ))
+  )}
 
           {/* Create Subscription Modal */}
           {showCreateModal && (
@@ -383,183 +416,13 @@ export default function Subscriptions() {
       </div>
 
       {/* Right Sidebar - 1/4 width */}
-      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
+      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
         <div className="p-0">
-          <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
-            {/* Header */}
-            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              <span className="text-gray-900">Trending Pages</span>
-            </h3>
+          {/* Trending Pages Section */}
+          <TrendingPagesGlobal />
 
-            {/* Trending List */}
-            <div className="space-y-6">
-              {trending.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src={topics}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div>
-                      <div className="flex gap-2">
-                        <p className="font-[400] text-[14px]"> {item.title}</p>
-                        <img src={notes} alt="" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-gray-600 mb-2 leading-snug">
-                    {item.desc}
-                  </p>
-
-                  {/* Hashtags */}
-                  <p className="text-xs text-gray-700 mb-3">
-                    {item.hashtags.map((tag, i) => (
-                      <span key={i} className="mr-1 text-gray-500">
-                        {tag}
-                      </span>
-                    ))}
-                  </p>
-
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-1 text-black">
-                      {/* Followers + Subscribe */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-2">
-                            <img
-                              src="https://randomuser.me/api/portraits/women/1.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                            <img
-                              src="https://randomuser.me/api/portraits/men/2.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                            <img
-                              src="https://randomuser.me/api/portraits/women/3.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[13px] text-black font-bold">
-                        50+{" "}
-                        <span className="text-slate-600 font-normal">
-                          Follows
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
-              <span>View All</span>
-              <FaChevronRight color="orange" />
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
-            {/* Header */}
-            <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              <span className="text-gray-900">
-                Suggestions based on your Interests/Activity
-              </span>
-            </h3>
-
-            {/* Trending List */}
-            <div className="space-y-6">
-              {trending.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src={topics}
-                      alt=""
-                      className="w-12 h-12 rounded-full object-cover"
-                    />
-                    <div>
-                      <div className="flex gap-2">
-                        <p className="font-[400] text-[14px]"> {item.title}</p>
-                        <img src={notes} alt="" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  <p className="text-sm text-gray-600 mb-2 leading-snug">
-                    {item.desc}
-                  </p>
-
-                  {/* Hashtags */}
-                  <p className="text-xs text-gray-700 mb-3">
-                    {item.hashtags.map((tag, i) => (
-                      <span key={i} className="mr-1 text-gray-500">
-                        {tag}
-                      </span>
-                    ))}
-                  </p>
-
-                  <div className="flex justify-between items-center">
-                    <div>
-                      {/* Followers + Subscribe */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="flex -space-x-2">
-                            <img
-                              src="https://randomuser.me/api/portraits/women/1.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                            <img
-                              src="https://randomuser.me/api/portraits/men/2.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                            <img
-                              src="https://randomuser.me/api/portraits/women/3.jpg"
-                              alt=""
-                              className="w-6 h-6 rounded-full border-2 border-white"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-600 font-medium">
-                        50+ Follows
-                      </p>
-                    </div>
-
-                    <div>
-                      <button className="bg-orange-500 hover:bg-orange-600 text-white px-16 py-1.5 rounded-[10px] text-sm font-semibold">
-                        Subscribe
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Footer */}
-            <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
-              <span>View All</span>
-              <FaChevronRight color="orange" />
-            </div>
-          </div>
-          {open && <ChatWidget />} {/* Your actual chat panel */}
-          <FloatingChatButton onClick={() => setOpen(!open)} />
+          {/* Suggestions Section */}
+          <SuggestionsPagesGlobal />
         </div>
       </div>
     </div>
