@@ -19,7 +19,6 @@ const initialState = {
   emailVerified: false,
 };
 
-
 // =============================
 // SEND OTP USING BACKEND ACCESS TOKEN
 // =============================
@@ -88,7 +87,9 @@ export const sendEmailOTP = createAsyncThunk(
       });
 
       if (!res.data?.success) {
-        return thunkAPI.rejectWithValue(res.data?.message || "Failed to send email OTP");
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Failed to send email OTP"
+        );
       }
 
       return res.data.message; // "OTP Sent to Email Successfully"
@@ -102,10 +103,9 @@ export const sendEmailOTP = createAsyncThunk(
 
 export const verifyEmailOTP = createAsyncThunk(
   "onboarding/verifyEmailOTP",
-  async (otp, thunkAPI) => {
+  async ({ endPoint, otp }, thunkAPI) => {
     try {
-      const res = await axios.post("/auth/verifyEmail", { otp });
-
+      const res = await axios.post(`/auth/verifyEmail?${endPoint}`, { otp });
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
           res.data?.message || "Email OTP verification failed"
@@ -120,7 +120,6 @@ export const verifyEmailOTP = createAsyncThunk(
     }
   }
 );
-
 
 export const checkUsername = createAsyncThunk(
   "onboarding/checkUsername",
@@ -140,7 +139,9 @@ export const checkUsername = createAsyncThunk(
       );
 
       if (!res.data?.success) {
-        return thunkAPI.rejectWithValue(res.data?.message || "Username not available");
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Username not available"
+        );
       }
 
       return res.data.message; // "Username available"
@@ -200,7 +201,7 @@ export const getInterests = createAsyncThunk(
         );
       }
 
-      return res.data.data;  // <-- backend should return list of interests
+      return res.data.data; // <-- backend should return list of interests
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to load interests"
@@ -268,7 +269,6 @@ export const getRecommendations = createAsyncThunk(
         pagination: res.data.pagination, // pagination object
         message: res.data.message,
       };
-
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to fetch recommendations"
@@ -276,7 +276,6 @@ export const getRecommendations = createAsyncThunk(
     }
   }
 );
-
 
 const onboardingSlice = createSlice({
   name: "onboarding",
@@ -418,9 +417,7 @@ const onboardingSlice = createSlice({
         state.emailVerifyLoading = false;
         state.emailVerifyError = action.payload;
         state.emailVerified = false;
-      })
-
-
+      });
   },
 });
 

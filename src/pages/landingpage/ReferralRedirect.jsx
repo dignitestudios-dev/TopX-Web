@@ -7,7 +7,6 @@ export default function ReferralRedirect() {
 
   useEffect(() => {
     const code = searchParams.get("code");
-
     if (code) {
       // signup page with referral code
       navigate(`/auth/signup?ref=${code}`, { replace: true });

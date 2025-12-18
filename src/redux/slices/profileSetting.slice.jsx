@@ -8,6 +8,7 @@ const initialState = {
   stage: "idle", // idle | otpSentOld | oldVerified | newUpdated | otpSentNew | newVerified | success
   lastResponse: null,
   blockedUsers: [],
+  recentActivity: [],
 };
 // ====================================================
 // 🚀 Get My Collections  (Get)
@@ -119,6 +120,22 @@ export const deleteAccount = createAsyncThunk(
       return res?.data;
     } catch (error) {
       return thunkAPI.rejectWithValue("Logout failed");
+    }
+  }
+);
+// get recent Activity
+export const getRecentActivity = createAsyncThunk(
+  "/get/activities",
+  async ({ page = 1, limit = 10, search = "" }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/activities?page=${page}&limit=${limit}&search=${search}`
+      );
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch subscriptions"
+      );
     }
   }
 );
@@ -238,6 +255,18 @@ const profileSettingSlice = createSlice({
         state.success = action.payload.success;
       })
       .addCase(deleteAccount.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(getRecentActivity.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getRecentActivity.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.recentActivity = action.payload.data;
+        state.success = action.payload.success;
+      })
+      .addCase(getRecentActivity.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });

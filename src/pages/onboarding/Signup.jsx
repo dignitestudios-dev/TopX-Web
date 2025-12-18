@@ -13,10 +13,13 @@ import AddStore from "../../components/onboarding/AddStore";
 import PersonalDetails from "../../components/onboarding/PersonalDetails";
 import Interests from "../../components/onboarding/Interests";
 import AccountCreated from "../../components/onboarding/AccountCreated";
+import { useLocation, useSearchParams } from "react-router";
 export default function SignUp() {
   const [currentStep, setCurrentStep] = useState(0);
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+const [searchParams] = useSearchParams();
+  const ref = searchParams.get("ref");
 
   const providerSteps = [
     { icon: LiaIdCard, title: "Your Details" },
@@ -60,6 +63,7 @@ export default function SignUp() {
             />
           ) : currentStep === 1 ? (
             <VerifyAccount
+              referalCode={ref}
               email={email}
               phone={phone}
               handleNext={handleNext} 

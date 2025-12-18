@@ -9,23 +9,30 @@ import Button from "../common/Button";
 import { BiArrowBack } from "react-icons/bi";
 
 import { useDispatch, useSelector } from "react-redux";
-import { 
-  sendPhoneOTP, 
+import {
+  sendPhoneOTP,
   verifyPhoneOTP,
   sendEmailOTP,
-  verifyEmailOTP 
+  verifyEmailOTP,
 } from "../../redux/slices/onboarding.slice";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 
-export default function VerifyAccount({ email, phone, handleNext, handlePrevious }) {
+export default function VerifyAccount({
+  email,
+  phone,
+  handleNext,
+  handlePrevious,
+  referalCode,
+}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isType, setIsType] = useState("");
-
   const dispatch = useDispatch();
-  const { isLoading, emailOTPLoading, emailVerifyLoading } = useSelector((state) => state.onboarding);
+  const { isLoading, emailOTPLoading, emailVerifyLoading } = useSelector(
+    (state) => state.onboarding
+  );
   const { user } = useSelector((state) => state.auth);
 
-  console.log(user, "userdata")
+  console.log(user, "userdata");
 
   // ⭐ EMAIL CARD CLICK + SEND OTP
   const handleEmailClick = async () => {
@@ -46,7 +53,7 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
       ErrorToast("Please verify your email first");
       return;
     }
-    
+
     const res = await dispatch(sendPhoneOTP());
     if (res.meta.requestStatus === "fulfilled") {
       SuccessToast(res.payload || "OTP sent successfully");
@@ -79,17 +86,28 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
   // ⭐ VERIFY OTP FUNCTION
   const handleVerifyOTP = async (code) => {
     let res;
-    
+
     if (isType === "email") {
-      res = await dispatch(verifyEmailOTP(code));
+      res = await dispatch(
+        verifyEmailOTP({
+          endPoint: `referral=https://topx.com/referral?code=${referalCode}`,
+          otp: code,
+        })
+      );
     } else {
-      res = await dispatch(verifyPhoneOTP(code));
+      res = await dispatch(
+        verifyPhoneOTP({
+          endPoint: `referral=https://topx.com/referral?code=${referalCode}`,
+          otp: code,
+        })
+      );
     }
 
     if (res.meta.requestStatus === "fulfilled") {
-      const verificationMsg = isType === "email" 
-        ? "Email Verified Successfully" 
-        : "Phone Verified Successfully";
+      const verificationMsg =
+        isType === "email"
+          ? "Email Verified Successfully"
+          : "Phone Verified Successfully";
       SuccessToast(verificationMsg);
       setIsModalOpen(false);
       handleNext(); // NEXT SCREEN
@@ -108,7 +126,9 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
         <img src={auth} alt="orange_logo" className="w-[100px]" />
 
         <div className="flex flex-col justify-center items-center text-center">
-          <h2 className="text-[24px] md:text-[32px] font-bold ">Verify Your Account</h2>
+          <h2 className="text-[24px] md:text-[32px] font-bold ">
+            Verify Your Account
+          </h2>
           <p className="text-[14px] text-[#565656]">
             To secure your account, please verify your identity.
           </p>
@@ -116,15 +136,17 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
 
         <div className="w-full md:w-[700px] flex  justify-between items-center gap-4">
           {/* EMAIL VERIFICATION */}
-          <Card 
-            onClick={handleEmailClick} 
+          <Card
+            onClick={handleEmailClick}
             className="w-[24em] flex cursor-pointer justify-between items-center bg-[#F9FAFA] rounded-[12px] h-[80px] p-4"
           >
             <div className="flex items-center  gap-4">
               <img src={emailimag} alt="" className="w-[34px] h-[34px]" />
               <p className="flex flex-col text-[15px] font-[500] text-wrap">
                 Email address
-                <span className="text-[12px] text-wrap font-[400] text-[#717171CC]">{email}</span>
+                <span className="text-[12px] text-wrap font-[400] text-[#717171CC]">
+                  {email}
+                </span>
               </p>
             </div>
             <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full">
@@ -157,13 +179,15 @@ export default function VerifyAccount({ email, phone, handleNext, handlePrevious
           variant="orange"
           size="full"
           loading={isLoading || emailOTPLoading || emailVerifyLoading}
-          disabled={!user?.isEmailVerified}   // 🔥 Email is compulsory, Phone is optional
-          className={`w-full flex items-center justify-center ${!user?.isEmailVerified ? "opacity-60 cursor-not-allowed" : ""
-            }`}
+          disabled={!user?.isEmailVerified} // 🔥 Email is compulsory, Phone is optional
+          className={`w-full flex items-center justify-center ${
+            !user?.isEmailVerified ? "opacity-60 cursor-not-allowed" : ""
+          }`}
         >
-          {isLoading || emailOTPLoading || emailVerifyLoading ? "Sending OTP..." : "Next"}
+          {isLoading || emailOTPLoading || emailVerifyLoading
+            ? "Sending OTP..."
+            : "Next"}
         </Button>
-
       </div>
 
       {/* OTP MODAL */}
