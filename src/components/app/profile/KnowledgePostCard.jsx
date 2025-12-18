@@ -10,7 +10,7 @@ import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
 import PageCategorySelector from "./PageCategorySelector";
 import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
 
-export default function KnowledgePostCard() {
+export default function KnowledgePostCard({ userKnowledgePost }) {
   const dispatch = useDispatch();
   const [selectoption, setSelectoption] = useState(false);
   const [createpage, setCreatepage] = useState(false);

@@ -337,13 +337,27 @@ export default function CommentsSection({ postId }) {
 
       {/* Comments List */}
       <div className="space-y-1">
-        {postComments.map((comment) => (
-          <CommentItem
-            key={comment.id}
-            onAddReply={addReply}
-            comment={comment}
-          />
-        ))}
+        {getCommentsLoading
+          ? Array.from({ length: 2 }).map((_, idx) => (
+              <div key={idx} className="flex gap-3 py-3 animate-pulse">
+                {/* Avatar */}
+                <div className="w-8 h-8 bg-gray-300 rounded-full" />
+
+                {/* Content */}
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-24 bg-gray-300 rounded" />
+                  <div className="h-3 w-full bg-gray-200 rounded" />
+                  <div className="h-3 w-3/4 bg-gray-200 rounded" />
+                </div>
+              </div>
+            ))
+          : postComments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                onAddReply={addReply}
+                comment={comment}
+              />
+            ))}
       </div>
     </div>
   );

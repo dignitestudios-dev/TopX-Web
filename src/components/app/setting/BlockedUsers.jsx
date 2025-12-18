@@ -29,37 +29,39 @@ export default function BlockedUsers() {
         Blocked Users
       </h1>
       <div className="space-y-3 overflow-y-auto">
-        {blockedUsers?.map((item) => (
-          <div
-            key={item}
-            className="w-full flex justify-between items-center gap-4 "
-          >
-            <div className="flex items-center gap-2">
-              <img
-                src={item?.blockedUser?.profilePicture || user}
-                alt=""
-                className="w-[50px] h-[50px] rounded-full"
-              />
-              <p className="text-[14px] font-[500] text-gray-800">
-                {item?.blockedUser?.name || "Username"}
-              </p>
-            </div>
+       {blockedUsers?.length > 0 ? (
+  blockedUsers.map((item) => (
+    <div key={item._id} className="w-full flex justify-between items-center gap-4">
+      <div className="flex items-center gap-2">
+        <img
+          src={item?.blockedUser?.profilePicture || user}
+          alt=""
+          className="w-[50px] h-[50px] rounded-full"
+        />
+        <p className="text-[14px] font-[500] text-gray-800">
+          {item?.blockedUser?.name || "Username"}
+        </p>
+      </div>
 
-            <Button
-              type="button"
-              size="md"
-              variant="orange"
-              loading={isLoading}
-              onClick={() => {
-                setBlockedUserId(item?._id);
-                setOpenModal(true);
-              }}
-              className="px-14 flex justify-center items-center"
-            >
-              Unblock
-            </Button>
-          </div>
-        ))}
+      <Button
+        type="button"
+        size="md"
+        variant="orange"
+        loading={isLoading}
+        onClick={() => {
+          setBlockedUserId(item?._id);
+          setOpenModal(true);
+        }}
+        className="px-14 flex justify-center items-center"
+      >
+        Unblock
+      </Button>
+    </div>
+  ))
+) : (
+  <p>No Block User Found</p>
+)}
+
       </div>
       <ErrorModal
         onConfirm={() => handleUnblock(blockedUserId)}

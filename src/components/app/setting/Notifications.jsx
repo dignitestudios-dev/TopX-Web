@@ -1,43 +1,90 @@
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProfileNotifications, updateProfileNotifications } from "../../../redux/slices/profileSetting.slice";
 import Button from "../../common/Button";
-import { useState } from "react";
+import { useEffect } from "react";
+
+// Skeleton Loader component
+const SkeletonLoader = () => (
+  <div className="space-y-5 w-[500px]">
+    {[...Array(10)].map((_, index) => (
+      <div key={index} className="flex items-center justify-between animate-pulse">
+        <div className="bg-gray-300 w-2/4 h-6 rounded-md" />
+        <div className="bg-gray-300 w-12 h-6 rounded-md" />
+      </div>
+    ))}
+  </div>
+);
 
 export default function Notifications() {
-    const [isOn, setIsOn] = useState(false);
-    const [isOn2, setIsOn2] = useState(false);
-    const [isOn3, setIsOn3] = useState(false);
-    const [isOn4, setIsOn4] = useState(false);
-    const [isOn5, setIsOn5] = useState(false);
+  const dispatch = useDispatch();
 
-    return (
-        <div className="space-y-6">
-            <h1 className="text-[28px] font-bold tracking-[-0.018em]">Notifications</h1>
-             <div className="space-y-5 w-[500px]">
-              <div className="flex items-center justify-between">
-                <p className="text-[16px] font-[500]">Allow anyone to message me</p>
-                <Button
-                 isToggle={true} isOn={isOn} onClick={() => setIsOn(!isOn)} />
-              </div>
-            
+  // Fetch notification settings from Redux store
+  const { notificationSettings, isLoading, error } = useSelector(
+    (state) => state.profileSetting
+  );
 
-  <div className="flex items-center justify-between">
-                <p className="text-[16px] font-[500]">Notifications</p>
-                <Button isToggle={true} isOn={isOn2} onClick={() => setIsOn2(!isOn2)} />
-              </div>
-                <div className="flex items-center justify-between">
-                <p className="text-[16px] font-[500]">Allow anyone to add me to group chats</p>
-                <Button isToggle={true} isOn={isOn4} onClick={() => setIsOn4(!isOn4)} />
-              </div>
-            
-              <div className="flex items-center justify-between">
-                <p className="text-[16px] font-[500]">Allow anyone to add me to group chats</p>
-                <Button isToggle={true} isOn={isOn3} onClick={() => setIsOn3(!isOn3)} />
-              </div>
+  useEffect(() => {
+    dispatch(fetchProfileNotifications());
+  }, [dispatch]);
 
-              <div className="flex items-center justify-between">
-                <p className="text-[16px] font-[500]">Push Notifications</p>
-                <Button isToggle={true} isOn={isOn5} onClick={() => setIsOn5(!isOn5)} />
-              </div>
+  // Handle loading or error states
+  if (isLoading) return <SkeletonLoader />;
+  if (error) return <div>{error}</div>;
+  if (!notificationSettings) return <div>No notification settings found</div>;
+
+  // Map API response fields to readable labels
+  const notificationLabels = {
+    accountAndSystemNotification: "Account & System Notifications",
+    activityStatus: "Activity Status",
+    contentAndTopicNotification: "Content & Topic Notifications",
+    engagementNotification: "Engagement Notifications",
+    groupNotification: "Group Notifications",
+    isGroupInviteOpen: "Group Invites",
+    isMessagingOpen: "Messaging Notifications",
+    liveAndInteractiveNotification: "Live & Interactive Notifications",
+    messageNotification: "Message Notifications",
+    postNotification: "Post Notifications",
+  };
+
+
+const handleToggle = (key) => {
+  // Remove non-allowed fields like '_id', 'createdAt', 'updatedAt', and '__v'
+  const { _id, createdAt, updatedAt, __v, user, ...settingsWithoutInvalidFields } = notificationSettings;
+
+  // Only update the specific field that is toggled
+  const updatedSettings = {
+    ...settingsWithoutInvalidFields,
+    [key]: false, // Set the toggled notification to false
+  };
+
+  // Dispatch action to update notification setting
+  dispatch(updateProfileNotifications(updatedSettings));
+};
+
+
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-[28px] font-bold tracking-[-0.018em]">Notifications</h1>
+      <div className="space-y-5 w-[500px]">
+        {Object.entries(notificationLabels).map(([key, label]) => {
+          const value = notificationSettings[key];
+          
+          // Skip fields that aren't boolean
+          if (typeof value !== "boolean") return null;
+
+          return (
+            <div key={key} className="flex items-center justify-between">
+              <p className="text-[16px] font-[500]">{label}</p>
+              <Button
+                isToggle={true}
+                isOn={value}
+                onClick={() => handleToggle(key)} // Call handleToggle on button click
+              />
             </div>
-        </div>
-    )
+          );
+        })}
+      </div>
+    </div>
+  );
 }
