@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { MoreHorizontal, ChevronRight, Layers } from "lucide-react";
 import { ballone, ballthree, balltwo } from "../../assets/export";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
 
 const MySubscription = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true); // Loading state
-
+  const navigate = useNavigate();
   // Effect to fetch subscriptions
   useEffect(() => {
     dispatch(getMySubsctiptions({ page: 1, limit: 10 }));
   }, [dispatch]);
 
   // Get subscriptions from Redux store
-  const { mySubscriptions, subscriptionLoading, mySubscriptionsPagination } = useSelector(
-    (state) => state.subscriptions
-  );
+  const { mySubscriptions, subscriptionLoading, mySubscriptionsPagination } =
+    useSelector((state) => state.subscriptions);
 
   // Set loading to false once the data is fetched
   useEffect(() => {
@@ -51,56 +50,63 @@ const MySubscription = () => {
               </div>
             ))}
           </>
-        ) : (
-          // Ensure `mySubscriptions` is an array before calling `.slice`
-          Array.isArray(mySubscriptions) && mySubscriptions.length > 0 ? (
-            mySubscriptions.slice(0, 3).map((item, idx) => (
-              <div
-                key={idx}
-                className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
-              >
-                <div className="flex items-start gap-3">
-                  <div>
-                    <Link to={item.url}>
-                      <p className="font-medium text-gray-900 flex items-center gap-1">
-                        {item.name}
-                        <Layers className="w-4 h-4 text-gray-500" />
-                      </p>
-                    </Link>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex -space-x-2">
-                        <img
-                          src={ballone}
-                          alt=""
-                          className="w-5 h-5 rounded-full border border-white"
-                        />
-                        <img
-                          src={balltwo}
-                          alt=""
-                          className="w-5 h-5 rounded-full border border-white"
-                        />
-                        <img
-                          src={ballone}
-                          alt=""
-                          className="w-5 h-5 rounded-full border border-white"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 font-medium">
-                        <span className="text-black font-[600]">50+</span> Pages
-                      </p>
+        ) : // Ensure `mySubscriptions` is an array before calling `.slice`
+        Array.isArray(mySubscriptions) && mySubscriptions.length > 0 ? (
+          mySubscriptions.slice(0, 3).map((item, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
+            >
+              <div className="flex items-start gap-3">
+                <div>
+                  <span
+                    onClick={() =>
+                      navigate(`/subscriptions-category`, {
+                        state: { id: item._id },
+                      })
+                    }
+                  >
+                    <p className="cursor-pointer font-medium text-gray-900 flex items-center gap-1">
+                      {item.name}
+                      <Layers className="w-4 h-4 text-gray-500" />
+                    </p>
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex -space-x-2">
+                      <img
+                        src={ballone}
+                        alt=""
+                        className="w-5 h-5 rounded-full border border-white"
+                      />
+                      <img
+                        src={balltwo}
+                        alt=""
+                        className="w-5 h-5 rounded-full border border-white"
+                      />
+                      <img
+                        src={ballone}
+                        alt=""
+                        className="w-5 h-5 rounded-full border border-white"
+                      />
                     </div>
+                    <p className="text-xs text-gray-500 font-medium">
+                      <span className="text-black font-[600]">50+</span> Pages
+                    </p>
                   </div>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="text-center text-gray-500">
-              <div className="flex justify-center">
-                <img src="https://www.profitim.com/build/images/background/no-results-bg.2d2c6ee3.png" alt="" />
-              </div>
-              <p>No Subscription Found</p>
             </div>
-          )
+          ))
+        ) : (
+          <div className="text-center text-gray-500">
+            <div className="flex justify-center">
+              <img
+                src="https://www.profitim.com/build/images/background/no-results-bg.2d2c6ee3.png"
+                alt=""
+              />
+            </div>
+            <p>No Subscription Found</p>
+          </div>
         )}
       </div>
 

@@ -59,14 +59,14 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           </div>
           <div>
             <h3
-              onClick={() =>
-                navigate("/other-profile", { state: { id: post.author } })
-              }
-              className="cursor-pointer font-semibold text-sm text-gray-900"
+              
+              className=" font-semibold text-sm text-gray-900"
             >
               {post.user}
             </h3>
-            <p className="text-xs text-gray-500">
+            <p onClick={() =>
+                navigate("/other-profile", { state: { id: post.author } })
+              } className="text-xs cursor-pointer text-gray-500">
               {post.username} · {post.time}
             </p>
           </div>

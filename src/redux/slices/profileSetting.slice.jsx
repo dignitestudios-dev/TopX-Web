@@ -8,6 +8,7 @@ const initialState = {
   stage: "idle", // idle | otpSentOld | oldVerified | newUpdated | otpSentNew | newVerified | success
   lastResponse: null,
   blockedUsers: [],
+  notificationSettings: null, // Added for storing notification settings
 };
 // ====================================================
 // 🚀 Get My Collections  (Get)
@@ -109,19 +110,84 @@ export const verifyNew = createAsyncThunk(
 );
 
 // Delete Account
-
 export const deleteAccount = createAsyncThunk(
   "/auth/delete",
-  async (token, thunkAPI) => {
+  async (otp, thunkAPI) => { // Now only expecting `otp` as a parameter
     try {
-      const res = await axios.post("/auth/delete");
-
+      const token = Cookies.get("access_token"); // Assuming you get the token from cookies
+      if (!token) {
+        return thunkAPI.rejectWithValue("No access token found");
+      }
+      const res = await axios.post(
+        "/auth/delete",
+        { otp }, // Send the OTP in the request body
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // Pass token in the authorization header
+          },
+        }
+      );
       return res?.data;
     } catch (error) {
       return thunkAPI.rejectWithValue("Logout failed");
     }
   }
 );
+
+
+// Example of action in slice to handle notification settings
+export const fetchProfileNotifications = createAsyncThunk(  
+  "profile/fetchNotifications", 
+  async (_, thunkAPI) => {
+    try {
+      const token = Cookies.get("access_token"); // Token from cookies
+      if (!token) {
+        return thunkAPI.rejectWithValue("No access token found"); 
+      }
+
+      // Request with Authorization header
+      const res = await axios.get("/settings", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      return res.data; // Return successful response data
+    } catch (error) {
+      // Error handling, if request fails
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch notification settings"
+      );
+    }
+  }
+);
+
+// Update Profile Notification Settings
+export const updateProfileNotifications = createAsyncThunk(
+  "profile/updateNotifications",
+  async (newSettings, thunkAPI) => {
+    try {
+      const token = Cookies.get("access_token"); // Fetch the token from cookies
+      if (!token) {
+        return thunkAPI.rejectWithValue("No access token found"); // Handle case when token is missing
+      }
+
+      const res = await axios.put("/settings", newSettings, {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include the token in the authorization header
+        },
+      });
+
+      return res.data; // Returning the updated settings data from the response
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update notification settings"
+      );
+    }
+  }
+);
+
+
 
 // ====================================================
 // SLICE
@@ -238,6 +304,33 @@ const profileSettingSlice = createSlice({
         state.success = action.payload.success;
       })
       .addCase(deleteAccount.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+
+      // Handle fetching profile notification settings
+      .addCase(fetchProfileNotifications.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchProfileNotifications.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.notificationSettings = action.payload.data; // Storing fetched settings
+        state.success = action.payload.success;
+      })
+      .addCase(fetchProfileNotifications.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // Handle updating profile notification settings
+      .addCase(updateProfileNotifications.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(updateProfileNotifications.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.notificationSettings = action.payload.data; // Updating settings in state
+        state.success = action.payload.success;
+      })
+      .addCase(updateProfileNotifications.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       });
