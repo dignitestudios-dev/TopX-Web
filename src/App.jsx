@@ -14,16 +14,16 @@ import MainRoutes from "./routes/MainRoutes";
 import Referrals from "./pages/landingpage/referrals";
 import PrivacyPolicy from "./pages/landingpage/PrivacyPolicy";
 import Termsandconditions from "./pages/landingpage/Termsandconditions";
+import ReferralRedirect from "./pages/landingpage/ReferralRedirect";
 
 function App() {
   return (
     <Routes>
-
       <Route path="/" element={<Login />} />
       <Route path="/referrals" element={<Referrals />} />
       <Route path="/privacy-policy" element={<PrivacyPolicy />} />
       <Route path="/terms-conditons" element={<Termsandconditions />} />
-
+      <Route path="/referral" element={<ReferralRedirect />} />
 
       <Route path="app" element={<DashboardLayout />}>
         <Route path="dashboard" element={<DummyHome />} />
