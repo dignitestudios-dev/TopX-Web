@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 // ================= BASE URL =================
-export const baseUrl = "http://3.80.71.34";
+export const baseUrl = "https://0jxxmx1m-8080.inc1.devtunnels.ms";
 // export const baseUrl = "http://192.168.10.174:8080";
 
 
