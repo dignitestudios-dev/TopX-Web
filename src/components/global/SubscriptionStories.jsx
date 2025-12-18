@@ -27,9 +27,9 @@ const SubscriptionStories = ({ pageId }) => {
   console.log(PageStories, "pages-storiess->");
   return (
     <div className="w-full p-4 md:p-0">
-      <h2 className="text-base font-bold text-gray-900 mb-3 py-0 px-4">
-        My Basketball
-      </h2>
+      {/* <h2 className="text-base font-bold text-gray-900 mb-3 py-0 px-4">
+        My Stories
+      </h2> */}
       <div className="bg-white py-4 px-4 rounded-2xl shadow-sm">
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-0">
           {isLoading ? (
@@ -63,7 +63,7 @@ const SubscriptionStories = ({ pageId }) => {
             </div>
           ) : (
             /* 🎞️ Stories */
-            PageStories.slice(0, 1).map((story) => (
+            PageStories?.slice(0, 1).map((story) => (
               <div
                 key={story._id}
                 onClick={() => {
