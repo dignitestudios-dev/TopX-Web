@@ -224,6 +224,7 @@ export default function SubscriptionsCategory() {
           {CollectionFeeds?.map((post) => (
             <CollectionFeedPostCard
               key={post.id}
+              isPostId={post?._id}
               post={post?.media}
               author={post?.author}
               likedCount={post?.likesCount}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
@@ -13,12 +13,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isLiked = liked[post.id]; // Check if this post is liked using the post.id key
-
-  console.log(post, "allnewpost");
-
-  const postislike = post.postlike;
-
-  // Check if postimage is array and has images
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstImage = hasImages ? post.postimage[0] : null;
 
@@ -41,6 +35,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     // Call API
     dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
+  
   console.log(post, "postUsername");
   return (
     <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
@@ -58,15 +53,15 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             />
           </div>
           <div>
-            <h3
-              
-              className=" font-semibold text-sm text-gray-900"
-            >
+            <h3 className=" font-semibold text-sm text-gray-900">
               {post.user}
             </h3>
-            <p onClick={() =>
+            <p
+              onClick={() =>
                 navigate("/other-profile", { state: { id: post.author } })
-              } className="text-xs cursor-pointer text-gray-500">
+              }
+              className="text-xs cursor-pointer text-gray-500"
+            >
               {post.username} · {post.time}
             </p>
           </div>
@@ -78,15 +73,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           <MoreHorizontal className="w-4 h-4 text-gray-500" />
         </button>
       </div>
-
-      {/* Tag */}
-      {/* {post.tag && (
-                <div className="px-4 pt-3 pb-2">
-                    <span className="inline-block text-orange-600 text-xs font-medium">
-                        {post.tag}
-                    </span>
-                </div>
-            )} */}
 
       {/* Post Images - Thumbnail */}
       {hasImages && (

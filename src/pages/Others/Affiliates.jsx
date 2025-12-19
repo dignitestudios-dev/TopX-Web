@@ -48,6 +48,35 @@ import {
 } from "../../redux/slices/affiliate.slice";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
+const RewardCardSkeleton = () => (
+  <div className="relative rounded-2xl overflow-hidden bg-gray-100 animate-pulse">
+    {/* image area */}
+    <div className="h-40 bg-gray-200" />
+
+    <div className="p-6 space-y-3">
+      <div className="flex justify-between items-center">
+        <div className="w-10 h-10 bg-gray-300 rounded" />
+        <div className="space-y-2">
+          <div className="h-3 w-20 bg-gray-300 rounded" />
+          <div className="h-3 w-24 bg-gray-300 rounded" />
+        </div>
+      </div>
+    </div>
+
+    <div className="px-10 pb-6">
+      <div className="h-9 bg-gray-300 rounded-lg" />
+    </div>
+  </div>
+);
+const ReferralRowSkeleton = () => (
+  <div className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm animate-pulse">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 rounded-full bg-gray-200" />
+      <div className="h-4 w-32 bg-gray-200 rounded" />
+    </div>
+    <div className="h-4 w-16 bg-gray-200 rounded" />
+  </div>
+);
 
 export default function Affiliates() {
   const [liked, setLiked] = useState({});
@@ -57,9 +86,13 @@ export default function Affiliates() {
 
   const coins = 400;
   const dispatch = useDispatch();
-  const { AllRewards, ReferralUsers, isLoading, referralLink,isGenerateLoading } = useSelector(
-    (state) => state.affiliate
-  );
+  const {
+    AllRewards,
+    ReferralUsers,
+    isLoading,
+    referralLink,
+    isGenerateLoading,
+  } = useSelector((state) => state.affiliate);
   useEffect(() => {
     dispatch(getAllRewards({ page: 1, limit: 10, search: "" }));
     dispatch(getAllRefferals({ page: 1, limit: 10, search: "" }));
@@ -70,7 +103,7 @@ export default function Affiliates() {
     await dispatch(generateRefferalLink({}));
   };
   const handleAvailRedeemCode = async (id) => {
-     setLoadingId(id);
+    setLoadingId(id);
     await dispatch(availRedeemCode(id));
     setLoadingId(null);
   };
@@ -176,7 +209,6 @@ export default function Affiliates() {
             </button>
           </div>
         </div>
-
         {/* Coin Balance */}
         <div className="bg-gradient-to-r from-[#E56F41] to-[#DE4B12] rounded-xl text-center text-white py-4 mb-3">
           <div className="flex justify-center items-center gap-2">
@@ -190,67 +222,68 @@ export default function Affiliates() {
         {/* Rewards Tab */}
         {activeTab === "rewards" && (
           <div className="grid grid-cols-2 gap-3">
-            {AllRewards?.rewards?.map((item, idx) => (
-              <div
-                key={idx}
-                className="relative rounded-2xl bg-transparent  overflow-hidden  text-center"
-              >
-                {/* Background Image */}
-                <div className="absolute inset-0">
-                  <img
-                    src={carddesign}
-                    alt="Card design"
-                    className="w-full h-full object-contain"
-                  />
-                  {/* Add a light overlay only if needed for readability */}
-                  <div className="absolute inset-0 bg-white/10"></div>
-                </div>
-
-                {/* Card Content */}
-                <div className="relative p-6 z-10">
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="flex items-center justify-center ">
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <RewardCardSkeleton key={i} />
+                ))
+              : AllRewards?.rewards?.map((item, idx) => (
+                  <div
+                    key={item?._id || idx}
+                    className="relative rounded-2xl bg-transparent overflow-hidden text-center"
+                  >
+                    {/* Background */}
+                    <div className="absolute inset-0">
                       <img
-                        src={item.icon}
-                        alt={item.name}
-                        className="w-10 h-10 object-contain ml-7 mb-3"
+                        src={carddesign}
+                        alt="Card design"
+                        className="w-full h-full object-contain"
                       />
+                      <div className="absolute inset-0 bg-white/10" />
                     </div>
-                    <div>
-                      <p className="font-medium text-[13px] text-gray-800 mb-2">
-                        {item.name}
-                      </p>
-                      <p className="text-sm text-gray-600 flex justify-center gap-1 items-center">
-                        <span className="text-orange-500 font-semibold flex justify-center gap-3 items-center">
-                          <img src={dollaricons} alt="" />
-                        </span>{" "}
-                        <span className="font-semibold text-black">
-                          {item.coins} coins
-                        </span>
-                      </p>
+
+                    {/* Content */}
+                    <div className="relative p-6 z-10">
+                      <div className="flex justify-between items-center mb-3">
+                        <img
+                          src={item.icon}
+                          alt={item.name}
+                          className="w-10 h-10 object-contain ml-7 mb-3"
+                        />
+
+                        <div>
+                          <p className="font-medium text-[13px] text-gray-800 mb-2">
+                            {item.name}
+                          </p>
+                          <p className="text-sm text-gray-600 flex justify-center gap-1 items-center">
+                            <span className="text-orange-500 font-semibold flex gap-3 items-center">
+                              <img src={dollaricons} alt="" />
+                            </span>
+                            <span className="font-semibold text-black">
+                              {item.coins} coins
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Redeem Button */}
+                    <div className="relative pb-6 pt-3 pl-10 pr-10 z-10">
+                      <button
+                        onClick={() => handleAvailRedeemCode(item?._id)}
+                        disabled={item?.isDisabled || loadingId === item?._id}
+                        className={`w-full py-2 rounded-lg font-semibold transition ${
+                          !item?.isDisabled
+                            ? "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] text-white"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {loadingId === item?._id ? "Redeeming..." : "Redeem"}
+                      </button>
                     </div>
                   </div>
-                </div>
-
-                {/* Redeem Button */}
-                <div className="relative pb-6 pt-3 pl-10 pr-10 z-10">
-                  <button
-                    onClick={()=>handleAvailRedeemCode(item?._id)}
-                    disabled={item?.isDisabled}
-                    className={`w-full py-2 rounded-lg font-semibold transition ${
-                      !item?.isDisabled
-                        ? "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] text-white hover:bg-orange-600"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                    }`}
-                  >
-                     {loadingId === item?._id ? "Redeeming..." : "Redeem"}
-                  </button>
-                </div>
-              </div>
-            ))}
+                ))}
           </div>
         )}
-
         {/* Referrals Tab */}
         {activeTab === "referrals" && (
           <div>
@@ -279,25 +312,38 @@ export default function Affiliates() {
                 </button>
               )}
             </div>
-
             <h3 className="font-semibold mb-3">Successful Invites</h3>
             <div className="space-y-3">
-              {ReferralUsers?.map((name, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center font-semibold text-orange-500">
-                      {name.charAt(0)}
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <ReferralRowSkeleton key={i} />
+                ))
+              ) : ReferralUsers?.length > 0 ? (
+                ReferralUsers.map((name, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center font-semibold text-orange-500">
+                        {name?.referredUser?.name.charAt(0)}
+                      </div>
+                      <p className="font-medium text-gray-700">
+                        {name?.referredUser?.name}
+                      </p>
                     </div>
-                    <p className="font-medium text-gray-700">{name}</p>
+
+                    <span className="text-black font-semibold flex items-center gap-2">
+                      <img src={maindollar} className="w-7 h-7" alt="" />{" "}
+                      {name?.reward}
+                    </span>
                   </div>
-                  <span className="text-black font-semibold flex items-center gap-2">
-                    <img src={maindollar} className="w-7 h-7" alt="" /> +100{" "}
-                  </span>
+                ))
+              ) : (
+                <div className="text-center text-sm text-gray-400 py-6">
+                  No referrals yet
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -305,14 +351,11 @@ export default function Affiliates() {
 
       {/* Right Sidebar - 1/4 width */}
       <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
-           <div className="p-0">
-        {/* Trending Pages Section */}
-        <TrendingPagesGlobal/>
-
-        {/* Suggestions Section */}
-        <SuggestionsPagesGlobal/>
-
-
+        <div className="p-0">
+          {/* Trending Pages Section */}
+          <TrendingPagesGlobal />
+          {/* Suggestions Section */}
+          <SuggestionsPagesGlobal />
           {open && <ChatWidget />} {/* Your actual chat panel */}
           <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>

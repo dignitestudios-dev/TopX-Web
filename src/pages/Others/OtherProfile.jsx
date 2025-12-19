@@ -3,9 +3,6 @@ import { useLocation } from "react-router";
 import LargeProfile from "../../components/app/profile/LargeProfile";
 import MySubscription from "../../components/homepage/MySubscription";
 import { BookOpen, Lightbulb, Users } from "lucide-react";
-import { FiPlus } from "react-icons/fi";
-import { auth, topics } from "../../assets/export";
-import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
 import CreatePostModal from "../../components/app/profile/CreatePostModal";
@@ -27,38 +24,6 @@ export default function OtherProfile() {
 
   const location = useLocation();
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
-  const trending = [
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-  ];
 
   const dispatch = useDispatch();
   const { topicPages, userCollections,userKnowledgePost,isLoading } = useSelector(
@@ -95,7 +60,6 @@ export default function OtherProfile() {
     handleGetUserProfile();
   }, [location?.state?.id]);
 
-  console.log(authorData, "topicPagesotherprofile");
   return (
     <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden">
       {/* Left Side */}

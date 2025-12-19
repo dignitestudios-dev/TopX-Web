@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, MoreVertical, X } from "lucide-react";
+import { Heart, MoreVertical, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createComment,
@@ -7,59 +7,17 @@ import {
   elevateComment,
   getComment,
   likeComment,
+  updateComment,
 } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
 import { likePost } from "../../redux/slices/posts.slice";
 
 export default function CommentsSection({ postId }) {
-  const [comments, setComments] = useState([
-    {
-      id: "1",
-      author: "Merry James",
-      avatar: "https://randomuser.me/api/portraits/women/44.jpg",
-      text: "Amazing. Keep it up!",
-      likes: 2,
-      isLiked: false,
-      timeAgo: "1hr ago",
-      replies: [
-        {
-          id: "1-1",
-          author: "David Laid",
-          avatar: "https://randomuser.me/api/portraits/men/44.jpg",
-          text: "It very a really bad experience.",
-          likes: 2,
-          isLiked: false,
-          timeAgo: "1w ago",
-          replies: [],
-        },
-      ],
-    },
-    {
-      id: "2",
-      author: "Peter Parker",
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-      isAdmin: true,
-      text: "It very a really bad experience.",
-      likes: 2,
-      isLiked: false,
-      timeAgo: "1w ago",
-      replies: [],
-    },
-    {
-      id: "3",
-      author: "Victoria James",
-      avatar: "https://randomuser.me/api/portraits/women/47.jpg",
-      text: "I've been using their services 2 years ago.",
-      likes: 2,
-      isLiked: false,
-      timeAgo: "2w ago",
-      replies: [],
-    },
-  ]);
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed
   );
+  const [editingCommentId, setEditingCommentId] = useState(null);
 
   const [newComment, setNewComment] = useState("");
   const dispatch = useDispatch();
@@ -71,15 +29,33 @@ export default function CommentsSection({ postId }) {
     handleGetComments();
   }, [postId]);
 
-  const addComment = async () => {
-    if (newComment.trim()) {
-      const data = {
-        post: postId,
-        text: newComment,
-      };
-      await dispatch(createComment(data)).unwrap();
-      handleGetComments();
+  const addOrUpdateComment = async () => {
+    if (!newComment.trim()) return;
+
+    try {
+      if (editingCommentId) {
+        // 🔁 UPDATE
+        await dispatch(
+          updateComment({
+            commentId: editingCommentId,
+            text: newComment,
+          })
+        ).unwrap();
+      } else {
+        // ➕ CREATE
+        await dispatch(
+          createComment({
+            post: postId,
+            text: newComment,
+          })
+        ).unwrap();
+      }
+
       setNewComment("");
+      setEditingCommentId(null);
+      handleGetComments();
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -96,13 +72,28 @@ export default function CommentsSection({ postId }) {
     }
   };
 
+  const findCommentById = (comments, commentId) => {
+    for (let comment of comments) {
+      if (comment._id === commentId) {
+        return comment;
+      }
+
+      if (comment.replies?.length) {
+        const found = findCommentById(comment.replies, commentId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
   const toggleLike = (commentId) => {
-    const comment = postComments.find((c) => c._id === commentId);
+    const comment = findCommentById(postComments, commentId);
+
     if (!comment) return;
 
     const newLikeStatus = !comment.isLiked;
 
-    // Optimistic update is handled in slice, no need to calculate newLikesCount here
+    // 🔥 Optimistic update trigger
     dispatch({
       type: "posts/likeComment/pending",
       meta: { arg: { commentId, likeToggle: newLikeStatus } },
@@ -112,15 +103,11 @@ export default function CommentsSection({ postId }) {
   };
 
   const handleDeleteComment = async (commentId) => {
-    // Dispatch delete comment action
     await dispatch(deleteComment(commentId)).unwrap();
-    // Refresh comments after deletion
     handleGetComments();
   };
   const handleElevateComment = async (commentId) => {
-    // Dispatch delete comment action
     await dispatch(elevateComment(commentId)).unwrap();
-    // Refresh comments after deletion
     handleGetComments();
   };
 
@@ -129,6 +116,8 @@ export default function CommentsSection({ postId }) {
     isReply = false,
     parentId = null,
     onAddReply,
+    setNewComment,
+    setEditingCommentId,
   }) => {
     const [isReplying, setIsReplying] = useState(false);
     const [replyText, setReplyText] = useState("");
@@ -152,20 +141,15 @@ export default function CommentsSection({ postId }) {
 
     const menuItems = [
       {
-        label: "Undo Elevate",
-        action: () => handleElevateComment(comment?._id),
-      },
-      {
-        label: "Report",
-        action: () => console.log("Report"),
+        label: "Edit",
+        action: () => {
+          setNewComment(comment.text); // input fill
+          setEditingCommentId(comment._id); // edit mode ON
+        },
       },
       {
         label: "Delete",
         action: () => handleDeleteComment(comment?._id),
-      },
-      {
-        label: "Block",
-        action: () => console.log("block"),
       },
     ];
 
@@ -182,7 +166,7 @@ export default function CommentsSection({ postId }) {
     const isAuthor = comment?.user?._id === user?._id;
 
     return (
-      <div className={` overflow-auto ${isReply ? "ml-12 mt-3" : "mt-4"}`}>
+      <div className={`py-5 ${isReply ? "ml-12 mt-3" : "mt-4"}`}>
         <div className="flex gap-3 ">
           <img
             src={comment.user?.profilePicture}
@@ -203,7 +187,7 @@ export default function CommentsSection({ postId }) {
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <button
-                onClick={() => toggleLike(comment._id)}
+                onClick={() => toggleLike(comment?._id)}
                 className="flex items-center gap-1 hover:text-orange-500 transition"
               >
                 <Heart
@@ -228,39 +212,34 @@ export default function CommentsSection({ postId }) {
               <span>{timeAgo(comment.createdAt)}</span>
             </div>
           </div>
-          {!isReply && (
-            <div className="relative z-50">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </button>
+          <div className="relative z-50">
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
 
-              {isOpen && (
-                <div className="absolute  right-0 mt-1 w-40  bg-white rounded-lg shadow-lg border border-gray-200 py-1  z-50">
-                  {menuItems.map((item, index) => {
-                    if (
-                      !isAuthor &&
-                      !["Delete", "Report"].includes(item.label)
-                    ) {
-                      return null;
-                    }
+            {isOpen && (
+              <div className="absolute  right-0 mt-1 w-40  bg-white rounded-lg shadow-lg border border-gray-200 py-1  z-50">
+                {menuItems.map((item, index) => {
+                  if (!isAuthor && !["Delete", "Report"].includes(item.label)) {
+                    return null;
+                  }
 
-                    return (
-                      <button
-                        key={index}
-                        onClick={item.action}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                  return (
+                    <button
+                      key={index}
+                      onClick={item.action}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Reply Input */}
@@ -303,6 +282,8 @@ export default function CommentsSection({ postId }) {
             isReply={true}
             parentId={comment._id}
             onAddReply={addReply}
+            setNewComment={setNewComment}
+            setEditingCommentId={setEditingCommentId}
           />
         ))}
       </div>
@@ -320,17 +301,32 @@ export default function CommentsSection({ postId }) {
         <div className="flex-1 flex gap-2">
           <input
             type="text"
-            placeholder="Add a comment"
+            placeholder={
+              editingCommentId ? "Update your comment..." : "Add a comment"
+            }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && addComment()}
             className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm border border-gray-300 focus:outline-none focus:border-orange-500"
           />
           <button
-            onClick={addComment}
-            className="bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-600 transition"
+            onClick={addOrUpdateComment}
+            disabled={commentLoading}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition
+    ${
+      commentLoading
+        ? "bg-orange-300 cursor-not-allowed"
+        : "bg-orange-500 hover:bg-orange-600 text-white"
+    }
+  `}
           >
-            {commentLoading ? "Posting" : " Post"}
+            {commentLoading
+              ? editingCommentId
+                ? "Updating..."
+                : "Posting..."
+              : editingCommentId
+              ? "Update"
+              : "Post"}
           </button>
         </div>
       </div>
@@ -356,6 +352,8 @@ export default function CommentsSection({ postId }) {
                 key={comment.id}
                 onAddReply={addReply}
                 comment={comment}
+                setNewComment={setNewComment}
+                setEditingCommentId={setEditingCommentId}
               />
             ))}
       </div>

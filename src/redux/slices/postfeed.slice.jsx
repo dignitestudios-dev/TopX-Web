@@ -94,6 +94,22 @@ export const createComment = createAsyncThunk(
   }
 );
 
+export const updateComment = createAsyncThunk(
+  "posts/updateComment",
+  async ({ commentId, text }, thunkAPI) => {
+    try {
+      const res = await axios.patch(`/comments/post/${commentId}`, {
+        text,
+      });
+      return res.data.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update comment"
+      );
+    }
+  }
+);
+
 export const deleteComment = createAsyncThunk(
   "comments/post/delete/id",
   async (data, thunkAPI) => {
@@ -209,6 +225,16 @@ const postFeedSlice = createSlice({
         state.commentLoading = false;
       })
       .addCase(createComment.rejected, (state, action) => {
+        state.commentLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateComment.pending, (state) => {
+        state.commentLoading = true;
+      })
+      .addCase(updateComment.fulfilled, (state, action) => {
+        state.commentLoading = false;
+      })
+      .addCase(updateComment.rejected, (state, action) => {
         state.commentLoading = false;
         state.error = action.payload;
       })

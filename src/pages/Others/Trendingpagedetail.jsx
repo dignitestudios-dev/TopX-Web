@@ -140,6 +140,9 @@ const Trendingpagedetail = () => {
         pageDetail.pageType === 'private' && !isSubscribed;
 
 
+
+
+        
     return (
         <div className="flex max-w-7xl mx-auto min-h-screen">
             {/* ================= MAIN CONTENT ================= */}

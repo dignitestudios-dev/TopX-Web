@@ -13,6 +13,7 @@ export default function CollectionFeedPostCard({
   commentCount,
   shareCount,
   toggleLike,
+  isPostId,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -21,7 +22,7 @@ export default function CollectionFeedPostCard({
 
   const isLiked = likedCount[post.id];
 
-  console.log(post[0]?.fileUrl, "allnewpost");
+  console.log(isPostId, "allnewpost");
 
   const postislike = post.postlike;
 
@@ -139,7 +140,7 @@ export default function CollectionFeedPostCard({
       />
 
       {/* Comments Section */}
-      {commentsOpen && <CommentsSection postId={post.id} />}
+      {commentsOpen && <CommentsSection postId={isPostId} />}
     </div>
   );
 }

@@ -86,9 +86,9 @@ const Header = () => {
                 setIsNotificationOpen(false);
             }
 
-            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-                setIsRecentOpen(false);
-            }
+            // if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+            //     setIsRecentOpen(false);
+            // }
         };
 
         // Jab koi bhi open ho tab listener add kro

@@ -1,7 +1,12 @@
-import React from 'react';
-import { Heart, MessageCircle, Share2, MoreHorizontal } from 'lucide-react';
+import React, { useState } from "react";
+import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { likePost } from "../../redux/slices/postfeed.slice";
+import CommentsSection from "./CommentsSection";
+import { useDispatch } from "react-redux";
 
 export default function TrendingPostCard({ post, liked, toggleLike }) {
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const dispatch = useDispatch();
   const timeAgo = (createdAt) => {
     const now = new Date();
     const then = new Date(createdAt);
@@ -13,10 +18,30 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
     if (days > 0) return `${days}d ago`;
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
-    return 'just now';
+    return "just now";
   };
 
-  console.log(post, "postcode")
+  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
+    const newLikeStatus = !currentLikeStatus;
+
+    // Calculate increment based on toggle
+    const newLikesCount = newLikeStatus
+      ? (currentLikesCount ?? 0) + 1
+      : Math.max((currentLikesCount ?? 0) - 1, 0);
+
+    // Optimistic update in localStorage
+    const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
+    localStorage.setItem("postLikes", JSON.stringify(likes));
+
+    // Update UI immediately
+    toggleLike(postId, newLikeStatus, newLikesCount);
+
+    // Call API
+    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+  };
+
+  console.log(post, "postcode");
 
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
@@ -24,7 +49,10 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
       <div className="p-4 flex items-start justify-between border-b border-gray-100">
         <div className="flex items-center gap-3 flex-1">
           <img
-            src={post.author?.profilePicture || "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"}
+            src={
+              post.author?.profilePicture ||
+              "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"
+            }
             alt={post.author?.name}
             className="w-10 h-10 rounded-full object-cover"
           />
@@ -61,21 +89,25 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
       {/* Post Content */}
       <div className="p-4">
-
-
         {/* Media Gallery */}
-        {post.media && post.media.length > 0 && (
-          <div className={`grid gap-2 mb-3 ${post.media.length === 1 ? 'grid-cols-1' :
-              post.media.length === 2 ? 'grid-cols-2' :
-                'grid-cols-2'
-            }`}>
-            {post.media.slice(0, 4).map((media, idx) => (
+        {post?.postimage && post?.postimage.length > 0 && (
+          <div
+            className={`grid gap-2 mb-3 ${
+              post.postimage.length === 1
+                ? "grid-cols-1"
+                : post.postimage.length === 2
+                ? "grid-cols-2"
+                : "grid-cols-2"
+            }`}
+          >
+            {post?.postimage.slice(0, 4).map((media, idx) => (
               <div
                 key={media._id || idx}
-                className={`rounded-lg overflow-hidden bg-gray-200 ${post.media.length === 1 ? 'h-72' : 'h-48'
-                  }`}
+                className={`rounded-lg overflow-hidden bg-gray-200 ${
+                  post?.postimage.length === 1 ? "h-72" : "h-48"
+                }`}
               >
-                {media.type === 'image' ? (
+                {media.type === "image" ? (
                   <img
                     src={media.fileUrl}
                     alt="post media"
@@ -90,9 +122,11 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
                 )}
               </div>
             ))}
-            {post.media.length > 4 && (
+            {post.postimage.length > 4 && (
               <div className="rounded-lg bg-gray-300 h-48 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">+{post.media.length - 4}</span>
+                <span className="text-white font-bold text-lg">
+                  +{post.postimage.length - 4}
+                </span>
               </div>
             )}
           </div>
@@ -118,30 +152,41 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-6 text-sm text-gray-600 px-4 py-3 border-t border-gray-100">
+      <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
-          onClick={() => toggleLike(post._id)}
-          className="flex items-center gap-2 hover:text-orange-500 transition-colors group"
+          onClick={() =>
+            handleLikeClick(post.id, post.isLiked, post.likesCount)
+          }
+          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition-all ${liked[post._id] ? 'fill-orange-500 text-orange-500' : 'text-gray-400 group-hover:text-orange-500'
-              }`}
+            className={`w-5 h-5 transition ${
+              post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+            }`}
           />
-          <span className={liked[post._id] ? 'text-orange-500 font-semibold' : ''}>
-            {post.likesCount}
+          <span
+            className={`text-sm font-medium ${
+              post.isLiked ? "text-orange-500" : "text-gray-600"
+            }`}
+          >
+            {Number(post.likesCount ?? 0)}
           </span>
         </button>
 
-        <button className="flex items-center gap-2 hover:text-blue-500 transition-colors group">
-          <MessageCircle className="w-5 h-5 text-gray-400 group-hover:text-blue-500" />
-          <span>{post.commentsCount}</span>
+        <button
+          onClick={() => setCommentsOpen(!commentsOpen)}
+          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span className="text-sm font-medium">{post.stats.comments}</span>
         </button>
 
-        <button className="flex items-center gap-2 hover:text-green-500 transition-colors group">
-          <Share2 className="w-5 h-5 text-gray-400 group-hover:text-green-500" />
-          <span>{post.sharesCount}</span>
+        <button className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition">
+          <Share2 className="w-5 h-5" />
+          <span className="text-sm font-medium">{post.stats.shares}</span>
         </button>
       </div>
+      {commentsOpen && <CommentsSection postId={post.id} />}
     </div>
   );
 }

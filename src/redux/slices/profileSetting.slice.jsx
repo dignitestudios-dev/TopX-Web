@@ -4,11 +4,13 @@ import Cookies from "js-cookie";
 const initialState = {
   error: null,
   success: false,
+  updateLoader: false,
   isLoading: false,
   stage: "idle", // idle | otpSentOld | oldVerified | newUpdated | otpSentNew | newVerified | success
   lastResponse: null,
   blockedUsers: [],
   recentActivity: [],
+  settings: null,
 };
 // ====================================================
 // 🚀 Get My Collections  (Get)
@@ -124,6 +126,21 @@ export const deleteAccount = createAsyncThunk(
   }
 );
 // get recent Activity
+export const getSettings = createAsyncThunk(
+  "/get/settings",
+  async ({ page = 1, limit = 10, search = "" }, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/settings?page=${page}&limit=${limit}&search=${search}`
+      );
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch subscriptions"
+      );
+    }
+  }
+);
 export const getRecentActivity = createAsyncThunk(
   "/get/activities",
   async ({ page = 1, limit = 10, search = "" }, thunkAPI) => {
@@ -135,6 +152,22 @@ export const getRecentActivity = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to fetch subscriptions"
+      );
+    }
+  }
+);
+
+export const updateActivityStatus = createAsyncThunk(
+  "/settings/activity-status",
+  async ({ activityStatus }, thunkAPI) => {
+    try {
+      const res = await axios.put("/settings", {
+        activityStatus, // "on" | "off"
+      });
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update activity status"
       );
     }
   }
@@ -269,6 +302,32 @@ const profileSettingSlice = createSlice({
       .addCase(getRecentActivity.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
+      })
+      .addCase(getSettings.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getSettings.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.settings = action.payload.data;
+        state.success = action.payload.success;
+      })
+      .addCase(getSettings.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(updateActivityStatus.pending, (state) => {
+        state.updateLoader = true;
+        state.updateError = null;
+      })
+
+      .addCase(updateActivityStatus.fulfilled, (state, action) => {
+        state.updateLoader = false;
+        state.settings.activityStatus = action.payload.activityStatus;
+      })
+
+      .addCase(updateActivityStatus.rejected, (state, action) => {
+        state.updateLoader = false;
+        state.updateError = action.payload;
       });
   },
 });
