@@ -10,7 +10,8 @@ import affiliateReducer from "./slices/affiliate.slice"
 import profileSettingsReducer from "./slices/profileSetting.slice"
 import OtherProfileReducer from "./slices/otherprofile.slice"
 import knowledgepostReducer from "./slices/knowledgepost.slice"
-import notificationsReducer from  "./slices/notifications.slice";
+import notificationsReducer from "./slices/notifications.slice";
+import chatReducer from "./slices/chat.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
 import trendingReducer from "./slices/trending.slice"
 import reportsReducder from "./slices/reports.slice";
@@ -40,7 +41,8 @@ const rootReducer = combineReducers({
   notifications: notificationsReducer,
   postsfeed: postsfeedReducer,
   reports: reportsReducder,
-  livestream : livestreamReducer,
+  livestream: livestreamReducer,
+  chat: chatReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

@@ -13,7 +13,6 @@ import HomePostFeed from "../../components/global/HomePostFeed";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
-import LiveStream from "../../components/global/LiveStream";
 
 export default function Home() {
   const [liked, setLiked] = useState({});
