@@ -200,9 +200,30 @@ const ChatApp = () => {
         ...prev,
         [selectedChat.id]: [...(prev[selectedChat.id] || []), { text: messageText, sender: "user" }],
       }));
+      // emit to server (best-effort)
+      try {
+        const payload = { to: selectedChat.id, text: messageText };
+        sock?.emit("send_message", payload);
+      } catch (e) {
+        // ignore if socket not ready
+      }
       setMessageText("");
     }
   };
+
+  // // subscribe to incoming messages
+  // useEffect(() => {
+  //   if (!sock) return;
+  //   const unsub = sock.on("new_message", (msg) => {
+  //     if (!msg || !msg.chatId) return;
+  //     setMessages((prev) => ({
+  //       ...prev,
+  //       [msg.chatId]: [...(prev[msg.chatId] || []), { text: msg.text, sender: msg.sender }],
+  //     }));
+  //   });
+
+  //   return () => unsub && unsub();
+  // }, [sock]);
 
   const handleSelectUser = (user) => {
     if (selectedUsers.find((u) => u._id === user._id)) {
