@@ -40,24 +40,46 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
 
       const client = clientRef.current;
 
-      // Handle remote user publishing
+      // Handle remote user publishing (host publishing their stream)
       client.on("user-published", async (user, mediaType) => {
         try {
+          console.log(`📡 User ${user.uid} published ${mediaType}`);
+          
+          // Subscribe to the remote user's stream
           await client.subscribe(user, mediaType);
+          console.log(`✅ Subscribed to user ${user.uid}'s ${mediaType}`);
 
+          // Update remote users list
           setRemoteUsers((prev) => {
-            // Avoid duplicates
-            const exists = prev.find((u) => u.uid === user.uid);
-            if (exists) return prev;
-            return [...prev, user];
+            // Check if user already exists
+            const existingUser = prev.find((u) => u.uid === user.uid);
+            
+            if (existingUser) {
+              // Update existing user with new track
+              return prev.map((u) => {
+                if (u.uid === user.uid) {
+                  return {
+                    ...u,
+                    videoTrack: mediaType === "video" ? user.videoTrack : u.videoTrack,
+                    audioTrack: mediaType === "audio" ? user.audioTrack : u.audioTrack,
+                  };
+                }
+                return u;
+              });
+            } else {
+              // Add new user
+              return [...prev, user];
+            }
           });
 
-          // Play audio track
+          // Auto-play audio track when subscribed
           if (mediaType === "audio" && user.audioTrack) {
-            user.audioTrack.play();
+            user.audioTrack.play().catch((err) => {
+              console.error("Error playing remote audio:", err);
+            });
           }
         } catch (err) {
-          console.error("Error subscribing to user:", err);
+          console.error("❌ Error subscribing to user:", err);
           setError(err.message || "Failed to subscribe to user");
         }
       });
@@ -110,8 +132,20 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
     try {
       const client = clientRef.current;
 
-      // Set client role (host or audience)
-      await client.setClientRole(role);
+      // IMPORTANT: Set client role BEFORE joining channel
+      // According to Agora docs: setClientRole must be called before join
+      // "host" can publish, "audience" can only subscribe (no camera/mic access)
+      console.log(`🎭 Setting client role to: ${role}`);
+      await client.setClientRole(role === "host" ? "host" : "audience");
+      
+      // For audience role, ensure no local tracks will be created
+      if (role !== "host") {
+        console.log("👁️ Audience role: No camera/microphone access");
+        setLocalVideo(null);
+        setLocalAudio(null);
+        localVideoTrackRef.current = null;
+        localAudioTrackRef.current = null;
+      }
 
       // Join the channel with EXACT backend values
       // Validate all required parameters
@@ -148,11 +182,14 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
       await client.join(appId, channelName, token, actualUid);
 
       setIsJoined(true);
+      console.log(`✅ Successfully joined channel as ${role}`);
 
-      // If host, create and publish local tracks
+      // IMPORTANT: Only create local tracks for HOST role
+      // Audience role should NEVER access camera/microphone
       if (role === "host") {
+        console.log("📹 Host role: Creating local video/audio tracks");
         try {
-          // Create microphone and camera tracks
+          // Create microphone and camera tracks (ONLY for host)
           const [audioTrack, videoTrack] =
             await AgoraRTC.createMicrophoneAndCameraTracks(
               {
@@ -183,13 +220,22 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
 
           // Publish tracks
           await client.publish([audioTrack, videoTrack]);
+          console.log("✅ Host: Local tracks published successfully");
         } catch (trackError) {
-          console.error("Error creating local tracks:", trackError);
+          console.error("❌ Error creating local tracks:", trackError);
           setError(
             trackError.message || "Failed to access camera/microphone"
           );
           // Still joined, just no local tracks
         }
+      } else {
+        // Audience role - confirm no local tracks
+        console.log("👁️ Audience role: Joined successfully, waiting for host stream");
+        // Ensure no local tracks exist
+        setLocalVideo(null);
+        setLocalAudio(null);
+        localVideoTrackRef.current = null;
+        localAudioTrackRef.current = null;
       }
     } catch (err) {
       console.error("Error joining channel:", err);

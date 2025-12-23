@@ -148,7 +148,7 @@ export default function Knowledge() {
                 <div className="p-4 flex items-start justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3 flex-1">
                     <img
-                      src={post.author.profilePicture}
+                      src={post.author.profilePicture || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"}
                       alt="User"
                       className="w-10 h-10 rounded-full object-cover"
                     />

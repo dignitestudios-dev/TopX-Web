@@ -48,7 +48,9 @@ export default function Golive() {
       if (res.meta.requestStatus === "fulfilled") {
         SuccessToast("Stream started successfully! Redirecting...");
         setTimeout(() => {
-          navigate(`/live-stream/${pageId}`);
+          navigate(`/live-stream/${pageId}`, {
+            state: { fromGoLive: true },
+          });
           setLoadingPageId(null);
         }, 500);
       } else {

@@ -134,7 +134,7 @@ const Header = () => {
         {/* Desktop Search */}
         <div className="hidden md:flex flex-1 max-w-md pt-3">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-[10px] text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Search"
@@ -170,11 +170,10 @@ const Header = () => {
                 <div key={index} className="relative" ref={notificationRef}>
                   <button
                     onClick={() => setIsNotificationOpen(!isNotificationOpen)}
-                    className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${
-                      isNotificationOpen
+                    className={`flex flex-col items-center cursor-pointer group border-t-4 pt-2 ${isNotificationOpen
                         ? "border-orange-500 text-orange-500"
                         : "border-transparent text-gray-600 hover:text-orange-500"
-                    }`}
+                      }`}
                   >
                     <div className="relative">
                       <Icon size={24} />
@@ -202,19 +201,17 @@ const Header = () => {
               <Link
                 key={index}
                 to={item.to}
-                className={`flex flex-col items-center cursor-pointer group ${
-                  isActive
+                className={`flex flex-col items-center cursor-pointer group ${isActive
                     ? "border-t-4 border-orange-500 pt-2"
                     : "border-t-4 border-transparent pt-2"
-                }`}
+                  }`}
               >
                 <Icon
                   size={24}
-                  className={`transition-colors ${
-                    isActive
+                  className={`transition-colors ${isActive
                       ? "text-orange-500"
                       : "text-gray-600 group-hover:text-orange-500"
-                  }`}
+                    }`}
                 />
                 <span className="text-xs mt-1 text-black">{item.label}</span>
               </Link>
@@ -331,11 +328,10 @@ const Header = () => {
                 <Link
                   key={index}
                   to={item.to}
-                  className={`flex items-center gap-4 px-4 py-3 text-sm transition-colors border-b border-gray-100 last:border-b-0 ${
-                    isActive
+                  className={`flex items-center gap-4 px-4 py-3 text-sm transition-colors border-b border-gray-100 last:border-b-0 ${isActive
                       ? "text-orange-500 bg-orange-50 font-semibold"
                       : "text-gray-600 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <Icon size={20} />
                   {item.label}
