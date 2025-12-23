@@ -274,7 +274,7 @@ const postFeedSlice = createSlice({
         const { postId, likeToggle } = action.meta.arg;
 
         // Optimistic update
-        const post = state.allfeedposts.find((p) => p._id === postId);
+        const post = state.allfeedposts?.find((p) => p._id === postId);
         if (post) {
           post.isLiked = likeToggle;
           post.likesCount = likeToggle
@@ -293,7 +293,7 @@ const postFeedSlice = createSlice({
       .addCase(likePost.fulfilled, (state, action) => {
         const { postId, likeToggle, likesCount: apiLikes } = action.payload;
 
-        const post = state.allfeedposts.find((p) => p._id === postId);
+        const post = state.allfeedposts?.find((p) => p._id === postId);
         if (post) {
           // Merge API likes with local increment/decrement
           const localLikes = JSON.parse(

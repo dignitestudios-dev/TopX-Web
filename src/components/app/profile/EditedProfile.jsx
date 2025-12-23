@@ -6,14 +6,22 @@ import { auth } from "../../../assets/export";
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import { getAllUserData, updateProfile } from "../../../redux/slices/auth.slice";
+import {
+  getAllUserData,
+  updateProfile,
+} from "../../../redux/slices/auth.slice";
 import { SuccessToast } from "../../global/Toaster";
 import { getInterests } from "../../../redux/slices/onboarding.slice";
 
 export default function EditedProfile() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { updateProfileLoading, updateProfileSuccess, updateProfileError, allUserData } = useSelector((state) => state.auth);
+  const {
+    updateProfileLoading,
+    updateProfileSuccess,
+    updateProfileError,
+    allUserData,
+  } = useSelector((state) => state.auth);
   const [name, setName] = useState(allUserData?.name || "");
   const [username, setUsername] = useState(allUserData?.username || "");
   const [email, setEmail] = useState(allUserData?.email || "");
@@ -22,10 +30,7 @@ export default function EditedProfile() {
   const [profileFile, setProfileFile] = useState(null);
   const [activeCategories, setActiveCategories] = useState([]);
 
-
   const { isLoading, interestsList } = useSelector((state) => state.onboarding);
-
-
 
   useEffect(() => {
     dispatch(getAllUserData());
@@ -35,35 +40,29 @@ export default function EditedProfile() {
     dispatch(getInterests());
   }, []);
 
-
   // Auto-select API interests
   useEffect(() => {
     if (allUserData?.interests?.length > 0) {
       // Convert all interests to lowercase for uniformity
-      setActiveCategories(allUserData.interests.map(i => i.toLowerCase()));
+      setActiveCategories(allUserData.interests.map((i) => i));
     }
   }, [allUserData]);
 
-
   // Toggle category
   const toggleCategory = (category) => {
-    const c = category.toLowerCase(); // make category lowercase to match with activeCategories
-
+    const c = category; // make category lowercase to match with activeCategories
     if (activeCategories.includes(c)) {
-      setActiveCategories(activeCategories.filter(cat => cat !== c));
+      setActiveCategories(activeCategories.filter((cat) => cat !== c));
     } else {
       setActiveCategories([...activeCategories, c]);
     }
   };
-
-
 
   useEffect(() => {
     if (allUserData?.interests?.length > 0) {
       setActiveCategories(allUserData.interests);
     }
   }, [allUserData]);
-
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -83,17 +82,11 @@ export default function EditedProfile() {
     // Add all fields to FormData
     formData.append("name", name);
     formData.append("bio", bio);
-
-  // Normalize interests to title case (first letter uppercase, rest lowercase)
-  const formattedCategories = activeCategories.map((interest) => {
-    // Capitalize the first letter of each interest and make the rest lowercase
-    return interest.charAt(0).toUpperCase() + interest.slice(1).toLowerCase();
-  });
-
+    console.log(activeCategories, "active categories");
     // Add each valid interest to FormData
-  formattedCategories.forEach((interest) => {
-    formData.append("interests", interest);
-  });
+    activeCategories.forEach((interest) => {
+      formData.append("interests", interest);
+    });
 
     // Fix: Backend expects existingProfilePicture when no new file
     if (profileFile) {
@@ -101,15 +94,17 @@ export default function EditedProfile() {
       formData.append("profilePicture", profileFile);
     } else {
       // No new image → preserve old image
-      formData.append("existingProfilePicture", allUserData?.profilePicture || "");
+      formData.append(
+        "existingProfilePicture",
+        allUserData?.profilePicture || ""
+      );
     }
-
 
     // Dispatch the updateProfile thunk
     const result = await dispatch(updateProfile(formData));
 
     if (result.type === "auth/updateProfile/fulfilled") {
-      SuccessToast("Profile Successfully Updated")
+      SuccessToast("Profile Successfully Updated");
     }
   };
 
@@ -120,10 +115,11 @@ export default function EditedProfile() {
       setEmail(allUserData.email || "");
       setBio(allUserData.bio || "");
       setPreview(allUserData.profilePicture || "");
-      setActiveCategories(allUserData.interests?.map(i => i.toLowerCase()) || []);
+      setActiveCategories(
+        allUserData.interests?.map((i) => i) || []
+      );
     }
   }, [allUserData]);
-
 
   return (
     <div className="w-full flex flex-col gap-4 bg-white rounded-[12px] p-4">
@@ -167,9 +163,7 @@ export default function EditedProfile() {
       </div>
 
       {/* Email */}
-      <div className="w-full">
-
-      </div>
+      <div className="w-full"></div>
 
       {/* Bio */}
       <div className="w-full flex flex-col gap-2 py-3">
@@ -192,26 +186,23 @@ export default function EditedProfile() {
           ) : (
             interestsList?.map((item, index) => {
               const title = item.name; // Get the name of the interest
-              const isActive = activeCategories.includes(title.toLowerCase()); // Convert title to lowercase for matching
-
+              const isActive = activeCategories.includes(title); // Convert title to lowercase for matching
               return (
                 <button
                   key={index}
-                  onClick={() => toggleCategory(title)} // Pass title to toggleCategory
-                  className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${isActive
-                    ? "bg-orange-600 text-white hover:bg-orange-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                  onClick={() => toggleCategory(item.name)} // Pass title to toggleCategory
+                  className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? "bg-orange-600 text-white hover:bg-orange-700"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
                 >
                   {title}
                 </button>
               );
             })
-          )
-          }
-
+          )}
         </div>
-
 
         <Button
           size="full"

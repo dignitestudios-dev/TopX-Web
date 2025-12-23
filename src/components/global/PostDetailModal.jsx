@@ -57,7 +57,7 @@ export default function PostImageViewerModal({
     setCurrentImageIndex(0);
     onClose();
   };
-
+console.log(author,post,"post---author")
   return (
     <div
       className="fixed inset-0 bg-black flex items-center justify-center z-50 p-4"
@@ -72,14 +72,14 @@ export default function PostImageViewerModal({
         <div className="p-4 border-b border-gray-700 flex items-center justify-between bg-black">
           <div className="flex items-center gap-3">
             <img
-              src={post?.profilePicture}
-              alt={post?.user}
+              src={post?.author?.profilePicture}
+              alt={post?.author?.user}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
-              <h3 className="font-semibold text-white text-sm">{post?.name}</h3>
+              <h3 className="font-semibold text-white text-sm">{post?.author?.name}</h3>
               <p className="text-gray-500 text-xs">
-                {post?.username} · {timeAgo(post?.createdAt)}
+                {post?.author?.username} · {timeAgo(post?.author?.createdAt)}
               </p>
             </div>
           </div>

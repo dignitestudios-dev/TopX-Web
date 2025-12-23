@@ -14,6 +14,7 @@ import notificationsReducer from  "./slices/notifications.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
 import trendingReducer from "./slices/trending.slice"
 import reportsReducder from "./slices/reports.slice";
+import GlobalSearchReducder from "./slices/Global.Slice";
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -39,6 +40,7 @@ const rootReducer = combineReducers({
   notifications: notificationsReducer,
   postsfeed: postsfeedReducer,
   reports: reportsReducder,
+  globalSearch: GlobalSearchReducder,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

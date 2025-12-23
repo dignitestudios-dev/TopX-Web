@@ -57,7 +57,7 @@ export const verifyPhoneOTP = createAsyncThunk(
   "onboarding/verifyPhoneOTP",
   async (otp, thunkAPI) => {
     try {
-      const res = await axios.post("/auth/verifyPhone", { otp });
+      const res = await axios.post("/auth/verifyPhone",otp);
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
@@ -105,7 +105,7 @@ export const verifyEmailOTP = createAsyncThunk(
   "onboarding/verifyEmailOTP",
   async ({ endPoint, otp }, thunkAPI) => {
     try {
-      const res = await axios.post(`/auth/verifyEmail?${endPoint}`, { otp });
+      const res = await axios.post(`/auth/verifyEmail?${endPoint}`,otp);
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
           res.data?.message || "Email OTP verification failed"

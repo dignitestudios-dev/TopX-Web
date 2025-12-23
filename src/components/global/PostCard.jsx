@@ -21,6 +21,7 @@ import {
 } from "../../redux/slices/posts.slice";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { SuccessToast } from "./Toaster";
+import SharePostModal from "./SharePostModal";
 
 const Button = ({ size = "md", variant = "orange", children, onClick }) => {
   const sizeClasses = {
@@ -256,23 +257,23 @@ const PostCard = ({
           </button>
         </div>
 
-                {/* Image Section - Show Only First Image */}
-                {firstImage && (
-                    <div className="m-4 cursor-pointer" onClick={openImageModal}>
-                        <div className="relative">
-                            <img
-                                src={firstImage}
-                                alt="Post"
-                                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
-                            />
-                            {images.length > 1 && (
-                                <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
-                                    1/{images.length}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
+        {/* Image Section - Show Only First Image */}
+        {firstImage && (
+          <div className="m-4 cursor-pointer" onClick={openImageModal}>
+            <div className="relative">
+              <img
+                src={firstImage}
+                alt="Post"
+                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
+              />
+              {images.length > 1 && (
+                <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
+                  1/{images.length}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {post.videoUrl && !firstImage && (
           <div className="m-4">
@@ -608,45 +609,12 @@ const PostCard = ({
 
       {/* Share Post Modal */}
       {sharepost && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white w-[380px] rounded-2xl shadow-xl">
-            <div className="flex items-center justify-between border-b px-5 py-3">
-              <h2 className="text-[17px] font-semibold">Share Post With</h2>
-              <button
-                onClick={() => setSharepost(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X size={22} />
-              </button>
-            </div>
-
-            <div className="flex flex-col py-3">
-              {options.map((option, index) => (
-                <label
-                  key={index}
-                  className="flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => {
-                    setSelectedOption(option);
-                    setSharepost(false);
-                  }}
-                >
-                  <span className="text-[15px] text-gray-800">{option}</span>
-                  <span
-                    className={`w-5 h-5 flex items-center justify-center rounded-full border-2 ${
-                      selectedOption === option
-                        ? "border-orange-500"
-                        : "border-gray-300"
-                    }`}
-                  >
-                    {selectedOption === option && (
-                      <span className="w-2.5 h-2.5 bg-orange-500 rounded-full" />
-                    )}
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
+        <SharePostModal
+          selectedOption={selectedOption}
+          setSelectedOption={setSelectedOption}
+          setSharepost={setSharepost}
+          options={options}
+        />
       )}
 
       {/* Edit Modal for post */}

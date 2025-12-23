@@ -93,6 +93,7 @@ export default function Home() {
             "https://randomuser.me/api/portraits/men/1.jpg",
           postimage: post.media?.map((m) => m.fileUrl) || [],
           author: post.author || null,
+          isAllowedByAdmin:post?.isAllowedByAdmin
         };
       })
     : [];

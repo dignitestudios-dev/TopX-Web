@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, TrendingUp } from "lucide-react";
-import { notes, postone, topics } from "../../assets/export";
+import { nofound, notes, postone, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
@@ -15,8 +15,6 @@ import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import { Link, useNavigate } from "react-router";
-
-
 
 export default function SubscriptionsCategory() {
   const [liked, setLiked] = useState({});
@@ -33,14 +31,11 @@ export default function SubscriptionsCategory() {
     }
   }, [location.state]);
 
-
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
 
-
-  console.log(CollectionFeeds, location.state.id, "list-collection-feed");
   const mySubscriptions = [
     { title: "My Basketball", pages: "50+" },
     { title: "My Fitness", pages: "50+" },
@@ -59,43 +54,6 @@ export default function SubscriptionsCategory() {
     { title: "Adam’s Politics", pages: "50+" },
   ];
 
-  const posts = [
-    {
-      id: "post1",
-      user: "Mike’s Basketball",
-      username: "@mikesmith35",
-      time: "5mins ago",
-      tag: "Cars: Ferrari",
-      gradient: "from-pink-500 via-orange-500 to-yellow-500",
-      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      stats: { likes: "10,403", comments: "500", shares: "105" },
-      avatar: "https://randomuser.me/api/portraits/men/12.jpg",
-      postimage: postone,
-    },
-    {
-      id: "post2",
-      user: "Peter’s Basketball",
-      username: "@petersmith35",
-      time: "5mins ago",
-      gradient: "from-blue-600 to-blue-400",
-      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      stats: { likes: "8,205", comments: "420", shares: "67" },
-      avatar: "https://randomuser.me/api/portraits/men/32.jpg",
-    },
-    {
-      id: "post3",
-      user: "Mike’s Basketball",
-      username: "@mikesmith35",
-      time: "5mins ago",
-      tag: "Cars: Ferrari",
-      gradient: "from-pink-500 via-orange-500 to-yellow-500",
-      text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-      stats: { likes: "10,403", comments: "500", shares: "105" },
-      avatar: "https://randomuser.me/api/portraits/men/12.jpg",
-      postimage: postone,
-    },
-  ];
-
   const subscriptions =
     activeTab === "my" ? mySubscriptions : savedSubscriptions;
 
@@ -108,19 +66,7 @@ export default function SubscriptionsCategory() {
 
   const [open, setOpen] = useState(false);
 
-  const trending = [
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-  ];
-  console.log(CollectionFeeds?.[0], "collection-feeds")
+  console.log(CollectionFeeds?.[0], "collection-feeds");
   return (
     <div className="flex h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -129,7 +75,6 @@ export default function SubscriptionsCategory() {
 
         <Profilecard smallcard={true} />
 
-       
         {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
@@ -139,72 +84,72 @@ export default function SubscriptionsCategory() {
           <div className="space-y-4">
             {pagesLoading
               ? Array.from({ length: 3 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
-                >
-                  {/* Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gray-300" />
 
-                    <div className="flex-1 space-y-1">
-                      <div className="h-3 w-32 bg-gray-300 rounded" />
-                      <div className="h-3 w-20 bg-gray-200 rounded" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 w-32 bg-gray-300 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* About */}
-                  <div className="space-y-2">
-                    <div className="h-3 w-full bg-gray-200 rounded" />
-                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
-                  </div>
+                    {/* About */}
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-gray-200 rounded" />
+                      <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                    </div>
 
-                  {/* Followers */}
-                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
-                </div>
-              ))
+                    {/* Followers */}
+                    <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                  </div>
+                ))
               : myPages?.slice(0, 3).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-10 h-10 flex-shrink-0">
-                      <img
-                        src={item?.image}
-                        className="w-full h-full object-cover rounded-full"
-                        alt=""
-                      />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt=""
+                        />
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <p
+                          onClick={() =>
+                            navigate(`/profile`, {
+                              state: { id: item._id },
+                            })
+                          }
+                          className="cursor-pointer font-[400] text-[14px]"
+                        >
+                          {item?.name}
+                        </p>
+                        <img src={notes} alt="" />
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                      <p
-                        onClick={() =>
-                          navigate(`/profile`, {
-                            state: { id: item._id },
-                          })
-                        }
-                        className="cursor-pointer font-[400] text-[14px]"
-                      >
-                        {item?.name}
-                      </p>
-                      <img src={notes} alt="" />
-                    </div>
+                    <p className="text-[14px] text-gray-600 leading-snug">
+                      {item?.about}
+                    </p>
+
+                    <p className="text-[14px] text-gray-700 mt-1">
+                      <span className="text-black font-[600]">
+                        {item?.followersCount}+
+                      </span>{" "}
+                      Follows
+                    </p>
                   </div>
-
-                  <p className="text-[14px] text-gray-600 leading-snug">
-                    {item?.about}
-                  </p>
-
-                  <p className="text-[14px] text-gray-700 mt-1">
-                    <span className="text-black font-[600]">
-                      {item?.followersCount}+
-                    </span>{" "}
-                    Follows
-                  </p>
-                </div>
-              ))}
+                ))}
           </div>
 
           <Link to="/profile">
@@ -221,18 +166,30 @@ export default function SubscriptionsCategory() {
         <SubscriptionStories pageId={location.state.id || null} />
 
         <div className="mt-6">
-          {CollectionFeeds?.map((post) => (
-            <CollectionFeedPostCard
-              key={post.id}
-              isPostId={post?._id}
-              post={post?.media}
-              author={post?.author}
-              likedCount={post?.likesCount}
-              commentCount={post?.commentsCount}
-              shareCount={post?.sharesCount}
-              toggleLike={toggleLike}
-            />
-          ))}
+          {CollectionFeeds && CollectionFeeds.length > 0 ? (
+            CollectionFeeds.map((post) => (
+              <CollectionFeedPostCard
+                key={post._id}
+                isPostId={post?._id}
+                post={post?.media}
+                fullPost={post}
+                author={post?.author}
+                likedCount={post?.likesCount}
+                commentCount={post?.commentsCount}
+                shareCount={post?.sharesCount}
+                toggleLike={toggleLike}
+              />
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10">
+              <img
+                src={nofound}
+                alt="No posts available"
+                className="w-[200px] opacity-70"
+              />
+              <p className="text-gray-500 mt-3">No posts available</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -241,11 +198,8 @@ export default function SubscriptionsCategory() {
         <div className="p-0">
           {/* Trending Pages Section */}
           <TrendingPagesGlobal />
-
           {/* Suggestions Section */}
           <SuggestionsPagesGlobal />
-
-
           {open && <ChatWidget />} {/* Your actual chat panel */}
           <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>

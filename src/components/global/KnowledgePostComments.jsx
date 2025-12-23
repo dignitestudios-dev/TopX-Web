@@ -1,20 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Heart, MoreVertical, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  createComment,
-  deleteComment,
-  elevateComment,
-  getComment,
-  likeComment,
-  updateComment,
-} from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
+import {
+  KnowledgeCreateComment,
+  KnowledgeDeleteComment,
+  KnowledgeGetComment,
+  KnowledgeUpdateComment,
+  likeComment,
+} from "../../redux/slices/knowledgepost.slice";
 
-export default function CommentsSection({ postId }) {
+export default function KnowledgePostComments({ postId }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
-    (state) => state.postsfeed
+    (state) => state.knowledgepost
   );
   const [editingCommentId, setEditingCommentId] = useState(null);
 
@@ -22,7 +21,7 @@ export default function CommentsSection({ postId }) {
   const dispatch = useDispatch();
   console.log(postComments, "postComments");
   const handleGetComments = async () => {
-    await dispatch(getComment(postId));
+    await dispatch(KnowledgeGetComment(postId));
   };
   useEffect(() => {
     handleGetComments();
@@ -35,7 +34,7 @@ export default function CommentsSection({ postId }) {
       if (editingCommentId) {
         // 🔁 UPDATE
         await dispatch(
-          updateComment({
+          KnowledgeUpdateComment({
             commentId: editingCommentId,
             text: newComment,
           })
@@ -43,8 +42,8 @@ export default function CommentsSection({ postId }) {
       } else {
         // ➕ CREATE
         await dispatch(
-          createComment({
-            post: postId,
+          KnowledgeCreateComment({
+            knowledgePost: postId,
             text: newComment,
           })
         ).unwrap();
@@ -61,12 +60,12 @@ export default function CommentsSection({ postId }) {
   const addReply = async (commentId, replyText) => {
     if (replyText.trim()) {
       const data = {
-        post: postId,
+        knowledgePost: postId,
         text: replyText,
         comment: commentId,
       };
 
-      await dispatch(createComment(data)).unwrap();
+      await dispatch(KnowledgeCreateComment(data)).unwrap();
       handleGetComments();
     }
   };
@@ -102,7 +101,7 @@ export default function CommentsSection({ postId }) {
   };
 
   const handleDeleteComment = async (commentId) => {
-    await dispatch(deleteComment(commentId)).unwrap();
+    await dispatch(KnowledgeDeleteComment(commentId)).unwrap();
     handleGetComments();
   };
   const handleElevateComment = async (commentId) => {
@@ -122,7 +121,6 @@ export default function CommentsSection({ postId }) {
     const [replyText, setReplyText] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-
     useEffect(() => {
       function handleClickOutside(event) {
         if (

@@ -77,6 +77,7 @@ export default function OtherProfile() {
             ) : (
               <>
                 <LargeProfile
+                isFromOtherProfile={isFromOtherProfile}
                   profileData={authorData}
                   setIsEditProfile={setIsEditProfile}
                 />

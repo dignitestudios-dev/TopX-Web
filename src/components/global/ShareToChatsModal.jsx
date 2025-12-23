@@ -53,7 +53,7 @@ const ShareToChatsModal = ({ onClose }) => {
         <div className="flex items-center justify-between border-b px-5 py-3">
           <h2 className="text-[17px] font-semibold">Share Post With</h2>
           <button
-            onClick={onClose}
+            onClick={() => onClose("")}
             className="text-gray-500 hover:text-gray-700"
           >
             <X size={22} />
@@ -137,7 +137,9 @@ const ShareToChatsModal = ({ onClose }) => {
       </div>
 
       {/* Success Modal */}
-      {showSuccessModal && <Donemodal onClose={() => setShowSuccessModal(false)} />}
+      {showSuccessModal && (
+        <Donemodal onClose={() => setShowSuccessModal(false)} />
+      )}
     </div>
   );
 };

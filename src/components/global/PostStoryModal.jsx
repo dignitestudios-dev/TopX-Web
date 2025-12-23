@@ -45,7 +45,7 @@ const PostStoryModal = ({ onClose }) => {
         {/* Pages List */}
         <div className="flex-1 overflow-y-auto px-4 pb-3 space-y-3">
           {/* Create New Page */}
-          <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2">
+          {/* <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-orange-500">
                 <Plus size={18} className="text-orange-500" />
@@ -54,7 +54,7 @@ const PostStoryModal = ({ onClose }) => {
                 Create New PageS
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Existing Pages */}
           {pages.map((page, index) => (

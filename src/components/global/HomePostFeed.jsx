@@ -1,21 +1,33 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { likePost } from "../../redux/slices/postfeed.slice";
 import { useNavigate } from "react-router";
+import { PostUnderReview } from "../../assets/export";
+import ReportModal from "./ReportModal";
+import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
+import { SuccessToast } from "./Toaster";
+import SharePostModal from "./SharePostModal";
+import ShareToChatsModal from "./ShareToChatsModal";
+import PostStoryModal from "./PostStoryModal";
+import ShareRepostModal from "./ShareRepostModal";
 
 export default function HomePostFeed({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isLiked = liked[post.id]; // Check if this post is liked using the post.id key
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstImage = hasImages ? post.postimage[0] : null;
-
+  const [reportmodal, setReportmodal] = useState(false);
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports
+  );
   const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
     const newLikeStatus = !currentLikeStatus;
 
@@ -35,8 +47,41 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     // Call API
     dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
-  
-  console.log(post, "postUsername");
+
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+  useEffect(() => {
+    if (reportSuccess) {
+      SuccessToast("Report submitted successfully");
+
+      // reset success so it does not fire again
+      dispatch(resetReportState());
+
+      // optional: close modal
+      setReportmodal(false);
+    }
+  }, [reportSuccess, dispatch]);
+
+  const [selectedOption, setSelectedOption] = useState("");
+  const [sharepost, setSharepost] = useState(false);
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
+  ];
+
+
   return (
     <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
@@ -66,30 +111,74 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setMoreOpen(!moreOpen)}
-          className="relative p-2 hover:bg-gray-50 rounded-full transition"
-        >
-          <MoreHorizontal className="w-4 h-4 text-gray-500" />
-        </button>
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className="p-2 hover:bg-gray-50 rounded-full transition"
+          >
+            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {moreOpen && (
+            <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+              <button
+                onClick={() => {
+                  setMoreOpen(false);
+                  setReportmodal(!reportmodal);
+                  console.log("Report clicked");
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+              >
+                Report
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Post Images - Thumbnail */}
       {hasImages && (
         <div
-          className="w-full bg-white overflow-hidden p-4 cursor-pointer hover:opacity-90 transition relative"
-          onClick={() => setImageViewerOpen(true)}
+          className={`w-full bg-white overflow-hidden p-4 relative transition 
+      ${
+        post.isAllowedByAdmin
+          ? "cursor-pointer hover:opacity-90"
+          : "cursor-not-allowed"
+      }
+    `}
+          onClick={() => {
+            if (post.isAllowedByAdmin) {
+              setImageViewerOpen(true);
+            }
+          }}
         >
+          {/* Image */}
           <img
             src={firstImage}
             alt="post"
-            className="w-full h-auto rounded-2xl object-cover max-h-96"
+            className={`w-full h-auto rounded-2xl object-cover max-h-96 
+        ${!post?.isAllowedByAdmin ? "blur-sm" : ""}
+      `}
           />
 
           {/* Image count badge */}
-          {post.postimage.length > 1 && (
+          {post.postimage.length > 1 && post.isAllowedByAdmin && (
             <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
               +{post.postimage.length}
+            </div>
+          )}
+
+          {/* 🔒 Under Review Overlay */}
+          {!post.isAllowedByAdmin && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center 
+                bg-black/40 backdrop-blur-md rounded-2xl"
+            >
+              <img
+                src={PostUnderReview}
+                className="w-[150px]"
+                alt="postUnderreview"
+              />
             </div>
           )}
         </div>
@@ -97,7 +186,13 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {/* Content */}
       <div className="px-4 py-3">
-        <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
+        {post.isAllowedByAdmin ? (
+          <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
+        ) : (
+          <p className="text-sm text-gray-400 italic">
+            This post is currently under review.
+          </p>
+        )}
       </div>
 
       {/* Stats - Action Bar */}
@@ -130,7 +225,10 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           <span className="text-sm font-medium">{post.stats.comments}</span>
         </button>
 
-        <button className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition">
+        <button
+          onClick={() => setSharepost(true)}
+          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+        >
           <Share2 className="w-5 h-5" />
           <span className="text-sm font-medium">{post.stats.shares}</span>
         </button>
@@ -145,6 +243,44 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {/* Comments Section */}
       {commentsOpen && <CommentsSection postId={post.id} />}
+
+      {/* Share Post Modal */}
+      {sharepost && (
+        <SharePostModal
+          selectedOption={selectedOption}
+          setSelectedOption={setSelectedOption}
+          setSharepost={setSharepost}
+          options={options}
+        />
+      )}
+
+      {(selectedOption === "Share in Individuals Chats" ||
+        selectedOption === "Share in Group Chats") && (
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
+
+      {selectedOption === "Share to your Story" && (
+        <PostStoryModal onClose={setSelectedOption} />
+      )}
+      {selectedOption === "Share with Topic Page" && (
+        <ShareRepostModal postId={post.id} onClose={setSelectedOption} />
+      )}
+
+      <ReportModal
+        isOpen={reportmodal}
+        onClose={() => setReportmodal(false)}
+        loading={reportLoading} // 👈 ADD THIS
+        onSubmit={(reason) => {
+          dispatch(
+            sendReport({
+              reason,
+              targetModel: "Post",
+              targetId: post.id,
+              isReported: true,
+            })
+          );
+        }}
+      />
     </div>
   );
 }

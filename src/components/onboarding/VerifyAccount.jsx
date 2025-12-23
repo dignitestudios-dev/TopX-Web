@@ -49,10 +49,10 @@ export default function VerifyAccount({
   // ⭐ PHONE CARD CLICK + SEND OTP
   const handlePhoneClick = async () => {
     // Check if email is verified first
-    if (!user?.isEmailVerified) {
-      ErrorToast("Please verify your email first");
-      return;
-    }
+    // if (!user?.isEmailVerified) {
+    //   ErrorToast("Please verify your email first");
+    //   return;
+    // }
 
     const res = await dispatch(sendPhoneOTP());
     if (res.meta.requestStatus === "fulfilled") {
@@ -87,20 +87,17 @@ export default function VerifyAccount({
   const handleVerifyOTP = async (code) => {
     let res;
 
+    const payload = {
+      otp: Number(code),
+      ...(referalCode && {
+        referral: Number(referalCode),
+      }),
+    };
+
     if (isType === "email") {
-      res = await dispatch(
-        verifyEmailOTP({
-          endPoint: `referral=https://topx.com/referral?code=${referalCode}`,
-          otp: code,
-        })
-      );
+      res = await dispatch(verifyEmailOTP(payload));
     } else {
-      res = await dispatch(
-        verifyPhoneOTP({
-          endPoint: `referral=https://topx.com/referral?code=${referalCode}`,
-          otp: code,
-        })
-      );
+      res = await dispatch(verifyPhoneOTP(payload));
     }
 
     if (res.meta.requestStatus === "fulfilled") {
@@ -157,9 +154,7 @@ export default function VerifyAccount({
           {/* PHONE VERIFICATION */}
           <Card
             onClick={handlePhoneClick}
-            className={`w-[24em] flex cursor-pointer justify-between items-center bg-[#F9FAFA] rounded-[12px] h-[80px] p-4 ${
-              !user?.isEmailVerified ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`w-[24em] flex cursor-pointer justify-between items-center bg-[#F9FAFA] rounded-[12px] h-[80px] p-4 `}
           >
             <div className="flex items-center gap-4">
               <img src={mobile} alt="" className="w-[34px] h-[34px]" />

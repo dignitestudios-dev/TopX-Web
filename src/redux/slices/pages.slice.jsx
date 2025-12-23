@@ -59,6 +59,23 @@ export const fetchMyPages = createAsyncThunk(
     }
   }
 );
+export const repostPostToPages = createAsyncThunk(
+  "posts/repostPostToPages",
+  async ({ postId, pageIds }, thunkAPI) => {
+    try {
+      const res = await axios.post("/posts/share", {
+        post: postId,
+        pages: pageIds,
+      });
+
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to repost post"
+      );
+    }
+  }
+);
 // ================= FETCH Other PAGES =================
 export const fetchOtherPages = createAsyncThunk(
   "pages/recommendations",
