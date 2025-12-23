@@ -1,11 +1,10 @@
 import React, { useState } from "react";
 import { X, Search } from "lucide-react";
-import Donemodal from "./Donemodal"; // Import your Donemodal component
 
 const ShareToChatsModal = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState("Individuals Chats");
   const [selectedChats, setSelectedChats] = useState([]);
-  const [showSuccessModal, setShowSuccessModal] = useState(false); // State for showing success modal
+  // const [showSuccessModal, setShowSuccessModal] = useState(false); // State for showing success modal
 
   const chats = [
     {
@@ -42,9 +41,9 @@ const ShareToChatsModal = ({ onClose }) => {
     }
   };
 
-  const handleSharePost = () => {
-    setShowSuccessModal(true);
-  };
+  // const handleSharePost = () => {
+  //   setShowSuccessModal(true);
+  // };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
@@ -137,9 +136,9 @@ const ShareToChatsModal = ({ onClose }) => {
       </div>
 
       {/* Success Modal */}
-      {showSuccessModal && (
+      {/* {showSuccessModal && (
         <Donemodal onClose={() => setShowSuccessModal(false)} />
-      )}
+      )} */}
     </div>
   );
 };
