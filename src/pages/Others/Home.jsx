@@ -228,6 +228,7 @@ export default function Home() {
         {/* Trending Pages Section */}
         <TrendingPagesGlobal/>
 
+
         {/* Suggestions Section */}
         <SuggestionsPagesGlobal/>
       </div>

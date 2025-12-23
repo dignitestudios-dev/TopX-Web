@@ -1,69 +1,33 @@
 import React, { useEffect, useState } from "react";
-import {
-  Heart,
-  MessageCircle,
-  Share2,
-  MoreHorizontal,
-  ChevronRight,
-  TrendingUp,
-  Search,
-} from "lucide-react";
-import {
-  notes,
-  postone,
-  profile,
-  profilehigh,
-  topics,
-} from "../../assets/export";
+import { Search, Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router";
+import { fetchMyPages } from "../../redux/slices/pages.slice";
+import { startStream } from "../../redux/slices/livestream.slice";
+import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
-import { TbNotes } from "react-icons/tb";
-import { FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchMyPages } from "../../redux/slices/pages.slice";
-import { useNavigate } from "react-router";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
+import ChatWidget from "../../components/global/ChatWidget";
+import FloatingChatButton from "../../components/global/ChatWidget";
 
 export default function Golive() {
   const [liked, setLiked] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
+  const [open, setOpen] = useState(false);
+  const [loadingPageId, setLoadingPageId] = useState(null);
+  
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { myPages } = useSelector((state) => state.pages);
+  const { livestreamError } = useSelector(
+    (state) => state.livestream
+  );
+
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
-
-  const pages = [
-    {
-      name: "Mike’s Basketball",
-      img: "https://randomuser.me/api/portraits/men/44.jpg",
-    },
-    {
-      name: "Mike’s Fitness",
-      img: "https://randomuser.me/api/portraits/men/41.jpg",
-    },
-    {
-      name: "Mike’s Opinions",
-      img: "https://randomuser.me/api/portraits/men/38.jpg",
-    },
-    {
-      name: "Mike’s Cooking",
-      img: "https://randomuser.me/api/portraits/men/33.jpg",
-    },
-    {
-      name: "Mike’s Cars",
-      img: "https://randomuser.me/api/portraits/men/31.jpg",
-    },
-    {
-      name: "Mike’s Fashion",
-      img: "https://randomuser.me/api/portraits/men/27.jpg",
-    },
-  ];
 
   const filteredPages = myPages.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -76,27 +40,34 @@ export default function Golive() {
     }));
   };
 
-  const [open, setOpen] = useState(false);
+  const handleGoLive = async (pageId) => {
+    setLoadingPageId(pageId);
+    try {
+      const res = await dispatch(startStream(pageId));
 
-  const trending = [
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin’s Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-  ];
+      if (res.meta.requestStatus === "fulfilled") {
+        SuccessToast("Stream started successfully! Redirecting...");
+        setTimeout(() => {
+          navigate(`/live-stream/${pageId}`);
+          setLoadingPageId(null);
+        }, 500);
+      } else {
+        ErrorToast(
+          res.payload || livestreamError || "Failed to start stream"
+        );
+        setLoadingPageId(null);
+      }
+    } catch (error) {
+      ErrorToast(error.message || "Failed to start stream");
+      setLoadingPageId(null);
+    }
+  };
 
   return (
-    <div className="flex  min-h-screen max-w-7xl mx-auto">
+    <div className="flex min-h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
-      <div className="w-1/4  !bg-[#F2F2F2] overflow-y-auto pt-3">
+      <div className="w-1/4 !bg-[#F2F2F2] overflow-y-auto pt-3">
         {/* Profile Card */}
-
         <Profilecard smallcard={true} />
 
         {/* My Subscription */}
@@ -127,53 +98,66 @@ export default function Golive() {
               />
             </div>
           </div>
-
           {/* Pages List */}
           <div className="space-y-3 mt-4">
-            {filteredPages.map((page, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={page.image}
-                    alt={page.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <span
-                    onClick={() =>
-                      navigate(`/profile`, {
-                        state: { id: page._id },
-                      })
-                    }
-                    className="text-gray-800 cursor-pointer font-medium text-sm"
+            {filteredPages && filteredPages.length > 0 ? (
+              filteredPages.map((page, i) => (
+                <div
+                  key={page._id || i}
+                  className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={page.image || "https://blog.holosophic.org/wp-content/uploads/2018/05/Countries-page-image-placeholder-800x500.jpg"}
+                      alt={page.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <span
+                      onClick={() =>
+                        navigate(`/profile`, {
+                          state: { id: page._id },
+                        })
+                      }
+                      className="text-gray-800 cursor-pointer font-medium text-sm"
+                    >
+                      {page.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleGoLive(page._id)}
+                    disabled={loadingPageId === page._id}
+                    className="bg-orange-500 text-white text-sm px-4 py-2 rounded-md hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {page.name}
-                  </span>
+                    {loadingPageId === page._id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Starting...</span>
+                      </>
+                    ) : (
+                      "Go live"
+                    )}
+                  </button>
                 </div>
-                <button className="bg-orange-500 text-white text-sm px-4 py-2 rounded-md hover:bg-orange-600 transition">
-                  Go live
-                </button>
+              ))
+            ) : (
+              <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
+                <p className="text-gray-500">No pages found</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
 
       {/* Right Sidebar - 1/4 width */}
-      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
+      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200">
         <div className="p-0">
-        {/* Trending Pages Section */}
-        <TrendingPagesGlobal/>
+          {/* Trending Pages Section */}
+          <TrendingPagesGlobal />
 
-        {/* Suggestions Section */}
-        <SuggestionsPagesGlobal/>
+          {/* Suggestions Section */}
+          <SuggestionsPagesGlobal />
 
-
-
-
-          {open && <ChatWidget />} {/* Your actual chat panel */}
+          {open && <ChatWidget />}
           <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>
       </div>

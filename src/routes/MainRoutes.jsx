@@ -18,6 +18,7 @@ import FloatingChatButton from '../components/global/ChatWidget';
 import ProtectedRoute from "./ProtectedRoute";
 import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
 import Trendingpagedetail from "../pages/Others/Trendingpagedetail";
+import LiveStreampage from "../pages/Others/LiveStreampage";
 
 const MainRoutes = () => {
     const [open, setOpen] = useState(false);
@@ -144,6 +145,15 @@ const MainRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <Searchitem />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/live-stream/:pageId" 
+                        element={
+                            <ProtectedRoute>
+                                <LiveStreampage />
                             </ProtectedRoute>
                         }
                     />

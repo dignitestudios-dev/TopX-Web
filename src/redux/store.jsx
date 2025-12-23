@@ -10,11 +10,13 @@ import affiliateReducer from "./slices/affiliate.slice"
 import profileSettingsReducer from "./slices/profileSetting.slice"
 import OtherProfileReducer from "./slices/otherprofile.slice"
 import knowledgepostReducer from "./slices/knowledgepost.slice"
-import notificationsReducer from  "./slices/notifications.slice";
+import notificationsReducer from "./slices/notifications.slice";
+import chatReducer from "./slices/chat.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
 import trendingReducer from "./slices/trending.slice"
 import reportsReducder from "./slices/reports.slice";
 import GlobalSearchReducder from "./slices/Global.Slice";
+import livestreamReducer from "./slices/livestream.slice";
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -41,6 +43,8 @@ const rootReducer = combineReducers({
   postsfeed: postsfeedReducer,
   reports: reportsReducder,
   globalSearch: GlobalSearchReducder,
+  livestream: livestreamReducer,
+  chat: chatReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
