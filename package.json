@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-   "dev": "vite --port 3000",
+    "dev": "vite --port 3000",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -15,6 +15,9 @@
     "@reduxjs/toolkit": "^2.10.1",
     "@tabler/icons": "^3.30.0",
     "@tabler/icons-react": "^3.30.0",
+    "agora-rtc-react": "^2.5.1",
+    "agora-rtc-sdk-ng": "^4.24.2",
+    "agora-rtm": "^2.2.3-2",
     "axios": "^1.7.9",
     "crypto-js": "^4.2.0",
     "f": "^1.4.0",
