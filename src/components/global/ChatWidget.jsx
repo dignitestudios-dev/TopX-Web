@@ -1,29 +1,56 @@
-import React, { useState, useEffect } from "react";
-import { MessageCircle, ChevronUp, Plus, X, Send, ArrowLeft, Check } from "lucide-react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useRef,
+  useLayoutEffect,
+} from "react";
+import {
+  MessageCircle,
+  ChevronUp,
+  Plus,
+  X,
+  Send,
+  ArrowLeft,
+  Check,
+} from "lucide-react";
+import { FaCamera } from "react-icons/fa6";
+import { MdGif } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    fetchIndividualChats,
-    fetchIndividualChatDetail,
-    acceptChatRequest,
-    rejectChatRequest,
-    searchUsers,
-    createGroup,
-    addGroupMembers,
-    fetchGroupChats,
-    fetchGroupChatHistory,
-    getGroupInfo,
-    updateGroupInfo,
-    toggleGroupMute,
+  fetchIndividualChats,
+  fetchIndividualChatDetail,
+  acceptChatRequest,
+  rejectChatRequest,
+  searchUsers,
+  createGroup,
+  addGroupMembers,
+  fetchGroupChats,
+  fetchGroupChatHistory,
+  getGroupInfo,
+  updateGroupInfo,
+  toggleGroupMute,
+  addMessage,
+  markChatAsRead,
+  increaseUnread,
+  removeChat,
+  blockChat,
+  setCurrentChatId,
+  resetChatDetail,
 } from "../../redux/slices/chat.slice";
+import SocketContext from "../../context/SocketContext";
+import { HiDotsVertical } from "react-icons/hi";
+import { SOCKET_EVENTS } from "../../constants/socketEvents";
 
 const ChatApp = () => {
   const dispatch = useDispatch();
-  const { 
-    chats, 
+  const socket = useContext(SocketContext);
+  const {
+    chats,
     groupChats,
     chatsLoading,
     groupChatsLoading,
-    chatDetailMessages, 
+    chatDetailMessages,
     chatDetailLoading,
     searchUsers: searchUsersList,
     searchUsersLoading,
@@ -35,12 +62,13 @@ const ChatApp = () => {
     toggleMuteLoading,
   } = useSelector((state) => state.chat);
   const { user, allUserData } = useSelector((state) => state.auth);
-  
+
+  console.log(groupInfo, "groupInfogroupInfo")
+
   const [screen, setScreen] = useState("list");
   const [activeTab, setActiveTab] = useState("Chat");
   const [open, setOpen] = useState(false);
   const [selectedChat, setSelectedChat] = useState(null);
-  const [messages, setMessages] = useState({});
   const [messageText, setMessageText] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupName, setGroupName] = useState("");
@@ -51,11 +79,56 @@ const ChatApp = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [userSearchPage, setUserSearchPage] = useState(1);
+  const [onlineUsers, setOnlineUsers] = useState({});
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
   // Group info screen states
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupBio, setEditGroupBio] = useState("");
   const [editGroupImage, setEditGroupImage] = useState(null);
   const [editGroupImagePreview, setEditGroupImagePreview] = useState(null);
+  // Media states
+  const [showMediaOptions, setShowMediaOptions] = useState(false);
+  const [showGifModal, setShowGifModal] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [gifSearch, setGifSearch] = useState("");
+  const [gifs, setGifs] = useState([]);
+  const [selectedGif, setSelectedGif] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [mediaPreview, setMediaPreview] = useState([]);
+  // Message image modal states
+  const [showMessageImageModal, setShowMessageImageModal] = useState(false);
+  const [selectedMessageImages, setSelectedMessageImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedNewChatUser, setSelectedNewChatUser] = useState(null);
+  const [showChatMenu, setShowChatMenu] = useState(false);
+
+
+
+  const giphyApiKey = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI";
+
+  const fetchGifs = async (query = "") => {
+    try {
+      const url = `https://api.giphy.com/v1/gifs/${query ? "search" : "trending"
+        }?api_key=${giphyApiKey}&q=${query}&limit=20`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setGifs(data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch GIFs:", error);
+      setGifs([]);
+    }
+  };
+
+  useEffect(() => {
+    setShowChatMenu(false);
+  }, [selectedChat]);
+
+
+  useEffect(() => {
+    // whenever screen changes, close media drawer
+    setShowMediaOptions(false);
+  }, [screen]);
 
   // Fetch chats based on active tab
   useEffect(() => {
@@ -70,15 +143,165 @@ const ChatApp = () => {
     }
   }, [open, activeTab, page, limit, dispatch]);
 
-  // Fetch users when on createGroup screen
+  const handleLeaveGroup = () => {
+    const groupId = selectedChat.groupId || selectedChat._id;
+
+    socket.leaveGroup({ groupId }, () => {
+      dispatch(removeChat({ chatId: groupId }));
+      dispatch(resetChatDetail());
+      setScreen("list");
+    });
+  };
+
+
+  const handleStartChat = (user) => {
+    socket.requestIndividualChat(
+      { receiverId: user._id },
+      async (res) => {
+        console.log("requestIndividualChat response:", res);
+
+        const chatId =
+          res?.data?.chatId ||
+          res?.chatId ||
+          res?.data?._id ||
+          res?._id;
+
+        if (!chatId) {
+          console.error("No chatId received");
+          return;
+        }
+
+        // ✅ SET STATE
+        setSelectedChat({
+          _id: chatId,
+          receiverInfo: user,
+          isGroup: false,
+        });
+
+        dispatch(setCurrentChatId(chatId));
+        setScreen("chat");
+
+        // ✅ FETCH MESSAGES
+        await dispatch(fetchIndividualChatDetail(chatId));
+
+        // ✅ MARK READ
+        socket.readChats(
+          { chatId, unreadCount: 0 },
+          () => {
+            dispatch(markChatAsRead({ chatId }));
+          }
+        );
+
+        // ✅ REFRESH CHAT LIST
+        dispatch(fetchIndividualChats({ page: 1, limit, type: "active" }));
+      }
+    );
+  };
+
+
+  // Fetch GIFs when modal opens
   useEffect(() => {
-    if (screen === "createGroup") {
-      const timeoutId = setTimeout(() => {
-        dispatch(searchUsers({ page: userSearchPage, limit, search: searchTerm }));
-      }, 500); // Debounce search
-      return () => clearTimeout(timeoutId);
+    if (showGifModal) {
+      fetchGifs();
     }
-  }, [screen, userSearchPage, limit, searchTerm, dispatch]);
+  }, [showGifModal]);
+
+  // Socket event listeners
+  useEffect(() => {
+    if (!socket || !socket.socket) return;
+
+    const handleMessageReceived = (data) => {
+      // ❌ agar group message hai to yahan ignore karo
+      if (data.groupId) return;
+
+      dispatch(
+        addMessage({
+          chatId: data.chatId,
+          message: data.message,
+          unreadCount: data.unreadCount || 1,
+        })
+      );
+    };
+
+
+
+    const handleChatDeleted = (data) => {
+      console.log("Chat deleted:", data);
+      dispatch(removeChat({ chatId: data.chatId }));
+    };
+
+    const handleChatBlocked = (data) => {
+      console.log("Chat blocked:", data);
+      dispatch(blockChat({ chatId: data.chatId }));
+    };
+
+    const handleGroupMessageReceived = (data) => {
+      console.log("Group message received:", data);
+      dispatch(
+        addMessage({
+          chatId: data.groupId,
+          message: data.message,
+          unreadCount: data.unreadCount || 1,
+        })
+      );
+    };
+
+
+
+    const handleGroupDeleted = (data) => {
+      console.log("Group deleted:", data);
+      dispatch(removeChat({ chatId: data.groupId }));
+    };
+
+    const handleUserStatus = (data) => {
+      console.log("User status:", data);
+      setOnlineUsers((prev) => ({
+        ...prev,
+        [data.userId]: data.online,
+      }));
+    };
+
+    socket.socket.on(
+      SOCKET_EVENTS.INDIVIDUAL.MESSAGE_RECEIVED,
+      handleMessageReceived
+    );
+    socket.socket.on(SOCKET_EVENTS.INDIVIDUAL.CHAT_DELETED, handleChatDeleted);
+    socket.socket.on(SOCKET_EVENTS.INDIVIDUAL.CHAT_BLOCKED, handleChatBlocked);
+    socket.socket.on(
+      SOCKET_EVENTS.GROUP.MESSAGE_RECEIVED,
+      handleGroupMessageReceived
+    );
+    socket.socket.on(SOCKET_EVENTS.GROUP.GROUP_DELETED, handleGroupDeleted);
+    socket.socket.on(SOCKET_EVENTS.COMMON.USER_STATUS, handleUserStatus);
+
+    return () => {
+      socket.socket.off(
+        SOCKET_EVENTS.INDIVIDUAL.MESSAGE_RECEIVED,
+        handleMessageReceived
+      );
+      socket.socket.off(
+        SOCKET_EVENTS.INDIVIDUAL.CHAT_DELETED,
+        handleChatDeleted
+      );
+      socket.socket.off(
+        SOCKET_EVENTS.INDIVIDUAL.CHAT_BLOCKED,
+        handleChatBlocked
+      );
+      socket.socket.off(
+        SOCKET_EVENTS.GROUP.MESSAGE_RECEIVED,
+        handleGroupMessageReceived
+      );
+      socket.socket.off(SOCKET_EVENTS.GROUP.GROUP_DELETED, handleGroupDeleted);
+      socket.socket.off(SOCKET_EVENTS.COMMON.USER_STATUS, handleUserStatus);
+    };
+  }, [socket, dispatch]);
+
+  // Scroll to bottom when messages change
+  useLayoutEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatDetailMessages]);
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -87,11 +310,11 @@ const ChatApp = () => {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return "Today";
     if (diffDays === 2) return "Yesterday";
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    
+
     return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   };
 
@@ -112,32 +335,120 @@ const ChatApp = () => {
     dispatch(fetchIndividualChats({ page, limit, type: "inactive" }));
   };
 
+  const chatPopupRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        chatPopupRef.current &&
+        !chatPopupRef.current.contains(event.target)
+      ) {
+        // 🔥 Close everything
+        setScreen("list");
+        setOpen(false);
+        setShowChatMenu(false);
+        setShowMediaOptions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+
   // Handle chat click
   const handleChatClick = async (chat) => {
+    setShowMediaOptions(false);
     setSelectedChat(chat);
     setScreen("chat");
     // Fetch chat detail based on chat type
     // Check if it's a group chat - use groupId if available, otherwise use _id
-    const groupId = chat.groupId || chat.group || (chat.isGroup ? chat._id : null);
-    
+    const groupId =
+      chat.groupId || chat.group || (chat.isGroup ? chat._id : null);
+
     if (chat.isGroup || groupId) {
-      await dispatch(fetchGroupChatHistory({ groupId: groupId || chat._id, page: 1, limit: 5 }));
+      await dispatch(
+        fetchGroupChatHistory({
+          groupId: groupId || chat._id,
+          page: 1,
+          limit: 5,
+        })
+      );
+      dispatch(
+        setCurrentChatId(
+          chat.isGroup || groupId ? groupId || chat._id : chat._id
+        )
+      );
+
+      // socket.joinGroup({ groupId: groupId || chat._id }, (response) => {
+      //   console.log("Joined group:", response);
+      // });
+      socket.joinGroup(
+        {
+          groupId: groupId || chat._id,
+          unreadCount: chat.unreadCount || 0,
+        },
+        () => {
+          dispatch(markChatAsRead({ chatId: groupId || chat._id }));
+        }
+      );
+
     } else {
       await dispatch(fetchIndividualChatDetail(chat._id));
+      dispatch(setCurrentChatId(chat._id));
+      // Request to join the chat room
+      socket.requestIndividualChat(
+        { receiverId: chat.receiverInfo._id },
+        (response) => {
+          console.log("Joined chat:", response);
+        }
+      );
+      // Mark as read
+      socket.readChats(
+        {
+          chatId: chat._id,
+          unreadCount: chat.unreadCount || 0,
+        },
+        () => {
+          dispatch(markChatAsRead({ chatId: chat._id }));
+        }
+      );
+
     }
+  };
+
+  const getMemberCount = () => {
+    if (selectedChat?.isGroup) {
+      // For group chats, use groupInfo if available
+      if (groupInfo?.members) {
+        return groupInfo.members.length;
+      }
+      // Fallback to what's stored in selectedChat
+      return selectedChat.members || 0;
+    }
+    return 0;
   };
 
   // Transform API data to component format
   const transformChatData = (chat) => {
     // Check if it's a group chat - group chats have group field or isGroup flag
-    const isGroup = chat.isGroup || chat.group || (chat.groupId && !chat.receiverInfo);
-    
+    const isGroup =
+      chat.isGroup || chat.group || (chat.groupId && !chat.receiverInfo);
+
     return {
       id: chat._id,
       name: chat.receiverInfo?.name || chat.name || "Unknown",
       msg: chat.lastMessage?.content || "No messages",
       date: formatDate(chat.lastMessage?.createdAt || chat.createdAt),
-      avatar: chat.receiverInfo?.profilePicture || chat.image || chat.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg",
+      avatar:
+        chat.receiverInfo?.profilePicture ||
+        chat.image ||
+        chat.profilePicture ||
+        "https://randomuser.me/api/portraits/men/1.jpg",
       unread: chat.unreadCount || 0,
       _id: chat._id,
       receiverInfo: chat.receiverInfo,
@@ -155,7 +466,10 @@ const ChatApp = () => {
       name: groupChat.name || "Unknown Group",
       msg: groupChat.lastMessage?.content || "No messages",
       date: formatDate(groupChat.lastMessage?.createdAt || groupChat.createdAt),
-      avatar: groupChat.image || groupChat.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg",
+      avatar:
+        groupChat.image ||
+        groupChat.profilePicture ||
+        "https://randomuser.me/api/portraits/men/1.jpg",
       unread: groupChat.unreadCount || 0,
       _id: groupChat._id,
       lastMessage: groupChat.lastMessage,
@@ -174,56 +488,160 @@ const ChatApp = () => {
     const fromGroupAPI = groupChats.map(transformGroupChatData);
     // Also check if individual chats have any groups (in case groups appear in recent chats)
     const fromIndividualChats = chats
-      .filter(chat => {
-        const isGroup = chat.isGroup || chat.group || (chat.groupId && !chat.receiverInfo);
+      .filter((chat) => {
+        const isGroup =
+          chat.isGroup || chat.group || (chat.groupId && !chat.receiverInfo);
         return isGroup;
       })
       .map(transformChatData);
-    
+
     // Combine and remove duplicates
     const allGroups = [...fromGroupAPI, ...fromIndividualChats];
-    const uniqueGroups = allGroups.filter((group, index, self) => 
-      index === self.findIndex(g => g._id === group._id)
+    const uniqueGroups = allGroups.filter(
+      (group, index, self) =>
+        index === self.findIndex((g) => g._id === group._id)
     );
     return uniqueGroups;
   };
 
   const chatsData = {
-    Chat: activeTab === "Chat" ? getChatsData().filter(chat => !chat.isGroup) : [],
+    Chat:
+      activeTab === "Chat"
+        ? getChatsData().filter((chat) => !chat.isGroup)
+        : [],
     "Group Chat": activeTab === "Group Chat" ? getGroupChatsData() : [],
-    Request: activeTab === "Request" ? getChatsData().filter(chat => !chat.isGroup) : [],
+    Request:
+      activeTab === "Request"
+        ? getChatsData().filter((chat) => !chat.isGroup)
+        : [],
   };
 
-  const handleSendMessage = () => {
-    if (messageText.trim() && selectedChat) {
-      setMessages((prev) => ({
-        ...prev,
-        [selectedChat.id]: [...(prev[selectedChat.id] || []), { text: messageText, sender: "user" }],
-      }));
-      // emit to server (best-effort)
-      try {
-        const payload = { to: selectedChat.id, text: messageText };
-        sock?.emit("send_message", payload);
-      } catch (e) {
-        // ignore if socket not ready
-      }
-      setMessageText("");
+  const handleSendMessage = async () => {
+    let mediaUrls = [];
+    if (selectedFiles.length > 0) {
+      mediaUrls = await Promise.all(
+        selectedFiles.map(
+          (file) =>
+            new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.readAsDataURL(file);
+            })
+        )
+      );
+    } else if (selectedGif) {
+      mediaUrls = [selectedGif];
     }
+
+    if (!messageText.trim() && mediaUrls.length === 0) return;
+
+    const isGroup = selectedChat.isGroup || selectedChat.groupId;
+    let type = "text";
+    let content = messageText;
+    if (selectedGif) {
+      type = "gif";
+      content = "";
+    } else if (selectedFiles.length > 0) {
+      type = "media";
+      content = "";
+    }
+    //  const isGroup = selectedChat.isGroup || selectedChat.groupId;
+
+    const payload = isGroup
+      ? {
+        groupId: selectedChat.groupId || selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      }
+      : {
+        chatId: selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      };
+
+    if (isGroup) {
+      socket.sendGroupMessage(payload, (response) => {
+        console.log("Group message sent:", response);
+      });
+    } else {
+      socket.sendMessage(payload, (response) => {
+        console.log("Message sent:", response);
+      });
+    }
+
+
+    setMessageText("");
+    setSelectedFiles([]);
+    setSelectedGif(null);
+    setMediaPreview([]);
   };
 
-  // // subscribe to incoming messages
-  // useEffect(() => {
-  //   if (!sock) return;
-  //   const unsub = sock.on("new_message", (msg) => {
-  //     if (!msg || !msg.chatId) return;
-  //     setMessages((prev) => ({
-  //       ...prev,
-  //       [msg.chatId]: [...(prev[msg.chatId] || []), { text: msg.text, sender: msg.sender }],
-  //     }));
-  //   });
 
-  //   return () => unsub && unsub();
-  // }, [sock]);
+  const handleBlockUser = () => {
+    if (!selectedChat?._id || !selectedChat?.receiverInfo?._id) return;
+
+    socket.socket.emit(
+      "individual:block:user",
+      {
+        chatId: selectedChat._id,
+        blockTo: selectedChat.receiverInfo._id,
+      }
+    );
+
+    // ✅ UI cleanup
+    dispatch(resetChatDetail());
+    setShowChatMenu(false);
+    setScreen("list");
+  };
+
+  const handleClearMessages = () => {
+    if (!selectedChat?._id) return;
+
+    socket.socket.emit(
+      "individual:chat:delete",
+      {
+        groupId: selectedChat._id,
+        memberIds: [user?._id || allUserData?._id],
+      }
+    );
+
+    // ✅ ONLY clear messages from UI
+    dispatch(resetChatDetail());
+
+    setShowChatMenu(false);
+  };
+
+
+  useEffect(() => {
+    if (!socket?.socket) return;
+
+    const handleIndividualChatDelete = (data) => {
+      console.log("Individual chat deleted:", data);
+
+      dispatch(removeChat({ chatId: data.groupId }));
+      dispatch(resetChatDetail());
+
+      if (selectedChat?._id === data.groupId) {
+        setScreen("list");
+      }
+    };
+
+
+    socket.socket.on(
+      "individual:chat:delete",
+      handleIndividualChatDelete
+    );
+
+    return () => {
+      socket.socket.off(
+        "individual:chat:delete",
+        handleIndividualChatDelete
+      );
+    };
+  }, [socket, selectedChat, dispatch]);
+
 
   const handleSelectUser = (user) => {
     if (selectedUsers.find((u) => u._id === user._id)) {
@@ -232,6 +650,19 @@ const ChatApp = () => {
       setSelectedUsers([...selectedUsers, user]);
     }
   };
+
+  useEffect(() => {
+    if ((screen === "createGroup" || screen === "newChat") && searchTerm.trim()) {
+      dispatch(
+        searchUsers({
+          page: userSearchPage,
+          limit: 10,
+          search: searchTerm,
+        })
+      );
+    }
+  }, [searchTerm, screen, userSearchPage, dispatch]);
+
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -258,12 +689,24 @@ const ChatApp = () => {
         const result = await dispatch(createGroup(formData));
         if (createGroup.fulfilled.match(result)) {
           const groupId = result.payload._id;
-          
+
           // Add selected members to group
           if (selectedUsers.length > 0) {
             const memberIds = selectedUsers.map((u) => u._id);
             await dispatch(addGroupMembers({ groupId, memberIds }));
           }
+
+          // 🔹 creator ko socket room join karwao
+          socket.joinGroup(
+            {
+              groupId,
+              unreadCount: 0,
+            },
+            (res) => {
+              console.log("Creator joined group socket:", res);
+            }
+          );
+
 
           // Reset and go back to list
           setScreen("list");
@@ -273,7 +716,7 @@ const ChatApp = () => {
           setGroupImage(null);
           setGroupImagePreview(null);
           setSearchTerm("");
-          
+
           // Refresh chats
           dispatch(fetchIndividualChats({ page, limit, type: "active" }));
         }
@@ -284,9 +727,10 @@ const ChatApp = () => {
   };
 
   // Filter users based on search term (client-side filtering)
-  const availableUsers = searchUsersList?.filter((user) =>
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const availableUsers =
+    searchUsersList?.filter((user) =>
+      user.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
   // Chat List Screen
   if (screen === "list") {
@@ -301,51 +745,80 @@ const ChatApp = () => {
             <span className="text-orange-500 font-semibold text-sm">New</span>
             <span className="text-gray-800 font-medium text-sm">Message</span>
           </div>
-          <ChevronUp className={`w-5 h-5 text-orange-500 transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronUp
+            className={`w-5 h-5 text-orange-500 transition-transform ${open ? "rotate-180" : ""
+              }`}
+          />
         </button>
 
         <div
-          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${
-            open ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-5 pointer-events-none"
-          } z-40`}
+          ref={chatPopupRef}
+          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-5 pointer-events-none"
+            } z-40`}
         >
+
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-orange-500" />
               <h3 className="font-semibold text-gray-900 text-sm">Message</h3>
             </div>
-            <Plus className="w-5 h-5 text-gray-700 cursor-pointer" />
+            <Plus
+              className="w-5 h-5 text-gray-700 cursor-pointer"
+              onClick={() => {
+                setScreen("newChat");
+                setOpen(false);
+                setSearchTerm("");
+                setUserSearchPage(1);
+              }}
+            />
+
           </div>
 
-          <div className="px-4 py-2 border-b border-gray-200">
-            <input type="text" placeholder="Search" className="w-full bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none" />
-          </div>
+          {/* <div className="px-4 py-2 border-b border-gray-200">
+           <input
+              type="text"
+              placeholder="Search"
+              className="w-full bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+            />
+          </div> */}
 
           <div className="flex border-b border-gray-200 text-sm font-medium">
             {["Chat", "Group Chat", "Request"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 ${activeTab === tab ? "text-orange-500 border-b-2 border-orange-500" : "text-gray-500"}`}
+                className={`flex-1 py-2 ${activeTab === tab
+                  ? "text-orange-500 border-b-2 border-orange-500"
+                  : "text-gray-500"
+                  }`}
               >
                 {tab}
               </button>
             ))}
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {(chatsLoading || (activeTab === "Group Chat" && groupChatsLoading)) ? (
-              <p className="text-sm text-gray-500 text-center py-6">Loading...</p>
+          <div className="h-[50vh] overflow-y-auto">
+            {chatsLoading ||
+              (activeTab === "Group Chat" && groupChatsLoading) ? (
+              <p className="text-sm text-gray-500 text-center py-6 flex justify-center items-center">
+                <img src="https://assets-v2.lottiefiles.com/a/90a4c0f2-1152-11ee-bda3-830a7a1975f2/iBALXy6uaH.gif" className="w-[14em] h-[14em]" alt="" />
+              </p>
             ) : chatsData[activeTab].length > 0 ? (
               chatsData[activeTab].map((chat) => (
                 <div
                   key={chat.id}
                   onClick={() => handleChatClick(chat)}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                  className="flex items-center justify-between px-5 py-5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                 >
                   <div className="flex items-center gap-3 flex-1">
                     <div className="relative">
-                      <img src={chat.avatar} alt={chat.name} className="w-10 h-10 rounded-full object-cover" />
+                      <img
+                        src={chat.avatar}
+                        alt={chat.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
                       {chat.unread > 0 && (
                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
                           {chat.unread}
@@ -353,8 +826,23 @@ const ChatApp = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm text-gray-900">{chat.name}</p>
-                      <p className="text-xs text-gray-500 truncate">{chat.msg}</p>
+                      <p className="font-semibold text-sm text-gray-900">
+                        {chat.name}
+                      </p>
+                      <p
+                        className={`text-xs text-gray-500 truncate ${chat.unread > 0 ? "font-semibold" : ""
+                          }`}
+                      >
+                        {chat.lastMessage?.mediaUrls &&
+                          chat.lastMessage.mediaUrls.length > 0 ? (
+                          <span className="flex items-center gap-1">
+                            <FaCamera className="w-3 h-3" />
+                            Media
+                          </span>
+                        ) : (
+                          chat.msg
+                        )}
+                      </p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -379,7 +867,9 @@ const ChatApp = () => {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-500 text-center py-6">No {activeTab.toLowerCase()} available</p>
+              <p className="text-sm text-gray-500 text-center py-6">
+                No {activeTab.toLowerCase()} available
+              </p>
             )}
           </div>
 
@@ -402,131 +892,524 @@ const ChatApp = () => {
   // Chat Screen
   if (screen === "chat") {
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
+      <div
+        ref={chatPopupRef}
+        className="fixed bottom-6 right-6 w-90 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setScreen("list")} className="text-gray-600 hover:text-gray-900">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <img 
-              src={selectedChat?.avatar || selectedChat?.receiverInfo?.profilePicture || selectedChat?.image} 
-              alt={selectedChat?.name || selectedChat?.receiverInfo?.name || "Chat"} 
-              className="w-10 h-10 rounded-full object-cover" 
-            />
-            <div className="flex-1">
-              <p 
-                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
+          <div className="flex items-center w-full justify-between gap-3">
+
+            {/* Left Section: Back + Avatar + Info */}
+            <div className="flex items-center gap-3">
+
+              {/* Back Button */}
+              <button
                 onClick={() => {
                   if (selectedChat?.isGroup) {
-                    const groupId = selectedChat.groupId || selectedChat._id;
-                    dispatch(getGroupInfo(groupId));
-                    setScreen("groupInfo");
+                    socket.leaveGroupRoom(
+                      { groupId: selectedChat.groupId || selectedChat._id },
+                      () => { }
+                    );
+                  } else {
+                    socket.leaveChats(
+                      { chatId: selectedChat._id },
+                      () => { }
+                    );
                   }
+                  setShowMediaOptions(false);
+                  dispatch(resetChatDetail());
+                  setScreen("list");
                 }}
+                className="text-gray-600 hover:text-gray-900"
               >
-                {selectedChat?.name || selectedChat?.receiverInfo?.name || "Unknown"}
-              </p>
-              <p className="text-xs text-gray-500">
-                {selectedChat?.isGroup 
-                  ? `${selectedChat.members || 0} members` 
-                  : "Online"}
-              </p>
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+
+              {/* Avatar */}
+              <img
+                src={
+                  selectedChat?.avatar ||
+                  selectedChat?.receiverInfo?.profilePicture ||
+                  selectedChat?.image
+                }
+                alt={selectedChat?.name || selectedChat?.receiverInfo?.name || "Chat"}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+
+              {/* Name + Status */}
+              <div className="flex flex-col leading-tight">
+                <p
+                  className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
+                  onClick={() => {
+                    if (selectedChat?.isGroup) {
+                      const groupId = selectedChat.groupId || selectedChat._id;
+                      dispatch(getGroupInfo(groupId));
+                      setScreen("groupInfo");
+                    }
+                  }}
+                >
+                  {selectedChat?.name ||
+                    selectedChat?.receiverInfo?.name ||
+                    "Unknown"}
+                </p>
+
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  {selectedChat?.isGroup ? (
+                    `${getMemberCount()} members`
+                  ) : onlineUsers[selectedChat?.receiverInfo?._id] ? (
+                    <>
+                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                      Online
+                    </>
+                  ) : (
+                    "Offline"
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              {/* Right Section: Menu */}
+              <button
+                onClick={() => setShowChatMenu(prev => !prev)}
+                className="text-gray-600 hover:text-gray-900"
+              >
+                <HiDotsVertical className="w-5 h-5" />
+              </button>
+
+              {showChatMenu && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+
+                  {/* Delete Chat */}
+                  <button
+                    onClick={handleClearMessages}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                  >
+                    Delete Chat
+                  </button>
+
+
+                  {/* Block User */}
+                  {!selectedChat?.isGroup && (
+                    <button
+                      onClick={handleBlockUser}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                    >
+                      Block User
+                    </button>
+                  )}
+
+                  {/* Report */}
+                  <button
+                    onClick={() => {
+                      setShowChatMenu(false);
+                      alert("Report submitted"); // replace later with API
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600"
+                  >
+                    Report
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
+
         </div>
+
+
 
         <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3">
           {chatDetailLoading ? (
-            <p className="text-center text-gray-400 text-sm mt-10">Loading messages...</p>
+            <p className="text-center text-gray-400 text-sm mt-10">
+              Loading messages...
+            </p>
           ) : chatDetailMessages && chatDetailMessages.length > 0 ? (
             chatDetailMessages.map((msg, i) => {
               const currentUserId = user?._id || allUserData?._id;
               const isCurrentUser = msg.sender?._id === currentUserId;
-              
+
               return (
-                <div key={msg._id || i} className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}>
+                <div
+                  key={msg._id}
+                  className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
+                    }`}
+                >
                   {!isCurrentUser && (
-                    <img 
-                      src={msg.sender?.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                      alt={msg.sender?.name || "User"} 
-                      className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1" 
+                    <img
+                      src={
+                        msg.sender?.profilePicture ||
+                        "https://randomuser.me/api/portraits/men/1.jpg"
+                      }
+                      alt={msg.sender?.name || "User"}
+                      className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1"
                     />
                   )}
-                  <div className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                    isCurrentUser 
-                      ? "bg-orange-500 text-white rounded-br-none" 
+                  <div
+                    className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
+                      ? "bg-orange-500 text-white rounded-br-none"
                       : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
-                  }`}>
+                      }`}
+                  >
                     {msg.type === "shared" && msg.shared ? (
                       <div className="space-y-2">
-                        <p className="text-xs opacity-80 mb-1">Shared a {msg.shared.sharedType === "knowledge" ? "knowledge post" : "post"}</p>
+                        <p className="text-xs opacity-80 mb-1">
+                          Shared a{" "}
+                          {msg.shared.sharedType === "knowledge"
+                            ? "knowledge post"
+                            : "post"}
+                        </p>
                         {msg.shared.pageImage && (
-                          <img 
-                            src={msg.shared.pageImage} 
-                            alt="Shared post" 
-                            className="w-full rounded-lg" 
+                          <img
+                            src={msg.shared.pageImage}
+                            alt="Shared post"
+                            className="w-full rounded-lg"
                           />
                         )}
                         {msg.shared.textOnImage && (
                           <p className="text-sm">{msg.shared.textOnImage}</p>
                         )}
-                        {msg.content && msg.content !== "Shared a knowledge post" && (
-                          <p className="text-sm mt-1">{msg.content}</p>
-                        )}
+                        {msg.content &&
+                          msg.content !== "Shared a knowledge post" && (
+                            <p className="text-sm mt-1">{msg.content}</p>
+                          )}
                       </div>
                     ) : (
                       <p>{msg.content}</p>
                     )}
                     {msg.mediaUrls && msg.mediaUrls.length > 0 && (
-                      <div className="mt-2 space-y-1">
-                        {msg.mediaUrls.map((url, idx) => (
-                          <img key={idx} src={url} alt={`Media ${idx + 1}`} className="w-full rounded mt-1" />
-                        ))}
-                      </div>
+                      (() => {
+                        const mediaCount = msg.mediaUrls.length;
+                        if (mediaCount === 1) {
+                          return (
+                            <img
+                              src={msg.mediaUrls[0]}
+                              alt="Media"
+                              className="w-full rounded mt-2 cursor-pointer"
+                              onClick={() => {
+                                setSelectedMessageImages(msg.mediaUrls);
+                                setCurrentImageIndex(0);
+                                setShowMessageImageModal(true);
+                              }}
+                            />
+                          );
+                        } else if (mediaCount === 2) {
+                          return (
+                            <div className="mt-2 grid grid-cols-2 gap-1">
+                              {msg.mediaUrls.map((url, idx) => (
+                                <img
+                                  key={idx}
+                                  src={url}
+                                  alt={`Media ${idx + 1}`}
+                                  className="w-full h-20 object-cover rounded cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedMessageImages(msg.mediaUrls);
+                                    setCurrentImageIndex(idx);
+                                    setShowMessageImageModal(true);
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          );
+                        } else {
+                          // 3 or more, 2x2 grid
+                          return (
+                            <div className="mt-2 grid grid-cols-2 gap-1">
+                              {msg.mediaUrls.slice(0, 4).map((url, idx) => {
+                                if (idx === 3 && mediaCount > 4) {
+                                  return (
+                                    <div
+                                      key={idx}
+                                      className="relative cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMessageImages(msg.mediaUrls);
+                                        setCurrentImageIndex(0);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    >
+                                      <img
+                                        src={url}
+                                        alt={`Media ${idx + 1}`}
+                                        className="w-full h-20 object-cover rounded"
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded">
+                                        <span className="text-white font-bold text-sm">
+                                          +{mediaCount - 3}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <img
+                                      key={idx}
+                                      src={url}
+                                      alt={`Media ${idx + 1}`}
+                                      className="w-full h-20 object-cover rounded cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMessageImages(msg.mediaUrls);
+                                        setCurrentImageIndex(idx);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    />
+                                  );
+                                }
+                              })}
+                            </div>
+                          );
+                        }
+                      })()
                     )}
-                    <p className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"}`}>
-                      {new Date(msg.createdAt).toLocaleTimeString("en-US", { 
-                        hour: "2-digit", 
-                        minute: "2-digit" 
+                    <p
+                      className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
+                        }`}
+                    >
+                      {new Date(msg.createdAt).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </p>
                   </div>
                   {isCurrentUser && (
-                    <img 
-                      src={user?.profilePicture || allUserData?.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                      alt="You" 
-                      className="w-8 h-8 rounded-full object-cover ml-2 self-end mb-1" 
+                    <img
+                      src={
+                        user?.profilePicture ||
+                        allUserData?.profilePicture ||
+                        "https://randomuser.me/api/portraits/men/1.jpg"
+                      }
+                      alt="You"
+                      className="w-8 h-8 rounded-full object-cover ml-2 self-end mb-1"
                     />
                   )}
                 </div>
               );
             })
-          ) : messages[selectedChat?.id] ? (
-            messages[selectedChat.id].map((msg, i) => (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-xs px-3 py-2 rounded-lg text-sm bg-orange-500 text-white rounded-br-none">
-                  {msg.text}
-                </div>
-              </div>
-            ))
           ) : (
-            <p className="text-center text-gray-400 text-sm mt-10">No messages yet</p>
+            <p className="text-center text-gray-400 text-sm mt-10">
+              No messages yet
+            </p>
           )}
+          <div ref={messagesEndRef} />
         </div>
 
-        <div className="border-t border-gray-200 px-4 py-3 bg-white flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Message"
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
-          />
-          <button onClick={handleSendMessage} className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600">
-            <Send className="w-4 h-4" />
-          </button>
+        <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
+          {mediaPreview.length > 0 && (
+            <div className="mb-2">
+              <div className="grid grid-cols-4 gap-2">
+                {mediaPreview.slice(0, 4).map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Preview ${i + 1}`}
+                    className="w-16 h-16 object-cover rounded"
+                  />
+                ))}
+                {mediaPreview.length > 4 && (
+                  <div
+                    className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
+                    onClick={() => setShowImageModal(true)}
+                  >
+                    <span className="text-sm font-semibold">
+                      +{mediaPreview.length - 4}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Message"
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+              disabled={mediaPreview.length > 0}
+            />
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMediaOptions(prev => !prev);
+              }}
+              className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleSendMessage}
+              className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => {
+                const files = Array.from(e.target.files).slice(0, 5);
+                setSelectedFiles(files);
+                setMediaPreview(files.map((file) => URL.createObjectURL(file)));
+                setShowMediaOptions(false);
+              }}
+              className="hidden"
+            />
+          </div>
         </div>
+
+        {showMediaOptions && (
+          <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Share Media
+              </span>
+              <button
+                onClick={() => setShowMediaOptions(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex justify-around">
+              <button
+                onClick={() => {
+                  fileInputRef.current.click();
+                  setShowMediaOptions(false);
+                }}
+                className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
+              >
+                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+                  <FaCamera />
+                </div>
+                <span className="text-sm text-gray-700">Image</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowGifModal(true);
+                  setShowMediaOptions(false);
+                }}
+                className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
+              >
+                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+                  <MdGif size={28} />
+                </div>
+                <span className="text-sm text-gray-700">GIF</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+
+        {showGifModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-4 w-96 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">Select GIF</h3>
+                <button
+                  onClick={() => setShowGifModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder="Search GIFs"
+                value={gifSearch}
+                onChange={(e) => setGifSearch(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && fetchGifs(gifSearch)}
+                className="w-full border border-gray-200 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:border-orange-500"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {gifs.map((gif) => (
+                  <img
+                    key={gif.id}
+                    src={gif.images.fixed_height.url}
+                    alt={gif.title}
+                    onClick={() => {
+                      setSelectedGif(gif.images.original.url);
+                      setMediaPreview([gif.images.original.url]);
+                      setShowGifModal(false);
+                    }}
+                    className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showImageModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-4 max-w-md max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">All Images</h3>
+                <button
+                  onClick={() => setShowImageModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {mediaPreview.map((url, i) => (
+                  <img
+                    key={i}
+                    src={url}
+                    alt={`Image ${i + 1}`}
+                    className="w-full h-32 object-cover rounded"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showMessageImageModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+            <div className="relative max-w-4xl max-h-[80vh]">
+              <button
+                onClick={() => setShowMessageImageModal(false)}
+                className="absolute top-2 right-2 text-white text-2xl z-10"
+              >
+                ×
+              </button>
+              <img
+                src={selectedMessageImages[currentImageIndex]}
+                alt="Full image"
+                className="max-w-full max-h-full object-contain"
+              />
+              {selectedMessageImages.length > 1 && (
+                <>
+                  <button
+                    onClick={() =>
+                      setCurrentImageIndex(
+                        (prev) =>
+                          (prev - 1 + selectedMessageImages.length) %
+                          selectedMessageImages.length
+                      )
+                    }
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    onClick={() =>
+                      setCurrentImageIndex(
+                        (prev) => (prev + 1) % selectedMessageImages.length
+                      )
+                    }
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                  >
+                    ›
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -536,7 +1419,14 @@ const ChatApp = () => {
     return (
       <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
-          <button onClick={() => { setScreen("list"); setSelectedUsers([]); setSearchTerm(""); }} className="text-gray-600">
+          <button
+            onClick={() => {
+              setScreen("list");
+              setSelectedUsers([]);
+              setSearchTerm("");
+            }}
+            className="text-gray-600"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h3 className="font-semibold text-sm text-gray-900">Create Group</h3>
@@ -555,17 +1445,28 @@ const ChatApp = () => {
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {selectedUsers.length > 0 && (
             <div className="mb-4 pb-3 border-b border-gray-200">
-              <p className="text-xs text-gray-600 mb-2">Selected ({selectedUsers.length})</p>
+              <p className="text-xs text-gray-600 mb-2">
+                Selected ({selectedUsers.length})
+              </p>
               <div className="flex flex-wrap gap-2">
                 {selectedUsers.map((user) => (
-                  <div key={user._id} className="flex items-center gap-1 bg-orange-100 px-2 py-1 rounded-full">
-                    <img 
-                      src={user.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                      alt={user.name} 
-                      className="w-6 h-6 rounded-full object-cover" 
+                  <div
+                    key={user._id}
+                    className="flex items-center gap-1 bg-orange-100 px-2 py-1 rounded-full"
+                  >
+                    <img
+                      src={
+                        user.profilePicture ||
+                        "https://randomuser.me/api/portraits/men/1.jpg"
+                      }
+                      alt={user.name}
+                      className="w-6 h-6 rounded-full object-cover"
                     />
                     <span className="text-xs text-gray-900">{user.name}</span>
-                    <button onClick={() => handleSelectUser(user)} className="text-orange-500">
+                    <button
+                      onClick={() => handleSelectUser(user)}
+                      className="text-orange-500"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </div>
@@ -576,38 +1477,50 @@ const ChatApp = () => {
 
           <p className="text-xs text-gray-600 mb-2">Add members</p>
           {searchUsersLoading ? (
-            <p className="text-sm text-gray-500 text-center py-4">Loading users...</p>
+            <p className="text-sm text-gray-500 text-center py-4">
+              Loading users...
+            </p>
           ) : availableUsers.length > 0 ? (
             availableUsers.map((user) => (
-              <div 
-                key={user._id} 
-                onClick={() => handleSelectUser(user)} 
+              <div
+                key={user._id}
+                onClick={() => handleSelectUser(user)}
                 className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded mb-1"
               >
                 <div className="flex items-center gap-2">
-                  <img 
-                    src={user.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                    alt={user.name} 
-                    className="w-8 h-8 rounded-full object-cover" 
+                  <img
+                    src={
+                      user.profilePicture ||
+                      "https://randomuser.me/api/portraits/men/1.jpg"
+                    }
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover"
                   />
                   <div>
-                    <span className="text-sm text-gray-900 block">{user.name}</span>
+                    <span className="text-sm text-gray-900 block">
+                      {user.name}
+                    </span>
                     {user.hasConnection && (
                       <span className="text-xs text-gray-400">Connected</span>
                     )}
                   </div>
                 </div>
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                  selectedUsers.find((u) => u._id === user._id) 
-                    ? "bg-orange-500 border-orange-500" 
+                <div
+                  className={`w-5 h-5 rounded border-2 flex items-center justify-center ${selectedUsers.find((u) => u._id === user._id)
+                    ? "bg-orange-500 border-orange-500"
                     : "border-gray-300"
-                }`}>
-                  {selectedUsers.find((u) => u._id === user._id) && <Check className="w-3 h-3 text-white" />}
+                    }`}
+                >
+                  {selectedUsers.find((u) => u._id === user._id) && (
+                    <Check className="w-3 h-3 text-white" />
+                  )}
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-sm text-gray-500 text-center py-4">No users found</p>
+            <p className="text-sm text-gray-500 text-center py-4">
+              No users found
+            </p>
           )}
         </div>
 
@@ -629,7 +1542,8 @@ const ChatApp = () => {
   if (screen === "groupInfo") {
     const groupInfoData = groupInfo?.info || {};
     const members = groupInfo?.members || [];
-    const isAdmin = groupInfoData?.admin?._id === (user?._id || allUserData?._id);
+    const isAdmin =
+      groupInfoData?.admin?._id === (user?._id || allUserData?._id);
     const isMuted = groupInfo?.isNotificationMute || false;
 
     const handleEditImageChange = (e) => {
@@ -646,10 +1560,10 @@ const ChatApp = () => {
 
     const handleUpdateGroup = async () => {
       if (!selectedChat?.groupId && !selectedChat?._id) return;
-      
+
       const groupId = selectedChat.groupId || selectedChat._id;
       const formData = new FormData();
-      
+
       if (editGroupName.trim()) formData.append("name", editGroupName);
       if (editGroupBio.trim()) formData.append("bio", editGroupBio);
       if (editGroupImage) formData.append("image", editGroupImage);
@@ -669,10 +1583,10 @@ const ChatApp = () => {
 
     const handleToggleMute = async () => {
       if (!selectedChat?.groupId && !selectedChat?._id) return;
-      
+
       const groupId = selectedChat.groupId || selectedChat._id;
       const muteValue = isMuted ? "disable" : "enable";
-      
+
       await dispatch(toggleGroupMute({ groupId, mute: muteValue }));
       // Refresh group info
       await dispatch(getGroupInfo(groupId));
@@ -681,27 +1595,40 @@ const ChatApp = () => {
     return (
       <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[500px]">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
-          <button 
-            onClick={() => setScreen("chat")} 
+          <button
+            onClick={() => setScreen("chat")}
             className="text-gray-600 hover:text-gray-900"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h3 className="font-semibold text-sm text-gray-900">Group Info</h3>
+          <button
+            onClick={handleLeaveGroup}
+            className="w-full text-red-500 text-sm mt-3"
+          >
+            Leave Group
+          </button>
+
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           {groupInfoLoading ? (
-            <p className="text-center text-gray-400 text-sm mt-10">Loading...</p>
+            <p className="text-center text-gray-400 text-sm mt-10">
+              <img src="https://assets-v2.lottiefiles.com/a/90a4c0f2-1152-11ee-bda3-830a7a1975f2/iBALXy6uaH.gif" alt="" />
+            </p>
           ) : (
             <>
               {/* Group Image & Name */}
               <div className="flex flex-col items-center mb-6">
                 <div className="relative mb-3">
-                  <img 
-                    src={editGroupImagePreview || groupInfoData?.image || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                    alt={groupInfoData?.name} 
-                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200" 
+                  <img
+                    src={
+                      editGroupImagePreview ||
+                      groupInfoData?.image ||
+                      "https://randomuser.me/api/portraits/men/1.jpg"
+                    }
+                    alt={groupInfoData?.name}
+                    className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
                   />
                   {isAdmin && (
                     <label className="absolute bottom-0 right-0 w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center cursor-pointer hover:bg-orange-600">
@@ -715,11 +1642,17 @@ const ChatApp = () => {
                     </label>
                   )}
                 </div>
-                <h2 className="font-semibold text-lg text-gray-900">{groupInfoData?.name}</h2>
+                <h2 className="font-semibold text-lg text-gray-900">
+                  {groupInfoData?.name}
+                </h2>
                 {groupInfoData?.bio && (
-                  <p className="text-sm text-gray-500 text-center mt-1">{groupInfoData?.bio}</p>
+                  <p className="text-sm text-gray-500 text-center mt-1">
+                    {groupInfoData?.bio}
+                  </p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">{groupInfoData?.numberOfMembers || 0} members</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {groupInfoData?.numberOfMembers || 0} members
+                </p>
               </div>
 
               {/* Mute Toggle */}
@@ -732,8 +1665,14 @@ const ChatApp = () => {
                   <span className="text-sm text-gray-900">
                     {isMuted ? "Unmute Notifications" : "Mute Notifications"}
                   </span>
-                  <div className={`w-10 h-6 rounded-full ${isMuted ? "bg-orange-500" : "bg-gray-300"} transition-colors`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${isMuted ? "translate-x-4" : "translate-x-0"}`} />
+                  <div
+                    className={`w-10 h-6 rounded-full ${isMuted ? "bg-orange-500" : "bg-gray-300"
+                      } transition-colors`}
+                  >
+                    <div
+                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${isMuted ? "translate-x-4" : "translate-x-0"
+                        }`}
+                    />
                   </div>
                 </button>
               </div>
@@ -741,7 +1680,9 @@ const ChatApp = () => {
               {/* Edit Group (Admin Only) */}
               {isAdmin && (
                 <div className="mb-4 pb-4 border-b border-gray-200">
-                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Edit Group</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                    Edit Group
+                  </h4>
                   <div className="space-y-3">
                     <input
                       type="text"
@@ -759,7 +1700,12 @@ const ChatApp = () => {
                     />
                     <button
                       onClick={handleUpdateGroup}
-                      disabled={updateGroupLoading || (!editGroupName.trim() && !editGroupBio.trim() && !editGroupImage)}
+                      disabled={
+                        updateGroupLoading ||
+                        (!editGroupName.trim() &&
+                          !editGroupBio.trim() &&
+                          !editGroupImage)
+                      }
                       className="w-full bg-orange-500 text-white py-2 rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
                     >
                       {updateGroupLoading ? "Updating..." : "Update Group"}
@@ -776,23 +1722,34 @@ const ChatApp = () => {
                 <div className="space-y-2">
                   {members.map((memberData) => {
                     const member = memberData.member || memberData;
-                    const isMemberAdmin = groupInfoData?.admin?._id === member._id;
+                    const isMemberAdmin =
+                      groupInfoData?.admin?._id === member._id;
                     return (
-                      <div key={memberData._id || member._id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg">
-                        <img 
-                          src={member.profilePicture || "https://randomuser.me/api/portraits/men/1.jpg"} 
-                          alt={member.name} 
-                          className="w-10 h-10 rounded-full object-cover" 
+                      <div
+                        key={memberData._id || member._id}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg"
+                      >
+                        <img
+                          src={
+                            member.profilePicture ||
+                            "https://randomuser.me/api/portraits/men/1.jpg"
+                          }
+                          alt={member.name}
+                          className="w-10 h-10 rounded-full object-cover"
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">
                             {member.name}
                             {isMemberAdmin && (
-                              <span className="text-xs text-orange-500 ml-2">(Admin)</span>
+                              <span className="text-xs text-orange-500 ml-2">
+                                (Admin)
+                              </span>
                             )}
                           </p>
                           {member.email && (
-                            <p className="text-xs text-gray-500">{member.email}</p>
+                            <p className="text-xs text-gray-500">
+                              {member.email}
+                            </p>
                           )}
                         </div>
                       </div>
@@ -810,12 +1767,20 @@ const ChatApp = () => {
   // Group Details Screen
   if (screen === "groupDetails") {
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
+      <div
+        ref={chatPopupRef}
+        className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96"
+      >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
-          <button onClick={() => setScreen("createGroup")} className="text-gray-600">
+          <button
+            onClick={() => setScreen("createGroup")}
+            className="text-gray-600"
+          >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h3 className="font-semibold text-sm text-gray-900">Add Group Details</h3>
+          <h3 className="font-semibold text-sm text-gray-900">
+            Add Group Details
+          </h3>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
@@ -823,7 +1788,11 @@ const ChatApp = () => {
             <div className="relative">
               <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center border-2 border-dashed border-orange-500 overflow-hidden">
                 {groupImagePreview ? (
-                  <img src={groupImagePreview} alt="Group preview" className="w-full h-full object-cover" />
+                  <img
+                    src={groupImagePreview}
+                    alt="Group preview"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <span className="text-2xl">📷</span>
                 )}
@@ -841,7 +1810,9 @@ const ChatApp = () => {
           </div>
 
           <div className="mb-4">
-            <label className="text-sm font-semibold text-gray-900 mb-2 block">Name</label>
+            <label className="text-sm font-semibold text-gray-900 mb-2 block">
+              Name
+            </label>
             <input
               type="text"
               placeholder="Group name"
@@ -852,27 +1823,161 @@ const ChatApp = () => {
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-gray-900 mb-2 block">Bio</label>
-            <textarea 
-              placeholder="Group description..." 
+            <label className="text-sm font-semibold text-gray-900 mb-2 block">
+              Bio
+            </label>
+            <textarea
+              placeholder="Group description..."
               value={groupBio}
               onChange={(e) => setGroupBio(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 resize-none" 
-              rows="3" 
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-orange-500 resize-none"
+              rows="3"
             />
           </div>
         </div>
 
-        <button 
-          onClick={handleCreateGroup} 
-          disabled={createGroupLoading || addMemberLoading || !groupName.trim() || selectedUsers.length === 0}
+        <button
+          onClick={handleCreateGroup}
+          disabled={
+            createGroupLoading ||
+            addMemberLoading ||
+            !groupName.trim() ||
+            selectedUsers.length === 0
+          }
           className="w-full bg-orange-500 text-white py-2 font-semibold hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
-          {createGroupLoading || addMemberLoading ? "Creating..." : "Create Group"}
+          {createGroupLoading || addMemberLoading
+            ? "Creating..."
+            : "Create Group"}
         </button>
       </div>
     );
   }
+
+  // NEW CHAT SCREEN
+  if (screen === "newChat") {
+    const filteredUsers = selectedNewChatUser
+      ? availableUsers.filter(
+        (u) => u._id !== selectedNewChatUser._id
+      )
+      : availableUsers;
+
+    return (
+      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96">
+
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b">
+          <button
+            onClick={() => {
+              setSelectedNewChatUser(null);
+              setSearchTerm("");
+              setScreen("list");
+            }}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h3 className="font-semibold text-sm">New Message</h3>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-2 border-b">
+          <input
+            type="text"
+            placeholder="Search user..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+          />
+        </div>
+
+        {/* Selected User Chip */}
+        {selectedNewChatUser && (
+          <div className="px-4 py-2 border-b bg-gray-50">
+            <div className="inline-flex items-center gap-2 bg-orange-100 px-3 py-1 rounded-full">
+              <img
+                src={
+                  selectedNewChatUser.profilePicture ||
+                  "https://randomuser.me/api/portraits/men/1.jpg"
+                }
+                className="w-6 h-6 rounded-full"
+              />
+              <span className="text-sm font-medium text-gray-800">
+                {selectedNewChatUser.name}
+              </span>
+              <button
+                onClick={() => setSelectedNewChatUser(null)}
+                className="text-orange-600 hover:text-orange-800"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Users List */}
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          {searchUsersLoading ? (
+            <p className="text-center text-sm text-gray-400">
+              Searching...
+            </p>
+          ) : filteredUsers.length > 0 ? (
+            filteredUsers.map((u) => (
+              <div
+                key={u._id}
+                onClick={() => setSelectedNewChatUser(u)}
+                className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={
+                      u.profilePicture ||
+                      "https://randomuser.me/api/portraits/men/1.jpg"
+                    }
+                    className="w-9 h-9 rounded-full"
+                  />
+                  <div>
+                    <p className="text-sm font-medium">{u.name}</p>
+                    <p className="text-xs text-gray-400">{u.email}</p>
+                  </div>
+                </div>
+
+                {/* Checkbox */}
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
+      ${selectedNewChatUser?._id === u._id
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-300"
+                    }`}
+                >
+                  {selectedNewChatUser?._id === u._id && (
+                    <Check className="w-3 h-3 text-white" />
+                  )}
+                </div>
+              </div>
+
+            ))
+          ) : (
+            <p className="text-center text-sm text-gray-400 mt-4">
+              No users found
+            </p>
+          )}
+        </div>
+
+        {/* Start Chat Button */}
+        {selectedNewChatUser && (
+          <div className="px-4 py-3 border-t">
+            <button
+              onClick={() => handleStartChat(selectedNewChatUser)}
+              className="w-full bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600"
+            >
+              Start Chat
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
 };
 
 export default ChatApp;

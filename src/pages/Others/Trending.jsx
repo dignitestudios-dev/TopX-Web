@@ -250,10 +250,6 @@ export default function Trending() {
                                                     Subscribe
                                                 </button>
                                             )}
-
-
-
-
                                         </div>
                                     </div>
                                 ))
