@@ -8,6 +8,7 @@ const initialState = {
     chatDetail: null,
     chatDetailMessages: [],
     chatDetailPagination: null,
+    currentChatId: null,
     pagination: null,
     groupChatsPagination: null,
     chatsLoading: false,
@@ -353,6 +354,79 @@ const chatSlice = createSlice({
             state.chatDetailMessages = [];
             state.chatDetailPagination = null;
             state.chatDetailError = null;
+            state.currentChatId = null;
+        },
+
+        setCurrentChatId(state, action) {
+            state.currentChatId = action.payload;
+        },
+
+        addMessage(state, action) {
+            const { chatId, message, unreadCount } = action.payload;
+            // Add to chatDetailMessages if it's the current chat
+            if (state.currentChatId === chatId) {
+                state.chatDetailMessages = [...state.chatDetailMessages, message];
+            }
+            // Update the chat list lastMessage
+            const chatIndex = state.chats.findIndex(chat => chat._id === chatId);
+            if (chatIndex !== -1) {
+                state.chats[chatIndex].lastMessage = message;
+                if (state.currentChatId !== chatId) {
+                    state.chats[chatIndex].unreadCount = (state.chats[chatIndex].unreadCount || 0) + unreadCount;
+                }
+            }
+            // Also check group chats
+            const groupChatIndex = state.groupChats.findIndex(chat => chat._id === chatId);
+            if (groupChatIndex !== -1) {
+                state.groupChats[groupChatIndex].lastMessage = message;
+                if (state.currentChatId !== chatId) {
+                    state.groupChats[groupChatIndex].unreadCount = (state.groupChats[groupChatIndex].unreadCount || 0) + unreadCount;
+                }
+            }
+        },
+
+        markChatAsRead(state, action) {
+            const { chatId } = action.payload;
+            const chatIndex = state.chats.findIndex(chat => chat._id === chatId);
+            if (chatIndex !== -1) {
+                state.chats[chatIndex].unreadCount = 0;
+            }
+            const groupChatIndex = state.groupChats.findIndex(chat => chat._id === chatId);
+            if (groupChatIndex !== -1) {
+                state.groupChats[groupChatIndex].unreadCount = 0;
+            }
+        },
+
+        increaseUnread(state, action) {
+            const { chatId } = action.payload;
+            const chatIndex = state.chats.findIndex(chat => chat._id === chatId);
+            if (chatIndex !== -1) {
+                state.chats[chatIndex].unreadCount = (state.chats[chatIndex].unreadCount || 0) + 1;
+            }
+            const groupChatIndex = state.groupChats.findIndex(chat => chat._id === chatId);
+            if (groupChatIndex !== -1) {
+                state.groupChats[groupChatIndex].unreadCount = (state.groupChats[groupChatIndex].unreadCount || 0) + 1;
+            }
+        },
+
+        removeChat(state, action) {
+            const { chatId } = action.payload;
+            state.chats = state.chats.filter(chat => chat._id !== chatId);
+            state.groupChats = state.groupChats.filter(chat => chat._id !== chatId);
+            if (state.currentChatId === chatId) {
+                state.chatDetail = null;
+                state.chatDetailMessages = [];
+                state.currentChatId = null;
+            }
+        },
+
+        blockChat(state, action) {
+            const { chatId } = action.payload;
+            // Mark as blocked, perhaps disable sending
+            const chatIndex = state.chats.findIndex(chat => chat._id === chatId);
+            if (chatIndex !== -1) {
+                state.chats[chatIndex].blocked = true;
+            }
         },
     },
 
@@ -379,8 +453,9 @@ const chatSlice = createSlice({
             })
             .addCase(fetchIndividualChatDetail.fulfilled, (state, action) => {
                 state.chatDetailLoading = false;
-                state.chatDetailMessages = action.payload.messages || [];
+                state.chatDetailMessages = (action.payload.messages || []).reverse();
                 state.chatDetailPagination = action.payload.pagination;
+                state.currentChatId = action.meta.arg; // chatId
             })
             .addCase(fetchIndividualChatDetail.rejected, (state, action) => {
                 state.chatDetailLoading = false;
@@ -513,6 +588,7 @@ const chatSlice = createSlice({
                 state.chatDetailLoading = false;
                 state.chatDetailMessages = action.payload.messages || [];
                 state.chatDetailPagination = action.payload.pagination;
+                state.currentChatId = action.meta.arg.groupId;
             })
             .addCase(fetchGroupChatHistory.rejected, (state, action) => {
                 state.chatDetailLoading = false;
@@ -524,6 +600,12 @@ const chatSlice = createSlice({
 export const {
     resetChatState,
     resetChatDetail,
+    setCurrentChatId,
+    addMessage,
+    markChatAsRead,
+    increaseUnread,
+    removeChat,
+    blockChat,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;
