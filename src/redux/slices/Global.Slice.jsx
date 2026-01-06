@@ -6,6 +6,7 @@ const initialState = {
   error: null,
   success: null,
   globalSearch: [], // yahan save hoga data
+  apiTrigger: false,
 };
 
 // ================= GET TOPICS =================
@@ -34,6 +35,9 @@ const globalSlice = createSlice({
       state.success = null;
       state.globalSearch = null;
     },
+    setApiTrigger(state, action) {
+      state.apiTrigger = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -53,5 +57,5 @@ const globalSlice = createSlice({
   },
 });
 
-export const { resetSearch } = globalSlice.actions;
+export const { resetSearch, setApiTrigger } = globalSlice.actions;
 export default globalSlice.reducer;

@@ -1,8 +1,7 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
 
-const DeletePostModal = ({ onClose, onConfirm }) => {
-  
+const DeletePostModal = ({ onClose, onConfirm, isLoading }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
       <div className="bg-white w-[350px] rounded-2xl shadow-xl p-6 text-center">
@@ -31,11 +30,10 @@ const DeletePostModal = ({ onClose, onConfirm }) => {
           <button
             onClick={() => {
               onConfirm();
-              onClose();
             }}
             className="flex-1 bg-red-500 hover:bg-red-600 text-white font-medium py-2 rounded-lg transition-colors"
           >
-            Delete Now
+            {isLoading ? "Deleting..." : "Delete Now"}
           </button>
         </div>
       </div>

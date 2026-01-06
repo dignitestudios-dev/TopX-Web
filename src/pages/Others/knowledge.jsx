@@ -24,10 +24,20 @@ import FloatingChatWidget from "../../components/global/ChatWidget";
 import FloatingChatButton from "../../components/global/ChatWidget";
 import CreateKnowledgePostModal from "../../components/global/CreateKnowledgePostModal";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchKnowledgeFeed, likePost } from "../../redux/slices/knowledgepost.slice";
+import {
+  fetchKnowledgeFeed,
+  likePost,
+} from "../../redux/slices/knowledgepost.slice";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import KnowledgePostComments from "../../components/global/KnowledgePostComments";
+import SharePostModal from "../../components/global/SharePostModal";
+import ShareToChatsModal from "../../components/global/ShareToChatsModal";
+import PostStoryModal from "../../components/global/PostStoryModal";
+import ShareRepostModal from "../../components/global/ShareRepostModal";
+import ReportModal from "../../components/global/ReportModal";
+import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
+import { SuccessToast } from "../../components/global/Toaster";
 
 export default function Knowledge() {
   const [liked, setLiked] = useState({});
@@ -37,6 +47,16 @@ export default function Knowledge() {
   const [page, setPage] = useState(1);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentedId, setCommentedId] = useState(null);
+  // Repost
+  const [moreOpenId, setMoreOpenId] = useState(null);
+
+  const [reportmodal, setReportmodal] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [sharepost, setSharepost] = useState(false);
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports
+  );
+  const dropdownRef = useRef(null);
   useEffect(() => {
     dispatch(fetchKnowledgeFeed({ page: page, limit: 10 }));
   }, [dispatch, page]);
@@ -120,7 +140,35 @@ export default function Knowledge() {
     // Call API
     dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
-  console.log(knowledgeFeed,"knowledge feed post--------->")
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setMoreOpenId(null);
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (reportSuccess) {
+      SuccessToast("Report submitted successfully");
+
+      // reset success so it does not fire again
+      dispatch(resetReportState());
+
+      // optional: close modal
+      setReportmodal(false);
+    }
+  }, [reportSuccess, dispatch]);
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
+  ];
+
   return (
     <div className="flex  min-h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -161,7 +209,34 @@ export default function Knowledge() {
                       </p>
                     </div>
                   </div>
-                  <MoreHorizontal className="w-5 h-5 text-gray-400 cursor-pointer" />
+                  <div
+                    className="relative"
+                    onClick={(e) => e.stopPropagation()}
+                    ref={dropdownRef}
+                  >
+                    <button
+                      onClick={() =>
+                        setMoreOpenId(moreOpenId === post._id ? null : post._id)
+                      }
+                      className="p-2 hover:bg-gray-50 rounded-full transition"
+                    >
+                      <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                    </button>
+
+                    {moreOpenId === post._id && (
+                      <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+                        <button
+                          onClick={() => {
+                            setMoreOpenId(null);
+                            setReportmodal(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Report
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Post Content */}
@@ -216,7 +291,10 @@ export default function Knowledge() {
                     <span>{post.commentsCount}</span>
                   </button>
 
-                  <button className="flex items-center gap-2 hover:text-orange-600">
+                  <button
+                    onClick={() => setSharepost(true)}
+                    className="flex items-center gap-2 hover:text-orange-600"
+                  >
                     <Share2 className="w-5 h-5" />
                     <span>{post.sharesCount}</span>
                   </button>
@@ -226,6 +304,46 @@ export default function Knowledge() {
                 {commentsOpen && commentedId == post?._id && (
                   <KnowledgePostComments postId={post._id} />
                 )}
+                {/* Share Post Modal */}
+                {sharepost && (
+                  <SharePostModal
+                    selectedOption={selectedOption}
+                    setSelectedOption={setSelectedOption}
+                    setSharepost={setSharepost}
+                    options={options}
+                  />
+                )}
+
+                {(selectedOption === "Share in Individuals Chats" ||
+                  selectedOption === "Share in Group Chats") && (
+                  <ShareToChatsModal onClose={setSelectedOption} />
+                )}
+
+                {selectedOption === "Share to your Story" && (
+                  <PostStoryModal onClose={setSelectedOption} />
+                )}
+                {selectedOption === "Share with Topic Page" && (
+                  <ShareRepostModal
+                    postId={post?._id}
+                    onClose={setSelectedOption}
+                  />
+                )}
+
+                <ReportModal
+                  isOpen={reportmodal}
+                  onClose={() => setReportmodal(false)}
+                  loading={reportLoading} // 👈 ADD THIS
+                  onSubmit={(reason) => {
+                    dispatch(
+                      sendReport({
+                        reason,
+                        targetModel: "Post",
+                        targetId: post?._id,
+                        isReported: true,
+                      })
+                    );
+                  }}
+                />
               </div>
             ))}
 

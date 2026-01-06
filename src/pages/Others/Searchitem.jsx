@@ -1,14 +1,24 @@
 import { ChevronRight } from "lucide-react";
 import React, { useState } from "react";
 import PostCard from "../../components/global/PostCard";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import CollectionFeedPostCard from "../../components/global/CollectionFeedPostCard";
+import { VscReport } from "react-icons/vsc";
+import {
+  addPageToCollections,
+  removePageFromCollections,
+} from "../../redux/slices/collection.slice";
+import CollectionModal from "../../components/global/CollectionModal";
+import { setApiTrigger } from "../../redux/slices/Global.Slice";
 
 const SearchItem = () => {
   const [activeTab, setActiveTab] = useState("Pages");
   const { globalSearch } = useSelector((state) => state.globalSearch);
   const [liked, setLiked] = useState({});
-
+  const dispatch = useDispatch();
+  const [openModal, setOpenModal] = useState(false);
+  const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
+  const [selectedPage, setSelectedPage] = useState(null);
   const toggleLike = (postId) => {
     setLiked((prev) => ({
       ...prev,
@@ -21,7 +31,35 @@ const SearchItem = () => {
   const posts = globalSearch?.posts || [];
   const people = globalSearch?.users || [];
   const keywords = globalSearch?.keywords || { posts: [], pages: [] };
+  const handleSubscribeClick = (page) => {
+    console.log(page, "page-record");
+    setSelectedPage(page);
+    setOpenModal(true);
+  };
+  const handleUnsubscribe = (page) => {
+    setUnsubscribingPageId(page._id); // mark specific page as loading
 
+    dispatch(
+      removePageFromCollections({
+        collections: page.collections || [],
+        page: page._id,
+      })
+    ).then(() => {
+      dispatch(setApiTrigger(true));
+      setUnsubscribingPageId(null); // stop loader for that page only
+    });
+  };
+  const handleSaveToCollection = ({ selectedCollections }) => {
+    dispatch(
+      addPageToCollections({
+        collections: selectedCollections,
+        page: selectedPage._id,
+      })
+    ).then(() => {
+      dispatch(setApiTrigger(true));
+      setOpenModal(false);
+    });
+  };
   return (
     <div className="container max-w-6xl mx-auto p-5">
       {/* Tabs */}
@@ -62,9 +100,35 @@ const SearchItem = () => {
                   <p className="text-xs text-gray-400 mb-2">
                     Followers: {page.followersCount}
                   </p>
-                  <button className="bg-orange-500 text-white px-4 py-1 rounded-full text-sm">
-                    Subscribe
-                  </button>
+                  {page.isSubscribed ? (
+                    <button
+                      onClick={() => handleUnsubscribe(page)}
+                      disabled={unsubscribingPageId === page._id}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
+                                                  ${
+                                                    unsubscribingPageId ===
+                                                    page._id
+                                                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                                      : "bg-gray-200 text-gray-700"
+                                                  }`}
+                    >
+                      {unsubscribingPageId === page._id ? (
+                        <span className="flex items-center gap-2">
+                          <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
+                          Removing...
+                        </span>
+                      ) : (
+                        "Unsubscribe"
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSubscribeClick(page)}
+                      className="bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition-all"
+                    >
+                      Subscribe
+                    </button>
+                  )}
                 </div>
               ))
             ) : (
@@ -163,6 +227,15 @@ const SearchItem = () => {
               <p className="text-center text-gray-500">No users found.</p>
             )}
           </div>
+        )}
+
+        {openModal && (
+          <CollectionModal
+            isOpen={openModal}
+            onClose={() => setOpenModal(false)}
+            page={selectedPage}
+            onSave={handleSaveToCollection}
+          />
         )}
       </div>
     </div>

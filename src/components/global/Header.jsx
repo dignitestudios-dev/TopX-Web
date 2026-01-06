@@ -22,7 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData, logout } from "../../redux/slices/auth.slice";
 import Cookies from "js-cookie";
 import useDebounce from "../../lib/useDebounce";
-import { getGlobalSearch, resetSearch } from "../../redux/slices/Global.Slice";
+import { getGlobalSearch, resetSearch, setApiTrigger } from "../../redux/slices/Global.Slice";
 
 const Header = () => {
   const dispatch = useDispatch();
@@ -40,7 +40,9 @@ const Header = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500); // 500ms debounce
-  const { globalSearch } = useSelector((state) => state.globalSearch);
+  const { globalSearch, apiTrigger } = useSelector(
+    (state) => state.globalSearch
+  );
 
   useEffect(() => {
     dispatch(getAllUserData());
@@ -53,6 +55,14 @@ const Header = () => {
       dispatch(resetSearch());
     }
   }, [debouncedSearch, dispatch]);
+
+  useEffect(() => {
+    if (apiTrigger) {
+      dispatch(getGlobalSearch(debouncedSearch)).finally(() => {
+        dispatch(setApiTrigger(false)); // 🔥 reset trigger
+      });
+    }
+  }, [apiTrigger, debouncedSearch, dispatch]);
 
   const navigate = useNavigate("");
   // const handleLogout = () => {
@@ -133,7 +143,10 @@ const Header = () => {
         {/* ✅ Search Bar - Desktop */}
         {/* Desktop Search */}
         <div className="hidden md:flex flex-1 max-w-md pt-3">
-          <div className="relative w-full">
+          <div
+            onClick={() => navigate("/search-items")}
+            className="relative w-full"
+          >
             <Search className="absolute left-3 top-3 text-gray-400" size={18} />
             <input
               type="text"

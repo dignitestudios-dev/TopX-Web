@@ -1,12 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import { likePost } from "../../redux/slices/postfeed.slice";
 import CommentsSection from "./CommentsSection";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import SharePostModal from "./SharePostModal";
+import ShareToChatsModal from "./ShareToChatsModal";
+import PostStoryModal from "./PostStoryModal";
+import ShareRepostModal from "./ShareRepostModal";
+import ReportModal from "./ReportModal";
+import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
+import { SuccessToast } from "./Toaster";
 
 export default function TrendingPostCard({ post, liked, toggleLike }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // Repost
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [reportmodal, setReportmodal] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [sharepost, setSharepost] = useState(false);
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports
+  );
+
+  const dropdownRef = useRef(null);
   const dispatch = useDispatch();
+
   const timeAgo = (createdAt) => {
     const now = new Date();
     const then = new Date(createdAt);
@@ -41,8 +59,34 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
     dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
 
-  console.log(post, "postcode");
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
+  useEffect(() => {
+    if (reportSuccess) {
+      SuccessToast("Report submitted successfully");
+
+      // reset success so it does not fire again
+      dispatch(resetReportState());
+
+      // optional: close modal
+      setReportmodal(false);
+    }
+  }, [reportSuccess, dispatch]);
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
+  ];
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
       {/* Header */}
@@ -65,7 +109,29 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
             </p>
           </div>
         </div>
-        <MoreHorizontal className="w-5 h-5 text-gray-400 cursor-pointer hover:text-gray-600" />
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setMoreOpen(!moreOpen)}
+            className="p-2 hover:bg-gray-50 rounded-full transition"
+          >
+            <MoreHorizontal className="w-4 h-4 text-gray-500" />
+          </button>
+
+          {moreOpen && (
+            <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+              <button
+                onClick={() => {
+                  setMoreOpen(false);
+                  setReportmodal(!reportmodal);
+                  console.log("Report clicked");
+                }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+              >
+                Report
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Page Info */}
@@ -181,12 +247,53 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           <span className="text-sm font-medium">{post.stats.comments}</span>
         </button>
 
-        <button className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition">
+        <button
+          onClick={() => setSharepost(true)}
+          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+        >
           <Share2 className="w-5 h-5" />
           <span className="text-sm font-medium">{post.stats.shares}</span>
         </button>
       </div>
       {commentsOpen && <CommentsSection postId={post.id} />}
+
+      {/* Share Post Modal */}
+      {sharepost && (
+        <SharePostModal
+          selectedOption={selectedOption}
+          setSelectedOption={setSelectedOption}
+          setSharepost={setSharepost}
+          options={options}
+        />
+      )}
+
+      {(selectedOption === "Share in Individuals Chats" ||
+        selectedOption === "Share in Group Chats") && (
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
+
+      {selectedOption === "Share to your Story" && (
+        <PostStoryModal onClose={setSelectedOption} />
+      )}
+      {selectedOption === "Share with Topic Page" && (
+        <ShareRepostModal postId={post.id} onClose={setSelectedOption} />
+      )}
+
+      <ReportModal
+        isOpen={reportmodal}
+        onClose={() => setReportmodal(false)}
+        loading={reportLoading} // 👈 ADD THIS
+        onSubmit={(reason) => {
+          dispatch(
+            sendReport({
+              reason,
+              targetModel: "Post",
+              targetId: post.id,
+              isReported: true,
+            })
+          );
+        }}
+      />
     </div>
   );
 }

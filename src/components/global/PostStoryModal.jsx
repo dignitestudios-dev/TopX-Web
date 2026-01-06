@@ -91,7 +91,7 @@ const PostStoryModal = ({ onClose }) => {
         {/* Footer */}
         <div className="p-4 border-t">
           <button
-            onClick={() => alert(`Story posted on ${selectedPage}!`)}
+            onClick={() => console.log(`Story posted on ${selectedPage}!`)}
             className="w-full bg-orange-600 text-white py-2.5 rounded-full font-medium hover:bg-orange-700 transition-colors"
           >
             Post Now

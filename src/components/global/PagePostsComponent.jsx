@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Heart,
@@ -14,11 +14,17 @@ import { sendReport, resetReportState } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "./Toaster";
 import { likePost } from "../../redux/slices/postfeed.slice";
 import CommentsSection from "./CommentsSection";
+import SharePostModal from "./SharePostModal";
+import ShareToChatsModal from "./ShareToChatsModal";
+import PostStoryModal from "./PostStoryModal";
+import ShareRepostModal from "./ShareRepostModal";
 
 export default function PagePostsComponent({ pageId }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
-
+  const [selectedOption, setSelectedOption] = useState("");
+  const [sharepost, setSharepost] = useState(false);
+  const dropdownRef = useRef(null);
   const dispatch = useDispatch();
   const { pagePosts, pagePostsLoading, pagePostsPagination } = useSelector(
     (state) => state.trending
@@ -145,8 +151,12 @@ export default function PagePostsComponent({ pageId }) {
       </div>
     );
   }
-  console.log(pagePosts, "page-posts-detail");
-
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
+  ];
   return (
     <div className="min-h-screen py-6 bg-gray-50">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
@@ -314,7 +324,10 @@ export default function PagePostsComponent({ pageId }) {
                         </span>
                       </button>
 
-                      <button className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition">
+                      <button
+                        onClick={() => setSharepost(true)}
+                        className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+                      >
                         <Share2 className="w-5 h-5" />
                         <span className="text-sm font-medium">
                           {post?.sharesCount}
@@ -438,6 +451,26 @@ export default function PagePostsComponent({ pageId }) {
           )}
         </div>
       </div>
+      {sharepost && (
+        <SharePostModal
+          selectedOption={selectedOption}
+          setSelectedOption={setSelectedOption}
+          setSharepost={setSharepost}
+          options={options}
+        />
+      )}
+
+      {(selectedOption === "Share in Individuals Chats" ||
+        selectedOption === "Share in Group Chats") && (
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
+
+      {selectedOption === "Share to your Story" && (
+        <PostStoryModal onClose={setSelectedOption} />
+      )}
+      {selectedOption === "Share with Topic Page" && (
+        <ShareRepostModal postId={post.id} onClose={setSelectedOption} />
+      )}
 
       {/* Report Modal */}
       <ReportModal

@@ -18,6 +18,8 @@ import {
   getcommentsofpost,
   commentonpost,
   deleteComment,
+  deletePost,
+  editPost,
 } from "../../redux/slices/posts.slice";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { SuccessToast } from "./Toaster";
@@ -72,6 +74,7 @@ const PostCard = ({
   const [showpopup, setShowpopup] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState();
   const popupRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -84,7 +87,9 @@ const PostCard = ({
     "Share in Group Chats",
   ];
 
-  const { comments, commentsLoading } = useSelector((state) => state.posts);
+  const { comments, commentsLoading, isLoading } = useSelector(
+    (state) => state.posts
+  );
 
   console.log(comments, "comments");
 
@@ -191,6 +196,12 @@ const PostCard = ({
     });
   };
 
+  const handleDeleteModal = async () => {
+    await dispatch(deletePost({ postId: selectedPost })).unwrap();
+    setDeleteModal(false);
+    await dispatch(getMyPosts({}));
+  };
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
@@ -235,6 +246,7 @@ const PostCard = ({
               >
                 <button
                   onClick={() => {
+                    setSelectedPost(post);
                     setEditModal(true);
                     setShowpopup(false);
                   }}
@@ -245,6 +257,7 @@ const PostCard = ({
 
                 <button
                   onClick={() => {
+                    setSelectedPost(post?._id);
                     setDeleteModal(true);
                     setShowpopup(false);
                   }}
@@ -621,19 +634,28 @@ const PostCard = ({
       {editModal && (
         <EditPostModal
           post={post}
+          isLoading={isLoading}
           onClose={() => setEditModal(false)}
-          onSave={(updatedPost) => console.log("Updated Post:", updatedPost)}
+          onSave={async (updatedPost) => {
+            await dispatch(
+              editPost({
+                postId: selectedPost?._id,
+                formData: updatedPost,
+              })
+            );
+            await dispatch(getMyPosts({}));
+          }}
         />
       )}
 
       {deleteModal && (
         <DeletePostModal
           onClose={() => setDeleteModal(false)}
-          onConfirm={() => console.log("✅ Post deleted")}
+          onConfirm={() => handleDeleteModal()}
+          isLoading={isLoading}
         />
       )}
     </>
   );
 };
-
 export default PostCard;

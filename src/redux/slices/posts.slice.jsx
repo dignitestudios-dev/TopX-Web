@@ -5,6 +5,7 @@ const initialState = {
   error: null,
   success: false,
   postsLoading: false,
+  isLoading: false,
   posts: [],
   pagination: null,
   pagepostLoading: false,
@@ -47,6 +48,33 @@ export const createStory = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to create post"
+      );
+    }
+  }
+);
+
+export const deletePost = createAsyncThunk(
+  "posts/deletePost",
+  async ({ postId }, thunkAPI) => {
+    try {
+      const res = await axios.delete(`/posts/${postId}`);
+      return res.data; // { success, message, data:{Post} }
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete Post"
+      );
+    }
+  }
+);
+export const editPost = createAsyncThunk(
+  "posts/editPost",
+  async ({ postId,formData }, thunkAPI) => {
+    try {
+      const res = await axios.put(`/posts/${postId}`,formData);
+      return res.data; // { success, message, data:{Post} }
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete Post"
       );
     }
   }
@@ -192,6 +220,34 @@ const postsSlice = createSlice({
 
       .addCase(createPost.rejected, (state, action) => {
         state.postsLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(deletePost.pending, (state) => {
+        state.isLoading = true;
+        state.success = false;
+      })
+
+      .addCase(deletePost.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.success = true;
+      })
+
+      .addCase(deletePost.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      .addCase(editPost.pending, (state) => {
+        state.isLoading = true;
+        state.success = false;
+      })
+
+      .addCase(editPost.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.success = true;
+      })
+
+      .addCase(editPost.rejected, (state, action) => {
+        state.isLoading = false;
         state.error = action.payload;
       })
       // ------------------

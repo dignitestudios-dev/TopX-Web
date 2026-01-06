@@ -3,22 +3,18 @@ import { Layers, BookmarkMinus } from "lucide-react";
 import { FaBookmark } from "react-icons/fa6";
 import { ballone, balltwo } from "../../assets/export";
 import { Link } from "react-router";
+import { useDispatch } from "react-redux";
+import { updateSavedCollections } from "../../redux/slices/collection.slice";
 
-const MySubscriptiononprofile = ({ userCollections }) => {
+const MySubscriptiononprofile = ({ userCollections,toggleBookmark }) => {
   const [bookmarked, setBookmarked] = useState({});
-
+  const dispatch = useDispatch();
   const subscriptions = [
     { id: 1, title: "My Basketball", url: "/subscriptions-category" },
     { id: 2, title: "My Fitness", url: "/subscriptions-category" },
     { id: 3, title: "My Cooking", url: "/subscriptions-category" },
   ];
-  console.log(userCollections, "userCollections----->");
-  const toggleBookmark = (id) => {
-    setBookmarked((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
+
 
   return (
     <div className="max-w-full bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -50,7 +46,11 @@ const MySubscriptiononprofile = ({ userCollections }) => {
                   </div>
                   {item?.pages?.length > 3 && (
                     <p className="text-xs text-gray-500 font-medium">
-                      <span className="text-black font-[600]"> +{item.pages.length - 3}</span> Pages
+                      <span className="text-black font-[600]">
+                        {" "}
+                        +{item.pages.length - 3}
+                      </span>{" "}
+                      Pages
                     </p>
                   )}
                 </div>
@@ -59,10 +59,10 @@ const MySubscriptiononprofile = ({ userCollections }) => {
 
             {/* Bookmark toggle */}
             <button
-              onClick={() => toggleBookmark(item.id)}
+              onClick={() => toggleBookmark(item._id)}
               className="transition-transform hover:scale-110"
             >
-              {bookmarked[item.id] ? (
+              {item?.isSavedByMe ? (
                 <FaBookmark className="w-5 h-5 text-[#E0551F]" />
               ) : (
                 <BookmarkMinus className="w-5 h-5 text-black" />

@@ -25,6 +25,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstImage = hasImages ? post.postimage[0] : null;
   const [reportmodal, setReportmodal] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports
   );
@@ -72,15 +74,13 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     }
   }, [reportSuccess, dispatch]);
 
-  const [selectedOption, setSelectedOption] = useState("");
-  const [sharepost, setSharepost] = useState(false);
+
   const options = [
     "Share to your Story",
     "Share with Topic Page",
     "Share in Individuals Chats",
     "Share in Group Chats",
   ];
-
 
   return (
     <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">

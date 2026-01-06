@@ -15,6 +15,7 @@ import {
   getUserTopicPages,
 } from "../../redux/slices/otherprofile.slice";
 import OtherProfileKnowledgePostCard from "../../components/app/profile/OtherProfileKnowledgePostCard";
+import { updateSavedCollections } from "../../redux/slices/collection.slice";
 
 export default function OtherProfile() {
   const [activeTab, setActiveTab] = useState("topics");
@@ -26,9 +27,8 @@ export default function OtherProfile() {
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
 
   const dispatch = useDispatch();
-  const { topicPages, userCollections,userKnowledgePost,isLoading } = useSelector(
-    (state) => state.otherProfile
-  );
+  const { topicPages, userCollections, userKnowledgePost, isLoading } =
+    useSelector((state) => state.otherProfile);
   const authorData = location?.state?.id;
   const handleGetUserProfile = async () => {
     await dispatch(
@@ -60,6 +60,11 @@ export default function OtherProfile() {
     handleGetUserProfile();
   }, [location?.state?.id]);
 
+  const toggleBookmark = async (id) => {
+    console.log(id, "idess");
+    await dispatch(updateSavedCollections(id)).unwrap();
+    handleGetUserProfile();
+  };
   return (
     <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden">
       {/* Left Side */}
@@ -77,7 +82,7 @@ export default function OtherProfile() {
             ) : (
               <>
                 <LargeProfile
-                isFromOtherProfile={isFromOtherProfile}
+                  isFromOtherProfile={isFromOtherProfile}
                   profileData={authorData}
                   setIsEditProfile={setIsEditProfile}
                 />
@@ -180,11 +185,15 @@ export default function OtherProfile() {
                       </div>
                     </div>
                   ) : activeTab === "knowledge" ? (
-                    <OtherProfileKnowledgePostCard loading={isLoading} userKnowledgePost={userKnowledgePost} />
+                    <OtherProfileKnowledgePostCard
+                      loading={isLoading}
+                      userKnowledgePost={userKnowledgePost}
+                    />
                   ) : (
                     // ✅ Show only when on /other-profile route
                     isFromOtherProfile && (
                       <MySubscriptiononprofile
+                        toggleBookmark={toggleBookmark}
                         userCollections={userCollections}
                       />
                     )

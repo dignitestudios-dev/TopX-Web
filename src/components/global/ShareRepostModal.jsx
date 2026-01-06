@@ -5,8 +5,9 @@ import {
   fetchMyPages,
   repostPostToPages,
 } from "../../redux/slices/pages.slice";
+import { ErrorToast } from "./Toaster";
 
-const ShareRepostModal = ({ onClose,postId }) => {
+const ShareRepostModal = ({ onClose, postId }) => {
   const [selectedPages, setSelectedPages] = useState([]);
 
   const { myPages } = useSelector((state) => state?.pages);
@@ -51,7 +52,7 @@ const ShareRepostModal = ({ onClose,postId }) => {
   }, []);
   const handleRepost = () => {
     if (selectedPages.length === 0) {
-      alert("Please select at least one page");
+      ErrorToast("Please select at least one page");
       return;
     }
 
@@ -63,10 +64,10 @@ const ShareRepostModal = ({ onClose,postId }) => {
     )
       .unwrap()
       .then(() => {
-        alert("Post reposted successfully");
+        ErrorToast("Post reposted successfully");
         onClose();
       })
-      .catch((err) => alert(err));
+      .catch((err) => ErrorToast(err));
   };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
