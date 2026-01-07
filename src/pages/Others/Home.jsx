@@ -48,19 +48,7 @@ export default function Home() {
     });
   };
 
-  const trending = [
-    {
-      title: "Justin's Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-    {
-      title: "Justin's Basketball",
-      desc: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.",
-      hashtags: ["#Loremipsum", "#Loremipsum", "#Loremipsum"],
-    },
-  ];
-
+ 
   // Get localStorage likes for merge
   const storedLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
 

@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 import Cookies from "js-cookie";
 
-
 const initialState = {
   isLoading: false,
   error: null,
@@ -24,6 +23,7 @@ const initialState = {
   updateProfileError: null,
   allUserData: null,
   logoutLoading: false,
+  followersFollowing: [],
 };
 
 // ================= LOGIN =================
@@ -55,7 +55,6 @@ export const login = createAsyncThunk(
   }
 );
 
-
 export const signUp = createAsyncThunk(
   "auth/signUp",
   async (formData, thunkAPI) => {
@@ -84,7 +83,6 @@ export const signUp = createAsyncThunk(
     }
   }
 );
-
 
 // ================= SOCIAL LOGIN =================
 export const socialLogin = createAsyncThunk(
@@ -119,8 +117,6 @@ export const socialLogin = createAsyncThunk(
   }
 );
 
-
-
 // ================= GET PROFILE =================
 export const getProfile = createAsyncThunk(
   "auth/getProfile",
@@ -135,8 +131,6 @@ export const getProfile = createAsyncThunk(
     }
   }
 );
-
-
 
 export const getAllUserData = createAsyncThunk(
   "auth/getAllUserData",
@@ -161,7 +155,6 @@ export const getAllUserData = createAsyncThunk(
   }
 );
 
-
 // ================= LOGOUT =================
 export const logout = createAsyncThunk(
   "auth/logout",
@@ -184,7 +177,6 @@ export const logout = createAsyncThunk(
   }
 );
 
-
 export const forgotPassword = createAsyncThunk(
   "auth/forgotPassword",
   async ({ email, role }, thunkAPI) => {
@@ -192,7 +184,9 @@ export const forgotPassword = createAsyncThunk(
       const res = await axios.post("/auth/forgot", { email, role });
 
       if (!res.data?.success) {
-        return thunkAPI.rejectWithValue(res.data?.message || "Failed to send OTP");
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Failed to send OTP"
+        );
       }
 
       return res.data.message; // "OTP Sent Successfully"
@@ -203,7 +197,6 @@ export const forgotPassword = createAsyncThunk(
     }
   }
 );
-
 
 export const verifyOTP = createAsyncThunk(
   "auth/verifyOTP",
@@ -219,7 +212,7 @@ export const verifyOTP = createAsyncThunk(
       const token = res.data?.data?.token;
 
       if (token) {
-        Cookies.set("reset_token", token);  // ← cookie bhi set
+        Cookies.set("reset_token", token); // ← cookie bhi set
       }
 
       return {
@@ -267,7 +260,6 @@ export const updatePassword = createAsyncThunk(
   }
 );
 
-
 // ================= UPDATE PROFILE =================
 export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
@@ -278,7 +270,7 @@ export const updateProfile = createAsyncThunk(
       });
 
       const api = res.data;
-      const updatedUser = api?.data?.user;  // FIXED
+      const updatedUser = api?.data?.user; // FIXED
 
       if (!updatedUser) {
         return thunkAPI.rejectWithValue("Failed to update profile");
@@ -296,7 +288,27 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+export const getFollowersFollowing = createAsyncThunk(
+  "users/network",
+  async ({ type, page, limit, userId }, thunkAPI) => {
+    try {
+      const params = {
+        type,
+        page,
+        limit,
+        ...(userId && { userId }), // ✅ sirf tab add hoga jab userId ho
+      };
 
+      const res = await axios.get("/users/network", { params });
+
+      return res?.data?.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch user data"
+      );
+    }
+  }
+);
 
 // ================= SLICE =================
 const authSlice = createSlice({
@@ -320,7 +332,6 @@ const authSlice = createSlice({
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
         state.success = action.payload.message;
-
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -352,6 +363,18 @@ const authSlice = createSlice({
         state.user = action.payload;
       })
       .addCase(getProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // GET PROFILE
+      .addCase(getFollowersFollowing.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getFollowersFollowing.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.followersFollowing = action.payload;
+      })
+      .addCase(getFollowersFollowing.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
@@ -468,10 +491,8 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload;
       });
-
   },
 });
 
 export const { resetAuth } = authSlice.actions;
 export default authSlice.reducer;
-

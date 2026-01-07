@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Edit } from "lucide-react";
 import { profilehigh } from "../../../assets/export";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../../redux/slices/auth.slice";
+import FollowersFollowingModal from "../../global/FollowersFollowingModal";
 
 export default function LargeProfile({
   setIsEditProfile,
@@ -10,9 +11,11 @@ export default function LargeProfile({
   isFromOtherProfile,
 }) {
   const dispatch = useDispatch();
-
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState("followers"); // or "following"
   const { allUserData } = useSelector((state) => state.auth);
   const userRecord = profileData || allUserData;
+  console.log(profileData, "profileData-record");
   useEffect(() => {
     dispatch(getAllUserData());
   }, []);
@@ -76,16 +79,26 @@ export default function LargeProfile({
               </div>
             </div>
 
-            <div className="text-center">
-              <div className="text-[18px] font-[500] text-[#000000]">
-                {userRecord.followersCount || "0"}
+            <div
+              className="text-center cursor-pointer"
+              onClick={() => {
+                setModalType("followers");
+                setIsModalOpen(true);
+              }}
+            >
+              <div className="text-[18px] font-[500]">
+                {userRecord.followersCount || 0}
               </div>
-              <div className="text-[14px] font-[400] text-[#18181899]">
-                Followers
-              </div>
+              <div className="text-[14px] text-gray-500">Followers</div>
             </div>
 
-            <div className="text-center">
+            <div
+              onClick={() => {
+                setModalType("following");
+                setIsModalOpen(true);
+              }}
+              className="text-center cursor-pointer"
+            >
               <div className="text-[18px] font-[500] text-[#000000]">
                 {userRecord.followingCount || "0"}
               </div>
@@ -95,7 +108,13 @@ export default function LargeProfile({
             </div>
           </div>
         </div>
-
+        <FollowersFollowingModal
+          otherProfile={isFromOtherProfile && userRecord?._id}
+          isOpen={isModalOpen}
+          setIsOpen={setIsModalOpen}
+          title={modalType === "followers" ? "Followers" : "Following"}
+          type={modalType == "followers" ? "followers" : "followings"}
+        />
         {/* Bottom White Section - Bio */}
         <div className="pt-20 px-8 pb-8 bg-slate-50">
           <p className="text-[14px] font-[400] text-[#413b3b99]">

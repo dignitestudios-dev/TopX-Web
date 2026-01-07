@@ -1,5 +1,8 @@
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProfileNotifications, updateProfileNotifications } from "../../../redux/slices/profileSetting.slice";
+import {
+  fetchProfileNotifications,
+  updateProfileNotifications,
+} from "../../../redux/slices/profileSetting.slice";
 import Button from "../../common/Button";
 import { useEffect } from "react";
 
@@ -7,7 +10,10 @@ import { useEffect } from "react";
 const SkeletonLoader = () => (
   <div className="space-y-5 w-[500px]">
     {[...Array(10)].map((_, index) => (
-      <div key={index} className="flex items-center justify-between animate-pulse">
+      <div
+        key={index}
+        className="flex items-center justify-between animate-pulse"
+      >
         <div className="bg-gray-300 w-2/4 h-6 rounded-md" />
         <div className="bg-gray-300 w-12 h-6 rounded-md" />
       </div>
@@ -46,30 +52,32 @@ export default function Notifications() {
     postNotification: "Post Notifications",
   };
 
+  const handleToggle = (key) => {
+    const {
+      _id,
+      createdAt,
+      updatedAt,
+      __v,
+      user,
+      ...settingsWithoutInvalidFields
+    } = notificationSettings;
 
-const handleToggle = (key) => {
-  // Remove non-allowed fields like '_id', 'createdAt', 'updatedAt', and '__v'
-  const { _id, createdAt, updatedAt, __v, user, ...settingsWithoutInvalidFields } = notificationSettings;
-
-  // Only update the specific field that is toggled
-  const updatedSettings = {
-    ...settingsWithoutInvalidFields,
-    [key]: false, // Set the toggled notification to false
+    const updatedSettings = {
+      ...settingsWithoutInvalidFields,
+      [key]: !notificationSettings[key], // ✅ toggle value
+    };
+    dispatch(updateProfileNotifications(updatedSettings));
   };
-
-  // Dispatch action to update notification setting
-  dispatch(updateProfileNotifications(updatedSettings));
-};
-
-
 
   return (
     <div className="space-y-6">
-      <h1 className="text-[28px] font-bold tracking-[-0.018em]">Notifications</h1>
+      <h1 className="text-[28px] font-bold tracking-[-0.018em]">
+        Notifications
+      </h1>
       <div className="space-y-5 w-[500px]">
         {Object.entries(notificationLabels).map(([key, label]) => {
           const value = notificationSettings[key];
-          
+
           // Skip fields that aren't boolean
           if (typeof value !== "boolean") return null;
 

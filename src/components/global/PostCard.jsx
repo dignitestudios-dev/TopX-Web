@@ -24,6 +24,9 @@ import {
 import { FaRegTrashCan } from "react-icons/fa6";
 import { SuccessToast } from "./Toaster";
 import SharePostModal from "./SharePostModal";
+import ShareToChatsModal from "./ShareToChatsModal";
+import PostStoryModal from "./PostStoryModal";
+import ShareRepostModal from "./ShareRepostModal";
 
 const Button = ({ size = "md", variant = "orange", children, onClick }) => {
   const sizeClasses = {
@@ -78,7 +81,7 @@ const PostCard = ({
   const popupRef = useRef(null);
   const buttonRef = useRef(null);
 
-  const [selectedOption, setSelectedOption] = useState("Share with Topic Page");
+  const [selectedOption, setSelectedOption] = useState("");
 
   const options = [
     "Share to your Story",
@@ -201,18 +204,25 @@ const PostCard = ({
     setDeleteModal(false);
     await dispatch(getMyPosts({}));
   };
-
+  console.log(post, "posstsscomint");
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
         {/* Header */}
         <div className="p-4 flex items-start justify-between border-b border-gray-100 relative">
           <div className="flex items-center gap-3 flex-1">
-            <img
-              src={post.avatar}
-              alt="Profile"
-              className="w-10 h-10 rounded-full object-cover"
-            />
+            {post.avatar ? (
+              <img
+                src={post.avatar}
+                alt="Profile"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                {post.user?.charAt(0).toUpperCase()}
+              </div>
+            )}
+
             <div>
               <p className="font-bold text-sm flex items-center gap-2">
                 {post.user}
@@ -628,6 +638,18 @@ const PostCard = ({
           setSharepost={setSharepost}
           options={options}
         />
+      )}
+
+      {(selectedOption === "Share in Individuals Chats" ||
+        selectedOption === "Share in Group Chats") && (
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
+
+      {selectedOption === "Share to your Story" && (
+        <PostStoryModal onClose={setSelectedOption} />
+      )}
+      {selectedOption === "Share with Topic Page" && (
+        <ShareRepostModal postId={post?._id} onClose={setSelectedOption} />
       )}
 
       {/* Edit Modal for post */}

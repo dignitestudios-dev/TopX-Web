@@ -74,7 +74,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     }
   }, [reportSuccess, dispatch]);
 
-
   const options = [
     "Share to your Story",
     "Share with Topic Page",
@@ -260,7 +259,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       )}
 
       {selectedOption === "Share to your Story" && (
-        <PostStoryModal onClose={setSelectedOption} />
+        <PostStoryModal post={post} onClose={setSelectedOption} />
       )}
       {selectedOption === "Share with Topic Page" && (
         <ShareRepostModal postId={post.id} onClose={setSelectedOption} />

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MoreHorizontal, ChevronRight, Layers } from "lucide-react";
+import { ChevronRight, Layers } from "lucide-react";
 import { ballone, ballthree, balltwo } from "../../assets/export";
 import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,19 +9,19 @@ const MySubscription = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true); // Loading state
   const navigate = useNavigate();
-  // Effect to fetch subscriptions
+
+  // Fetch subscriptions
   useEffect(() => {
     dispatch(getMySubsctiptions({ page: 1, limit: 10 }));
   }, [dispatch]);
 
-  // Get subscriptions from Redux store
-  const { mySubscriptions, subscriptionLoading, mySubscriptionsPagination } =
-    useSelector((state) => state.subscriptions);
+  const { mySubscriptions, subscriptionLoading } = useSelector(
+    (state) => state.subscriptions
+  );
 
-  // Set loading to false once the data is fetched
   useEffect(() => {
     if (!subscriptionLoading) {
-      setLoading(false); // Stop loading when data is fetched
+      setLoading(false);
     }
   }, [subscriptionLoading]);
 
@@ -36,7 +36,7 @@ const MySubscription = () => {
       {/* Subscription List */}
       <div className="space-y-4">
         {loading ? (
-          // Manual Skeleton Loading
+          // Skeleton Loading
           <>
             {[1, 2, 3].map((_, idx) => (
               <div
@@ -44,14 +44,12 @@ const MySubscription = () => {
                 className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
               >
                 <div className="flex items-start gap-3">
-                  {/* Skeleton */}
                   <div className="skeleton-box w-3/4 h-5 bg-gray-300 rounded-md" />
                 </div>
               </div>
             ))}
           </>
-        ) : // Ensure `mySubscriptions` is an array before calling `.slice`
-        Array.isArray(mySubscriptions) && mySubscriptions.length > 0 ? (
+        ) : Array.isArray(mySubscriptions) && mySubscriptions.length > 0 ? (
           mySubscriptions.slice(0, 3).map((item, idx) => (
             <div
               key={idx}
@@ -59,38 +57,41 @@ const MySubscription = () => {
             >
               <div className="flex items-start gap-3">
                 <div>
-                  <span
+                  {/* Subscription Name */}
+                  <p
                     onClick={() =>
                       navigate(`/subscriptions-category`, {
                         state: { id: item._id },
                       })
                     }
+                    className="cursor-pointer font-medium text-gray-900 flex items-center gap-1"
                   >
-                    <p className="cursor-pointer font-medium text-gray-900 flex items-center gap-1">
-                      {item.name}
-                      <Layers className="w-4 h-4 text-gray-500" />
-                    </p>
-                  </span>
+                    {item.name}
+                    <Layers className="w-4 h-4 text-gray-500" />
+                  </p>
+
+                  {/* Page avatars + number */}
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex -space-x-2">
-                      <img
-                        src={ballone}
-                        alt=""
-                        className="w-5 h-5 rounded-full border border-white"
-                      />
-                      <img
-                        src={balltwo}
-                        alt=""
-                        className="w-5 h-5 rounded-full border border-white"
-                      />
-                      <img
-                        src={ballone}
-                        alt=""
-                        className="w-5 h-5 rounded-full border border-white"
-                      />
+                      {/* Show first 3 non-null page images */}
+                      {item.pages
+                        .filter((p) => p) // remove nulls
+                        .slice(0, 3)
+                        .map((p, index) => (
+                          <img
+                            key={index}
+                            src={p}
+                            alt=""
+                            className="w-5 h-5 rounded-full border border-white object-cover"
+                          />
+                        ))}
                     </div>
                     <p className="text-xs text-gray-500 font-medium">
-                      <span className="text-black font-[600]">50+</span> Pages
+                      <span className="text-black font-[600]">
+                        {item.pages.filter((p) => p).length}{" "}
+                        {/* number of pages */}
+                      </span>{" "}
+                      Page{item.pages.filter((p) => p).length > 1 ? "s" : ""}
                     </p>
                   </div>
                 </div>
@@ -102,7 +103,7 @@ const MySubscription = () => {
             <div className="flex justify-center">
               <img
                 src="https://www.profitim.com/build/images/background/no-results-bg.2d2c6ee3.png"
-                alt=""
+                alt="No Subscription"
               />
             </div>
             <p>No Subscription Found</p>
@@ -110,6 +111,7 @@ const MySubscription = () => {
         )}
       </div>
 
+      {/* View All Button */}
       {Array.isArray(mySubscriptions) && mySubscriptions.length > 0 && (
         <div className="flex items-center justify-between mt-5 text-black cursor-pointer font-semibold text-sm">
           <Link to="/subscriptions">

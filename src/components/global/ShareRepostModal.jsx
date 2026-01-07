@@ -11,33 +11,6 @@ const ShareRepostModal = ({ onClose, postId }) => {
   const [selectedPages, setSelectedPages] = useState([]);
 
   const { myPages } = useSelector((state) => state?.pages);
-  const pages = [
-    {
-      name: "Mike’s Basketball",
-      image: "https://randomuser.me/api/portraits/men/11.jpg",
-    },
-    {
-      name: "Mike’s Fitness",
-      image: "https://randomuser.me/api/portraits/men/22.jpg",
-    },
-    {
-      name: "Mike’s Opinions",
-      image: "https://randomuser.me/api/portraits/men/44.jpg",
-    },
-    {
-      name: "Mike’s Cooking",
-      image: "https://randomuser.me/api/portraits/men/21.jpg",
-    },
-    {
-      name: "Mike’s Cars",
-      image: "https://randomuser.me/api/portraits/men/25.jpg",
-    },
-    {
-      name: "Mike’s Fashion",
-      image: "https://randomuser.me/api/portraits/men/30.jpg",
-    },
-  ];
-
   const togglePage = (pageId) => {
     if (selectedPages.includes(pageId)) {
       setSelectedPages(selectedPages.filter((id) => id !== pageId));
