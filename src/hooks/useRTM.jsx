@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 export const useRTM = ({ appId, uid, token, channelName }) => {
   const clientRef = useRef(null);
   const channelRef = useRef(null);
+  const messageHandlerRef = useRef(null); // Store message handler for cleanup
 
   const [isConnected, setIsConnected] = useState(false);
   const [comments, setComments] = useState([]);
@@ -62,7 +63,9 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         console.log("✅ RTM: Logged in successfully");
 
         // Subscribe to channel messages (agora-rtm 2.x uses subscribe method)
-        await client.subscribe(channelName);
+        await client.subscribe(channelName, {
+          withMessage: true
+        });
         console.log("✅ RTM: Subscribed to channel");
 
         // Set connected state after successful subscription
@@ -70,8 +73,9 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         setIsConnected(true);
         console.log("✅ RTM: Connection ready for publishing");
 
-        // Listen for messages in the channel (agora-rtm 2.x uses "message" event)
-        client.addEventListener("message", (event) => {
+        // Message handler function - defined separately for cleanup
+        // Store handler reference so we can remove it later
+        const handleMessage = (event) => {
           try {
             // event contains: channelName, message, messageType, publisher
             const messageText = event.message;
@@ -103,9 +107,18 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
             // Handle comment messages
             if (data.type === "comment" || data.msg || data.text || data.comment) {
-              const messageUserId = data.userId || publisher;
+              // Normalize userIds to strings for comparison
+              const messageUserId = String(data.userId || publisher);
               const currentUserId = String(uid);
               const isOwnMessage = messageUserId === currentUserId;
+
+              console.log("🔍 RTM: Message check", {
+                messageUserId,
+                currentUserId,
+                isOwnMessage,
+                publisher,
+                dataUserId: data.userId,
+              });
 
               const commentId = `comment-${Date.now()}-${Math.random()}-${messageUserId}`;
               const newComment = {
@@ -118,58 +131,79 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
               };
 
               setComments((prev) => {
-                // Only skip if it's our own message (loopback) and already exists in local state
-                // For other users' messages, always add them (they won't be in local state)
-                if (isOwnMessage) {
-                  // Check if this exact message already exists (from optimistic update)
-                  // Use text + userId combination with a reasonable time window (5 seconds)
-                  const exists = prev.some(
-                    (c) => {
-                      const sameText = c.text === newComment.text;
-                      const sameUserId = c.userId === newComment.userId;
-                      // Use a 5 second window to catch optimistic updates
-                      const recentTime = Math.abs((c.timestamp || 0) - newComment.timestamp) < 5000;
+                // OTHER USERS: always add (only skip exact duplicates within 500ms to avoid double listeners)
+                if (!isOwnMessage) {
+                  // More strict duplicate check: same text + same userId + same timestamp (or very close)
+                  const duplicateExists = prev.some((c) => {
+                    const sameText = c.text === newComment.text;
+                    const sameUserId = String(c.userId) === String(newComment.userId);
+                    // Use 500ms window - very short to only catch true duplicate events
+                    const recentTime =
+                      Math.abs((c.timestamp || 0) - newComment.timestamp) < 500;
+                    // Also check if comment ID is the same (if somehow generated identically)
+                    const sameId = c.id === newComment.id;
+                    
+                    return (sameText && sameUserId && recentTime) || sameId;
+                  });
 
-                      // Only skip if it's the exact same message from same user within 5 seconds
-                      if (sameText && sameUserId && recentTime) {
-                        return true;
+                  if (duplicateExists) {
+                    console.log(
+                      "⚠️ RTM: Duplicate comment from other user detected (likely duplicate event), skipping",
+                      {
+                        text: newComment.text,
+                        publisher,
+                        userId: messageUserId,
+                        existingComments: prev.length,
+                        commentId: newComment.id,
                       }
-                      return false;
-                    }
-                  );
-                  if (exists) {
-                    console.log("⚠️ RTM: Duplicate comment detected (own message loopback), skipping", {
-                      text: newComment.text,
-                      publisher,
-                      userId: messageUserId,
-                      timestamp: newComment.timestamp
-                    });
+                    );
                     return prev;
                   }
 
-                  // If it's our own message but not found, it might be a retry or delayed message
-                  // Replace optimistic comment with confirmed one, or add if not found
-                  const optimisticIndex = prev.findIndex(
-                    (c) => c.text === newComment.text &&
-                      c.userId === newComment.userId &&
-                      c.isOptimistic
-                  );
-
-                  if (optimisticIndex >= 0) {
-                    // Replace optimistic comment with confirmed one
-                    const updated = [...prev];
-                    updated[optimisticIndex] = { ...newComment, isOptimistic: false };
-                    console.log("✅ RTM: Replacing optimistic comment with confirmed", { text: newComment.text });
-                    return updated;
-                  }
+                  console.log("✅ RTM: Adding comment from other user", {
+                    text: newComment.text,
+                    publisher,
+                    userId: messageUserId,
+                    username: newComment.username,
+                    totalComments: prev.length,
+                    willBeTotal: prev.length + 1,
+                    timestamp: newComment.timestamp,
+                    commentId: newComment.id,
+                  });
+                  
+                  // Verify the comment will actually be added
+                  const newComments = [...prev, { ...newComment, isOptimistic: false }];
+                  console.log("📊 RTM: State update - prev:", prev.length, "new:", newComments.length);
+                  
+                  return newComments;
                 }
 
-                // For other users' messages or new own messages, add them
-                console.log("✅ RTM: Adding new comment", {
+                // OWN MESSAGE LOOPBACK:
+                // 1) replace optimistic if present
+                // 2) otherwise ALWAYS add (no duplicate skip) so other devices see it
+
+                const optimisticIndex = prev.findIndex(
+                  (c) =>
+                    c.text === newComment.text &&
+                    c.userId === newComment.userId &&
+                    c.isOptimistic === true
+                );
+
+                if (optimisticIndex >= 0) {
+                  const updated = [...prev];
+                  updated[optimisticIndex] = { ...newComment, isOptimistic: false };
+                  console.log("✅ RTM: Replacing optimistic comment with confirmed", {
+                    text: newComment.text,
+                    index: optimisticIndex,
+                  });
+                  return updated;
+                }
+
+                // No optimistic found: add it unconditionally (do NOT skip as duplicate)
+                console.log("✅ RTM: Adding own message (no optimistic match found)", {
                   text: newComment.text,
                   publisher,
                   userId: messageUserId,
-                  isOwnMessage
                 });
                 return [...prev, { ...newComment, isOptimistic: false }];
               });
@@ -192,7 +226,22 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
           } catch (err) {
             console.error("❌ RTM: Error processing message", err, event);
           }
-        });
+        };
+
+        // Listen for messages in the channel (agora-rtm 2.x uses "message" event)
+        // Remove any existing listener first to prevent duplicates
+        if (messageHandlerRef.current) {
+          try {
+            client.removeEventListener("message", messageHandlerRef.current);
+          } catch (err) {
+            // Ignore if listener doesn't exist
+          }
+        }
+        
+        // Store handler reference and add listener
+        messageHandlerRef.current = handleMessage;
+        client.addEventListener("message", handleMessage);
+        console.log("✅ RTM: Message event listener registered");
 
         // Store channel info for sending messages
         channelRef.current = { name: channelName, client };
@@ -209,18 +258,35 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
     return () => {
       // Cleanup
-      if (channelRef.current && clientRef.current) {
-        const { client, name: channelName } = channelRef.current;
-        if (channelName) {
-          client.unsubscribe(channelName).catch(console.error);
-        }
-        channelRef.current = null;
-      }
       if (clientRef.current) {
-        clientRef.current.logout().catch(console.error);
+        const client = clientRef.current;
+
+        // Remove event listeners - use stored handler reference
+        try {
+          if (messageHandlerRef.current) {
+            client.removeEventListener("message", messageHandlerRef.current);
+            messageHandlerRef.current = null;
+            console.log("🧹 RTM: Message event listener removed");
+          }
+        } catch (err) {
+          console.error("Error removing event listeners:", err);
+        }
+
+        // Unsubscribe from channel
+        if (channelRef.current) {
+          const { name: channelName } = channelRef.current;
+          if (channelName) {
+            client.unsubscribe(channelName).catch(console.error);
+          }
+          channelRef.current = null;
+        }
+
+        // Logout
+        client.logout().catch(console.error);
         clientRef.current = null;
       }
       setIsConnected(false);
+      setComments([]); // Clear comments on cleanup
     };
   }, [appId, uid, token, channelName]);
 

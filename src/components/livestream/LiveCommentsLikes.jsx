@@ -15,6 +15,20 @@ const LiveCommentsLikes = ({
   const commentsEndRef = useRef(null);
   const inputRef = useRef(null);
 
+  // Debug: Log comments updates
+  useEffect(() => {
+    console.log("💬 LiveCommentsLikes: Comments updated", {
+      count: comments.length,
+      comments: comments.map(c => ({
+        id: c.id,
+        text: c.text?.substring(0, 20),
+        username: c.username,
+        userId: c.userId,
+        isOptimistic: c.isOptimistic,
+      })),
+    });
+  }, [comments]);
+
   // Auto-scroll to bottom when new comments arrive
   useEffect(() => {
     if (commentsEndRef.current) {

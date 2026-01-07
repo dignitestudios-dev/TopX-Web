@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Profilecard from '../../components/homepage/Profilecard';
 import MySubscription from '../../components/homepage/MySubscription';
 import { useNavigate, useParams } from 'react-router';
@@ -17,9 +17,10 @@ import {
 } from '../../redux/slices/trending.slice';
 import ReportModal from '../../components/global/ReportModal';
 import { sendReport, resetReportState } from '../../redux/slices/reports.slice';
-import { SuccessToast } from '../../components/global/Toaster';
+import { SuccessToast, ErrorToast } from '../../components/global/Toaster';
 import { FaArrowLeft } from 'react-icons/fa6';
 import PagePostsComponent from '../../components/global/PagePostsComponent';
+import { RiLiveLine } from 'react-icons/ri';
 
 const Trendingpagedetail = () => {
     const dispatch = useDispatch();
@@ -52,6 +53,17 @@ const Trendingpagedetail = () => {
     );
 
     console.log(pageDetail, "pageDetail")
+
+
+    // Join stream from Trending page – just navigate, LiveStreampage handles role + join logic
+    const handleJoinStream = useCallback(
+        (pageId) => {
+            console.log("Navigating to live stream from Trendingpagedetail", { pageId });
+            navigate(`/live-stream/${pageId}`);
+        },
+        [navigate]
+    );
+
 
     useEffect(() => {
         if (reportSuccess) {
@@ -142,7 +154,7 @@ const Trendingpagedetail = () => {
 
 
 
-        
+
     return (
         <div className="flex max-w-7xl mx-auto min-h-screen">
             {/* ================= MAIN CONTENT ================= */}
@@ -168,17 +180,17 @@ const Trendingpagedetail = () => {
                     <div className="px-8 pb-6">
 
                         <div className="flex items-end gap-4 -mt-16 mb-0">
-                             {pageDetail.image ? (
-                            <img
-                              src={pageDetail.image}
-                              alt={pageDetail.image}
-                              className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
-                            />
-                          ) : (
-                            <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                              {pageDetail.name?.charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                            {pageDetail.image ? (
+                                <img
+                                    src={pageDetail.image}
+                                    alt={pageDetail.image}
+                                    className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
+                                />
+                            ) : (
+                                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                                    {pageDetail.name?.charAt(0).toUpperCase()}
+                                </div>
+                            )}
 
                             {/* Info */}
                             <div className="flex-1 pb-2">
@@ -245,6 +257,24 @@ const Trendingpagedetail = () => {
                                     <MessageSquareText />
                                     Star A Live Chat
                                 </button>
+
+                            </div>
+
+                            <div className="mb-[0em]">
+                                {pageDetail?.isLiveStreaming && (
+                                    <button
+                                        onClick={() => handleJoinStream(pageDetail._id)} // Pass the pageId here
+                                       
+                                        className="p-2 px-4 flex gap-4 rounded-2xl items-center cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                                    >
+                                      
+                                                <RiLiveLine size={20} />
+                                                Join Live Stream
+                                        
+                                    </button>
+                                )}
+
+
 
                             </div>
                         </div>

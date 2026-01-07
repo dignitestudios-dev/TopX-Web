@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useAgora } from "../../hooks/useAgora";
 import { useRTM } from "../../hooks/useRTM";
@@ -20,6 +20,7 @@ import {
 const LiveStreampage = () => {
   const { pageId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const { user } = useSelector((state) => state.auth);
@@ -39,12 +40,18 @@ const LiveStreampage = () => {
 
   // Determine if user is page owner (host) or viewer (audience)
   useEffect(() => {
+    const fromGoLive = location.state?.fromGoLive === true;
+
     const determineRole = async () => {
       try {
-        // Check if streamData already exists (user came from Golive page)
-        // If streamData exists, user is definitely the host
-        if (streamData && streamData.channelName && streamData.rtcToken) {
-          console.log("StreamData already exists, user is host");
+        // Shortcut: if coming from GoLive and streamData already exists, user is host
+        if (
+          fromGoLive &&
+          streamData &&
+          streamData.channelName &&
+          streamData.rtcToken
+        ) {
+          console.log("StreamData already exists from GoLive, user is host");
           setRole("host");
           setIsInitializing(false);
           return;
@@ -123,7 +130,7 @@ const LiveStreampage = () => {
     if (user && pageId) {
       determineRole();
     }
-  }, [pageId, user, dispatch, navigate, streamData]);
+  }, [pageId, user, dispatch, navigate, streamData, location.state]);
 
   // Get Agora credentials from streamData - use EXACT values from backend
   const appId =
@@ -161,6 +168,15 @@ const LiveStreampage = () => {
     }
   }, [streamData, appId, token, rtmToken, uid, channelName]);
 
+  // Log role before passing to useAgora
+  useEffect(() => {
+    console.log("🎭 Current role:", role, {
+      isHost: role === "host",
+      isAudience: role === "audience",
+      shouldAccessCamera: role === "host"
+    });
+  }, [role]);
+
   const {
     join,
     leave,
@@ -174,7 +190,7 @@ const LiveStreampage = () => {
     error: agoraError,
   } = useAgora({
     pageId,
-    role: role || "audience",
+    role: role || "audience", // Default to audience if role not set
     appId,
     token,
     uid,
@@ -203,6 +219,21 @@ const LiveStreampage = () => {
         }
       : { appId: "", uid: "", token: "", channelName: "" }
   );
+
+  // Debug: Log comments updates in parent component
+  useEffect(() => {
+    console.log("📨 LiveStreampage: Comments state updated", {
+      count: comments?.length || 0,
+      hasRTMParams,
+      rtmConnected,
+      comments: comments?.map(c => ({
+        id: c.id,
+        text: c.text?.substring(0, 30),
+        username: c.username,
+        userId: c.userId,
+      })) || [],
+    });
+  }, [comments, hasRTMParams, rtmConnected]);
 
   // RTM connection debug - moved after useRTM hook
   useEffect(() => {
@@ -248,49 +279,142 @@ const LiveStreampage = () => {
     }
   }, [role, isInitializing, isJoined, agoraLoading, streamData, channelName, token, uid, appId, join]);
 
-  // Handle local video display
+  // Handle local video display (HOST ONLY - no camera access for audience)
   useEffect(() => {
-    if (localVideo && localVideoRef.current && role === "host") {
-      localVideo.play(localVideoRef.current);
+    // Only play local video if user is host
+    if (role === "host" && localVideo && localVideoRef.current) {
+      console.log("📹 Playing local video (host)", {
+        hasLocalVideo: !!localVideo,
+        hasRef: !!localVideoRef.current,
+        isPlaying: localVideo.isPlaying,
+      });
+      
+      try {
+        const playPromise = localVideo.play(localVideoRef.current);
+        // Handle promise if it exists
+        if (playPromise && typeof playPromise.then === "function") {
+          playPromise
+            .then(() => {
+              console.log("✅ Local video playing successfully");
+            })
+            .catch((err) => {
+              console.error("❌ Error playing local video:", err);
+            });
+        } else {
+          // If play() doesn't return a promise, it's still okay
+          console.log("✅ Local video play() called (no promise returned)");
+        }
+      } catch (err) {
+        console.error("❌ Error calling localVideo.play():", err);
+      }
+    } else if (role === "host" && !localVideo) {
+      console.log("⏳ Host: Waiting for local video track...");
+    }
+
+    // For audience, ensure no local video is being displayed
+    if (role === "audience" && localVideo) {
+      console.warn("⚠️ Local video exists for audience role - stopping it");
+      try {
+        localVideo.stop();
+      } catch (err) {
+        console.error("Error stopping local video:", err);
+      }
     }
 
     return () => {
-      if (localVideo) {
-        localVideo.stop();
+      if (localVideo && role === "host") {
+        try {
+          localVideo.stop();
+        } catch (err) {
+          console.error("Error stopping local video in cleanup:", err);
+        }
       }
     };
   }, [localVideo, role]);
 
-  // Handle remote users video display
+  // Handle remote users video display (for audience to see host, and host to see other hosts)
   useEffect(() => {
-    if (!remoteVideosContainerRef.current) return;
+    if (!remoteVideosContainerRef.current) {
+      console.log("⚠️ Remote videos container not available");
+      return;
+    }
+
+    // Process remote users for both roles:
+    // - Audience sees host(s)
+    // - Host can see other hosts (if multiple hosts exist)
+    console.log(`📹 Processing ${remoteUsers.length} remote user(s) for ${role} role:`, remoteUsers);
 
     remoteUsers.forEach((user) => {
+      const uid = user.uid.toString();
+      console.log(`📹 Processing remote user ${uid}:`, {
+        hasVideoTrack: !!user.videoTrack,
+        hasAudioTrack: !!user.audioTrack,
+        videoTrackState: user.videoTrack?.isPlaying,
+      });
+
+      // Handle video track
       if (user.videoTrack) {
-        const uid = user.uid.toString();
         let div = remoteVideoRefs.current[uid];
 
         if (!div) {
           div = document.createElement("div");
           div.id = `remote-video-${uid}`;
-          div.className = "w-full h-full";
+          div.className = "w-full h-full bg-black";
+          div.style.width = "100%";
+          div.style.height = "100%";
+          div.style.minWidth = "100%";
+          div.style.minHeight = "100%";
+          div.style.position = "absolute";
+          div.style.top = "0";
+          div.style.left = "0";
+          // Video element will be inserted by Agora SDK
           remoteVideoRefs.current[uid] = div;
           remoteVideosContainerRef.current.appendChild(div);
+          console.log(`✅ Created video container for remote user ${uid}`);
         }
 
-        // Play video track
-        if (user.videoTrack && div) {
-          user.videoTrack.play(div).catch((err) => {
-            console.error("Error playing remote video:", err);
-          });
+        // Play video track - ensure it's not already playing
+        if (user.videoTrack && div && !user.videoTrack.isPlaying) {
+          try {
+            const playPromise = user.videoTrack.play(div);
+            if (playPromise && typeof playPromise.then === "function") {
+              playPromise
+                .then(() => {
+                  console.log(`✅ Remote video playing for user ${uid}`);
+                })
+                .catch((err) => {
+                  console.error(`❌ Error playing remote video for user ${uid}:`, err);
+                });
+            } else {
+              console.log(`✅ Remote video play() called for user ${uid}`);
+            }
+          } catch (err) {
+            console.error(`❌ Error calling play() for user ${uid}:`, err);
+          }
+        } else if (user.videoTrack && div && user.videoTrack.isPlaying) {
+          // If already playing, just ensure it's in the right container
+          console.log(`📹 Video already playing for user ${uid}`);
         }
       }
 
       // Play audio track
-      if (user.audioTrack) {
-        user.audioTrack.play().catch((err) => {
-          console.error("Error playing remote audio:", err);
-        });
+      if (user.audioTrack && !user.audioTrack.isPlaying) {
+        try {
+          const playPromise = user.audioTrack.play();
+          if (playPromise && typeof playPromise.then === "function") {
+            playPromise
+              .then(() => {
+                console.log(`✅ Remote audio playing for user ${uid}`);
+              })
+              .catch((err) => {
+                console.error(`❌ Error playing remote audio for user ${uid}:`, err);
+              });
+          } else {
+            console.log(`✅ Remote audio play() called for user ${uid}`);
+          }
+        } catch (err) {
+          console.error(`❌ Error calling audio play() for user ${uid}:`, err);
+        }
       }
     });
 
@@ -302,11 +426,7 @@ const LiveStreampage = () => {
       if (!userExists) {
         const div = remoteVideoRefs.current[uid];
         if (div) {
-          // Stop video track
-          const user = remoteUsers.find((u) => u.uid.toString() === uid);
-          if (user?.videoTrack) {
-            user.videoTrack.stop();
-          }
+          console.log(`🗑️ Cleaning up video container for user ${uid}`);
           if (div.parentNode) {
             div.parentNode.removeChild(div);
           }
@@ -314,7 +434,7 @@ const LiveStreampage = () => {
         delete remoteVideoRefs.current[uid];
       }
     });
-  }, [remoteUsers]);
+  }, [remoteUsers, role]);
 
   // Update viewer count (simplified - in production, get from Agora stats)
   useEffect(() => {
@@ -457,18 +577,24 @@ const LiveStreampage = () => {
       </div>
 
       {/* Video Container */}
-      <div className="relative w-full h-screen">
-        {/* Local Video (Host) */}
+      <div className="relative w-full h-screen bg-black">
+        {/* Local Video (Host Only) */}
         {role === "host" && (
-          <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-black">
             {localVideo ? (
               <div
                 ref={localVideoRef}
-                className="w-full h-full bg-gray-900"
+                className="w-full h-full bg-black"
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  minWidth: "100%",
+                  minHeight: "100%",
+                }}
               ></div>
             ) : (
-              <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                <div className="text-center">
+              <div className="w-full h-full bg-black flex items-center justify-center">
+                <div className="text-center text-white">
                   <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
                   <p>Starting your stream...</p>
                 </div>
@@ -477,25 +603,36 @@ const LiveStreampage = () => {
           </div>
         )}
 
-        {/* Remote Videos (Audience sees host) */}
-        {role === "audience" && (
+        {/* Remote Videos (Audience sees host, Host can see other hosts) */}
+        {(role === "audience" || (role === "host" && remoteUsers.length > 0)) && (
           <div
             ref={remoteVideosContainerRef}
             id="remote-videos-container"
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 bg-black"
+            style={{ width: "100%", height: "100%", position: "relative" }}
           >
             {remoteUsers.length === 0 && !isJoined && (
-              <div className="text-center">
-                <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
-                <p>Connecting to stream...</p>
+              <div className="absolute inset-0 flex items-center justify-center text-center text-white">
+                <div>
+                  <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
+                  <p>Connecting to stream...</p>
+                </div>
               </div>
             )}
-            {remoteUsers.length === 0 && isJoined && (
-              <div className="text-center">
-                <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
-                <p>Waiting for host to start streaming...</p>
+            {remoteUsers.length === 0 && isJoined && role === "audience" && (
+              <div className="absolute inset-0 flex items-center justify-center text-center text-white">
+                <div>
+                  <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
+                  <p>Waiting for host to start streaming...</p>
+                </div>
               </div>
             )}
+            {remoteUsers.length > 0 && (
+              <div className="text-white text-sm absolute top-4 left-4 bg-black/50 px-2 py-1 rounded z-10">
+                {remoteUsers.length} user(s) streaming
+              </div>
+            )}
+            {/* Remote videos will be rendered here by the useEffect */}
           </div>
         )}
 
