@@ -79,6 +79,8 @@ export default function Subscriptions() {
 
   const [open, setOpen] = useState(false);
 
+  console.log(subscriptions,"subscriptions")
+
   const trending = [
     {
       title: "Justin’s Basketball",
@@ -140,7 +142,7 @@ export default function Subscriptions() {
     console.log(id, "idesss");
     await dispatch(updateSavedCollections(id)).unwrap();
   };
-  console.log(subscriptions, "item-pages-->");
+  console.log(subscriptions, "subscriptions");
   return (
     <div className="flex  min-h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -314,9 +316,10 @@ export default function Subscriptions() {
                       state: { id: item._id },
                     })
                   }
-                  className="text-sm font-semibold text-gray-800 flex items-center gap-1"
+                  className="text-[14px] font-semibold text-gray-800 flex items-center gap-1"
                 >
-                  {item.name}
+                  <img src={item?.image} className="rounded-full object-cover w-6 h-6" alt="" />
+                 {item.userData?.name} {item.name}
                   <span className="text-gray-400 pl-1">
                     <Layers size={16} />
                   </span>

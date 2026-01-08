@@ -185,18 +185,21 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
 
           {/* Email */}
           <div className="w-full">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              value={values.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Enter your email"
-              touched={touched.email}
-              error={errors.email}
-              size="md"
-            />
+          <Input
+  label="Email Address"
+  type="email"
+  name="email"
+  value={values.email}
+  onChange={(e) => {
+    setFieldValue("email", e.target.value.toLowerCase());
+  }}
+  onBlur={handleBlur}
+  placeholder="Enter your email"
+  touched={touched.email}
+  error={errors.email}
+  size="md"
+/>
+
           </div>
 
           <div className="w-full">
@@ -214,9 +217,12 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
                 value={values.phone}
                 onChange={(e) => {
                   let nums = e.target.value.replace(/\D/g, "");
+
+                  // 🔒 only 9 digits
                   if (nums.length > 10) nums = nums.slice(0, 10);
 
-                  let formatted = nums;
+                  let formatted = "";
+
                   if (nums.length > 6) {
                     formatted = `(${nums.slice(0, 3)}) ${nums.slice(3, 6)}-${nums.slice(6)}`;
                   } else if (nums.length > 3) {
@@ -224,15 +230,17 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
                   } else if (nums.length > 0) {
                     formatted = `(${nums}`;
                   }
+
                   setFieldValue("phone", formatted);
                 }}
                 onBlur={handleBlur}
-                placeholder="(123) 456-7890"
+                placeholder="(234) 567-891"
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${touched.phone && errors.phone
                   ? "border-red-500 bg-red-50"
                   : "border-gray-300"
                   }`}
               />
+
             </div>
             {touched.phone && errors.phone && (
               <p className="text-red-500 text-xs mt-1">{errors.phone}</p>

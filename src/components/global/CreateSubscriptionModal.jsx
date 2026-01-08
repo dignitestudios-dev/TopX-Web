@@ -134,7 +134,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
           {/* Header */}
           <div className="flex items-center justify-between border-b px-5 py-3">
             <h2 className="text-[17px] font-semibold">
-              Create New Subscription
+              Create New Collection
             </h2>
             <button
               onClick={onClose}
@@ -174,11 +174,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                 {/* Name Input */}
                 <div>
                   <label className="text-sm font-semibold">
-                    Subscription Name
+                    Collection Name
                   </label>
                   <input
                     className="w-full mt-1 border rounded-xl p-3 bg-gray-100"
-                    placeholder="Enter name"
+                    placeholder="Enter name here"
                     value={collectionName}
                     onChange={(e) => {
                       setCollectionName(e.target.value);

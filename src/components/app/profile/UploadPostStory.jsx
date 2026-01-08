@@ -59,10 +59,10 @@ export default function UploadPostStory({
       return;
     }
 
-    if (images.length === 0) {
-      ErrorToast("Please upload at least one photo or video!");
-      return;
-    }
+    // if (images.length === 0) {
+    //   ErrorToast("Please upload at least one photo or video!");
+    //   return;
+    // }
 
     if (!selectedPages || selectedPages.length === 0) {
       ErrorToast("No page selected!");

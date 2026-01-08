@@ -18,7 +18,7 @@ export default function CollectionModal({
     const [imageFile, setImageFile] = useState(null);
 
     const [errors, setErrors] = useState({ name: "", image: "" });
-
+    const [searchTerm, setSearchTerm] = useState(""); // Added search term state
 
     const dispatch = useDispatch();
 
@@ -27,7 +27,6 @@ export default function CollectionModal({
         isLoading,
         error,
     } = useSelector((state) => state.collections);
-
 
     // FINAL SAVE
     const handleFinalSave = () => {
@@ -38,9 +37,6 @@ export default function CollectionModal({
             onClose();
         });
     };
-
-
-    console.log(allcollections, "allcollections")
 
     // Load collections when opened
     useEffect(() => {
@@ -107,6 +103,11 @@ export default function CollectionModal({
             setSelectedCollections([...selectedCollections, id]);
         }
     };
+
+    // Filter collections based on search term
+    const filteredCollections = allcollections.filter((col) =>
+        col.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="fixed inset-0 rounded-2xl bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
@@ -181,6 +182,17 @@ export default function CollectionModal({
                                 <span className="font-medium">Create New Collection</span>
                             </div>
 
+                            {/* Search Bar */}
+                            <div className="mb-4">
+                                <input
+                                    type="text"
+                                    className="w-full p-2 rounded-lg border border-gray-300"
+                                    placeholder="Search collections"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+
                             {/* Loading Skeleton */}
                             {isLoading &&
                                 [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
@@ -193,8 +205,8 @@ export default function CollectionModal({
                             {/* Data */}
                             {!isLoading && (
                                 <>
-                                    {allcollections && allcollections.length > 0 ? (
-                                        allcollections.map((col) => (
+                                    {filteredCollections && filteredCollections.length > 0 ? (
+                                        filteredCollections.map((col) => (
                                             <div
                                                 key={col._id}
                                                 className="flex justify-between items-center cursor-pointer p-2 border rounded-lg"
@@ -202,10 +214,7 @@ export default function CollectionModal({
                                             >
                                                 <div className="flex items-center gap-3">
                                                     <img
-                                                        src={
-                                                            col.image ||
-                                                            "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
-                                                        }
+                                                        src={col.image || "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"}
                                                         className="w-10 h-10 rounded-full"
                                                     />
                                                     <p>{col.name}</p>
@@ -219,7 +228,7 @@ export default function CollectionModal({
                                         ))
                                     ) : (
                                         <p className="text-center text-gray-500 py-4">
-                                            No collections here
+                                            No collections found
                                         </p>
                                     )}
                                 </>
@@ -240,7 +249,6 @@ export default function CollectionModal({
                         </button>
                     </>
                 )}
-
             </div>
         </div>
     );

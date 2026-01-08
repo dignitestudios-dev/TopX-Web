@@ -252,14 +252,14 @@ const Header = () => {
                   src={allUserData.profilePicture}
                   loading="lazy"
                   alt="profile"
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 object-cover rounded-full"
                 />
               ) : dummyprofile ? (
                 <img
                   src={dummyprofile}
                   loading="lazy"
                   alt="profile"
-                  className="h-8 w-8 rounded-full"
+                  className="h-8 w-8 object-cover rounded-full"
                 />
               ) : (
                 <span>No Data</span>

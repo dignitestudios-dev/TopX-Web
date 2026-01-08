@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
@@ -10,6 +10,7 @@ import ShareToChatsModal from "./ShareToChatsModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
 import ReportModal from "./ReportModal";
+
 export default function CollectionFeedPostCard({
   post,
   author,
@@ -19,24 +20,17 @@ export default function CollectionFeedPostCard({
   toggleLike,
   isPostId,
   fullPost,
+  text,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const dispatch = useDispatch();
 
-  const isLiked = likedCount[post.id];
-
-  console.log(fullPost, "allnewpost");
-
-  const postislike = post.postlike;
-
-  const firstImage = post[0]?.fileUrl;
+  console.log(post, "post")
 
   const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
     const newLikeStatus = !currentLikeStatus;
-
-    // Calculate increment based on toggle
     const newLikesCount = newLikeStatus
       ? (currentLikesCount ?? 0) + 1
       : Math.max((currentLikesCount ?? 0) - 1, 0);
@@ -65,9 +59,9 @@ export default function CollectionFeedPostCard({
     "Share in Individuals Chats",
     "Share in Group Chats",
   ];
-  const dropdownRef = useRef(null);
 
   // Close dropdown on outside click
+  const dropdownRef = useRef(null);
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -77,6 +71,29 @@ export default function CollectionFeedPostCard({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Render image or video
+  const renderMedia = (mediaItem) => {
+    if (mediaItem.type === "image") {
+      return (
+        <img
+          src={mediaItem.fileUrl}
+          alt="post"
+          className="w-full h-auto rounded-2xl object-cover max-h-96"
+        />
+      );
+    } else if (mediaItem.type === "video") {
+      return (
+        <video
+          controls
+          className="w-full h-auto rounded-2xl object-cover max-h-96"
+          src={mediaItem.fileUrl}
+        />
+      );
+    }
+    return null; // Return null if neither image nor video
+  };
+
   return (
     <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
@@ -121,41 +138,22 @@ export default function CollectionFeedPostCard({
         </div>
       </div>
 
-      {/* Tag */}
-      {/* {post.tag && (
-                <div className="px-4 pt-3 pb-2">
-                    <span className="inline-block text-orange-600 text-xs font-medium">
-                        {post.tag}
-                    </span>
-                </div>
-            )} */}
-
-      {/* Post Images - Thumbnail */}
-      {firstImage && (
+      {/* Post Media - Render Image or Video */}
+      {/* Post Media - Render Image or Video */}
+      {post && post.length > 0 && (
         <div
           className="w-full bg-white overflow-hidden p-4 cursor-pointer hover:opacity-90 transition relative"
           onClick={() => {
             setImageViewerOpen(true);
           }}
         >
-          <img
-            src={firstImage}
-            alt="post"
-            className="w-full h-auto rounded-2xl object-cover max-h-96"
-          />
-
-          {/* Image count badge */}
-          {/* {post.postimage.length > 1 && (
-            <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-              +{post.postimage.length}
-            </div>
-          )} */}
+          {renderMedia(post[0])}
         </div>
       )}
 
       {/* Content */}
       <div className="px-4 py-3">
-        <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
+        <p className="text-sm text-gray-700 leading-relaxed">{text}</p>
       </div>
 
       {/* Stats - Action Bar */}
@@ -167,16 +165,14 @@ export default function CollectionFeedPostCard({
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              fullPost?.isLiked
-                ? "fill-orange-500 text-orange-500"
-                : "text-gray-600"
-            }`}
+            className={`w-5 h-5 transition ${fullPost?.isLiked
+              ? "fill-orange-500 text-orange-500"
+              : "text-gray-600"
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {fullPost?.likesCount}
           </span>
@@ -187,7 +183,7 @@ export default function CollectionFeedPostCard({
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{fullPost?.commentsCount}</span>
+          <span className="text-sm font-medium">{commentCount}</span>
         </button>
 
         <button
@@ -217,8 +213,8 @@ export default function CollectionFeedPostCard({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal onClose={setSelectedOption} />
@@ -230,7 +226,7 @@ export default function CollectionFeedPostCard({
       <ReportModal
         isOpen={reportmodal}
         onClose={() => setReportmodal(false)}
-        loading={reportLoading} // 👈 ADD THIS
+        loading={reportLoading}
         onSubmit={(reason) => {
           dispatch(
             sendReport({

@@ -22,6 +22,7 @@ export default function OtherProfile() {
   const [isEditProfile, setIsEditProfile] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isProfilePostOpen, setIsProfilePostOpen] = useState(false);
+  const [selectedPageId, setSelectedPageId] = useState(null);
 
   const location = useLocation();
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
@@ -65,6 +66,8 @@ export default function OtherProfile() {
     await dispatch(updateSavedCollections(id)).unwrap();
     handleGetUserProfile();
   };
+
+  console.log(topicPages,"topicPages")
   return (
     <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden">
       {/* Left Side */}
@@ -172,7 +175,10 @@ export default function OtherProfile() {
                       <div className="grid grid-cols-3 gap-3">
                         {topicPages?.map((_, index) => (
                           <TopicPageCard
-                            onClick={() => setIsProfilePostOpen(true)}
+                            onClick={() => {
+                              setSelectedPageId(_._id);
+                              setIsProfilePostOpen(true);
+                            }}
                             key={index}
                             img={_?.image}
                             title={_.name}
@@ -180,6 +186,7 @@ export default function OtherProfile() {
                             tags={_.keywords}
                             Follows={_.followersCount}
                             className="bg-white"
+                            pagetype={_?.pageType}
                           />
                         ))}
                       </div>
@@ -203,7 +210,10 @@ export default function OtherProfile() {
             )}
           </div>
         ) : (
-          <ProfilePost setIsProfilePostOpen={setIsProfilePostOpen} />
+          <ProfilePost
+            setIsProfilePostOpen={setIsProfilePostOpen}
+            pageId={selectedPageId}
+          />
         )}
       </div>
 

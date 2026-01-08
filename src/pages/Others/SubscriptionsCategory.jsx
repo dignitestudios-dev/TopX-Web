@@ -36,6 +36,7 @@ export default function SubscriptionsCategory() {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
 
+  console.log(CollectionFeeds,"CollectionFeeds")
   const mySubscriptions = [
     { title: "My Basketball", pages: "50+" },
     { title: "My Fitness", pages: "50+" },
@@ -178,6 +179,7 @@ export default function SubscriptionsCategory() {
                 commentCount={post?.commentsCount}
                 shareCount={post?.sharesCount}
                 toggleLike={toggleLike}
+                text={post?.bodyText}
               />
             ))
           ) : (
@@ -185,9 +187,8 @@ export default function SubscriptionsCategory() {
               <img
                 src={nofound}
                 alt="No posts available"
-                className="w-[200px] opacity-70"
+                className="w-[200em] opacity-70"
               />
-              <p className="text-gray-500 mt-3">No posts available</p>
             </div>
           )}
         </div>

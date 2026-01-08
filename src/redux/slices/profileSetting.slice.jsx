@@ -49,7 +49,7 @@ export const changePassword = createAsyncThunk(
   "/auth/changePassword",
   async (payload, thunkAPI) => {
     try {
-      const res = await axios.post(`/auth/changePassword/`, payload);
+      const res = await axios.post(`/auth/changePassword`, payload);
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -104,7 +104,7 @@ export const verifyNew = createAsyncThunk(
   "changePhone/verifyNew",
   async ({ otp }, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`/auth/verifyNewPhone`, otp);
+      const res = axios.post(`/auth/verifyNewPhone`, { otp: otp });
       return res.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || err.message);
@@ -115,25 +115,28 @@ export const verifyNew = createAsyncThunk(
 // Delete Account
 export const deleteAccount = createAsyncThunk(
   "/auth/delete",
-  async (otp, thunkAPI) => {
-    // Now only expecting `otp` as a parameter
+  async ({ otp }, thunkAPI) => {
     try {
-      const token = Cookies.get("access_token"); // Assuming you get the token from cookies
+      const token = Cookies.get("access_token");
       if (!token) {
         return thunkAPI.rejectWithValue("No access token found");
       }
+
       const res = await axios.post(
         "/auth/delete",
-        { otp }, // Send the OTP in the request body
+        { otp: Number(otp) }, // ✅ number
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Pass token in the authorization header
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-      return res?.data;
+
+      return res.data;
     } catch (error) {
-      return thunkAPI.rejectWithValue("Logout failed");
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Delete account failed"
+      );
     }
   }
 );

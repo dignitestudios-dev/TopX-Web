@@ -26,7 +26,14 @@ export default function VerificationModal({
 
   const handleResendClick = async () => {
     if (onResend) onResend();
+
+    setValues(Array.from({length},()=>""));
+
     setTimer(30); // start 15 sec timer
+
+    setTimeout(()=>{
+      focusIndex(0);
+    },0)
   };
 
 

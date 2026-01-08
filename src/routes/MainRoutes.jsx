@@ -19,6 +19,7 @@ import ProtectedRoute from "./ProtectedRoute";
 import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
 import Trendingpagedetail from "../pages/Others/Trendingpagedetail";
 import LiveStreampage from "../pages/Others/LiveStreampage";
+import Livechat from "../pages/Others/Livechat";
 
 const MainRoutes = () => {
     const [open, setOpen] = useState(false);
@@ -73,6 +74,15 @@ const MainRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <Knowledge />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                     <Route
+                        path="/live-chat"
+                        element={
+                            <ProtectedRoute>
+                                <Livechat />
                             </ProtectedRoute>
                         }
                     />

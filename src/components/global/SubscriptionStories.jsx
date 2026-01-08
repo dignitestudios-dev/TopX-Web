@@ -73,18 +73,28 @@ const SubscriptionStories = ({ pageId }) => {
                 className="flex flex-col items-center cursor-pointer flex-shrink-0"
               >
                 <div
-                  className={`w-24 h-32 rounded-2xl overflow-hidden relative flex items-end justify-center transition-all duration-300 ${
-                    activeStory?._id === story._id
+                  className={`w-24 h-32 rounded-2xl overflow-hidden relative flex items-end justify-center transition-all duration-300 ${activeStory?._id === story._id
                       ? "ring-3 ring-orange-500 shadow-lg"
                       : "hover:ring-2 hover:ring-orange-300 shadow"
-                  }`}
+                    }`}
                 >
-                  <img
-                    src={story?.story?.media?.fileUrl}
-                    alt={story.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {story?.story?.media?.type === "image" ? (
+                    <img
+                      src={story?.story?.media?.fileUrl}
+                      alt={story.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : story?.story?.media?.type === "video" ? (
+                    <video
+                      controls
+                      className="w-full h-full object-cover"
+                      src={story?.story?.media?.fileUrl}
+                    />
+                  ) : null}
+
+                  {/* Overlay gradient */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+
 
                   <div className="absolute top-2 left-2">
                     <img
@@ -108,6 +118,7 @@ const SubscriptionStories = ({ pageId }) => {
       <ActiveStoryModal
         activeStory={activeStory}
         setActiveStory={setActiveStory}
+        handleViewStory={handleViewStory}
       />
     </div>
   );
