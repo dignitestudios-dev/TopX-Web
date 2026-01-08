@@ -12,20 +12,27 @@ export default function DOBGender() {
   const [openModal, setOpenModal] = useState(false);
   const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
+
+  // ✅ Extract date from ISO string (2026-01-13T00:00:00.000Z -> 2026-01-13)
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    return dateString.split("T")[0];
+  };
+
   const { values, handleBlur, handleChange, handleSubmit, errors, touched } =
     useFormik({
       initialValues: {
-        dob:user?.dob || "",
-        gender:user?.gender || "",
+        dob: formatDate(user?.dob) || "",
+        gender: user?.gender || "",
       },
       validationSchema: changeDOBGenderSchema,
       validateOnChange: true,
       validateOnBlur: true,
       onSubmit: (values) => {
-        if (values.dateOfBirth && values.gender) {
+        if (values.dob && values.gender) {
           const data = {
             username: user?.username,
-            dob: values.dateOfBirth,
+            dob: values.dob,
             gender: values.gender,
           };
           dispatch(completeProfile(data));
@@ -34,6 +41,8 @@ export default function DOBGender() {
         }
       },
     });
+
+  console.log(user, "usersusersusers");
 
   return (
     <div className="space-y-6">
@@ -48,13 +57,13 @@ export default function DOBGender() {
             placeholder="Enter your date of birth"
             variant="default"
             size="md"
-            id="dateOfBirth"
-            name="dateOfBirth"
+            id="dob"
+            name="dob"
             onChange={handleChange}
             onBlur={handleBlur}
-            value={values.dateOfBirth}
-            error={errors.dateOfBirth}
-            touched={touched.dateOfBirth}
+            value={values.dob}
+            error={errors.dob}
+            touched={touched.dob}
           />
           <Input
             label="Gender"
@@ -80,8 +89,7 @@ export default function DOBGender() {
           type="submit"
           size="full"
           variant="orange"
-          className="w-full flex justify-center items-center"
-          // onClick={() => setOpenModal(!openModal)}
+          className="!w-[32em] flex justify-center items-center"
         >
           Save
         </Button>

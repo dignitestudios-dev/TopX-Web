@@ -87,12 +87,14 @@ export default function VerifyAccount({
   const handleVerifyOTP = async (code) => {
     let res;
 
-    const payload = {
-      otp: Number(code),
-      ...(referalCode && {
+    const payload = referalCode
+      ? {
+        otp: String(code),        // ✅ STRING
         referral: Number(referalCode),
-      }),
-    };
+      }
+      : {
+        otp: String(code),        // ✅ STRING
+      };
 
     if (isType === "email") {
       res = await dispatch(verifyEmailOTP(payload));
@@ -101,13 +103,13 @@ export default function VerifyAccount({
     }
 
     if (res.meta.requestStatus === "fulfilled") {
-      const verificationMsg =
+      SuccessToast(
         isType === "email"
           ? "Email Verified Successfully"
-          : "Phone Verified Successfully";
-      SuccessToast(verificationMsg);
+          : "Phone Verified Successfully"
+      );
       setIsModalOpen(false);
-      handleNext(); // NEXT SCREEN
+      handleNext();
     } else {
       ErrorToast(res.payload || "Invalid OTP");
     }
@@ -175,9 +177,8 @@ export default function VerifyAccount({
           size="full"
           loading={isLoading || emailOTPLoading || emailVerifyLoading}
           disabled={!user?.isEmailVerified} // 🔥 Email is compulsory, Phone is optional
-          className={`w-full flex items-center justify-center ${
-            !user?.isEmailVerified ? "opacity-60 cursor-not-allowed" : ""
-          }`}
+          className={`w-full flex items-center justify-center ${!user?.isEmailVerified ? "opacity-60 cursor-not-allowed" : ""
+            }`}
         >
           {isLoading || emailOTPLoading || emailVerifyLoading
             ? "Sending OTP..."

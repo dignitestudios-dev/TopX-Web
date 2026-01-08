@@ -11,6 +11,7 @@ import profileSettingsReducer from "./slices/profileSetting.slice"
 import OtherProfileReducer from "./slices/otherprofile.slice"
 import knowledgepostReducer from "./slices/knowledgepost.slice"
 import notificationsReducer from "./slices/notifications.slice";
+import changeEmailReducer from "./slices/changeemail.slice";
 import chatReducer from "./slices/chat.slice";
 import postsfeedReducer from "./slices/postfeed.slice";
 import trendingReducer from "./slices/trending.slice"
@@ -45,6 +46,7 @@ const rootReducer = combineReducers({
   globalSearch: GlobalSearchReducder,
   livestream: livestreamReducer,
   chat: chatReducer,
+  changeEmail: changeEmailReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

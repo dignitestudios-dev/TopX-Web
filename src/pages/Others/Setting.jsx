@@ -41,7 +41,7 @@ export default function Setting() {
     { name: "Notifications", component: <Notifications />, icon: FaRegBell },
     { name: "Change Password", component: <ChangePassword />, icon: MdOutlineLock },
     { name: "Change Number", component: <ChangeContact />, icon: LuPhone },
-    // { name: "Change Email", component: <ChangeEmail />, icon: IoMailOutline },
+    { name: "Change Email", component: <ChangeEmail />, icon: IoMailOutline },
     { name: "DOB / Gender", component: <DOBGender />, icon: BsGenderAmbiguous },
     { name: "Blocked Users", component: <BlockedUsers />, icon: LuUserRoundX },
     { name: "Delete Account", component: <DeleteAccount />, icon: LuUserRoundX },

@@ -62,7 +62,7 @@ export default function KnowledgeAllPostCard({ item }) {
       </div>
 
       {/* Followers Section */}
-      <div className="flex items-center gap-2 mt-2">
+      {/* <div className="flex items-center gap-2 mt-2">
         <div className="relative w-[60px] h-[24px]">
           <img src="https://randomuser.me/api/portraits/women/3.jpg" className="w-[24px] h-[24px] rounded-full absolute left-0" />
           <img src="https://randomuser.me/api/portraits/men/2.jpg" className="w-[24px] h-[24px] rounded-full absolute left-5" />
@@ -72,7 +72,7 @@ export default function KnowledgeAllPostCard({ item }) {
         <p className="text-[12px] font-[500] text-[#5A5A5A]">
           {item?.followersCount || 0}+ Follows
         </p>
-      </div>
+      </div> */}
 
     </div>
   );

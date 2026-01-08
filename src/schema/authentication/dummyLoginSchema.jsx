@@ -47,7 +47,6 @@ export const changeEmailSchema = Yup.object({
 export const changeNumberSchema = Yup.object({
   phone: Yup.string()
     .matches(/^[0-9]*$/, "Only digits are allowed")
-    .length(10, "Phone number must be exactly 10 digits")
     .required("Please enter your phone number"),
 });
 

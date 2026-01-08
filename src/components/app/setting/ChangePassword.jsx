@@ -10,6 +10,7 @@ import Modal from "../../common/Modal";
 import SuccessModal from "../../common/Modal";
 import { useDispatch, useSelector } from "react-redux";
 import { changePassword } from "../../../redux/slices/profileSetting.slice";
+import { ErrorToast, SuccessToast } from "../../global/Toaster";
 
 export default function ChangePassword() {
   const [openModal, setOpenModal] = useState(false);
@@ -18,7 +19,7 @@ export default function ChangePassword() {
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
     useState(false);
   const dispatch = useDispatch();
-  const { isLoading } = useSelector((state) => state.profileSetting);
+  const { isLoading,success,error } = useSelector((state) => state.profileSetting);
   const {
     values,
     handleBlur,
@@ -30,18 +31,31 @@ export default function ChangePassword() {
   } = useFormik({
     initialValues: changePasswordValues,
     validationSchema: changePasswordSchema,
-    onSubmit: async (values) => {
-      console.log(values);
-      const data = {
-        password: values.old_password,
-        newPassword: values.confirm_password,
-      };
-      await dispatch(changePassword(data)).unwrap();
-      resetForm();
-      setOpenModal(true);
-    },
+   onSubmit: async (values) => {
+  try {
+    const data = {
+      password: values.old_password,
+      newPassword: values.confirm_password,
+    };
+
+    await dispatch(changePassword(data)).unwrap();
+
+    SuccessToast("Password changed successfully");
+    resetForm();
+    setOpenModal(true);
+
+  } catch (err) {
+    ErrorToast(
+      typeof err === "string"
+        ? err
+        : "Failed to change password. Please try again."
+    );
+  }
+},
+
   });
   console.log(openModal);
+ 
   return (
     <div className="w-full space-y-6">
       <h1 className="text-[28px] font-bold tracking-[-0.018em]">
@@ -144,7 +158,7 @@ export default function ChangePassword() {
           size="full"
           variant="orange"
           loading={isLoading}
-          className="w-full flex justify-center items-center"
+          className="!w-[31.3em] flex justify-center items-center"
         >
           Save
         </Button>

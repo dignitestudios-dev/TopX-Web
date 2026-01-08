@@ -30,8 +30,8 @@ export default function PageCategorySelector({ onNext, onClose }) {
             return;
         }
 
-        if (selectedSubTopics.length >= 2) {
-            ErrorToast("You can select maximum 2 sub-topics!");
+        if (selectedSubTopics.length >= 1) {
+            ErrorToast("You can select maximum 1 sub-topics!");
             return;
         }
 

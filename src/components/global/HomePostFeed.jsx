@@ -18,41 +18,44 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-
+  
+  const isVideo = (url) => {
+    return /\.(mp4|webm|ogg)$/i.test(url);
+  };
+  
+  const [activeMedia, setActiveMedia] = useState(null);
+  console.log("post", post)
+  
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const isLiked = liked[post.id]; // Check if this post is liked using the post.id key
+  const isLiked = liked[post.id];
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
-  const firstImage = hasImages ? post.postimage[0] : null;
+  const firstMedia = hasImages ? post.postimage[0] : null;
+  const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
+
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
   const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports
   );
+
   const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
     const newLikeStatus = !currentLikeStatus;
-
-    // Calculate increment based on toggle
     const newLikesCount = newLikeStatus
       ? (currentLikesCount ?? 0) + 1
       : Math.max((currentLikesCount ?? 0) - 1, 0);
 
-    // Optimistic update in localStorage
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
     likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
     localStorage.setItem("postLikes", JSON.stringify(likes));
 
-    // Update UI immediately
     toggleLike(postId, newLikeStatus, newLikesCount);
-
-    // Call API
     dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
 
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -62,14 +65,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   useEffect(() => {
     if (reportSuccess) {
       SuccessToast("Report submitted successfully");
-
-      // reset success so it does not fire again
       dispatch(resetReportState());
-
-      // optional: close modal
       setReportmodal(false);
     }
   }, [reportSuccess, dispatch]);
@@ -139,26 +139,37 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {hasImages && (
         <div
           className={`w-full bg-white overflow-hidden p-4 relative transition 
-      ${
-        post.isAllowedByAdmin
-          ? "cursor-pointer hover:opacity-90"
-          : "cursor-not-allowed"
-      }
+      ${post.isAllowedByAdmin
+              ? "cursor-pointer hover:opacity-90"
+              : "cursor-not-allowed"
+            }
     `}
           onClick={() => {
             if (post.isAllowedByAdmin) {
+              setActiveMedia(post); // ✅ CHANGE: Pass entire post object, not just URL
               setImageViewerOpen(true);
             }
           }}
         >
           {/* Image */}
-          <img
-            src={firstImage}
-            alt="post"
-            className={`w-full h-auto rounded-2xl object-cover max-h-96 
-        ${!post?.isAllowedByAdmin ? "blur-sm" : ""}
-      `}
-          />
+          {firstMediaIsVideo ? (
+            <video
+              src={firstMedia}
+              className={`w-full rounded-2xl max-h-96 object-cover
+    ${!post?.isAllowedByAdmin ? "blur-sm" : ""}`}
+              muted
+              controls
+              playsInline
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <img
+              src={firstMedia}
+              alt="post"
+              className={`w-full h-auto rounded-2xl object-cover max-h-96
+    ${!post?.isAllowedByAdmin ? "blur-sm" : ""}`}
+            />
+          )}
 
           {/* Image count badge */}
           {post.postimage.length > 1 && post.isAllowedByAdmin && (
@@ -203,14 +214,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
-            }`}
+            className={`w-5 h-5 transition ${post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              post.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${post.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {Number(post.likesCount ?? 0)}
           </span>
@@ -235,9 +244,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {/* Image Viewer Modal */}
       <PostImageViewerModal
-        post={post}
+        post={activeMedia} // ✅ CHANGE: Pass activeMedia directly
         isOpen={imageViewerOpen}
-        onClose={() => setImageViewerOpen(false)}
+        onClose={() => {
+          setImageViewerOpen(false);
+          setActiveMedia(null);
+        }}
       />
 
       {/* Comments Section */}
@@ -255,8 +267,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
@@ -268,7 +280,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       <ReportModal
         isOpen={reportmodal}
         onClose={() => setReportmodal(false)}
-        loading={reportLoading} // 👈 ADD THIS
+        loading={reportLoading}
         onSubmit={(reason) => {
           dispatch(
             sendReport({

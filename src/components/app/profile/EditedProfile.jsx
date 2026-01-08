@@ -121,6 +121,8 @@ export default function EditedProfile() {
     }
   }, [allUserData]);
 
+  console.log(allUserData, "allUserData")
+
   return (
     <div className="w-full flex flex-col gap-4 bg-white rounded-[12px] p-4">
       <button
@@ -151,7 +153,7 @@ export default function EditedProfile() {
           onChange={(e) => setName(e.target.value)}
           label="Name"
         />
-        <Input
+        {/* <Input
           size="md"
           type="email"
           placeholder="Text goes here"
@@ -159,7 +161,18 @@ export default function EditedProfile() {
           disabled
           onChange={(e) => setEmail(e.target.value)}
           label="Email (can not changed)"
+        /> */}
+        {username && (
+        <Input
+          size="md"
+          type="email"
+          placeholder="Text goes here"
+          value={username}
+          disabled
+          onChange={(e) => setUsername(e.target.value)}
+          label="Username (can not changed)"
         />
+        )}
       </div>
 
       {/* Email */}
@@ -191,11 +204,10 @@ export default function EditedProfile() {
                 <button
                   key={index}
                   onClick={() => toggleCategory(item.name)} // Pass title to toggleCategory
-                  className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${
-                    isActive
+                  className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${isActive
                       ? "bg-orange-600 text-white hover:bg-orange-700"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                    }`}
                 >
                   {title}
                 </button>

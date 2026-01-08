@@ -10,6 +10,9 @@ export default function PostImageViewerModal({
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // ✅ ADD: media type helper
+  const isVideo = (url) => /\.(mp4|webm|ogg)$/i.test(url);
+
   const images = React.useMemo(() => {
     if (!post) return [];
 
@@ -28,6 +31,8 @@ export default function PostImageViewerModal({
     return [];
   }, [post]);
 
+  console.log(author,"postpost")
+
   const currentImage = images[currentImageIndex];
 
   useEffect(() => {
@@ -36,20 +41,20 @@ export default function PostImageViewerModal({
     }
   }, [images, currentImageIndex]);
 
-  // ✅ RETURN ALWAYS AFTER ALL HOOKS
-  if (!isOpen) return null;
+  // ✅ SAFETY
+  if (!isOpen || !currentImage) return null;
 
   const goToPrevious = (e) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) =>
-      prev === 0 ? images?.length - 1 : prev - 1
+      prev === 0 ? images.length - 1 : prev - 1
     );
   };
 
   const goToNext = (e) => {
     e.stopPropagation();
     setCurrentImageIndex((prev) =>
-      prev === images?.length - 1 ? 0 : prev + 1
+      prev === images.length - 1 ? 0 : prev + 1
     );
   };
 
@@ -57,7 +62,7 @@ export default function PostImageViewerModal({
     setCurrentImageIndex(0);
     onClose();
   };
-console.log(author,post,"post---author")
+
   return (
     <div
       className="fixed inset-0 bg-black flex items-center justify-center z-50 p-4"
@@ -72,14 +77,17 @@ console.log(author,post,"post---author")
         <div className="p-4 border-b border-gray-700 flex items-center justify-between bg-black">
           <div className="flex items-center gap-3">
             <img
-              src={post?.author?.profilePicture}
-              alt={post?.author?.user}
+              src={author?.profilePicture}
+              alt={author?.user}
               className="w-10 h-10 rounded-full object-cover"
             />
             <div>
-              <h3 className="font-semibold text-white text-sm">{post?.author?.name}</h3>
+              <h3 className="font-semibold text-white text-sm">
+                {author?.name}
+              </h3>
               <p className="text-gray-500 text-xs">
-                {post?.author?.username} · {timeAgo(post?.author?.createdAt)}
+                {author?.username} ·{" "}
+                {timeAgo(author?.createdAt)}
               </p>
             </div>
           </div>
@@ -93,19 +101,36 @@ console.log(author,post,"post---author")
 
         {/* Post Text */}
         <div className="px-4 py-3 bg-black border-b border-gray-700">
-          <p className="text-white text-sm leading-relaxed">{post.text}</p>
+          <p className="text-white text-sm leading-relaxed">
+            {post.text}
+          </p>
         </div>
 
-        {/* Image Container */}
-        <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden">
-          <img
-            src={currentImage}
-            alt="post"
-            className="max-w-full max-h-full object-contain"
-          />
+        {/* Media Container */}
+        <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden min-h-[300px]">
+          {/* ✅ REPLACE IMG WITH CONDITIONAL MEDIA */}
+          {isVideo(currentImage) ? (
+            <video
+              src={currentImage}
+              controls
+              playsInline
+              muted={false}
+              preload="metadata"
+              onClick={(e) => e.stopPropagation()}   // ✅ MOST IMPORTANT
+              className="max-w-full max-h-full w-full h-full object-contain rounded-lg"
+            />
+
+
+          ) : (
+            <img
+              src={currentImage}
+              alt="post"
+              className="max-w-full max-h-full object-contain"
+            />
+          )}
 
           {/* Previous Button */}
-          {images?.length > 1 && (
+          {images.length > 1 && (
             <button
               onClick={goToPrevious}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-gray-800 p-2 rounded-full transition bg-black bg-opacity-50"
@@ -115,7 +140,7 @@ console.log(author,post,"post---author")
           )}
 
           {/* Next Button */}
-          {images?.length > 1 && (
+          {images.length > 1 && (
             <button
               onClick={goToNext}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-gray-800 p-2 rounded-full transition bg-black bg-opacity-50"
@@ -124,29 +149,28 @@ console.log(author,post,"post---author")
             </button>
           )}
 
-          {/* Image Counter */}
-          {images?.length > 1 && (
+          {/* Counter */}
+          {images.length > 1 && (
             <div className="absolute top-4 right-4 bg-black bg-opacity-60 text-white px-3 py-1 rounded-full text-xs font-medium">
-              {currentImageIndex + 1} / {images?.length}
+              {currentImageIndex + 1} / {images.length}
             </div>
           )}
         </div>
 
-        {/* Image Indicators (Dots) */}
-        {images?.length > 1 && (
+        {/* Dots */}
+        {images.length > 1 && (
           <div className="p-3 bg-black border-t border-gray-700 flex gap-2 justify-center">
-            {images?.map((_, index) => (
+            {images.map((_, index) => (
               <button
                 key={index}
                 onClick={(e) => {
                   e.stopPropagation();
                   setCurrentImageIndex(index);
                 }}
-                className={`transition ${
-                  index === currentImageIndex
-                    ? "bg-white w-6 h-1.5"
-                    : "bg-gray-600 w-1.5 h-1.5"
-                } rounded-full`}
+                className={`transition ${index === currentImageIndex
+                  ? "bg-white w-6 h-1.5"
+                  : "bg-gray-600 w-1.5 h-1.5"
+                  } rounded-full`}
               />
             ))}
           </div>

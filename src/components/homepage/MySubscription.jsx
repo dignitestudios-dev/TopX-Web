@@ -66,7 +66,11 @@ const MySubscription = () => {
                     }
                     className="cursor-pointer font-medium text-gray-900 flex items-center gap-1"
                   >
-                    {item.name}
+                    <img src={item?.image} className="rounded-full object-cover w-6 h-6" alt="" />
+                    <span className="pl-1">
+                      {item.name}
+                    </span>
+
                     <Layers className="w-4 h-4 text-gray-500" />
                   </p>
 

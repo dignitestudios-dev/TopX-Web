@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Heart, MoreVertical, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
+import { Heart, MoreVertical, X } from "lucide-react";
 import {
   createComment,
   deleteComment,
@@ -10,6 +10,8 @@ import {
   updateComment,
 } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
+import ReportModal from "./ReportModal"; // Report Modal
+import { sendReport } from "../../redux/slices/reports.slice";
 
 export default function CommentsSection({ postId }) {
   const { user } = useSelector((state) => state.auth);
@@ -17,13 +19,15 @@ export default function CommentsSection({ postId }) {
     (state) => state.postsfeed
   );
   const [editingCommentId, setEditingCommentId] = useState(null);
-
   const [newComment, setNewComment] = useState("");
+  const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
+  const [reportTargetId, setReportTargetId] = useState(null); // Store the comment ID to report
   const dispatch = useDispatch();
-  console.log(postComments, "postComments");
+
   const handleGetComments = async () => {
     await dispatch(getComment(postId));
   };
+
   useEffect(() => {
     handleGetComments();
   }, [postId]);
@@ -105,6 +109,7 @@ export default function CommentsSection({ postId }) {
     await dispatch(deleteComment(commentId)).unwrap();
     handleGetComments();
   };
+
   const handleElevateComment = async (commentId) => {
     await dispatch(elevateComment(commentId)).unwrap();
     handleGetComments();
@@ -138,19 +143,45 @@ export default function CommentsSection({ postId }) {
         document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Menu items for comment actions
     const menuItems = [
-      {
-        label: "Edit",
-        action: () => {
-          setNewComment(comment.text); // input fill
-          setEditingCommentId(comment._id); // edit mode ON
-        },
-      },
-      {
-        label: "Delete",
-        action: () => handleDeleteComment(comment?._id),
-      },
+      // Show "Edit" only if the comment belongs to the logged-in user
+      ...(comment.user._id === user._id
+        ? [
+          {
+            label: "Edit",
+            action: () => {
+              setNewComment(comment.text); // input fill
+              setEditingCommentId(comment._id); // edit mode ON
+            },
+          },
+        ]
+        : []),
+
+      // Show "Delete" if the comment belongs to the logged-in user
+      ...(comment.user._id === user._id
+        ? [
+          {
+            label: "Delete",
+            action: () => handleDeleteComment(comment?._id),
+          },
+        ]
+        : []),
+
+      // Show "Report" only if the comment doesn't belong to the logged-in user
+      ...(comment.user._id !== user._id
+        ? [
+          {
+            label: "Report",
+            action: () => {
+              setReportmodal(true); // Open report modal
+              setReportTargetId(comment._id); // Set the comment ID to report
+            },
+          },
+        ]
+        : []),
     ];
+
 
     const handleItemClick = (action) => {
       action();
@@ -162,20 +193,46 @@ export default function CommentsSection({ postId }) {
       setReplyText("");
       setIsReplying(false);
     };
+
     const isAuthor = comment?.user?._id === user?._id;
+
+     useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false); // Close dropdown if clicked outside
+      }
+    };
+
+    // Add event listener on component mount
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Cleanup event listener on component unmount
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
     return (
       <div className={`py-5 ${isReply ? "ml-12 mt-3" : "mt-4"}`}>
         <div className="flex gap-3 ">
-          <img
-            src={comment.user?.profilePicture}
-            alt={comment.user?.username}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ED6416] text-white flex-shrink-0">
+            {comment.user?.profilePicture ? (
+              <img
+                src={comment.user?.profilePicture}
+                alt={comment.user?.username}
+                className="w-8 h-8 rounded-full object-cover"
+              />
+            ) : (
+              <span className="font-[600] text-sm uppercase">
+                {comment?.user?.username ? comment.user.username[0] : "?"}
+              </span>
+            )}
+          </div>
+
           <div className="flex-1">
             <div className="bg-gray-100 rounded-lg px-3 py-2">
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
-                {comment.user?.username}
+                {comment.user?.name}
                 {comment.isAdmin && (
                   <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
                     Admin
@@ -190,15 +247,9 @@ export default function CommentsSection({ postId }) {
                 className="flex items-center gap-1 hover:text-orange-500 transition"
               >
                 <Heart
-                  className={`w-4 h-4 ${
-                    comment.isLiked ? "fill-orange-500 text-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 ${comment.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
                 />
-                <span
-                  className={
-                    comment.isLiked ? "text-orange-500 font-medium" : ""
-                  }
-                >
+                <span className={comment.isLiked ? "text-orange-500 font-medium" : ""}>
                   {Number(comment.likesCount ?? 0)}
                 </span>
               </button>
@@ -220,12 +271,14 @@ export default function CommentsSection({ postId }) {
             </button>
 
             {isOpen && (
-              <div className="absolute  right-0 mt-1 w-40  bg-white rounded-lg shadow-lg border border-gray-200 py-1  z-50">
+               <div
+          ref={dropdownRef} // Attach ref to the dropdown menu
+          className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+        >
                 {menuItems.map((item, index) => {
-                  if (!isAuthor && !["Delete", "Report"].includes(item.label)) {
-                    return null;
+                  if (!isAuthor && item.label === "Delete") {
+                    return null; // Prevent the delete option from showing for other users
                   }
-
                   return (
                     <button
                       key={index}
@@ -300,9 +353,7 @@ export default function CommentsSection({ postId }) {
         <div className="flex-1 flex gap-2">
           <input
             type="text"
-            placeholder={
-              editingCommentId ? "Update your comment..." : "Add a comment"
-            }
+            placeholder={editingCommentId ? "Update your comment..." : "Add a comment"}
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && addComment()}
@@ -312,11 +363,10 @@ export default function CommentsSection({ postId }) {
             onClick={addOrUpdateComment}
             disabled={commentLoading}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
-    ${
-      commentLoading
-        ? "bg-orange-300 cursor-not-allowed"
-        : "bg-orange-500 hover:bg-orange-600 text-white"
-    }
+    ${commentLoading
+                ? "bg-orange-300 cursor-not-allowed"
+                : "bg-orange-500 hover:bg-orange-600 text-white"
+              }
   `}
           >
             {commentLoading
@@ -324,8 +374,8 @@ export default function CommentsSection({ postId }) {
                 ? "Updating..."
                 : "Posting..."
               : editingCommentId
-              ? "Update"
-              : "Post"}
+                ? "Update"
+                : "Post"}
           </button>
         </div>
       </div>
@@ -334,28 +384,45 @@ export default function CommentsSection({ postId }) {
       <div className="space-y-1">
         {getCommentsLoading
           ? Array.from({ length: 2 }).map((_, idx) => (
-              <div key={idx} className="flex gap-3 py-3 animate-pulse">
-                {/* Avatar */}
-                <div className="w-8 h-8 bg-gray-300 rounded-full" />
+            <div key={idx} className="flex gap-3 py-3 animate-pulse">
+              {/* Avatar */}
+              <div className="w-8 h-8 bg-gray-300 rounded-full" />
 
-                {/* Content */}
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-24 bg-gray-300 rounded" />
-                  <div className="h-3 w-full bg-gray-200 rounded" />
-                  <div className="h-3 w-3/4 bg-gray-200 rounded" />
-                </div>
+              {/* Content */}
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 bg-gray-300 rounded" />
+                <div className="h-3 w-full bg-gray-200 rounded" />
+                <div className="h-3 w-3/4 bg-gray-200 rounded" />
               </div>
-            ))
+            </div>
+          ))
           : postComments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                onAddReply={addReply}
-                comment={comment}
-                setNewComment={setNewComment}
-                setEditingCommentId={setEditingCommentId}
-              />
-            ))}
+            <CommentItem
+              key={comment.id}
+              onAddReply={addReply}
+              comment={comment}
+              setNewComment={setNewComment}
+              setEditingCommentId={setEditingCommentId}
+            />
+          ))}
       </div>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={reportmodal}
+        onClose={() => setReportmodal(false)}
+        loading={commentLoading}
+        onSubmit={(reason) => {
+          dispatch(
+            sendReport({
+              reason,
+              targetModel: "Comment",
+              targetId: reportTargetId, // Use the comment's target ID for reporting
+              isReported: true,
+            })
+          );
+        }}
+      />
     </div>
   );
 }
