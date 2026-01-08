@@ -9,8 +9,9 @@ import CreateKnowledgePageModal from "../../global/CreateKnowledgePageModal";
 import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
 import PageCategorySelector from "./PageCategorySelector";
 import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
+import { nofound } from "../../../assets/export";
 
-export default function OtherProfileKnowledgePostCard({ userKnowledgePost,loading }) {
+export default function OtherProfileKnowledgePostCard({ userKnowledgePost, loading }) {
   const dispatch = useDispatch();
   const [selectoption, setSelectoption] = useState(false);
   const [createpage, setCreatepage] = useState(false);
@@ -31,41 +32,41 @@ export default function OtherProfileKnowledgePostCard({ userKnowledgePost,loadin
   return (
     <div className="py-4">
       <div className="space-y-6">
- {!isKnowledgePageOpen ? (
+        {!isKnowledgePageOpen ? (
           <>
-        {/* CREATE KNOWLEDGE POST (TOP INPUT) */}
-        <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-3 py-1">
-          <input
-            type="text"
-            placeholder="Create Knowledge Page"
-            className="flex-1 text-sm text-gray-600 focus:outline-none"
-            onClick={() => {
-              dispatch(resetKnowledge());
-              setSelectoption(true);
-            }}
-          />
-          <button
-            className="bg-orange-500 text-white p-2 rounded-[10px] hover:bg-orange-600 transition"
-            onClick={() => {
-              dispatch(resetKnowledge());
-              setSelectoption(true);
-            }}
-          >
-            <Plus size={20} />
-          </button>
-        </div>
+            {/* CREATE KNOWLEDGE POST (TOP INPUT) */}
+            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-2xl px-3 py-1">
+              <input
+                type="text"
+                placeholder="Create Knowledge Page"
+                className="flex-1 text-sm text-gray-600 focus:outline-none"
+                onClick={() => {
+                  dispatch(resetKnowledge());
+                  setSelectoption(true);
+                }}
+              />
+              <button
+                className="bg-orange-500 text-white p-2 rounded-[10px] hover:bg-orange-600 transition"
+                onClick={() => {
+                  dispatch(resetKnowledge());
+                  setSelectoption(true);
+                }}
+              >
+                <Plus size={20} />
+              </button>
+            </div>
 
-        {/* SKELETON */}
-        {loading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <KnowledgePostSkeleton key={index} />
-            ))}
-          </div>
-        )}
+            {/* SKELETON */}
+            {loading && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <KnowledgePostSkeleton key={index} />
+                ))}
+              </div>
+            )}
 
-        {/* DATA */}
-       
+            {/* DATA */}
+
             {!loading && userKnowledgePost?.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {userKnowledgePost?.map((item) => (
@@ -95,7 +96,15 @@ export default function OtherProfileKnowledgePostCard({ userKnowledgePost,loadin
 
         {/* EMPTY */}
         {!loading && userKnowledgePost?.length === 0 && (
-          <p className="text-center text-gray-500">No knowledge pages found.</p>
+          <div className="text-center p-10 pb-10">
+            <div className=" flex justify-center">
+              <img src={nofound} height={200} width={200} alt="" />
+            </div>
+            <p className="font-bold pt-4 text-black">
+              No knowledge pages found
+
+            </p>
+          </div>
         )}
 
         {/* MODAL */}

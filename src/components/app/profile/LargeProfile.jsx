@@ -32,6 +32,8 @@ export default function LargeProfile({
     );
   }
 
+  console.log(allUserData,"allUserData")
+
   return (
     <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
       {/* Top Orange Section */}
@@ -116,7 +118,13 @@ export default function LargeProfile({
           type={modalType == "followers" ? "followers" : "followings"}
         />
         {/* Bottom White Section - Bio */}
-        <div className="pt-20 px-8 pb-8 bg-slate-50">
+        <div className="pt-20 px-6 pb-8 space-y-1 bg-slate-50">
+           <p className="text-[16px] font-[700] text-[#000]">
+            {userRecord.name || "No username Available"}
+          </p>
+          <p className="text-[14px] font-[400] text-[#413b3b99]">
+            @{userRecord.username || "No username Available"}
+          </p>
           <p className="text-[14px] font-[400] text-[#413b3b99]">
             {userRecord.bio || "No Bio Available"}
           </p>

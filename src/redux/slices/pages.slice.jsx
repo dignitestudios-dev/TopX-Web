@@ -12,6 +12,12 @@ const initialState = {
   // NEW
   pageDetailLoading: false,
   pageDetail: null,
+  deletePageLoading: false,
+  deletePageSuccess: false,
+  updatePageLoading: false,
+  updatePageSuccess: false,
+  expertStatusLoading: false,
+  expertStatusSuccess: false,
 };
 
 // ================= CREATE PAGE =================
@@ -76,6 +82,55 @@ export const repostPostToPages = createAsyncThunk(
     }
   }
 );
+
+// ================= DELETE PAGE =================
+export const deletePage = createAsyncThunk(
+  "pages/deletePage",
+  async (pageId, thunkAPI) => {
+    try {
+      const res = await axios.delete(`/pages/${pageId}`);
+      return res.data?.data || res.data; // returns deleted page data or success message
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete page"
+      );
+    }
+  }
+);
+
+// ================= UPDATE PAGE =================
+export const updatePage = createAsyncThunk(
+  "pages/updatePage",
+  async ({ pageId, formData }, thunkAPI) => {
+    try {
+      const res = await axios.patch(`/pages/${pageId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data?.data || res.data; // returns updated page data
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update page"
+      );
+    }
+  }
+);
+
+// ================= APPLY FOR EXPERT STATUS =================
+export const applyExpertStatus = createAsyncThunk(
+  "pages/applyExpertStatus",
+  async (formData, thunkAPI) => {
+    try {
+      const res = await axios.post("/expertisestatus", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data?.data || res.data; // returns expert status application data
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to apply for expert status"
+      );
+    }
+  }
+);
 // ================= FETCH Other PAGES =================
 export const fetchOtherPages = createAsyncThunk(
   "pages/recommendations",
@@ -102,6 +157,18 @@ const pagesSlice = createSlice({
       state.error = null;
       state.success = null;
       state.pages = null;
+    },
+    resetDeletePageSuccess(state) {
+      state.deletePageSuccess = false;
+      state.error = null;
+    },
+    resetUpdatePageSuccess(state) {
+      state.updatePageSuccess = false;
+      state.error = null;
+    },
+    resetExpertStatusSuccess(state) {
+      state.expertStatusSuccess = false;
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -155,9 +222,73 @@ const pagesSlice = createSlice({
       .addCase(fetchOtherPages.rejected, (state, action) => {
         state.pagesLoading = false;
         state.error = action.payload;
+      })
+      // ******** DELETE PAGE ********
+      .addCase(deletePage.pending, (state) => {
+        state.deletePageLoading = true;
+        state.deletePageSuccess = false;
+        state.error = null;
+      })
+      .addCase(deletePage.fulfilled, (state, action) => {
+        state.deletePageLoading = false;
+        state.deletePageSuccess = true;
+        state.success = true;
+        // Remove deleted page from myPages if it exists
+        state.myPages = state.myPages.filter(
+          (page) => page._id !== action.payload?._id
+        );
+        // Clear pageDetail if it was the deleted page
+        if (state.pageDetail?._id === action.payload?._id) {
+          state.pageDetail = null;
+        }
+      })
+      .addCase(deletePage.rejected, (state, action) => {
+        state.deletePageLoading = false;
+        state.deletePageSuccess = false;
+        state.error = action.payload;
+      })
+      // ******** UPDATE PAGE ********
+      .addCase(updatePage.pending, (state) => {
+        state.updatePageLoading = true;
+        state.updatePageSuccess = false;
+        state.error = null;
+      })
+      .addCase(updatePage.fulfilled, (state, action) => {
+        state.updatePageLoading = false;
+        state.updatePageSuccess = true;
+        state.success = true;
+        // Update pageDetail if it's the updated page
+        if (state.pageDetail?._id === action.payload?._id) {
+          state.pageDetail = action.payload;
+        }
+        // Update myPages if it exists there
+        state.myPages = state.myPages.map((page) =>
+          page._id === action.payload?._id ? action.payload : page
+        );
+      })
+      .addCase(updatePage.rejected, (state, action) => {
+        state.updatePageLoading = false;
+        state.updatePageSuccess = false;
+        state.error = action.payload;
+      })
+      // ******** APPLY EXPERT STATUS ********
+      .addCase(applyExpertStatus.pending, (state) => {
+        state.expertStatusLoading = true;
+        state.expertStatusSuccess = false;
+        state.error = null;
+      })
+      .addCase(applyExpertStatus.fulfilled, (state, action) => {
+        state.expertStatusLoading = false;
+        state.expertStatusSuccess = true;
+        state.success = true;
+      })
+      .addCase(applyExpertStatus.rejected, (state, action) => {
+        state.expertStatusLoading = false;
+        state.expertStatusSuccess = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { resetPages } = pagesSlice.actions;
+export const { resetPages, resetDeletePageSuccess, resetUpdatePageSuccess, resetExpertStatusSuccess } = pagesSlice.actions;
 export default pagesSlice.reducer;

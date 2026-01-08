@@ -4,7 +4,7 @@ import Button from '../../common/Button';
 import Input from '../../common/Input';
 import { useDispatch, useSelector } from 'react-redux';
 import { gettopics } from '../../../redux/slices/topics.slice';
-import { createPage } from '../../../redux/slices/pages.slice';
+import { createPage, fetchMyPages } from '../../../redux/slices/pages.slice';
 import { ErrorToast, SuccessToast } from '../../global/Toaster';
 
 export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) {
@@ -100,13 +100,16 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
     fd.append("pageType", formData.pageType);
 
     formData.keywords.forEach((item) => {
-      fd.append("keywords[]", item);
+      fd.append("keywords[]", `#${item}`); 
     });
+
 
     dispatch(createPage(fd))
       .unwrap()
       .then(() => {
         SuccessToast('Page created successfully!');
+        // Refresh pages list in real-time
+        dispatch(fetchMyPages({ page: 1, limit: 100 }));
         setSelectedType("Page done");
         setIsOpen(false);
         setFormData({
@@ -163,7 +166,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
             <div className="bg-white rounded-3xl w-full max-w-3xl shadow-2xl animate-slideUp overflow-hidden">
               <div className="p-8">
                 <div className="flex items-center justify-between mb-8">
-                  <h2 className="text-3xl font-bold text-gray-900">Create Page</h2>
+                  <h2 className="text-3xl font-bold text-gray-900">Create New Page</h2>
                   <button
                     onClick={() => setIsOpen(false)}
                     disabled={pagesLoading}
@@ -179,7 +182,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
                       label="Name"
                       size="md"
                       type="text"
-                      placeholder="Text goes here"
+                      placeholder="Enter your Topic page name"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                     />
@@ -238,7 +241,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
                           key={index}
                           className="flex items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm"
                         >
-                          {keyword}
+                          #{keyword}
                           <button
                             onClick={() => removeKeyword(index)}
                             className="ml-2 text-orange-600 hover:text-orange-800"
@@ -251,7 +254,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
                       <input
                         type="text"
                         className="flex-1 outline-none px-2 py-1 text-gray-700"
-                        placeholder="Type and press Enter"
+                        placeholder="Text goes here (hashtags)"
                         value={keywordInput}
                         onChange={(e) => setKeywordInput(e.target.value)}
                         onKeyDown={handleKeywordKeyDown}
@@ -278,7 +281,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-4">
-                      Page Type
+                      Topic Page Type
                     </label>
                     <div className="space-y-4">
                       <label className="flex items-start cursor-pointer group">

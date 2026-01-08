@@ -27,12 +27,17 @@ export default function VerifyAccount({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isType, setIsType] = useState("");
   const dispatch = useDispatch();
-  const { isLoading, emailOTPLoading, emailVerifyLoading } = useSelector(
+  const { isLoading, emailOTPLoading, emailVerifyLoading, otpVerified, emailVerified } = useSelector(
     (state) => state.onboarding
   );
   const { user } = useSelector((state) => state.auth);
 
   console.log(user, "userdata");
+
+  // Check if both email and phone are verified
+  const isEmailVerified = user?.isEmailVerified || emailVerified;
+  const isPhoneVerified = user?.isPhoneVerified || otpVerified;
+  const bothVerified = isEmailVerified && isPhoneVerified;
 
   // ⭐ EMAIL CARD CLICK + SEND OTP
   const handleEmailClick = async () => {
@@ -87,12 +92,14 @@ export default function VerifyAccount({
   const handleVerifyOTP = async (code) => {
     let res;
 
-    const payload = {
-      otp: Number(code),
-      ...(referalCode && {
+    const payload = referalCode
+      ? {
+        otp: String(code),        // ✅ STRING
         referral: Number(referalCode),
-      }),
-    };
+      }
+      : {
+        otp: String(code),        // ✅ STRING
+      };
 
     if (isType === "email") {
       res = await dispatch(verifyEmailOTP(payload));
@@ -101,13 +108,13 @@ export default function VerifyAccount({
     }
 
     if (res.meta.requestStatus === "fulfilled") {
-      const verificationMsg =
+      SuccessToast(
         isType === "email"
           ? "Email Verified Successfully"
-          : "Phone Verified Successfully";
-      SuccessToast(verificationMsg);
+          : "Phone Verified Successfully"
+      );
       setIsModalOpen(false);
-      handleNext(); // NEXT SCREEN
+      // Don't call handleNext here, let user verify both first
     } else {
       ErrorToast(res.payload || "Invalid OTP");
     }
@@ -127,45 +134,71 @@ export default function VerifyAccount({
             Verify Your Account
           </h2>
           <p className="text-[14px] text-[#565656]">
-            To secure your account, please verify your identity.
+            For your account's security, please verify both your email and phone number.
           </p>
         </div>
 
         <div className="w-full md:w-[700px] flex  justify-between items-center gap-4">
           {/* EMAIL VERIFICATION */}
           <Card
-            onClick={handleEmailClick}
-            className="w-[24em] flex cursor-pointer justify-between items-center bg-[#F9FAFA] rounded-[12px] h-[80px] p-4"
+            onClick={!isEmailVerified ? handleEmailClick : undefined}
+            className={`w-[24em] flex justify-between items-center rounded-[12px] h-[80px] p-4 ${
+              isEmailVerified 
+                ? "bg-green-50 border-2 border-green-500 cursor-default" 
+                : "bg-[#F9FAFA] cursor-pointer"
+            }`}
           >
-            <div className="flex items-center  gap-4">
+            <div className="flex items-center gap-4">
               <img src={emailimag} alt="" className="w-[34px] h-[34px]" />
               <p className="flex flex-col text-[15px] font-[500] text-wrap">
                 Email address
                 <span className="text-[12px] text-wrap font-[400] text-[#717171CC]">
                   {email}
                 </span>
+                {isEmailVerified && (
+                  <span className="text-[12px] text-green-600 font-medium mt-1">✓ Verified</span>
+                )}
               </p>
             </div>
-            <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full">
-              <IoIosArrowForward />
-            </button>
+            {!isEmailVerified ? (
+              <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full">
+                <IoIosArrowForward />
+              </button>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
           </Card>
 
           {/* PHONE VERIFICATION */}
           <Card
-            onClick={handlePhoneClick}
-            className={`w-[24em] flex cursor-pointer justify-between items-center bg-[#F9FAFA] rounded-[12px] h-[80px] p-4 `}
+            onClick={!isPhoneVerified ? handlePhoneClick : undefined}
+            className={`w-[24em] flex justify-between items-center rounded-[12px] h-[80px] p-4 ${
+              isPhoneVerified 
+                ? "bg-green-50 border-2 border-green-500 cursor-default" 
+                : "bg-[#F9FAFA] cursor-pointer"
+            }`}
           >
             <div className="flex items-center gap-4">
               <img src={mobile} alt="" className="w-[34px] h-[34px]" />
               <p className="flex flex-col text-[15px] font-[500]">
                 Phone number
-                <span className="text-[12px] text-[#717171CC]">{phone}</span>
+                <span className="text-[12px] text-[#717171CC]">+1 {phone}</span>
+                {isPhoneVerified && (
+                  <span className="text-[12px] text-green-600 font-medium mt-1">✓ Verified</span>
+                )}
               </p>
             </div>
-            <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full">
-              <IoIosArrowForward />
-            </button>
+            {!isPhoneVerified ? (
+              <button className="bg-[#F85E00] text-white px-2 py-2 rounded-full">
+                <IoIosArrowForward />
+              </button>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
           </Card>
         </div>
 
@@ -174,14 +207,15 @@ export default function VerifyAccount({
           variant="orange"
           size="full"
           loading={isLoading || emailOTPLoading || emailVerifyLoading}
-          disabled={!user?.isEmailVerified} // 🔥 Email is compulsory, Phone is optional
-          className={`w-full flex items-center justify-center ${
-            !user?.isEmailVerified ? "opacity-60 cursor-not-allowed" : ""
-          }`}
+          disabled={!bothVerified} // 🔥 Both Email and Phone must be verified
+          className={`w-full flex items-center justify-center ${!bothVerified ? "opacity-60 cursor-not-allowed" : ""
+            }`}
         >
           {isLoading || emailOTPLoading || emailVerifyLoading
             ? "Sending OTP..."
-            : "Next"}
+            : bothVerified
+            ? "Next"
+            : "Please verify both email and phone"}
         </Button>
       </div>
 
