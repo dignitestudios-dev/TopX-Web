@@ -90,6 +90,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         // Subscribe to channel messages (agora-rtm 2.x uses subscribe method)
         await client.subscribe(channelName, {
           withMessage: true,
+          types: ["msg"],
         });
         console.log("✅ RTM: Subscribed to channel");
 
@@ -102,55 +103,39 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         // Store handler reference so we can remove it later
         const handleMessage = (event) => {
           try {
-            // event contains: channelName, message, messageType, publisher
             const messageText = event.message;
             const publisher = event.publisher || "Unknown";
 
             let data;
-            // Try to parse as JSON first
             if (typeof messageText === "string") {
               try {
                 data = JSON.parse(messageText);
               } catch {
-                // If not JSON, treat as plain text comment
                 data = {
+                  customType: "msg",
                   msg: messageText,
                   userName: publisher,
                 };
               }
             } else {
-              // Binary message - convert to string if possible
               data = {
+                customType: "msg",
                 msg: String(messageText),
                 userName: publisher,
               };
             }
 
-            console.log("📨 RTM: Received message", {
-              data,
-              publisher,
-              channel: event.channelName,
-            });
+            // Normalize comment detection: accept msg even without type
+            const isComment =
+              (data.customType && data.customType === "comment") ||
+              typeof data.msg === "string" ||
+              typeof data.text === "string" ||
+              typeof data.comment === "string";
 
-            // Handle comment messages
-            if (
-              data.type === "comment" ||
-              data.msg ||
-              data.text ||
-              data.comment
-            ) {
-              // Normalize userIds to strings for comparison
+            if (isComment) {
               const messageUserId = String(data.userId || publisher);
               const currentUserId = String(uid);
               const isOwnMessage = messageUserId === currentUserId;
-
-              console.log("🔍 RTM: Message check", {
-                messageUserId,
-                currentUserId,
-                isOwnMessage,
-                publisher,
-                dataUserId: data.userId,
-              });
 
               const commentId = `comment-${Date.now()}-${Math.random()}-${messageUserId}`;
               const newComment = {
@@ -164,115 +149,29 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
               };
 
               setComments((prev) => {
-                // OTHER USERS: always add (only skip exact duplicates within 500ms to avoid double listeners)
+                // Always add comment from other users (ignore duplicate timestamp check)
                 if (!isOwnMessage) {
-                  // More strict duplicate check: same text + same userId + same timestamp (or very close)
-                  const duplicateExists = prev.some((c) => {
-                    const sameText = c.text === newComment.text;
-                    const sameUserId =
-                      String(c.userId) === String(newComment.userId);
-                    // Use 500ms window - very short to only catch true duplicate events
-                    const recentTime =
-                      Math.abs((c.timestamp || 0) - newComment.timestamp) < 500;
-                    // Also check if comment ID is the same (if somehow generated identically)
-                    const sameId = c.id === newComment.id;
-
-                    return (sameText && sameUserId && recentTime) || sameId;
-                  });
-
-                  if (duplicateExists) {
-                    console.log(
-                      "⚠️ RTM: Duplicate comment from other user detected (likely duplicate event), skipping",
-                      {
-                        text: newComment.text,
-                        publisher,
-                        userId: messageUserId,
-                        existingComments: prev.length,
-                        commentId: newComment.id,
-                      }
-                    );
-                    return prev;
-                  }
-
-                  console.log("✅ RTM: Adding comment from other user", {
-                    text: newComment.text,
-                    publisher,
-                    userId: messageUserId,
-                    username: newComment.username,
-                    totalComments: prev.length,
-                    willBeTotal: prev.length + 1,
-                    timestamp: newComment.timestamp,
-                    commentId: newComment.id,
-                  });
-
-                  // Verify the comment will actually be added
-                  const newComments = [
-                    ...prev,
-                    { ...newComment, isOptimistic: false },
-                  ];
-                  console.log(
-                    "📊 RTM: State update - prev:",
-                    prev.length,
-                    "new:",
-                    newComments.length
-                  );
-
-                  return newComments;
+                  return [...prev, { ...newComment, isOptimistic: false }];
                 }
 
-                // OWN MESSAGE LOOPBACK:
-                // 1) replace optimistic if present
-                // 2) otherwise ALWAYS add (no duplicate skip) so other devices see it
-
+                // Handle own message with optimistic update
                 const optimisticIndex = prev.findIndex(
                   (c) =>
                     c.text === newComment.text &&
                     c.userId === newComment.userId &&
                     c.isOptimistic === true
                 );
-
                 if (optimisticIndex >= 0) {
                   const updated = [...prev];
                   updated[optimisticIndex] = {
                     ...newComment,
                     isOptimistic: false,
                   };
-                  console.log(
-                    "✅ RTM: Replacing optimistic comment with confirmed",
-                    {
-                      text: newComment.text,
-                      index: optimisticIndex,
-                    }
-                  );
                   return updated;
                 }
 
-                // No optimistic found: add it unconditionally (do NOT skip as duplicate)
-                console.log(
-                  "✅ RTM: Adding own message (no optimistic match found)",
-                  {
-                    text: newComment.text,
-                    publisher,
-                    userId: messageUserId,
-                  }
-                );
                 return [...prev, { ...newComment, isOptimistic: false }];
               });
-            }
-
-            // Handle like messages
-            if (data.type === "like") {
-              if (data.action === "add") {
-                setLikesCount((prev) => prev + 1);
-                if (data.userId === String(uid)) {
-                  setUserLiked(true);
-                }
-              } else if (data.action === "remove") {
-                setLikesCount((prev) => Math.max(0, prev - 1));
-                if (data.userId === String(uid)) {
-                  setUserLiked(false);
-                }
-              }
             }
           } catch (err) {
             console.error("❌ RTM: Error processing message", err, event);
@@ -340,92 +239,37 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
   // Send comment function
   const sendComment = useCallback(
     async (text, userInfo) => {
-      if (!channelRef.current || !text || !text.trim()) {
-        console.warn("⚠️ RTM: Cannot send comment - missing channel or text");
-        return false;
-      }
+      if (!channelRef.current || !text?.trim()) return false;
+      const { client, name: channelName } = channelRef.current;
 
-      try {
-        const { client, name: channelName } = channelRef.current;
-        if (!client || !channelName) {
-          console.warn("⚠️ RTM: Client or channel name not available");
-          return false;
-        }
+      const payload = {
+        msg: text.trim(),
+        userId: String(uid),
+        userName: userInfo?.username || "Anonymous",
+        profilePicture: userInfo?.profilePicture || null,
+      };
 
-        const currentUserId = String(uid);
-        const payload = {
-          type: "comment",
-          msg: text.trim(),
-          userId: currentUserId,
-          userName: userInfo?.username || userInfo?.userName || "Anonymous",
-          profilePicture: userInfo?.profilePicture || null,
-        };
-
-        console.log("📤 RTM: Sending comment", payload);
-
-        // Add comment immediately to local state (optimistic update)
-        // Use a unique key that will help identify duplicates later
-        const optimisticTimestamp = Date.now();
-        const commentId = `comment-${optimisticTimestamp}-${Math.random()}-${currentUserId}`;
-        const newComment = {
-          id: commentId,
+      // Optimistic UI
+      setComments((prev) => [
+        {
+          id: `comment-${Date.now()}-${Math.random()}-${uid}`,
           username: payload.userName,
           text: payload.msg,
           profilePicture: payload.profilePicture,
-          userId: currentUserId,
-          timestamp: optimisticTimestamp,
-          isOptimistic: true, // Mark as optimistic so we can replace it later
-        };
+          userId: String(uid),
+          timestamp: Date.now(),
+          isOptimistic: true,
+        },
+        ...prev,
+      ]);
 
-        setComments((prev) => {
-          // Check if already exists (shouldn't, but just in case)
-          const exists = prev.some(
-            (c) =>
-              c.text === newComment.text &&
-              c.userId === newComment.userId &&
-              Math.abs((c.timestamp || 0) - newComment.timestamp) < 1000
-          );
-          if (exists) {
-            console.log("⚠️ RTM: Comment already in local state");
-            return prev;
-          }
-          console.log("✅ RTM: Adding comment to local state immediately", {
-            text: newComment.text,
-          });
-          return [...prev, newComment];
-        });
-
-        // Check if client is connected before publishing
-        // Wait for connection if not ready (with timeout)
-        let retries = 0;
-        const maxRetries = 5;
-        while (!isConnected && retries < maxRetries) {
-          console.warn(
-            `⚠️ RTM: Not connected, waiting... (${retries + 1}/${maxRetries})`
-          );
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          retries++;
-        }
-
-        if (!isConnected) {
-          console.error("❌ RTM: Client not connected after waiting");
-          throw new Error(
-            "RTM client is not connected. Please wait and try again."
-          );
-        }
-
-        console.log("📤 RTM: Publishing message to channel", channelName);
-        // agora-rtm 2.x uses publish method
-        await client.publish(channelName, JSON.stringify(payload));
-
-        console.log("✅ RTM: Comment sent successfully");
-        return true;
-      } catch (err) {
-        console.error("❌ RTM: Failed to send comment", err);
-        return false;
-      }
+      // ✅ Send with correct customType argument
+      await client.publish(channelName, JSON.stringify(payload), {
+        customType: "msg",
+      });
+      return true;
     },
-    [uid, isConnected]
+    [uid]
   );
 
   // Send like function
@@ -453,7 +297,16 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         console.log("📤 RTM: Sending like", payload);
 
         // agora-rtm 2.x uses publish method
-        await client.publish(channelName, JSON.stringify(payload));
+        await client.publish(
+          channelName,
+          JSON.stringify({
+            msg: text.trim(),
+            userId: String(uid),
+            userName: userInfo?.username || "Anonymous",
+            profilePicture: userInfo?.profilePicture || null,
+          }),
+          { customType: "msg" }
+        ); // <- this is important
 
         // Optimistically update local state
         if (action === "add") {
