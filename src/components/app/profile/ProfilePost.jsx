@@ -13,6 +13,7 @@ import {
 } from "../../../redux/slices/Subscription.slice";
 import { timeAgo } from "../../../lib/helpers";
 import ActiveStoryModal from "./ActiveStoryModal";
+import { useNavigate } from "react-router";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   // ✅ ALL hooks at top
@@ -21,6 +22,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [liked, setLiked] = useState(false);
+  const navigate = useNavigate();
 
   const dispatch = useDispatch();
   const { pageDetail, pageDetailLoading } = useSelector((state) => state.pages);
@@ -51,6 +53,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   const page = pageDetail;
   const user = page?.user;
+
 
   return (
     <div className="">
@@ -127,11 +130,20 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 </div>
               </div>
 
+
+
               {/* ACTION BUTTONS */}
               <div className="flex items-center gap-2 mt-14">
-                <button className="px-6 py-2 border-2 border-orange-500 text-orange-500 font-semibold rounded-lg hover:bg-orange-50 transition-colors text-sm">
-                  Start A Live Chat
+                <button
+                  onClick={() => {
+                    console.log("Button clicked, navigating with:", { pageId, pageName: pageDetail?.name });
+                    navigate(`/live-chat`, { state: { pageId: pageId, pageName: pageDetail?.name } });
+                  }}
+                  className=" p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
+                >
+                  {page?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
                 </button>
+
                 <button className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors">
                   <MoreVertical className="w-5 h-5 text-gray-600" />
                 </button>
@@ -170,11 +182,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         <div className="flex gap-2 border-b border-gray-200">
           <button
             onClick={() => setActiveTab("post")}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
-              activeTab === "post"
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "post"
                 ? "text-orange-600"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <BsFileEarmarkTextFill size={19} />
             <span className="text-[14px] font-[500]">Post</span>
@@ -185,16 +196,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
           <button
             onClick={() => setActiveTab("postrequest")}
-            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
-              activeTab === "postrequest"
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
                 ? "text-orange-600"
                 : "text-gray-500 hover:text-gray-700"
-            }`}
+              }`}
           >
             <div
-              className={`p-1.5 rounded ${
-                activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"
-              }`}
+              className={`p-1.5 rounded ${activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"
+                }`}
             >
               <Lightbulb className="text-white" size={16} />
             </div>
