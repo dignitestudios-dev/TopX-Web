@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 
-/**
- * Custom hook for Agora RTC livestream functionality
- * @param {string} pageId - The page ID for the stream
- * @param {string} role - "host" or "audience"
- * @param {string} appId - Agora App ID
- * @param {string} token - Agora token (optional, can be null for testing)
- * @param {number} uid - User ID (optional, Agora will generate if not provided)
- * @param {string} backendChannelName - Channel name from backend (if provided, use this instead of page_${pageId})
- */
-export const useAgora = ({ pageId, role, appId, token = null, uid = null, backendChannelName = null }) => {
+export const useAgora = ({
+  pageId,
+  role,
+  appId,
+  token = null,
+  uid = null,
+  backendChannelName = null,
+}) => {
   const clientRef = useRef(null);
+  const hasInitializedRef = useRef(false);
+
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
 
@@ -22,301 +22,136 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Use EXACT channel name from backend (no fallback)
   const channelName = backendChannelName;
 
-  // Initialize Agora client
+  // ✅ Initialize Agora client ONCE
   useEffect(() => {
-    if (!appId) {
-      setError("Agora App ID is required");
-      return;
-    }
+    if (!appId || hasInitializedRef.current) return;
 
-    try {
-      clientRef.current = AgoraRTC.createClient({
-        mode: "live",
-        codec: "vp8",
-      });
+    hasInitializedRef.current = true;
 
-      const client = clientRef.current;
+    const client = AgoraRTC.createClient({
+      mode: "live",
+      codec: "vp8",
+    });
 
-      // Handle remote user publishing (host publishing their stream)
-      client.on("user-published", async (user, mediaType) => {
-        try {
-          console.log(`📡 User ${user.uid} published ${mediaType}`);
-          
-          // Subscribe to the remote user's stream
-          await client.subscribe(user, mediaType);
-          console.log(`✅ Subscribed to user ${user.uid}'s ${mediaType}`);
+    clientRef.current = client;
 
-          // Update remote users list
-          setRemoteUsers((prev) => {
-            // Check if user already exists
-            const existingUser = prev.find((u) => u.uid === user.uid);
-            
-            if (existingUser) {
-              // Update existing user with new track
-              return prev.map((u) => {
-                if (u.uid === user.uid) {
-                  return {
-                    ...u,
-                    videoTrack: mediaType === "video" ? user.videoTrack : u.videoTrack,
-                    audioTrack: mediaType === "audio" ? user.audioTrack : u.audioTrack,
-                  };
-                }
-                return u;
-              });
-            } else {
-              // Add new user
-              return [...prev, user];
-            }
-          });
+    // 🔹 User published
+    client.on("user-published", async (user, mediaType) => {
+      try {
+        console.log(`📡 User ${user.uid} published ${mediaType}`);
 
-          // Auto-play audio track when subscribed
-          if (mediaType === "audio" && user.audioTrack) {
-            user.audioTrack.play().catch((err) => {
-              console.error("Error playing remote audio:", err);
-            });
-          }
-        } catch (err) {
-          console.error("❌ Error subscribing to user:", err);
-          setError(err.message || "Failed to subscribe to user");
-        }
-      });
+        await client.subscribe(user, mediaType);
+        console.log(`✅ Subscribed to user ${user.uid}`);
 
-      // Handle remote user unpublishing
-      client.on("user-unpublished", (user, mediaType) => {
-        if (mediaType === "video") {
-          user.videoTrack?.stop();
-        }
-        if (mediaType === "audio") {
-          user.audioTrack?.stop();
-        }
-      });
+        setRemoteUsers((prev) => {
+          const exists = prev.find((u) => u.uid === user.uid);
+          return exists ? prev : [...prev, user];
+        });
 
-      // Handle remote user leaving
-      client.on("user-left", (user) => {
-        setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
-      });
-
-      // Handle connection state changes
-      client.on("connection-state-change", (curState, revState) => {
-        console.log("Connection state changed:", curState, revState);
-      });
-
-      // Cleanup on unmount
-      return () => {
-        if (client) {
-          client.removeAllListeners();
-          if (isJoined) {
-            client.leave().catch(console.error);
+        // ✅ FIXED audio play
+        if (mediaType === "audio" && user.audioTrack) {
+          try {
+            user.audioTrack.play();
+          } catch (err) {
+            console.error("❌ Audio play failed:", err);
           }
         }
-      };
-    } catch (err) {
-      console.error("Error initializing Agora client:", err);
-      setError(err.message || "Failed to initialize Agora client");
-    }
-  }, [appId, pageId, isJoined]);
+      } catch (err) {
+        console.error("❌ Error subscribing to user:", err);
+        setError(err.message || "Failed to subscribe");
+      }
+    });
 
-  // Join channel
+    // 🔹 User unpublished
+    client.on("user-unpublished", (user, mediaType) => {
+      if (mediaType === "video") user.videoTrack?.stop();
+      if (mediaType === "audio") user.audioTrack?.stop();
+    });
+
+    // 🔹 User left
+    client.on("user-left", (user) => {
+      setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
+    });
+
+    return () => {
+      client.removeAllListeners();
+    };
+  }, [appId]);
+
+  // ✅ Join channel
   const join = useCallback(async () => {
-    if (!clientRef.current || !appId) {
-      setError("Client not initialized or App ID missing");
-      return;
-    }
+    const client = clientRef.current;
+    if (!client || !appId) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const client = clientRef.current;
-
-      // IMPORTANT: Set client role BEFORE joining channel
-      // According to Agora docs: setClientRole must be called before join
-      // "host" can publish, "audience" can only subscribe (no camera/mic access)
-      console.log(`🎭 Setting client role to: ${role}`);
       await client.setClientRole(role === "host" ? "host" : "audience");
-      
-      // For audience role, ensure no local tracks will be created
-      if (role !== "host") {
-        console.log("👁️ Audience role: No camera/microphone access");
-        setLocalVideo(null);
-        setLocalAudio(null);
-        localVideoTrackRef.current = null;
-        localAudioTrackRef.current = null;
-      }
 
-      // Join the channel with EXACT backend values
-      // Validate all required parameters
-      if (!token) {
-        throw new Error("rtcToken is required from backend. Please check backend response.");
-      }
-      
-      if (!channelName) {
-        console.error("❌ Channel name is required from backend");
-        throw new Error("channelName is required from backend. Please check backend response.");
-      }
+      if (!token) throw new Error("RTC token missing");
+      if (!channelName) throw new Error("Channel name missing");
+      if (uid === null || uid === undefined) throw new Error("UID missing");
 
-      // UID must be a Number (from accountNumber) - do NOT pass null
-      if (uid === null || uid === undefined) {
-        throw new Error("UID (accountNumber) is required from backend. Cannot join without UID.");
-      }
-      
-      const actualUid = Number(uid); // Ensure it's a Number
-      
-      if (isNaN(actualUid)) {
-        throw new Error(`Invalid UID: ${uid}. Must be a valid number.`);
-      }
+      const numericUid = Number(uid);
+      if (isNaN(numericUid)) throw new Error("Invalid UID");
 
-      console.log("Joining Agora with backend values:", {
-        appId,
-        channelName,
-        tokenLength: token.length,
-        uid: actualUid,
-        uidType: typeof actualUid,
-        role,
-      });
-      
-      // Join with EXACT parameters from backend: appId, channelName, rtcToken, Number(accountNumber)
-      await client.join(appId, channelName, token, actualUid);
-
+      await client.join(appId, channelName, token, numericUid);
       setIsJoined(true);
-      console.log(`✅ Successfully joined channel as ${role}`);
 
-      // IMPORTANT: Only create local tracks for HOST role
-      // Audience role should NEVER access camera/microphone
       if (role === "host") {
-        console.log("📹 Host role: Creating local video/audio tracks");
-        try {
-          // Create microphone and camera tracks (ONLY for host)
-          const [audioTrack, videoTrack] =
-            await AgoraRTC.createMicrophoneAndCameraTracks(
-              {
-                encoderConfig: {
-                  bitrateMax: 1000,
-                  bitrateMin: 500,
-                  frameRate: 30,
-                  width: 1280,
-                  height: 720,
-                },
-              },
-              {
-                encoderConfig: {
-                  bitrateMax: 1000,
-                  bitrateMin: 500,
-                  frameRate: 30,
-                  width: 1280,
-                  height: 720,
-                },
-              }
-            );
+        const [audioTrack, videoTrack] =
+          await AgoraRTC.createMicrophoneAndCameraTracks();
 
-          localAudioTrackRef.current = audioTrack;
-          localVideoTrackRef.current = videoTrack;
+        localAudioTrackRef.current = audioTrack;
+        localVideoTrackRef.current = videoTrack;
 
-          setLocalAudio(audioTrack);
-          setLocalVideo(videoTrack);
+        setLocalAudio(audioTrack);
+        setLocalVideo(videoTrack);
 
-          // Publish tracks
-          await client.publish([audioTrack, videoTrack]);
-          console.log("✅ Host: Local tracks published successfully");
-        } catch (trackError) {
-          console.error("❌ Error creating local tracks:", trackError);
-          setError(
-            trackError.message || "Failed to access camera/microphone"
-          );
-          // Still joined, just no local tracks
-        }
-      } else {
-        // Audience role - confirm no local tracks
-        console.log("👁️ Audience role: Joined successfully, waiting for host stream");
-        // Ensure no local tracks exist
-        setLocalVideo(null);
-        setLocalAudio(null);
-        localVideoTrackRef.current = null;
-        localAudioTrackRef.current = null;
+        await client.publish([audioTrack, videoTrack]);
       }
     } catch (err) {
-      console.error("Error joining channel:", err);
-      setError(err.message || "Failed to join channel");
+      console.error("❌ Join failed:", err);
+      setError(err.message);
       setIsJoined(false);
     } finally {
       setIsLoading(false);
     }
-  }, [role, channelName, appId, token, uid]);
+  }, [role, appId, token, uid, channelName]);
 
-  // Leave channel and cleanup
+  // ✅ Leave channel
   const leave = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+    const client = clientRef.current;
+    if (!client) return;
 
     try {
-      // Stop and close local tracks
-      if (localAudioTrackRef.current) {
-        localAudioTrackRef.current.stop();
-        localAudioTrackRef.current.close();
-        localAudioTrackRef.current = null;
-      }
+      localAudioTrackRef.current?.stop();
+      localAudioTrackRef.current?.close();
+      localVideoTrackRef.current?.stop();
+      localVideoTrackRef.current?.close();
 
-      if (localVideoTrackRef.current) {
-        localVideoTrackRef.current.stop();
-        localVideoTrackRef.current.close();
-        localVideoTrackRef.current = null;
-      }
+      localAudioTrackRef.current = null;
+      localVideoTrackRef.current = null;
 
-      setLocalAudio(null);
-      setLocalVideo(null);
-
-      // Leave channel
-      if (clientRef.current && isJoined) {
-        await clientRef.current.leave();
+      if (isJoined) {
+        await client.leave();
         setIsJoined(false);
       }
 
-      // Clear remote users
       setRemoteUsers([]);
+      setLocalAudio(null);
+      setLocalVideo(null);
     } catch (err) {
-      console.error("Error leaving channel:", err);
-      setError(err.message || "Failed to leave channel");
-    } finally {
-      setIsLoading(false);
+      console.error("❌ Leave failed:", err);
     }
   }, [isJoined]);
-
-  // Toggle local video
-  const toggleVideo = useCallback(async () => {
-    if (localVideoTrackRef.current) {
-      try {
-        await localVideoTrackRef.current.setEnabled(
-          !localVideoTrackRef.current.isPlaying
-        );
-      } catch (err) {
-        console.error("Error toggling video:", err);
-        setError(err.message || "Failed to toggle video");
-      }
-    }
-  }, []);
-
-  // Toggle local audio
-  const toggleAudio = useCallback(async () => {
-    if (localAudioTrackRef.current) {
-      try {
-        await localAudioTrackRef.current.setEnabled(
-          !localAudioTrackRef.current.isPlaying
-        );
-      } catch (err) {
-        console.error("Error toggling audio:", err);
-        setError(err.message || "Failed to toggle audio");
-      }
-    }
-  }, []);
 
   return {
     join,
     leave,
-    toggleVideo,
-    toggleAudio,
     localVideo,
     localAudio,
     remoteUsers,
@@ -325,4 +160,3 @@ export const useAgora = ({ pageId, role, appId, token = null, uid = null, backen
     error,
   };
 };
-

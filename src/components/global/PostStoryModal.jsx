@@ -27,7 +27,6 @@ const PostStoryModal = ({ onClose, post }) => {
 
   const handlePostStory = async () => {
     try {
-      // Wait for images to load before capturing
       const images = snippetRef.current.querySelectorAll("img");
       await Promise.all(
         Array.from(images).map((img) => {
@@ -35,7 +34,6 @@ const PostStoryModal = ({ onClose, post }) => {
           return new Promise((resolve, reject) => {
             img.onload = resolve;
             img.onerror = reject;
-            // Force reload with crossOrigin
             if (!img.crossOrigin) {
               img.crossOrigin = "anonymous";
               const src = img.src;

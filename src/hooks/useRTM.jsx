@@ -4,6 +4,9 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
   const clientRef = useRef(null);
   const channelRef = useRef(null);
   const messageHandlerRef = useRef(null); // Store message handler for cleanup
+  const isLoggingInRef = useRef(false);
+  const isLoggedInRef = useRef(false);
+  let singletonRTMClient = null;
 
   const [isConnected, setIsConnected] = useState(false);
   const [comments, setComments] = useState([]);
@@ -13,7 +16,12 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
   useEffect(() => {
     if (!appId || !uid || !token || !channelName) {
-      console.log("⚠️ RTM: Missing required parameters", { appId, uid, token, channelName });
+      console.log("⚠️ RTM: Missing required parameters", {
+        appId,
+        uid,
+        token,
+        channelName,
+      });
       return;
     }
 
@@ -32,39 +40,56 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             hasDefault: !!rtmModule.default,
             hasRTM: !!RTMClass,
             moduleKeys: Object.keys(rtmModule),
-            rtmKeys: RTMExport ? Object.keys(RTMExport) : []
+            rtmKeys: RTMExport ? Object.keys(RTMExport) : [],
           });
         } catch (importError) {
           throw new Error(`Failed to import agora-rtm: ${importError.message}`);
         }
 
-        if (!RTMClass || typeof RTMClass !== 'function') {
-          throw new Error(`RTM class not found. Available: ${RTMClass ? Object.keys(RTMClass).join(", ") : "null"}`);
+        if (!RTMClass || typeof RTMClass !== "function") {
+          throw new Error(
+            `RTM class not found. Available: ${
+              RTMClass ? Object.keys(RTMClass).join(", ") : "null"
+            }`
+          );
         }
 
         // Create RTM client instance (agora-rtm 2.x uses constructor, not createClient)
-        const client = new RTMClass(appId, String(uid));
-        clientRef.current = client;
-
+        if (!singletonRTMClient) {
+          singletonRTMClient = new RTMClass(appId, String(uid));
+        }
+        clientRef.current = singletonRTMClient;
+        const client = clientRef.current;
         // Listen for connection state changes
         client.addEventListener("status", (event) => {
           console.log("📡 RTM: Connection status changed", event);
           if (event.state === "CONNECTED") {
             setIsConnected(true);
-          } else if (event.state === "DISCONNECTED" || event.state === "RECONNECTING") {
+          } else if (
+            event.state === "DISCONNECTED" ||
+            event.state === "RECONNECTING"
+          ) {
             setIsConnected(false);
           }
         });
 
-        // Login to RTM
-        await client.login({
-          token,
-        });
+        if (isLoggingInRef.current || isLoggedInRef.current) {
+          console.log("⚠️ RTM: Login already in progress or completed");
+          return;
+        }
+
+        isLoggingInRef.current = true;
+
+        await client.login({ token });
+
+        isLoggedInRef.current = true;
+        isLoggingInRef.current = false;
+
         console.log("✅ RTM: Logged in successfully");
 
         // Subscribe to channel messages (agora-rtm 2.x uses subscribe method)
         await client.subscribe(channelName, {
-          withMessage: true
+          withMessage: true,
         });
         console.log("✅ RTM: Subscribed to channel");
 
@@ -83,13 +108,12 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
             let data;
             // Try to parse as JSON first
-            if (typeof messageText === 'string') {
+            if (typeof messageText === "string") {
               try {
                 data = JSON.parse(messageText);
               } catch {
                 // If not JSON, treat as plain text comment
                 data = {
-                  type: "comment",
                   msg: messageText,
                   userName: publisher,
                 };
@@ -97,16 +121,24 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             } else {
               // Binary message - convert to string if possible
               data = {
-                type: "comment",
                 msg: String(messageText),
                 userName: publisher,
               };
             }
 
-            console.log("📨 RTM: Received message", { data, publisher, channel: event.channelName });
+            console.log("📨 RTM: Received message", {
+              data,
+              publisher,
+              channel: event.channelName,
+            });
 
             // Handle comment messages
-            if (data.type === "comment" || data.msg || data.text || data.comment) {
+            if (
+              data.type === "comment" ||
+              data.msg ||
+              data.text ||
+              data.comment
+            ) {
               // Normalize userIds to strings for comparison
               const messageUserId = String(data.userId || publisher);
               const currentUserId = String(uid);
@@ -123,7 +155,8 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
               const commentId = `comment-${Date.now()}-${Math.random()}-${messageUserId}`;
               const newComment = {
                 id: commentId,
-                username: data.userName || data.username || publisher || "Anonymous",
+                username:
+                  data.userName || data.username || publisher || "Anonymous",
                 text: data.msg || data.text || data.comment || "",
                 profilePicture: data.profilePicture || data.userAvatar || null,
                 userId: messageUserId,
@@ -136,13 +169,14 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
                   // More strict duplicate check: same text + same userId + same timestamp (or very close)
                   const duplicateExists = prev.some((c) => {
                     const sameText = c.text === newComment.text;
-                    const sameUserId = String(c.userId) === String(newComment.userId);
+                    const sameUserId =
+                      String(c.userId) === String(newComment.userId);
                     // Use 500ms window - very short to only catch true duplicate events
                     const recentTime =
                       Math.abs((c.timestamp || 0) - newComment.timestamp) < 500;
                     // Also check if comment ID is the same (if somehow generated identically)
                     const sameId = c.id === newComment.id;
-                    
+
                     return (sameText && sameUserId && recentTime) || sameId;
                   });
 
@@ -170,11 +204,19 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
                     timestamp: newComment.timestamp,
                     commentId: newComment.id,
                   });
-                  
+
                   // Verify the comment will actually be added
-                  const newComments = [...prev, { ...newComment, isOptimistic: false }];
-                  console.log("📊 RTM: State update - prev:", prev.length, "new:", newComments.length);
-                  
+                  const newComments = [
+                    ...prev,
+                    { ...newComment, isOptimistic: false },
+                  ];
+                  console.log(
+                    "📊 RTM: State update - prev:",
+                    prev.length,
+                    "new:",
+                    newComments.length
+                  );
+
                   return newComments;
                 }
 
@@ -191,20 +233,29 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
                 if (optimisticIndex >= 0) {
                   const updated = [...prev];
-                  updated[optimisticIndex] = { ...newComment, isOptimistic: false };
-                  console.log("✅ RTM: Replacing optimistic comment with confirmed", {
-                    text: newComment.text,
-                    index: optimisticIndex,
-                  });
+                  updated[optimisticIndex] = {
+                    ...newComment,
+                    isOptimistic: false,
+                  };
+                  console.log(
+                    "✅ RTM: Replacing optimistic comment with confirmed",
+                    {
+                      text: newComment.text,
+                      index: optimisticIndex,
+                    }
+                  );
                   return updated;
                 }
 
                 // No optimistic found: add it unconditionally (do NOT skip as duplicate)
-                console.log("✅ RTM: Adding own message (no optimistic match found)", {
-                  text: newComment.text,
-                  publisher,
-                  userId: messageUserId,
-                });
+                console.log(
+                  "✅ RTM: Adding own message (no optimistic match found)",
+                  {
+                    text: newComment.text,
+                    publisher,
+                    userId: messageUserId,
+                  }
+                );
                 return [...prev, { ...newComment, isOptimistic: false }];
               });
             }
@@ -237,7 +288,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             // Ignore if listener doesn't exist
           }
         }
-        
+
         // Store handler reference and add listener
         messageHandlerRef.current = handleMessage;
         client.addEventListener("message", handleMessage);
@@ -257,38 +308,34 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
     initRTM();
 
     return () => {
-      // Cleanup
       if (clientRef.current) {
         const client = clientRef.current;
 
-        // Remove event listeners - use stored handler reference
         try {
           if (messageHandlerRef.current) {
             client.removeEventListener("message", messageHandlerRef.current);
             messageHandlerRef.current = null;
-            console.log("🧹 RTM: Message event listener removed");
           }
-        } catch (err) {
-          console.error("Error removing event listeners:", err);
+
+          if (channelRef.current?.name) {
+            client.unsubscribe(channelRef.current.name).catch(() => {});
+          }
+
+          // ❗ ONLY logout if ACTUALLY logged in
+          if (isLoggedInRef.current) {
+            client.logout().catch(() => {});
+            isLoggedInRef.current = false;
+          }
+        } catch (e) {
+          console.warn("RTM cleanup warning:", e);
         }
 
-        // Unsubscribe from channel
-        if (channelRef.current) {
-          const { name: channelName } = channelRef.current;
-          if (channelName) {
-            client.unsubscribe(channelName).catch(console.error);
-          }
-          channelRef.current = null;
-        }
-
-        // Logout
-        client.logout().catch(console.error);
         clientRef.current = null;
       }
+
       setIsConnected(false);
-      setComments([]); // Clear comments on cleanup
     };
-  }, [appId, uid, token, channelName]);
+  }, [appId, channelName]);
 
   // Send comment function
   const sendComment = useCallback(
@@ -333,7 +380,8 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         setComments((prev) => {
           // Check if already exists (shouldn't, but just in case)
           const exists = prev.some(
-            (c) => c.text === newComment.text &&
+            (c) =>
+              c.text === newComment.text &&
               c.userId === newComment.userId &&
               Math.abs((c.timestamp || 0) - newComment.timestamp) < 1000
           );
@@ -341,7 +389,9 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             console.log("⚠️ RTM: Comment already in local state");
             return prev;
           }
-          console.log("✅ RTM: Adding comment to local state immediately", { text: newComment.text });
+          console.log("✅ RTM: Adding comment to local state immediately", {
+            text: newComment.text,
+          });
           return [...prev, newComment];
         });
 
@@ -350,14 +400,18 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         let retries = 0;
         const maxRetries = 5;
         while (!isConnected && retries < maxRetries) {
-          console.warn(`⚠️ RTM: Not connected, waiting... (${retries + 1}/${maxRetries})`);
-          await new Promise(resolve => setTimeout(resolve, 500));
+          console.warn(
+            `⚠️ RTM: Not connected, waiting... (${retries + 1}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 500));
           retries++;
         }
 
         if (!isConnected) {
           console.error("❌ RTM: Client not connected after waiting");
-          throw new Error("RTM client is not connected. Please wait and try again.");
+          throw new Error(
+            "RTM client is not connected. Please wait and try again."
+          );
         }
 
         console.log("📤 RTM: Publishing message to channel", channelName);
