@@ -1,22 +1,40 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2 } from "lucide-react";
-import { getKnowledgePostDetail, deleteKnowledgePost, resetKnowledge } from "../../../redux/slices/knowledgepost.slice";
-import { SuccessToast } from "../../global/Toaster";
+import { getKnowledgePostDetail, deleteKnowledgePost, resetKnowledge, likePost } from "../../../redux/slices/knowledgepost.slice";
+import { SuccessToast, ErrorToast } from "../../global/Toaster";
+import ShareToChatsModal from "../../global/ShareToChatsModal";
 
 export default function KnowledgePostPageDetail({ pageId, setIsKnowledgePageOpen }) {
     const dispatch = useDispatch();
     const [likedPosts, setLikedPosts] = useState(new Set());
+    const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
     const [showDeleteMenu, setShowDeleteMenu] = useState(null);
-    
-const {
-    knowledgePageDetail,
-    knowledgePagePosts,
-    knowledgePageLoading,
-    deleteLoading,
-    deleteSuccess
-} = useSelector((state) => state.knowledgepost);
+    const [likingPostId, setLikingPostId] = useState(null);
+    const [activeSubTopic, setActiveSubTopic] = useState("All");
+    const [shareModalOpen, setShareModalOpen] = useState(false);
+    const [selectedPostForShare, setSelectedPostForShare] = useState(null);
+
+    const { user } = useSelector((state) => state.auth);
+
+    const presetBackgrounds = [
+        { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
+        { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
+        { id: 3, name: "bg_red_gradient", imagePath: "/bg_orange_gradient.jpg" },
+        { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
+        { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" }
+    ];
+
+    const {
+        knowledgePageDetail,
+        knowledgePagePosts,
+        knowledgePageLoading,
+        deleteLoading,
+        deleteSuccess
+    } = useSelector((state) => state.knowledgepost);
+
+    const deleteMenuRefs = useRef({}); // Use ref to track delete menus for each post
 
 
     useEffect(() => {
@@ -25,25 +43,137 @@ const {
         }
     }, [pageId]);
 
-  if (deleteSuccess) {
-    SuccessToast("Post deleted successfully");
+    // Initialize liked posts from localStorage and API data
+    useEffect(() => {
+        if (knowledgePagePosts && user?._id) {
+            const localLikes = JSON.parse(localStorage.getItem("knowledgePostLikes") || "{}");
+            const initialLiked = new Set();
+            const initialCounts = {};
 
-    setTimeout(() => {
-        dispatch(resetKnowledge());
-    }, 1500);
-}
+            knowledgePagePosts.forEach(post => {
+                // Check localStorage first, then API data
+                const isLocallyLiked = localLikes[post._id] === true;
+                const isApiLiked = post.userLikes?.includes(user._id) || post.isLiked;
+
+                if (isLocallyLiked || isApiLiked) {
+                    initialLiked.add(post._id);
+                }
+
+                // Store initial counts from API
+                initialCounts[post._id] = post.likesCount || 0;
+            });
+
+            setLikedPosts(initialLiked);
+            setLikesCounts(initialCounts);
+        }
+    }, [knowledgePagePosts, user?._id]);
+
+    // Close the delete menu when clicked outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if click is outside any open menu
+            if (showDeleteMenu) {
+                const menuRef = deleteMenuRefs.current[showDeleteMenu];
+                if (menuRef && !menuRef.contains(event.target)) {
+                    setShowDeleteMenu(null);
+                }
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showDeleteMenu]);
+
+    if (deleteSuccess) {
+        SuccessToast("Post deleted successfully");
+
+        setTimeout(() => {
+            dispatch(resetKnowledge());
+        }, 1500);
+    }
+
+    console.log(knowledgePagePosts, "knowledgePagePosts")
 
 
-    const handleLike = (postId) => {
+    const handleLike = async (postId) => {
+        const post = knowledgePagePosts?.find(p => p._id === postId);
+        if (!post) return;
+
+        // Check if user has already liked the post (check localStorage first, then API data)
+        const localLikes = JSON.parse(localStorage.getItem("knowledgePostLikes") || "{}");
+        const isLocallyLiked = localLikes[postId] === true;
+        const isCurrentlyLiked = isLocallyLiked || post.userLikes?.includes(user?._id) || post.isLiked || likedPosts.has(postId);
+        const newLikeToggle = !isCurrentlyLiked;
+
+        // Get current count (use optimistic count if available, otherwise API count)
+        const currentCount = likesCounts[postId] !== undefined ? likesCounts[postId] : (post.likesCount || 0);
+        const newCount = newLikeToggle
+            ? currentCount + 1
+            : Math.max(currentCount - 1, 0);
+
+        // Update local state immediately - Heart icon
         setLikedPosts(prev => {
             const newSet = new Set(prev);
-            if (newSet.has(postId)) {
-                newSet.delete(postId);
-            } else {
+            if (newLikeToggle) {
                 newSet.add(postId);
+            } else {
+                newSet.delete(postId);
             }
             return newSet;
         });
+
+        // Update count immediately - Optimistic update
+        setLikesCounts(prev => ({
+            ...prev,
+            [postId]: newCount
+        }));
+
+        // Save to localStorage immediately
+        const updatedLocalLikes = { ...localLikes, [postId]: newLikeToggle };
+        localStorage.setItem("knowledgePostLikes", JSON.stringify(updatedLocalLikes));
+
+        setLikingPostId(postId);
+
+        try {
+            // API hit
+            await dispatch(likePost({
+                postId,
+                likeToggle: newLikeToggle
+            })).unwrap();
+
+            // Note: Count will be updated from API when page reloads/refetches
+        } catch (error) {
+            // Revert local state on error
+            setLikedPosts(prev => {
+                const newSet = new Set(prev);
+                if (isCurrentlyLiked) {
+                    newSet.add(postId);
+                } else {
+                    newSet.delete(postId);
+                }
+                return newSet;
+            });
+
+            // Revert count on error
+            setLikesCounts(prev => ({
+                ...prev,
+                [postId]: currentCount
+            }));
+
+            // Revert localStorage on error
+            const revertedLikes = { ...localLikes };
+            if (isCurrentlyLiked) {
+                revertedLikes[postId] = true;
+            } else {
+                delete revertedLikes[postId];
+            }
+            localStorage.setItem("knowledgePostLikes", JSON.stringify(revertedLikes));
+
+            ErrorToast(error);
+        } finally {
+            setLikingPostId(null);
+        }
     };
 
     const handleDelete = (postId) => {
@@ -70,6 +200,62 @@ const {
         );
     }
 
+    // Build unique subTopic tabs from posts (split by comma, trim)
+    const subTopicSet = new Set();
+    (knowledgePagePosts || []).forEach((post) => {
+        if (post?.subTopic) {
+            post.subTopic
+                .split(",")
+                .map((p) => p.trim())
+                .filter(Boolean)
+                .forEach((topic) => subTopicSet.add(topic));
+        }
+    });
+    const subTopicTabs = Array.from(subTopicSet);
+
+    const timeAgo = (dateString) => {
+        const now = new Date();
+        const createdAt = new Date(dateString);
+        const diffInSeconds = Math.floor((now - createdAt) / 1000);
+
+        const minute = 60;
+        const hour = minute * 60;
+        const day = hour * 24;
+        const week = day * 7;
+        const month = day * 30;
+        const year = day * 365;
+
+        if (diffInSeconds < minute) {
+            return `${diffInSeconds} seconds ago`;
+        } else if (diffInSeconds < hour) {
+            return `${Math.floor(diffInSeconds / minute)} minutes ago`;
+        } else if (diffInSeconds < day) {
+            return `${Math.floor(diffInSeconds / hour)} hours ago`;
+        } else if (diffInSeconds < week) {
+            return `${Math.floor(diffInSeconds / day)} days ago`;
+        } else if (diffInSeconds < month) {
+            return `${Math.floor(diffInSeconds / week)} weeks ago`;
+        } else if (diffInSeconds < year) {
+            return `${Math.floor(diffInSeconds / month)} months ago`;
+        } else {
+            return `${Math.floor(diffInSeconds / year)} years ago`;
+        }
+    };
+
+
+    // Filter posts by active subTopic
+    const filteredPosts =
+        activeSubTopic === "All"
+            ? knowledgePagePosts
+            : knowledgePagePosts?.filter((post) => {
+                if (!post?.subTopic) return false;
+                return post.subTopic
+                    .split(",")
+                    .map((p) => p.trim())
+                    .filter(Boolean)
+                    .some((topic) => topic === activeSubTopic);
+            });
+
     return (
         <div className="bg-transparent min-h-screen max-w-2xl">
             {/* Header Card */}
@@ -82,13 +268,40 @@ const {
                     <IoChevronBackOutline size={24} /> Back
                 </button>
 
-                {/* Page Header */}
+                {/* Page Header + SubTopic Tabs */}
 
+                {subTopicTabs.length > 0 && (
+                    <div className="mt-4">
+                        <div className="flex flex-wrap gap-2 bg-white/40 rounded-2xl p-2 backdrop-blur-sm">
+                            <button
+                                onClick={() => setActiveSubTopic("All")}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${activeSubTopic === "All"
+                                        ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                                        : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
+                                    }`}
+                            >
+                                All
+                            </button>
+                            {subTopicTabs.map((topic) => (
+                                <button
+                                    key={topic}
+                                    onClick={() => setActiveSubTopic(topic)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${activeSubTopic === topic
+                                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                                            : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
+                                        }`}
+                                >
+                                    {topic}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Posts Feed */}
             <div className="space-y-6">
-                {knowledgePagePosts && knowledgePagePosts.map((post) => (
+                {filteredPosts && filteredPosts.map((post) => (
                     <div key={post._id} className="rounded-3xl overflow-hidden bg-white">
                         {/* Post Header */}
                         <div className="px-6 py-4 flex items-center justify-between bg-white relative">
@@ -100,14 +313,26 @@ const {
                                 />
                                 <div className="flex-1">
                                     <h3 className="font-bold text-gray-900 text-base">{post.author.name}</h3>
-                                    <p className="text-gray-500 text-sm">@{post.author.username} • 5mins ago</p>
+                                    <p className="text-gray-500 text-sm">@{post.author.username} • {timeAgo(post.createdAt)}</p>
                                 </div>
                             </div>
-                            
+
                             {/* More Options Button */}
-                            <div className="relative">
-                                <button 
-                                    onClick={() => setShowDeleteMenu(showDeleteMenu === post._id ? null : post._id)}
+                            <div 
+                                className="relative"
+                                ref={(el) => {
+                                    if (el) {
+                                        deleteMenuRefs.current[post._id] = el;
+                                    } else {
+                                        delete deleteMenuRefs.current[post._id];
+                                    }
+                                }}
+                            >
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setShowDeleteMenu(showDeleteMenu === post._id ? null : post._id);
+                                    }}
                                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                                 >
                                     <MoreHorizontal size={20} className="text-gray-600" />
@@ -115,18 +340,20 @@ const {
 
                                 {/* Delete Menu */}
                                 {showDeleteMenu === post._id && (
-                                    <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                                     <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
                                         <button
-                                            onClick={() => handleDelete(post._id)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDelete(post._id);
+                                            }}
                                             disabled={deleteLoading}
-                                            className={`w-full px-4 py-3 flex items-center gap-2 transition-colors rounded-lg text-sm font-semibold ${
-                                                deleteLoading 
-                                                    ? "text-gray-400 cursor-not-allowed" 
-                                                    : "text-red-600 hover:bg-red-50"
-                                            }`}
+                                            className={`w-full px-4 py-3 flex items-center gap-2 transition-colors rounded-lg text-sm font-semibold ${deleteLoading
+                                                ? "text-gray-400 cursor-not-allowed"
+                                                : "text-red-600 hover:bg-red-50"
+                                                }`}
                                         >
                                             <Trash2 size={18} />
-                                            {deleteLoading ? "Deleting..." : "Delete Post"}
+                                            {deleteLoading ? "Deleting..." : "Delete"}
                                         </button>
                                     </div>
                                 )}
@@ -134,73 +361,92 @@ const {
                         </div>
 
                         {/* Post Card with Background */}
-                     {/* Post Card with Background */}
-<div className="px-6 py-4">
-  <div
-    className="rounded-3xl overflow-hidden flex items-center justify-center p-12 min-h-[320px] relative shadow-xl"
-    style={
-      post.background
-        ? {
-            backgroundImage: `url(${post.background})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }
-        : post.backgroundCode
-        ? { background: post.backgroundCode }
-        : {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          }
-    }
-  >
-    {/* Overlay for better text readability */}
-    <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
-    
-    {/* Category Badge - Top Left */}
-    {post.subTopic && (
-      <div className="absolute top-4 left-4 z-20 inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full border border-white/30">
-        {post.subTopic.split(",")[0].trim()}
-      </div>
-    )}
+                        {/* Post Card with Background */}
+                        <div className="px-6 py-4">
+                            <div
+                                className="rounded-3xl overflow-hidden flex items-center justify-center p-12 min-h-[320px] relative shadow-xl"
+                                style={
+                                    // Check if the post has a background image URL
+                                    post.background
+                                        ? {
+                                            backgroundImage: `url(${post.background})`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center'
+                                        }
+                                        // If there's a backgroundCode, match it with presetBackgrounds
+                                        : post.backgroundCode
+                                            ? {
+                                                backgroundImage: `url(${presetBackgrounds.find((bg) => bg.name === post.backgroundCode)?.imagePath
+                                                    })`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center'
+                                            }
+                                            // Default gradient background if no background or code is found
+                                            : {
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                            }
+                                }
+                            >
+                                {/* Overlay for better text readability */}
+                                <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
 
-    <div className="text-center w-full space-y-3 relative z-10">
-      {/* Post Text */}
-      <p
-        className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(post.fontFamily)}`}
-        style={{
-          fontSize: `${post.fontSize}px`,
-          color: post.color,
-          fontWeight: post.isBold ? "700" : "500",
-          fontStyle: post.isItalic ? "italic" : "normal",
-          textDecoration: post.isUnderline ? "underline" : "none",
-          textAlign: post.textAlignment,
-        }}
-      >
-        {post.text}
-      </p>
-    </div>
-  </div>
-</div>
+                                {/* Category Badge - Top Left */}
+                                {post.subTopic && (
+                                    <div className="absolute top-4 left-4 z-20 inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full border border-white/30">
+                                        {post.subTopic.split(",")[0].trim()}
+                                    </div>
+                                )}
+
+                                <div className="text-center w-full space-y-3 relative z-10">
+                                    {/* Post Text */}
+                                    <p
+                                        className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(post.fontFamily)}`}
+                                        style={{
+                                            fontSize: `${post.fontSize}px`,
+                                            color: post.color,
+                                            fontWeight: post.isBold ? "700" : "500",
+                                            fontStyle: post.isItalic ? "italic" : "normal",
+                                            textDecoration: post.isUnderline ? "underline" : "none",
+                                            textAlign: post.textAlignment,
+                                        }}
+                                    >
+                                        {post.text}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                       {post.sharedBy ? (
+                                <div className='text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]'>
+                                    <img
+                                        src={post.sharedBy.profilePicture}
+                                        className="w-7 h-7 rounded-full object-cover"
+                                    />
+                                    {post.sharedBy.username} Reposted
+                                </div>
+                            ) : null}
 
                         {/* Post Footer - Interaction Buttons */}
                         <div className="px-6 py-5 bg-white flex items-center gap-8">
                             <button
                                 onClick={() => handleLike(post._id)}
-                                className="flex items-center gap-2 group transition-colors"
+                                disabled={likingPostId === post._id}
+                                className="flex items-center gap-2 group transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Heart
                                     size={22}
-                                    className={`${likedPosts.has(post._id)
-                                            ? "fill-red-500 text-red-500"
-                                            : "text-gray-500 group-hover:text-red-500"
+                                    className={`${post.userLikes?.includes(user?._id) || post.isLiked || likedPosts.has(post._id)
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-500 group-hover:text-red-500"
                                         } transition-colors`}
                                 />
                                 <span className={`text-sm font-semibold transition-colors ${likedPosts.has(post._id)
-                                        ? "text-red-500"
-                                        : "text-gray-600"
+                                    ? "text-red-500"
+                                    : "text-gray-600"
                                     }`}>
-                                    {likedPosts.has(post._id)
-                                        ? (post.likesCount + 1)
-                                        : post.likesCount}
+                                    {likesCounts[post._id] !== undefined
+                                        ? likesCounts[post._id]
+                                        : (post.likesCount || 0)
+                                    }
                                 </span>
                             </button>
 
@@ -214,7 +460,19 @@ const {
                                 </span>
                             </button>
 
-                            <button className="flex items-center gap-2 group transition-colors">
+                            <button 
+                                onClick={() => {
+                                    setSelectedPostForShare({
+                                        ...post,
+                                        contentType: "knowledge",
+                                        page: knowledgePageDetail,
+                                        pageName: knowledgePageDetail?.name,
+                                        pageImage: knowledgePageDetail?.image,
+                                    });
+                                    setShareModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 group transition-colors"
+                            >
                                 <Share2
                                     size={22}
                                     className="text-gray-500 group-hover:text-orange-500 transition-colors"
@@ -235,6 +493,17 @@ const {
                     </div>
                 )}
             </div>
+
+            {/* Share Modal */}
+            {shareModalOpen && (
+                <ShareToChatsModal
+                    onClose={() => {
+                        setShareModalOpen(false);
+                        setSelectedPostForShare(null);
+                    }}
+                    post={selectedPostForShare}
+                />
+            )}
         </div>
     );
 }

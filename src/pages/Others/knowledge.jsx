@@ -371,9 +371,12 @@ export default function Knowledge() {
           <div ref={observerTarget} className="h-0 -mt-[1.4em]" />
 
           {!knowledgeFeedLoading && knowledgeFeed?.length === 0 && (
-            <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
-              <img src={nofound} alt="" />
-            </p>
+             <div className="text-gray-500 col-span-3 text-center py-10">
+                            <div className=" flex justify-center">
+                            <img src={nofound} height={300} width={300} alt="" />
+                            </div>
+                            <p className="font-bold pt-4 text-black">No Knowledge Posts Found.</p>
+                          </div>
           )}
         </div>
       </div>

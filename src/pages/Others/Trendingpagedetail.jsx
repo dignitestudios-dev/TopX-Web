@@ -225,11 +225,19 @@ const Trendingpagedetail = () => {
                                 </div>
                             </div>
 
-                            {/* Subscribe Button */}
-                            <div className="mb-[0em]">
-                                <div>
-                                    <VscReport color='white' size={26} onClick={() => setReportmodal(true)} className='absolute top-[6.8em] right-[11em] cursor-pointer' />
-                                </div>
+                            {/* Report Icon */}
+                            <div className="absolute top-[6.8em] right-[18em]">
+                                <VscReport 
+                                    color='white' 
+                                    size={26} 
+                                    onClick={() => setReportmodal(true)} 
+                                    className='cursor-pointer' 
+                                />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 mb-[0em]">
+                                {/* Subscribe Button */}
                                 <button
                                     onClick={handleSubscribeClick}
                                     disabled={isSubscribed}
@@ -238,26 +246,22 @@ const Trendingpagedetail = () => {
                                         : 'bg-white text-orange-500 hover:bg-orange-50'
                                         }`}
                                 >
-                                    {isSubscribed
-                                        ? 'UnSubscribe'
-                                        : 'Subscribe'}
+                                    {isSubscribed ? 'UnSubscribe' : 'Subscribe'}
                                 </button>
 
-                            </div>
-
-                            <div className="mb-[0em]">
-                                <div>
-                                    <VscReport color='white' size={26} onClick={() => setReportmodal(true)} className='absolute top-[6.8em] right-[11em] cursor-pointer' />
-                                </div>
+                                {/* Live Chat Button */}
                                 <button
-                                    onClick={handleSubscribeClick}
-                                    disabled={isSubscribed}
-                                    className=" p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
+                                    onClick={() => navigate(`/live-chat`, { 
+                                        state: { 
+                                            pageId: id, 
+                                            pageName: pageDetail?.name 
+                                        } 
+                                    })}
+                                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
                                 >
-                                    <MessageSquareText />
-                                    Star A Live Chat
+                                    <MessageSquareText size={20} />
+                                {pageDetail?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
                                 </button>
-
                             </div>
 
                             <div className="mb-[0em]">

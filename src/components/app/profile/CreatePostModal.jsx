@@ -29,7 +29,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-slideUp">
               <div className="p-6">
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="text-[20px] font-[600] text-[#181818]">
                     Select Type
                   </h2>
@@ -41,9 +41,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
                   </button>
                 </div>
 
-                <p className="text-[14px] font-[500] text-[#181818] mb-6">
-                  Subscription Name
-                </p>
+              
 
                 <div className="space-y-4">
                   {options.map((option, index) => (

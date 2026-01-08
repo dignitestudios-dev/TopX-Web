@@ -144,7 +144,7 @@ useEffect(() => {
         </button>
 
         <h2 className="text-[20px] font-[700] text-black text-center mb-6">
-          Create New Knowledge Page
+          Create Knowledge Page
         </h2>
 
         {/* IMAGE UPLOAD */}
@@ -188,7 +188,7 @@ useEffect(() => {
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="Text goes here"
+              placeholder="Enter your Knowledge page name"
               className={`w-full border rounded-xl px-4 py-3 mt-1 text-sm ${
                 errors.name ? "border-red-500" : "border-gray-300"
               }`}
@@ -198,13 +198,13 @@ useEffect(() => {
 
           {/* ABOUT */}
           <div>
-            <label className="text-sm font-semibold text-black">About</label>
+            <label className="text-sm font-semibold text-black">About Knowledge Page</label>
             <textarea
               disabled={loadingCreate}
               value={formData.about}
               onChange={(e) => handleInputChange("about", e.target.value)}
               placeholder="Text goes here"
-              className={`w-full border rounded-xl px-4 py-3 mt-1 text-sm h-24 ${
+              className={`w-full border rounded-xl px-4 py-3 mt-1 text-sm h-[3.4em] ${
                 errors.about ? "border-red-500" : "border-gray-300"
               }`}
             />
@@ -229,7 +229,7 @@ useEffect(() => {
                 <option>Loading topics…</option>
               ) : (
                 <>
-                  <option value="">Select Topic</option>
+                  <option value="">Select</option>
                   {alltopics?.map((item) => (
                     <option key={item._id} value={item.name}>
                       {item.name}
@@ -240,6 +240,47 @@ useEffect(() => {
             </select>
 
             {errors.topic && <p className="text-red-500 text-sm">{errors.topic}</p>}
+          </div>
+
+           {/* KEYWORDS */}
+          <div>
+            <label className="text-sm font-semibold text-black">Keywords</label>
+
+            <div
+              className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 ${
+                errors.keywords ? "border-red-500" : "border-gray-300"
+              }`}
+            >
+              {keywords.map((tag, i) => (
+                <div
+                  key={i}
+                  className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs flex items-center gap-2"
+                >
+                  #{tag}
+                  <button
+                    disabled={loadingCreate}
+                    onClick={() => removeKeyword(i)}
+                    className="font-bold"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              <input
+                disabled={loadingCreate}
+                type="text"
+                placeholder="Text goes here (hashtags)"
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={handleKeywordKeyDown}
+                className="flex-1 outline-none text-sm py-1"
+              />
+            </div>
+
+            {errors.keywords && (
+              <p className="text-red-500 text-sm">{errors.keywords}</p>
+            )}
           </div>
 
           {/* SUB CATEGORY */}
@@ -272,7 +313,7 @@ useEffect(() => {
               <input
                 disabled={loadingCreate}
                 type="text"
-                placeholder="Type & press Enter"
+                placeholder="Text goes here (Sub-Catrgories)"
                 value={subInput}
                 onChange={(e) => setSubInput(e.target.value)}
                 onKeyDown={handleSubCategoryKeyDown}
@@ -285,46 +326,7 @@ useEffect(() => {
             )}
           </div>
 
-          {/* KEYWORDS */}
-          <div>
-            <label className="text-sm font-semibold text-black">Keywords</label>
-
-            <div
-              className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 ${
-                errors.keywords ? "border-red-500" : "border-gray-300"
-              }`}
-            >
-              {keywords.map((tag, i) => (
-                <div
-                  key={i}
-                  className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs flex items-center gap-2"
-                >
-                  #{tag}
-                  <button
-                    disabled={loadingCreate}
-                    onClick={() => removeKeyword(i)}
-                    className="font-bold"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-
-              <input
-                disabled={loadingCreate}
-                type="text"
-                placeholder="Type & press Enter"
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-                onKeyDown={handleKeywordKeyDown}
-                className="flex-1 outline-none text-sm py-1"
-              />
-            </div>
-
-            {errors.keywords && (
-              <p className="text-red-500 text-sm">{errors.keywords}</p>
-            )}
-          </div>
+         
         </div>
 
         {/* SUBMIT BUTTON */}
@@ -335,9 +337,9 @@ useEffect(() => {
           }`}
           onClick={handleCreatePage}
         >
-          {loadingCreate ? "Creating..." : "Create Page"}
+          {loadingCreate ? "Creating..." : "Create Knowledge Page"}
         </button>
-      </div>
+      </div>  
     </div>
   );
 }

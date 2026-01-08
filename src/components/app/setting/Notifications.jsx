@@ -40,16 +40,13 @@ export default function Notifications() {
 
   // Map API response fields to readable labels
   const notificationLabels = {
-    accountAndSystemNotification: "Account & System Notifications",
-    activityStatus: "Activity Status",
-    contentAndTopicNotification: "Content & Topic Notifications",
-    engagementNotification: "Engagement Notifications",
-    groupNotification: "Group Notifications",
-    isGroupInviteOpen: "Group Invites",
-    isMessagingOpen: "Messaging Notifications",
-    liveAndInteractiveNotification: "Live & Interactive Notifications",
-    messageNotification: "Message Notifications",
     postNotification: "Post Notifications",
+    messageNotification: "Message Notifications",
+    groupNotification: "Group Notifications",
+    engagementNotification: "Engagement Notifications",
+    contentAndTopicNotification: "Content & Topic Notifications",
+    liveAndInteractiveNotification: "Live & Interactive Notifications",
+    accountAndSystemNotification: "Account & System Notifications",
   };
 
   const handleToggle = (key) => {
@@ -78,7 +75,7 @@ export default function Notifications() {
         {Object.entries(notificationLabels).map(([key, label]) => {
           const value = notificationSettings[key];
 
-          // Skip fields that aren't boolean
+          // Skip fields that aren't boolean (safety)
           if (typeof value !== "boolean") return null;
 
           return (

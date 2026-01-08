@@ -90,6 +90,35 @@ export const createKnowledgePost = createAsyncThunk(
   }
 );
 
+/* ===============================
+   SHARE KNOWLEDGE POST TO CATEGORY
+   API → POST /knowledgeposts/share
+   BODY → { originalKnowledgePost, pageId, sharedToCategory }
+================================*/
+export const shareKnowledgePostToCategory = createAsyncThunk(
+  "knowledgepost/shareKnowledgePostToCategory",
+  async ({ postId, pageId, subTopics }, thunkAPI) => {
+    try {
+      // subTopics is an array, take the first element as sharedToCategory
+      const sharedToCategory = Array.isArray(subTopics) && subTopics.length > 0 
+        ? subTopics[0] 
+        : (typeof subTopics === 'string' ? subTopics : '');
+
+      const res = await axios.post("/knowledgeposts/share", {
+        originalKnowledgePost: postId,
+        pageId: pageId,
+        sharedToCategory: sharedToCategory,
+      });
+
+      return res.data?.data; // shared post object
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to share knowledge post to category"
+      );
+    }
+  }
+);
+
 export const getKnowledgePostDetail = createAsyncThunk(
   "knowledgepost/getKnowledgePostDetail",
   async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
@@ -151,18 +180,25 @@ export const fetchKnowledgeFeed = createAsyncThunk(
 // Comment
 
 
-// Like/Unlike post API call
+// Like/Unlike post or comment API call
 export const likePost = createAsyncThunk(
   "likes/Knowledge",
-  async ({ postId, likeToggle }, thunkAPI) => {
+  async ({ postId, commentId, likeToggle }, thunkAPI) => {
     try {
-      const res = await axios.post("/likes/Knowledge", {
-        knowledgePost: postId,
-        likeToggle: likeToggle, // true for like, false for unlike
-      });
+      const body = {};
+      if (postId) {
+        body.knowledgePost = postId;
+      }
+      if (commentId) {
+        body.comment = commentId;
+      }
+      body.likeToggle = likeToggle; // true for like, false for unlike
+
+      const res = await axios.post("/likes/Knowledge", body);
 
       return {
         postId,
+        commentId,
         likeToggle: res.data.data.likeToggle, // true for like, false for unlike
         likesCount: res.data.data.likesCount, // Get the actual likes count from API response
       };
@@ -358,6 +394,19 @@ const knowledgeSlice = createSlice({
         state.loadingCreate = false;
         state.error = action.payload;
       })
+      // Share Knowledge Post to Category
+      .addCase(shareKnowledgePostToCategory.pending, (state) => {
+        state.loadingCreate = true;
+        state.error = null;
+      })
+      .addCase(shareKnowledgePostToCategory.fulfilled, (state, action) => {
+        state.loadingCreate = false;
+        state.success = true;
+      })
+      .addCase(shareKnowledgePostToCategory.rejected, (state, action) => {
+        state.loadingCreate = false;
+        state.error = action.payload;
+      })
       //getknowledgepost detail
       .addCase(getKnowledgePostDetail.pending, (state) => {
         state.knowledgePageLoading = true;
@@ -466,45 +515,70 @@ const knowledgeSlice = createSlice({
 
       // Like/Unlike Post
       .addCase(likePost.pending, (state, action) => {
-        const { postId, likeToggle } = action.meta.arg;
+        const { postId, commentId, likeToggle } = action.meta.arg;
 
-        // Optimistic update
-        const post = state.knowledgeFeed.find((p) => p._id === postId);
-        if (post) {
-          post.isLiked = likeToggle;
-          post.likesCount = likeToggle
-            ? post.likesCount + 1
-            : post.likesCount - 1;
+        // Optimistic update for knowledge feed posts
+        if (postId) {
+          const post = state.knowledgeFeed.find((p) => p._id === postId);
+          if (post) {
+            post.isLiked = likeToggle;
+            post.likesCount = likeToggle
+              ? post.likesCount + 1
+              : Math.max(post.likesCount - 1, 0);
 
-          // Save to localStorage
-          const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-          likes[postId] = {
-            isLiked: post.isLiked,
-            likesCount: post.likesCount,
-          };
-          localStorage.setItem("postLikes", JSON.stringify(likes));
+            // Save to localStorage
+            const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+            likes[postId] = {
+              isLiked: post.isLiked,
+              likesCount: post.likesCount,
+            };
+            localStorage.setItem("postLikes", JSON.stringify(likes));
+          }
+        }
+
+        // Optimistic update for knowledge page posts
+        if (postId && state.knowledgePagePosts) {
+          const post = state.knowledgePagePosts.find((p) => p._id === postId);
+          if (post) {
+            post.isLiked = likeToggle;
+            post.likesCount = likeToggle
+              ? (post.likesCount || 0) + 1
+              : Math.max((post.likesCount || 0) - 1, 0);
+          }
         }
       })
       .addCase(likePost.fulfilled, (state, action) => {
-        const { postId, likeToggle, likesCount: apiLikes } = action.payload;
+        const { postId, commentId, likeToggle, likesCount: apiLikes } = action.payload;
 
-        const post = state.knowledgeFeed.find((p) => p._id === postId);
-        if (post) {
-          // Merge API likes with local increment/decrement
-          const localLikes = JSON.parse(
-            localStorage.getItem("postLikes") || "{}"
-          );
-          const local = localLikes[postId];
+        // Update knowledge feed posts
+        if (postId) {
+          const post = state.knowledgeFeed.find((p) => p._id === postId);
+          if (post) {
+            // Merge API likes with local increment/decrement
+            const localLikes = JSON.parse(
+              localStorage.getItem("postLikes") || "{}"
+            );
+            const local = localLikes[postId];
 
-          post.isLiked = likeToggle;
-          post.likesCount = local?.likesCount ?? apiLikes; // Use local increment if exists
+            post.isLiked = likeToggle;
+            post.likesCount = local?.likesCount ?? apiLikes; // Use local increment if exists
 
-          // Save merged to localStorage
-          localLikes[postId] = {
-            isLiked: post.isLiked,
-            likesCount: post.likesCount,
-          };
-          localStorage.setItem("postLikes", JSON.stringify(localLikes));
+            // Save merged to localStorage
+            localLikes[postId] = {
+              isLiked: post.isLiked,
+              likesCount: post.likesCount,
+            };
+            localStorage.setItem("postLikes", JSON.stringify(localLikes));
+          }
+        }
+
+        // Update knowledge page posts
+        if (postId && state.knowledgePagePosts) {
+          const post = state.knowledgePagePosts.find((p) => p._id === postId);
+          if (post) {
+            post.isLiked = likeToggle;
+            post.likesCount = apiLikes;
+          }
         }
       })
 

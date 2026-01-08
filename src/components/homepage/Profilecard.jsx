@@ -60,7 +60,7 @@ const Profilecard = () => {
                                 src={allUserData?.profilePicture || dummyprofile}
                                 loading="lazy"
                                 alt="profile"
-                                className="h-20 w-20 rounded-full"
+                                className="h-20 w-20 object-cover rounded-full"
                             />
 
                             <div className="text-white flex gap-6 pb-3">
@@ -85,7 +85,14 @@ const Profilecard = () => {
                 <div className="p-5 pt-8">
                     <h2 className="text-lg font-semibold text-gray-800">{allUserData?.name || "Not Available"}</h2>
                     <p className="text-sm text-gray-500 mb-2">{allUserData?.username || "No Username"}</p>
-                    <p className="text-sm text-gray-600 leading-snug">{allUserData?.bio || "No Bio"}</p>
+                    <p className="text-sm text-gray-600 leading-snug">
+  {allUserData?.bio
+    ? allUserData.bio.length > 100
+      ? allUserData.bio.substring(0, 100) + "..."
+      : allUserData.bio
+    : "No Bio"}
+</p>
+
                 </div>
 
             </div>
