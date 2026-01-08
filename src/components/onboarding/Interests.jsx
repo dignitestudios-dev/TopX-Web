@@ -69,7 +69,7 @@ const filteredCategories = interestsList?.filter((item) =>
         <div className="flex flex-col text-center">
           <h2 className="text-[24px] md:text-[32px] font-bold">Interests</h2>
           <p className="text-[14px] text-[#565656]">
-            Select topics you like and we'll tailor your feed accordingly.
+            Select some topics and we'll fill your home feed witha few things you may like to get you started.
           </p>
         </div>
 

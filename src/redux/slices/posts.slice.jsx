@@ -53,6 +53,20 @@ export const createStory = createAsyncThunk(
   }
 );
 
+export const deleteStory = createAsyncThunk(
+  "posts/deleteStory",
+  async (storyId, thunkAPI) => {
+    try {
+      const res = await axios.delete(`/stories/${storyId}`);
+      return { storyId, data: res.data };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete story"
+      );
+    }
+  }
+);
+
 export const deletePost = createAsyncThunk(
   "posts/deletePost",
   async ({ postId }, thunkAPI) => {
@@ -126,6 +140,41 @@ export const getMyPosts = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to fetch posts"
+      );
+    }
+  }
+);
+
+// ====================================================
+// 🚀 ELEVATE POST (POST /posts/elevate/:postId)
+// ====================================================
+export const elevatePost = createAsyncThunk(
+  "posts/elevatePost",
+  async ({ postId, duration }, thunkAPI) => {
+    try {
+      const body = {};
+      if (duration) {
+        body.duration = duration; // "24h", "7d", "1m", "manual"
+      }
+      const res = await axios.post(`/posts/elevate/${postId}`, body);
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to elevate post"
+      );
+    }
+  }
+);
+
+export const demotePost = createAsyncThunk(
+  "posts/demotePost",
+  async (postId, thunkAPI) => {
+    try {
+      const res = await axios.post(`/posts/demote/${postId}`);
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to demote post"
       );
     }
   }
@@ -251,6 +300,38 @@ const postsSlice = createSlice({
         state.error = action.payload;
       })
       // ------------------
+      // ELEVATE POST
+      // ------------------
+      .addCase(elevatePost.pending, (state) => {
+        state.isLoading = true;
+        state.success = false;
+      })
+      .addCase(elevatePost.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.success = true;
+        // Optional: if API returns updated post, merge into pagepost/posts here
+      })
+      .addCase(elevatePost.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // ------------------
+      // DEMOTE POST
+      // ------------------
+      .addCase(demotePost.pending, (state) => {
+        state.isLoading = true;
+        state.success = false;
+      })
+      .addCase(demotePost.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.success = true;
+        // Optional: if API returns updated post, merge into pagepost/posts here
+      })
+      .addCase(demotePost.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
+      })
+      // ------------------
       // CREATE Story
       // ------------------
       .addCase(createStory.pending, (state) => {
@@ -264,6 +345,24 @@ const postsSlice = createSlice({
       })
 
       .addCase(createStory.rejected, (state, action) => {
+        state.postsLoading = false;
+        state.error = action.payload;
+      })
+
+      // ------------------
+      // DELETE STORY
+      // ------------------
+      .addCase(deleteStory.pending, (state) => {
+        state.postsLoading = true;
+        state.success = false;
+      })
+
+      .addCase(deleteStory.fulfilled, (state, action) => {
+        state.postsLoading = false;
+        state.success = true;
+      })
+
+      .addCase(deleteStory.rejected, (state, action) => {
         state.postsLoading = false;
         state.error = action.payload;
       })

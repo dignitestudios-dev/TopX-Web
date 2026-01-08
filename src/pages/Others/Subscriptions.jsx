@@ -8,7 +8,7 @@ import {
   Bookmark,
   Layers,
 } from "lucide-react";
-import { notes, topics } from "../../assets/export";
+import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
@@ -79,6 +79,8 @@ export default function Subscriptions() {
 
   const [open, setOpen] = useState(false);
 
+  console.log(subscriptions, "subscriptions")
+
   const trending = [
     {
       title: "Justin’s Basketball",
@@ -140,7 +142,7 @@ export default function Subscriptions() {
     console.log(id, "idesss");
     await dispatch(updateSavedCollections(id)).unwrap();
   };
-  console.log(subscriptions, "item-pages-->");
+  console.log(subscriptions, "subscriptions");
   return (
     <div className="flex  min-h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -149,7 +151,7 @@ export default function Subscriptions() {
 
         <Profilecard smallcard={true} />
 
-       
+
         {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
@@ -258,8 +260,8 @@ export default function Subscriptions() {
             <div className="flex bg-white p-1 rounded-full overflow-hidden">
               <button
                 className={`px-4 py-2 rounded-l-full text-sm font-medium ${activeTab === "my"
-                    ? "bg-orange-500 text-white"
-                    : "text-gray-600 hover:bg-gray-200"
+                  ? "bg-orange-500 text-white"
+                  : "text-gray-600 hover:bg-gray-200"
                   }`}
                 onClick={() => setActiveTab("my")}
               >
@@ -267,8 +269,8 @@ export default function Subscriptions() {
               </button>
               <button
                 className={`px-4 py-2 text-sm rounded-r-full font-medium ${activeTab === "saved"
-                    ? "bg-orange-500 text-white"
-                    : "text-gray-600 hover:bg-gray-200"
+                  ? "bg-orange-500 text-white"
+                  : "text-gray-600 hover:bg-gray-200"
                   }`}
                 onClick={() => setActiveTab("saved")}
               >
@@ -299,96 +301,107 @@ export default function Subscriptions() {
 
         {/* Subscription Cards Grid */}
         <div className="grid grid-cols-2 gap-4">
-           {subscriptions?.length === 0 ? (
-    <p className="text-center text-gray-500 text-[18px] w-[33em]">No Saved Subscriptions</p> // Display this message if there are no subscriptions
-  ) : (
-          subscriptions?.map((item) => (
-            <div
-              key={item._id}
-              className="bg-white cursor-pointer border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
-            >
-              <div className="flex justify-between items-start">
-                <h3
-                  onClick={() =>
-                    navigate(`/subscriptions-category`, {
-                      state: { id: item._id },
-                    })
-                  }
-                  className="text-sm font-semibold text-gray-800 flex items-center gap-1"
-                >
-                  {item.name}
-                  <span className="text-gray-400 pl-1">
-                    <Layers size={16} />
-                  </span>
-                </h3>
-
-                {activeTab === "my" ? (
-                  <div
-                    className="relative"
-                    ref={openDropdownId === item._id ? dropdownRef : null}
-                  >
-                    <MoreVertical
-                      size={18}
-                      className="text-gray-500 hover:text-gray-700 cursor-pointer"
-                      onClick={() => toggleDropdown(item._id)}
-                    />
-
-                    {openDropdownId === item._id && (
-                      <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-10">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <Bookmark
-                    size={18}
-                    onClick={() => savedCollection(item._id)}
-                    className="text-orange-500 cursor-pointer"
-                    fill="#F97316"
-                  />
-                )}
+          {subscriptions?.length === 0 ? (
+            <div className="text-gray-500 col-span-3 text-center py-10">
+              <div className=" flex justify-center">
+                <img src={nofound} height={300} width={300} alt="" />
               </div>
+              <p className="font-bold pt-4 text-black">
+                {activeTab === "saved" && " No Saved Collections"}
+                  {activeTab === "my" && "You Have No Collections"}
+              
+              </p>
+            </div> // Display this message if there are no subscriptions
+          ) : (
+            subscriptions?.map((item) => (
+              <div
+                key={item._id}
+                className="bg-white cursor-pointer border border-gray-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+              >
+                <div className="flex justify-between items-start">
+                  <h3
+                    onClick={() =>
+                      navigate(`/subscriptions-category`, {
+                        state: { id: item._id },
+                      })
+                    }
+                    className="text-[14px] font-semibold text-gray-800 flex items-center gap-1"
+                  >
+                    <img src={item?.image} className="rounded-full object-cover w-6 h-6" alt="" />
+                    {item.userData?.name}
+                    {activeTab === "saved" && "'s"} {item.name}
+                    <span className="text-gray-400 pl-1">
+                      <Layers size={16} />
+                    </span>
+                  </h3>
 
-              {/* Pages */}
-              <div className="flex items-center mt-3 gap-2">
-                <div className="flex -space-x-2">
-                  {Array.isArray(item?.pages) && item?.pages.length > 0 ? (
-                    item?.pages
-                      .slice(0, 3)
-                      .map((page, i) => (
-                        <img
-                          key={page?._id || i}
-                          src={page?.image || page || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"}
-                          alt=""
-                          className="w-6 h-6 rounded-full border border-white object-cover"
-                        />
-                      ))
+                  {activeTab === "my" ? (
+                    <div
+                      className="relative"
+                      ref={openDropdownId === item._id ? dropdownRef : null}
+                    >
+                      <MoreVertical
+                        size={18}
+                        className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                        onClick={() => toggleDropdown(item._id)}
+                      />
+
+                      {openDropdownId === item._id && (
+                        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-10">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    <span className="text-xs text-gray-400">No pages</span>
+                    <Bookmark
+                      size={18}
+                      onClick={() => savedCollection(item._id)}
+                      className="text-orange-500 cursor-pointer"
+                      fill="#F97316"
+                    />
                   )}
                 </div>
 
-                <p className="text-xs text-gray-500 font-medium">
-                  <span className="font-semibold text-black">
-                    {item?.pages?.length || 0}+
-                  </span>{" "}
-                  Pages
-                </p>
+                {/* Pages */}
+                <div className="flex items-center mt-3 gap-2">
+                  <div className="flex -space-x-2">
+                    {Array.isArray(item?.pages) && item?.pages.length > 0 ? (
+                      item?.pages
+                        .slice(0, 3)
+                        .map((page, i) => (
+                          <img
+                            key={page?._id || i}
+                            src={page?.image || page || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"}
+                            alt=""
+                            className="w-6 h-6 rounded-full border border-white object-cover"
+                          />
+                        ))
+                    ) : (
+                      <span className="text-xs text-gray-400">No pages</span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-gray-500 font-medium">
+                    <span className="font-semibold text-black">
+                      {item?.pages?.length || 0}+
+                    </span>{" "}
+                    Pages
+                  </p>
+                </div>
               </div>
-            </div>
-          ))
-  )}
+            ))
+          )}
 
           {/* Create Subscription Modal */}
           {showCreateModal && (

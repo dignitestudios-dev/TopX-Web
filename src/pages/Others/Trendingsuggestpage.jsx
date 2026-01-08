@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp, Plus, ChevronsRight, ArrowLeft } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, ChevronRight, TrendingUp, Plus, ChevronsRight, ArrowLeft, Search } from "lucide-react";
 import { notes, postone, profile, profilehigh, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -22,6 +22,7 @@ export default function Trendingsuggestpage() {
   const [openModal, setOpenModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
   const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const navigation = useNavigate();
   const observerTarget = useRef(null);
   const dispatch = useDispatch();
@@ -95,6 +96,11 @@ export default function Trendingsuggestpage() {
     setOpenModal(true);
   };
 
+  // Filter pages based on search query
+  const filteredPages = trendingPages?.filter((page) =>
+    page?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+
   return (
     <div className="flex max-w-7xl mx-auto min-h-screen">
       {/* Left Sidebar - 25% width (Fixed) */}
@@ -109,7 +115,7 @@ export default function Trendingsuggestpage() {
       <div className="w-3/4 bg-transparent overflow-y-auto">
         <div className="p-4">
           {/* Header */}
-          <div className="flex gap-3 items-center p-0 bg-[#F2F2F2] rounded-xl mb-6">
+          <div className="flex gap-3 items-center p-0 bg-[#F2F2F2] rounded-xl mb-4">
             <button
               onClick={() => navigation(-1)}
               className="hover:bg-gray-300 p-2 rounded-full transition-colors"
@@ -117,6 +123,23 @@ export default function Trendingsuggestpage() {
               <ArrowLeft size={24} className="text-gray-700" />
             </button>
             <h1 className="font-bold text-[22px] text-gray-900">Trending Pages</h1>
+          </div>
+
+          {/* Search Input */}
+          <div className="mb-6">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-2.5 text-gray-400"
+              />
+              <input
+                type="text"
+                placeholder="Search pages by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-white"
+              />
+            </div>
           </div>
 
           {/* Loading State */}
@@ -134,7 +157,7 @@ export default function Trendingsuggestpage() {
           {trendingPages && trendingPages.length > 0 ? (
             <>
               <div className="grid grid-cols-3 gap-6 px-4 py-6">
-                {trendingPages.map((item, idx) => (
+                {(searchQuery ? filteredPages : trendingPages).map((item, idx) => (
                   <div
                     key={item._id || idx}
                     className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition-shadow"
@@ -235,11 +258,11 @@ export default function Trendingsuggestpage() {
                 </div>
               )}
 
-              {/* Infinite Scroll Trigger */}
-              <div ref={observerTarget} className="h-10 mt-8" />
+              {/* Infinite Scroll Trigger - Only show when not searching */}
+              {!searchQuery && <div ref={observerTarget} className="h-10 mt-8" />}
 
               {/* No More Pages */}
-              {!trendingLoading && !trendingPagination?.hasNextPage && trendingPages.length > 0 && (
+              {!trendingLoading && !trendingPagination?.hasNextPage && trendingPages.length > 0 && !searchQuery && (
                 <div className="text-center py-8 text-gray-500 mt-8">
                   <p className="font-medium">No more pages to load</p>
                 </div>
@@ -248,7 +271,17 @@ export default function Trendingsuggestpage() {
           ) : (
             <div className="text-center py-16">
               <TrendingUp size={48} className="text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">No pages available</p>
+              <p className="text-gray-500 text-lg">
+                {searchQuery ? "No pages found matching your search" : "No pages available"}
+              </p>
+            </div>
+          )}
+
+          {/* Show message when search has no results but pages exist */}
+          {searchQuery && filteredPages.length === 0 && trendingPages && trendingPages.length > 0 && (
+            <div className="text-center py-16 px-4">
+              <Search size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">No pages found matching "{searchQuery}"</p>
             </div>
           )}
         </div>

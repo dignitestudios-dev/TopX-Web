@@ -39,8 +39,9 @@ import authlogo from "./auth.png";
 import bg from "./landingpage/bg.png"
 import Mask from "./landingpage/Mask.png"
 import topxlogout from "./landingpage/topx-logo.png"
-import nofound from "../assets/nopost.png"
+// import nofound from "../assets/nopost.png"
 import PostUnderReview from "../assets/under-review-img.png"
+import nofound from "../assets/notfound.png"
 
 export {
   PostUnderReview,

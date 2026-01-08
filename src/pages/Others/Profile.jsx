@@ -3,7 +3,7 @@ import LargeProfile from "../../components/app/profile/LargeProfile";
 import MySubscription from "../../components/homepage/MySubscription";
 import { BookOpen, Lightbulb } from "lucide-react";
 import { FiPlus } from "react-icons/fi";
-import { auth, topics } from "../../assets/export";
+import { auth, nofound, topics } from "../../assets/export";
 import KnowledgePostCard from "../../components/app/profile/KnowledgePostCard";
 import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
@@ -146,9 +146,13 @@ export default function Profile() {
                             />
                           ))
                         ) : (
-                          <p className="text-gray-500 col-span-3 text-center py-10">
-                            No topic pages created yet.
-                          </p>
+                          
+                          <div className="text-gray-500 col-span-3 text-center py-10">
+                            <div className=" flex justify-center">
+                            <img src={nofound} height={300} width={300} alt="" />
+                            </div>
+                            <p className="font-bold pt-4 text-black">No Pages Found</p>
+                          </div>
                         )}
                       </div>
                     </div>

@@ -9,7 +9,7 @@ export const signupValues = {
 
 export const PersonalValues = {
     name: "",
-    dateOfBirth: "",
+    dateOfBirth: "2013-01-01",
     gender: "",
     profileImage: "",
    

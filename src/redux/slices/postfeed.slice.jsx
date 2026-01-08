@@ -264,6 +264,24 @@ const postFeedSlice = createSlice({
       })
       .addCase(elevateComment.fulfilled, (state, action) => {
         state.deleteCommentLoading = false;
+        // Update the comment in postComments to mark it as elevated
+        const updateCommentElevated = (comments) => {
+          return comments.map((comment) => {
+            if (comment._id === action.payload?._id) {
+              return { ...comment, isElevated: true };
+            }
+            if (comment.replies?.length) {
+              return {
+                ...comment,
+                replies: updateCommentElevated(comment.replies),
+              };
+            }
+            return comment;
+          });
+        };
+        if (state.postComments?.length) {
+          state.postComments = updateCommentElevated(state.postComments);
+        }
       })
       .addCase(elevateComment.rejected, (state, action) => {
         state.deleteCommentLoading = false;
