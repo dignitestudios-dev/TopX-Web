@@ -100,8 +100,9 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
     fd.append("pageType", formData.pageType);
 
     formData.keywords.forEach((item) => {
-      fd.append("keywords[]", item);
+      fd.append("keywords[]", `#${item}`); 
     });
+
 
     dispatch(createPage(fd))
       .unwrap()
@@ -238,7 +239,7 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
                           key={index}
                           className="flex items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm"
                         >
-                          {keyword}
+                          #{keyword}
                           <button
                             onClick={() => removeKeyword(index)}
                             className="ml-2 text-orange-600 hover:text-orange-800"

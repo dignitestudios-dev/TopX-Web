@@ -22,9 +22,8 @@ export const signupSchema = Yup.object().shape({
     .required("Phone number is required")
     .matches(
       /^\(\d{3}\)\s\d{3}-\d{4}$/,
-      "Please enter a valid phone number in (123) 456-7890 format"
+      "Please enter a valid phone number in (123) 456-7889 format"
     ),
-
 
   password: Yup.string()
     .min(8, "Password must be at least 8 characters long.")

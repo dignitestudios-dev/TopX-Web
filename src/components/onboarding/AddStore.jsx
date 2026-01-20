@@ -174,10 +174,8 @@ export default function AddStore({ handleNext }) {
           variant="orange"
           size="full"
           onClick={handleNext}
-          disabled={!hasAnySubscribed}
-          className={`w-full flex items-center justify-center
-    ${!hasAnySubscribed ? "bg-gray-300 text-gray-500 cursor-not-allowed border-none" : ""}
-  `}
+          // disabled={!hasAnySubscribed}
+          className="w-full flex items-center justify-center bg-[#F85E00] text-white border-none"
         >
           Next
         </Button>

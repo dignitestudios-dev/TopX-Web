@@ -9,14 +9,22 @@ export default function KnowledgePostPageDetail({ pageId, setIsKnowledgePageOpen
     const dispatch = useDispatch();
     const [likedPosts, setLikedPosts] = useState(new Set());
     const [showDeleteMenu, setShowDeleteMenu] = useState(null);
-    
-const {
-    knowledgePageDetail,
-    knowledgePagePosts,
-    knowledgePageLoading,
-    deleteLoading,
-    deleteSuccess
-} = useSelector((state) => state.knowledgepost);
+
+    const presetBackgrounds = [
+        { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
+        { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
+        { id: 3, name: "bg_red_gradient", imagePath: "/bg_red_gradient.png" },
+        { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
+        { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" }
+    ];
+
+    const {
+        knowledgePageDetail,
+        knowledgePagePosts,
+        knowledgePageLoading,
+        deleteLoading,
+        deleteSuccess
+    } = useSelector((state) => state.knowledgepost);
 
 
     useEffect(() => {
@@ -25,13 +33,15 @@ const {
         }
     }, [pageId]);
 
-  if (deleteSuccess) {
-    SuccessToast("Post deleted successfully");
+    if (deleteSuccess) {
+        SuccessToast("Post deleted successfully");
 
-    setTimeout(() => {
-        dispatch(resetKnowledge());
-    }, 1500);
-}
+        setTimeout(() => {
+            dispatch(resetKnowledge());
+        }, 1500);
+    }
+
+    console.log(knowledgePagePosts, "knowledgePagePosts")
 
 
     const handleLike = (postId) => {
@@ -70,6 +80,36 @@ const {
         );
     }
 
+    const timeAgo = (dateString) => {
+        const now = new Date();
+        const createdAt = new Date(dateString);
+        const diffInSeconds = Math.floor((now - createdAt) / 1000);
+
+        const minute = 60;
+        const hour = minute * 60;
+        const day = hour * 24;
+        const week = day * 7;
+        const month = day * 30;
+        const year = day * 365;
+
+        if (diffInSeconds < minute) {
+            return `${diffInSeconds} seconds ago`;
+        } else if (diffInSeconds < hour) {
+            return `${Math.floor(diffInSeconds / minute)} minutes ago`;
+        } else if (diffInSeconds < day) {
+            return `${Math.floor(diffInSeconds / hour)} hours ago`;
+        } else if (diffInSeconds < week) {
+            return `${Math.floor(diffInSeconds / day)} days ago`;
+        } else if (diffInSeconds < month) {
+            return `${Math.floor(diffInSeconds / week)} weeks ago`;
+        } else if (diffInSeconds < year) {
+            return `${Math.floor(diffInSeconds / month)} months ago`;
+        } else {
+            return `${Math.floor(diffInSeconds / year)} years ago`;
+        }
+    };
+
+
     return (
         <div className="bg-transparent min-h-screen max-w-2xl">
             {/* Header Card */}
@@ -100,13 +140,13 @@ const {
                                 />
                                 <div className="flex-1">
                                     <h3 className="font-bold text-gray-900 text-base">{post.author.name}</h3>
-                                    <p className="text-gray-500 text-sm">@{post.author.username} • 5mins ago</p>
+                                    <p className="text-gray-500 text-sm">@{post.author.username} • {timeAgo(post.createdAt)}</p>
                                 </div>
                             </div>
-                            
+
                             {/* More Options Button */}
                             <div className="relative">
-                                <button 
+                                <button
                                     onClick={() => setShowDeleteMenu(showDeleteMenu === post._id ? null : post._id)}
                                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
                                 >
@@ -119,11 +159,10 @@ const {
                                         <button
                                             onClick={() => handleDelete(post._id)}
                                             disabled={deleteLoading}
-                                            className={`w-full px-4 py-3 flex items-center gap-2 transition-colors rounded-lg text-sm font-semibold ${
-                                                deleteLoading 
-                                                    ? "text-gray-400 cursor-not-allowed" 
-                                                    : "text-red-600 hover:bg-red-50"
-                                            }`}
+                                            className={`w-full px-4 py-3 flex items-center gap-2 transition-colors rounded-lg text-sm font-semibold ${deleteLoading
+                                                ? "text-gray-400 cursor-not-allowed"
+                                                : "text-red-600 hover:bg-red-50"
+                                                }`}
                                         >
                                             <Trash2 size={18} />
                                             {deleteLoading ? "Deleting..." : "Delete Post"}
@@ -134,52 +173,60 @@ const {
                         </div>
 
                         {/* Post Card with Background */}
-                     {/* Post Card with Background */}
-<div className="px-6 py-4">
-  <div
-    className="rounded-3xl overflow-hidden flex items-center justify-center p-12 min-h-[320px] relative shadow-xl"
-    style={
-      post.background
-        ? {
-            backgroundImage: `url(${post.background})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }
-        : post.backgroundCode
-        ? { background: post.backgroundCode }
-        : {
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-          }
-    }
-  >
-    {/* Overlay for better text readability */}
-    <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
-    
-    {/* Category Badge - Top Left */}
-    {post.subTopic && (
-      <div className="absolute top-4 left-4 z-20 inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full border border-white/30">
-        {post.subTopic.split(",")[0].trim()}
-      </div>
-    )}
+                        {/* Post Card with Background */}
+                        <div className="px-6 py-4">
+                            <div
+                                className="rounded-3xl overflow-hidden flex items-center justify-center p-12 min-h-[320px] relative shadow-xl"
+                                style={
+                                    // Check if the post has a background image URL
+                                    post.background
+                                        ? {
+                                            backgroundImage: `url(${post.background})`,
+                                            backgroundSize: 'cover',
+                                            backgroundPosition: 'center'
+                                        }
+                                        // If there's a backgroundCode, match it with presetBackgrounds
+                                        : post.backgroundCode
+                                            ? {
+                                                backgroundImage: `url(${presetBackgrounds.find((bg) => bg.name === post.backgroundCode)?.imagePath
+                                                    })`,
+                                                backgroundSize: 'cover',
+                                                backgroundPosition: 'center'
+                                            }
+                                            // Default gradient background if no background or code is found
+                                            : {
+                                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                            }
+                                }
+                            >
+                                {/* Overlay for better text readability */}
+                                <div className="absolute inset-0 bg-black/5 rounded-3xl"></div>
 
-    <div className="text-center w-full space-y-3 relative z-10">
-      {/* Post Text */}
-      <p
-        className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(post.fontFamily)}`}
-        style={{
-          fontSize: `${post.fontSize}px`,
-          color: post.color,
-          fontWeight: post.isBold ? "700" : "500",
-          fontStyle: post.isItalic ? "italic" : "normal",
-          textDecoration: post.isUnderline ? "underline" : "none",
-          textAlign: post.textAlignment,
-        }}
-      >
-        {post.text}
-      </p>
-    </div>
-  </div>
-</div>
+                                {/* Category Badge - Top Left */}
+                                {post.subTopic && (
+                                    <div className="absolute top-4 left-4 z-20 inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-2 rounded-full border border-white/30">
+                                        {post.subTopic.split(",")[0].trim()}
+                                    </div>
+                                )}
+
+                                <div className="text-center w-full space-y-3 relative z-10">
+                                    {/* Post Text */}
+                                    <p
+                                        className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(post.fontFamily)}`}
+                                        style={{
+                                            fontSize: `${post.fontSize}px`,
+                                            color: post.color,
+                                            fontWeight: post.isBold ? "700" : "500",
+                                            fontStyle: post.isItalic ? "italic" : "normal",
+                                            textDecoration: post.isUnderline ? "underline" : "none",
+                                            textAlign: post.textAlignment,
+                                        }}
+                                    >
+                                        {post.text}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* Post Footer - Interaction Buttons */}
                         <div className="px-6 py-5 bg-white flex items-center gap-8">
@@ -190,13 +237,13 @@ const {
                                 <Heart
                                     size={22}
                                     className={`${likedPosts.has(post._id)
-                                            ? "fill-red-500 text-red-500"
-                                            : "text-gray-500 group-hover:text-red-500"
+                                        ? "fill-red-500 text-red-500"
+                                        : "text-gray-500 group-hover:text-red-500"
                                         } transition-colors`}
                                 />
                                 <span className={`text-sm font-semibold transition-colors ${likedPosts.has(post._id)
-                                        ? "text-red-500"
-                                        : "text-gray-600"
+                                    ? "text-red-500"
+                                    : "text-gray-600"
                                     }`}>
                                     {likedPosts.has(post._id)
                                         ? (post.likesCount + 1)

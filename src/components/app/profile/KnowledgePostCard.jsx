@@ -160,7 +160,7 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
                       <Plus className="text-orange-500" size={20} />
                     </div>
                     <p className="text-[15px] font-semibold text-black">
-                      Create Page
+                      Create New Page
                     </p>
                   </div>
                   <ChevronRight className="text-orange-500" />
