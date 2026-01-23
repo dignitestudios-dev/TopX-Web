@@ -24,7 +24,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   };
 
   const [activeMedia, setActiveMedia] = useState(null);
-  console.log("postpostpostpostpost", post);
+  console.log("postpostpostpostpost", post)
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -175,11 +175,10 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {hasImages && (
         <div
           className={`w-full bg-white overflow-hidden p-4 relative transition 
-      ${
-        post.isAllowedByAdmin
-          ? "cursor-pointer hover:opacity-90"
-          : "cursor-not-allowed"
-      }
+      ${post.isAllowedByAdmin
+              ? "cursor-pointer hover:opacity-90"
+              : "cursor-not-allowed"
+            }
     `}
           onClick={() => {
             if (post.isAllowedByAdmin) {
@@ -252,14 +251,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
-            }`}
+            className={`w-5 h-5 transition ${post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              post.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${post.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {Number(post.likesCount ?? 0)}
           </span>
@@ -307,8 +304,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />

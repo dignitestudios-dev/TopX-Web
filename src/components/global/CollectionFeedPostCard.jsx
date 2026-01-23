@@ -27,7 +27,7 @@ export default function CollectionFeedPostCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const dispatch = useDispatch();
 
-  console.log(post, "post");
+  console.log(post, "post")
 
   const handleLikeClick = async () => {
     dispatch(
@@ -157,16 +157,14 @@ export default function CollectionFeedPostCard({
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              fullPost?.isLiked
-                ? "fill-orange-500 text-orange-500"
-                : "text-gray-600"
-            }`}
+            className={`w-5 h-5 transition ${fullPost?.isLiked
+              ? "fill-orange-500 text-orange-500"
+              : "text-gray-600"
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {fullPost?.likesCount}
           </span>
@@ -207,8 +205,8 @@ export default function CollectionFeedPostCard({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal onClose={setSelectedOption} />

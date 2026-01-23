@@ -169,9 +169,9 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
             <div className="p-6 max-h-[82vh] overflow-y-auto space-y-5">
               {/* Body Text */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">Post Content</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">Body Text</label>
                 <textarea
-                  placeholder="Write your knowledge post here..."
+                  placeholder="Text goes here"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="w-full border-2 border-gray-200 rounded-2xl px-4 py-3 text-sm placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none h-28 font-medium"

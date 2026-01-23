@@ -67,6 +67,20 @@ export const deleteStory = createAsyncThunk(
   },
 );
 
+export const deleteStory = createAsyncThunk(
+  "posts/deleteStory",
+  async (storyId, thunkAPI) => {
+    try {
+      const res = await axios.delete(`/stories/${storyId}`);
+      return { storyId, data: res.data };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete story"
+      );
+    }
+  }
+);
+
 export const deletePost = createAsyncThunk(
   "posts/deletePost",
   async ({ postId }, thunkAPI) => {
@@ -178,6 +192,41 @@ export const demotePost = createAsyncThunk(
       );
     }
   },
+);
+
+// ====================================================
+// 🚀 ELEVATE POST (POST /posts/elevate/:postId)
+// ====================================================
+export const elevatePost = createAsyncThunk(
+  "posts/elevatePost",
+  async ({ postId, duration }, thunkAPI) => {
+    try {
+      const body = {};
+      if (duration) {
+        body.duration = duration; // "24h", "7d", "1m", "manual"
+      }
+      const res = await axios.post(`/posts/elevate/${postId}`, body);
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to elevate post"
+      );
+    }
+  }
+);
+
+export const demotePost = createAsyncThunk(
+  "posts/demotePost",
+  async (postId, thunkAPI) => {
+    try {
+      const res = await axios.post(`/posts/demote/${postId}`);
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to demote post"
+      );
+    }
+  }
 );
 
 export const commentonpost = createAsyncThunk(

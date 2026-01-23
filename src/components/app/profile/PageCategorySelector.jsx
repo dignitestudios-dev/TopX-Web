@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchMyKnowledgePages } from "../../../redux/slices/knowledgepost.slice";
 import { ErrorToast } from "../../global/Toaster";
 
-export default function PageCategorySelector({ onNext, onClose }) {
+export default function PageCategorySelector({ onNext, onClose, heading }) {
     const dispatch = useDispatch();
     const { knowledgePages } = useSelector((state) => state.knowledgepost);
 
@@ -59,9 +59,11 @@ export default function PageCategorySelector({ onNext, onClose }) {
         <div className="space-y-6">
 
             {/* Heading */}
-            <h2 className="text-center text-[20px] font-semibold mt-1">
-                Select page you want to create post
-            </h2>
+            {heading && (
+                <h2 className="text-center text-[20px] font-semibold mt-1">
+                    {heading}
+                </h2>
+            )}
 
             {/* Search Field */}
             <div className="relative">

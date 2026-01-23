@@ -46,6 +46,15 @@ import { ErrorToast } from "./Toaster";
 const ChatApp = () => {
   const dispatch = useDispatch();
   const socket = useContext(SocketContext);
+  
+  // Preset backgrounds for knowledge posts
+  const presetBackgrounds = [
+    { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
+    { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
+    { id: 3, name: "bg_red_gradient", imagePath: "/bg_orange_gradient.jpg" },
+    { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
+    { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" }
+  ];
   const {
     chats,
     groupChats,
@@ -1127,16 +1136,8 @@ const ChatApp = () => {
                       }`}
                   >
                     {msg.type === "shared" && msg.shared ? (
-                      // If no media, show simple text
-                      !msg.shared.media ? (
-                        <p className="text-sm">
-                          {msg.sender?.name || "Someone"} shared a{" "}
-                          {msg.shared.sharedType === "knowledge"
-                            ? "knowledge post"
-                            : "text post"}
-                        </p>
-                      ) : (
-                        // If media exists, show full details
+                      // Knowledge post - show styled card
+                      msg.shared.sharedType === "knowledge" ? (
                         <div className="space-y-2">
                           {/* Page/Topic Info */}
                           {msg.shared.name && (
@@ -1156,50 +1157,152 @@ const ChatApp = () => {
                           
                           {/* Shared Post Type Label */}
                           <p className="text-xs opacity-80 mb-2">
-                            Shared a{" "}
-                            {msg.shared.sharedType === "knowledge"
-                              ? "knowledge post"
-                              : "post"}
+                            Shared a knowledge post
                           </p>
                           
-                          {/* Post Media (Video or Image) */}
-                          {msg.shared.media && (
-                            <div className="rounded-lg overflow-hidden">
-                              {msg.shared.media.includes('.mp4') || msg.shared.media.includes('.mov') || msg.shared.media.includes('video') ? (
-                                <video
-                                  src={msg.shared.media}
-                                  controls
-                                  className="w-full max-h-64 object-contain rounded-lg"
-                                >
-                                  Your browser does not support the video tag.
-                                </video>
-                              ) : (
-                                <img
-                                  src={msg.shared.media}
-                                  alt="Shared post"
-                                  className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
-                                  onClick={() => {
-                                    setSelectedMessageImages([msg.shared.media]);
-                                    setCurrentImageIndex(0);
-                                    setShowMessageImageModal(true);
-                                  }}
-                                />
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* Text on Image */}
-                          {msg.shared.textOnImage && (
-                            <p className="text-sm mt-2">{msg.shared.textOnImage}</p>
-                          )}
-                          
-                          {/* Additional Content */}
-                          {msg.content &&
-                            msg.content !== "Shared a knowledge post" &&
-                            msg.content !== "Shared a post" && (
-                              <p className="text-sm mt-2">{msg.content}</p>
+                          {/* Knowledge Post Card */}
+                          <div
+                            className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
+                            style={
+                              // Check if imageStyle is a JSON string or simple string
+                              (() => {
+                                let backgroundCode = null;
+                                let styleData = null;
+                                
+                                if (msg.shared.imageStyle) {
+                                  try {
+                                    // Try to parse as JSON
+                                    styleData = JSON.parse(msg.shared.imageStyle);
+                                    backgroundCode = styleData.backgroundCode || msg.shared.imageLocalPath;
+                                  } catch (e) {
+                                    // If not JSON, use as string
+                                    backgroundCode = msg.shared.imageStyle || msg.shared.imageLocalPath;
+                                  }
+                                } else {
+                                  backgroundCode = msg.shared.imageLocalPath;
+                                }
+                                
+                                // Find background from presetBackgrounds
+                                const bgPreset = presetBackgrounds.find((bg) => bg.name === backgroundCode);
+                                
+                                if (bgPreset) {
+                                  return {
+                                    backgroundImage: `url(${bgPreset.imagePath})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center'
+                                  };
+                                }
+                                
+                                // Default gradient if no background found
+                                return {
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                };
+                              })()
+                            }
+                          >
+                            {/* Overlay for better text readability */}
+                            <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
+                            
+                            {/* Text Content */}
+                            {msg.shared.textOnImage && (
+                              <p
+                                className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg"
+                                style={
+                                  (() => {
+                                    let styleData = null;
+                                    if (msg.shared.imageStyle) {
+                                      try {
+                                        styleData = JSON.parse(msg.shared.imageStyle);
+                                      } catch (e) {
+                                        styleData = null;
+                                      }
+                                    }
+                                    
+                                    return {
+                                      fontSize: styleData?.fontSize ? `${styleData.fontSize}px` : '18px',
+                                      color: styleData?.color || '#ffffff',
+                                      fontWeight: styleData?.isBold ? '700' : '500',
+                                      fontStyle: styleData?.isItalic ? 'italic' : 'normal',
+                                      textDecoration: styleData?.isUnderline ? 'underline' : 'none',
+                                      textAlign: styleData?.textAlignment || 'center',
+                                    };
+                                  })()
+                                }
+                              >
+                                {msg.shared.textOnImage}
+                              </p>
                             )}
+                          </div>
                         </div>
+                      ) : (
+                        // Regular post with media
+                        !msg.shared.media ? (
+                          <p className="text-sm">
+                            {msg.sender?.name || "Someone"} shared a text post
+                          </p>
+                        ) : (
+                          // If media exists, show full details
+                          <div className="space-y-2">
+                            {/* Page/Topic Info */}
+                            {msg.shared.name && (
+                              <div className="flex items-center gap-2 mb-2">
+                                {msg.shared.pageImage && (
+                                  <img
+                                    src={msg.shared.pageImage}
+                                    alt="Page"
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
+                                )}
+                                <p className="text-xs font-semibold opacity-90">
+                                  {msg.shared.name}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {/* Shared Post Type Label */}
+                            <p className="text-xs opacity-80 mb-2">
+                              Shared a post
+                            </p>
+                            
+                            {/* Post Media (Video or Image) */}
+                            {msg.shared.media && (
+                              <div className="rounded-lg overflow-hidden">
+                                {msg.shared.media.includes('.mp4') || msg.shared.media.includes('.mov') || msg.shared.media.includes('video') ? (
+                                  <video
+                                    src={msg.shared.media}
+                                    controls
+                                    className="w-full max-h-64 object-contain rounded-lg"
+                                  >
+                                    Your browser does not support the video tag.
+                                  </video>
+                                ) : (
+                                  <img
+                                    src={msg.shared.media}
+                                    alt="Shared post"
+                                    className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
+                                    onClick={() => {
+                                      setSelectedMessageImages([msg.shared.media]);
+                                      setCurrentImageIndex(0);
+                                      setShowMessageImageModal(true);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+                            
+                            {/* Text on Image */}
+                            {msg.shared.textOnImage && (
+                              <p className="text-sm mt-2">{msg.shared.textOnImage}</p>
+                            )}
+                            
+                            {/* Additional Content */}
+                            {msg.content &&
+                              msg.content !== "Shared a knowledge post" &&
+                              msg.content !== "Shared a post" && (
+                                <p className="text-sm mt-2">{msg.content}</p>
+                              )}
+                          </div>
+                        )
                       )
                     ) : (
                       <p>{msg.content}</p>

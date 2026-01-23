@@ -3,17 +3,24 @@ import { X, Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchIndividualChats, fetchGroupChats } from "../../redux/slices/chat.slice";
 import SocketContext from "../../context/SocketContext";
-import { SuccessToast } from "./Toaster";
+import { SuccessToast, ErrorToast } from "./Toaster";
 import { getFollowersFollowing } from "../../redux/slices/auth.slice";
+import PageCategorySelector from "../app/profile/PageCategorySelector";
+import { shareKnowledgePostToCategory } from "../../redux/slices/knowledgepost.slice";
 
 const ShareToChatsModal = ({ onClose, story, post }) => {
+  const [selectedOption, setSelectedOption] = useState(""); // Track selected sharing option
   const [activeTab, setActiveTab] = useState("Individuals Chats");
   const [selectedChats, setSelectedChats] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hoveredOption, setHoveredOption] = useState(""); // Track hovered option for radio button
   const dispatch = useDispatch();
   const socket = useContext(SocketContext);
   const { chats, groupChats, chatsLoading, groupChatsLoading } = useSelector((state) => state.chat);
   const { followersFollowing } = useSelector((state) => state.auth);
+  
+  // Check if this is a knowledge post
+  const isKnowledgePost = post?.contentType === "knowledge" || post?.type === "knowledge";
 
   // Fetch chats on mount
   useEffect(() => {
@@ -64,6 +71,18 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
   };
 
   const handleShare = () => {
+    // For knowledge posts, check selected option
+    if (isKnowledgePost) {
+      if (selectedOption === "Share In Individuals Chats" || selectedOption === "Share in Group Chats") {
+        // Continue with normal chat sharing
+      } else if (selectedOption === "Share to Knowledge Post Category") {
+        // Handle category sharing separately
+        return;
+      } else {
+        return; // No option selected
+      }
+    }
+
     if (selectedChats.length === 0) {
       return;
     }
@@ -114,6 +133,84 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
         }
       });
     } else if (post) {
+      // For knowledge posts, only share to the selected option
+      if (isKnowledgePost) {
+        if (selectedOption === "Share In Individuals Chats") {
+          // Only share to individual chats
+          const individualChatIds = selectedChats.filter((chatId) => !isGroupChat(chatId));
+          if (individualChatIds.length === 0) return;
+          
+          const sendTo = individualChatIds
+            .map((chatId) => {
+              const individualChat = chats.find((chat) => chat._id === chatId);
+              return (
+                individualChat?.receiverInfo?._id ||
+                individualChat?.receiverId ||
+                null
+              );
+            })
+            .filter(Boolean);
+
+          if (sendTo.length > 0) {
+            // Get the actual text content from knowledge post
+            const postText = post?.text || post?.bodyText || post?.content || null;
+            // Get background code if exists
+            const backgroundCode = post?.backgroundCode || null;
+            
+            const payload = {
+              sendTo,
+              sharedType: "knowledge",
+              page: post?.page?._id || post?.page,
+              pageImage: post?.page?.image || post?.pageImage,
+              media: null, // Knowledge posts don't have media files
+              name: post?.page?.name || post?.pageName,
+              targetId: post._id,
+              textOnImage: postText, // Actual text content (not background code)
+              imageStyle: backgroundCode, // Background code for styling
+              imageLocalPath: null,
+            };
+
+            socket.shareContent(payload, (response) => {
+              if (response?.success) {
+                SuccessToast("Knowledge post shared successfully");
+              }
+            });
+          }
+          onClose();
+          return;
+        } else if (selectedOption === "Share in Group Chats") {
+          // Only share to group chats
+          const groupChatIds = selectedChats.filter((chatId) => isGroupChat(chatId));
+          if (groupChatIds.length === 0) return;
+
+          // Get the actual text content from knowledge post
+          const postText = post?.text || post?.bodyText || post?.content || null;
+          // Get background code if exists
+          const backgroundCode = post?.backgroundCode || null;
+          
+          const payload = {
+            groupIds: groupChatIds,
+            sharedType: "knowledge",
+            page: post?.page?._id || post?.page,
+            pageImage: post?.page?.image || post?.pageImage,
+            media: null, // Knowledge posts don't have media files
+            name: post?.page?.name || post?.pageName,
+            targetId: post._id,
+            textOnImage: postText, // Actual text content (not background code)
+            imageStyle: backgroundCode, // Background code for styling
+            imageLocalPath: null,
+          };
+
+          socket.shareGroupContent(payload, (response) => {
+            if (response?.success) {
+              SuccessToast("Knowledge post shared successfully");
+            }
+          });
+          onClose();
+          return;
+        }
+      }
+
       // Share post to individual chats
       const individualChatIds = selectedChats.filter((chatId) => !isGroupChat(chatId));
       const groupChatIds = selectedChats.filter((chatId) => isGroupChat(chatId));
@@ -194,57 +291,190 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
     onClose();
   };
 
+  // Show initial selection screen for knowledge posts
+  if (isKnowledgePost && !selectedOption) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white w-[380px] rounded-2xl shadow-xl flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between border-b px-5 py-3">
+            <h2 className="text-[17px] font-semibold">Share Post with</h2>
+            <button
+              onClick={() => onClose()}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          {/* Options */}
+          <div className="p-4 space-y-3">
+            <button
+              onClick={() => setSelectedOption("Share In Individuals Chats")}
+              onMouseEnter={() => setHoveredOption("Share In Individuals Chats")}
+              onMouseLeave={() => setHoveredOption("")}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all"
+            >
+              <span className="text-[15px] font-medium text-gray-800">Share In Individuals Chats</span>
+              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                hoveredOption === "Share In Individuals Chats" 
+                  ? "border-orange-500" 
+                  : "border-gray-300"
+              }`}>
+                {hoveredOption === "Share In Individuals Chats" && (
+                  <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
+                )}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSelectedOption("Share in Group Chats")}
+              onMouseEnter={() => setHoveredOption("Share in Group Chats")}
+              onMouseLeave={() => setHoveredOption("")}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all"
+            >
+              <span className="text-[15px] font-medium text-gray-800">Share in Group Chats</span>
+              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                hoveredOption === "Share in Group Chats" 
+                  ? "border-orange-500" 
+                  : "border-gray-300"
+              }`}>
+                {hoveredOption === "Share in Group Chats" && (
+                  <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
+                )}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setSelectedOption("Share to Knowledge Post Category")}
+              onMouseEnter={() => setHoveredOption("Share to Knowledge Post Category")}
+              onMouseLeave={() => setHoveredOption("")}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all"
+            >
+              <span className="text-[15px] font-medium text-gray-800">Share to Knowledge Post Category</span>
+              <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                hoveredOption === "Share to Knowledge Post Category" 
+                  ? "border-orange-500" 
+                  : "border-gray-300"
+              }`}>
+                {hoveredOption === "Share to Knowledge Post Category" && (
+                  <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
+                )}
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white w-[380px] rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
+      <div className="bg-white w-[400px] rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-3">
-          <h2 className="text-[17px] font-semibold">Share {story ? "Story" : "Post"} With</h2>
+          <div className="flex items-center gap-2">
+            {isKnowledgePost && selectedOption && (
+              <button
+                onClick={() => setSelectedOption("")}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={18} />
+              </button>
+            )}
+            <h2 className="text-[17px] font-semibold">
+              {isKnowledgePost && selectedOption ? selectedOption : story ? "Share Story With" : "Share Post With"}
+            </h2>
+          </div>
           <button
-            onClick={() => onClose()}
+            onClick={() => {
+              setSelectedOption("");
+              onClose();
+            }}
             className="text-gray-500 hover:text-gray-700"
           >
             <X size={22} />
           </button>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b">
-          {["Individuals Chats", "Group Chats"].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 text-center py-2 font-medium text-sm border-b-2 transition-all ${
-                activeTab === tab
-                  ? "border-orange-500 text-orange-500"
-                  : "border-transparent text-gray-500"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        {/* Show Knowledge Post Category selection */}
+        {isKnowledgePost && selectedOption === "Share to Knowledge Post Category" ? (
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <PageCategorySelector
+              heading="Select page you want to share post"
+              onNext={async ({ pageId, subTopics }) => {
+                // Handle sharing knowledge post to selected category
+                try {
+                  const result = await dispatch(
+                    shareKnowledgePostToCategory({
+                      postId: post?._id,
+                      pageId: pageId,
+                      subTopics: subTopics,
+                    })
+                  ).unwrap();
 
-        {/* Search Bar */}
-        <div className="px-4 py-3">
-          <div className="relative">
-            <Search
-              size={18}
-              className="absolute left-3 top-2.5 text-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-orange-500"
+                  SuccessToast("Knowledge post shared to category successfully");
+                  setSelectedOption("");
+                  onClose();
+                } catch (error) {
+                  ErrorToast(error || "Failed to share knowledge post to category");
+                }
+              }}
+              onClose={() => {
+                setSelectedOption("");
+                onClose();
+              }}
             />
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Tabs - Only show for Individual/Group Chats */}
+            {(selectedOption === "Share In Individuals Chats" || selectedOption === "Share in Group Chats" || !isKnowledgePost) && (
+              <div className="flex border-b">
+                {["Individuals Chats", "Group Chats"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => {
+                      setActiveTab(tab);
+                      if (isKnowledgePost) {
+                        setSelectedOption(tab === "Individuals Chats" ? "Share In Individuals Chats" : "Share in Group Chats");
+                      }
+                    }}
+                    className={`flex-1 text-center py-2 font-medium text-sm border-b-2 transition-all ${
+                      (isKnowledgePost && selectedOption === (tab === "Individuals Chats" ? "Share In Individuals Chats" : "Share in Group Chats")) ||
+                      (!isKnowledgePost && activeTab === tab)
+                        ? "border-orange-500 text-orange-500"
+                        : "border-transparent text-gray-500"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* Chat List */}
-        <div className="flex-1 overflow-y-auto px-4 pb-3">
-          {activeTab === "Individuals Chats" ? (
+            {/* Search Bar - Only show for chat options */}
+            {(selectedOption === "Share In Individuals Chats" || selectedOption === "Share in Group Chats" || !isKnowledgePost) && (
+              <div className="px-4 py-3">
+                <div className="relative">
+                  <Search
+                    size={18}
+                    className="absolute left-3 top-2.5 text-gray-400"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-gray-100 border border-gray-200 rounded-full text-sm focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Chat List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-3">
+              {(selectedOption === "Share In Individuals Chats" || (!isKnowledgePost && activeTab === "Individuals Chats")) ? (
             chatsLoading ? (
               <div className="text-center py-8 text-gray-500">Loading chats...</div>
             ) : filteredIndividualChats.length === 0 ? (
@@ -266,21 +496,19 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
                       {chat.receiverInfo?.name || chat.receiverInfo?.username || "Unknown"}
                     </span>
                   </div>
-                  <span
-                    className={`w-5 h-5 flex items-center justify-center rounded-md border-2 ${
-                      selectedChats.includes(chat._id)
-                        ? "bg-orange-500 border-orange-500"
-                        : "border-gray-300"
-                    }`}
-                  >
+                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selectedChats.includes(chat._id)
+                      ? "border-orange-500"
+                      : "border-gray-300"
+                  }`}>
                     {selectedChats.includes(chat._id) && (
-                      <span className="w-2.5 h-2.5 bg-white rounded-sm" />
+                      <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
                     )}
-                  </span>
+                  </div>
                 </div>
               ))
             )
-          ) : (
+          ) : (selectedOption === "Share in Group Chats" || (!isKnowledgePost && activeTab === "Group Chats")) ? (
             groupChatsLoading ? (
               <div className="text-center py-8 text-gray-500">Loading groups...</div>
             ) : filteredGroupChats.length === 0 ? (
@@ -302,21 +530,19 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
                       {chat.name || "Unknown Group"}
                     </span>
                   </div>
-                  <span
-                    className={`w-5 h-5 flex items-center justify-center rounded-md border-2 ${
-                      selectedChats.includes(chat._id)
-                        ? "bg-orange-500 border-orange-500"
-                        : "border-gray-300"
-                    }`}
-                  >
+                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    selectedChats.includes(chat._id)
+                      ? "border-orange-500"
+                      : "border-gray-300"
+                  }`}>
                     {selectedChats.includes(chat._id) && (
-                      <span className="w-2.5 h-2.5 bg-white rounded-sm" />
+                      <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
                     )}
-                  </span>
+                  </div>
                 </div>
               ))
             )
-          )}
+          ) : null}
         </div>
 
         {/* Footer Button */}
@@ -329,6 +555,8 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
             Share {selectedChats.length > 0 && `(${selectedChats.length})`}
           </button>
         </div>
+          </>
+        )}
       </div>
 
       {/* Success Modal */}

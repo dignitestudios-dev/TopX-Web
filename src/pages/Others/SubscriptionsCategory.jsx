@@ -36,7 +36,28 @@ export default function SubscriptionsCategory() {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
 
- 
+  console.log(CollectionFeeds,"CollectionFeeds")
+  const mySubscriptions = [
+    { title: "My Basketball", pages: "50+" },
+    { title: "My Fitness", pages: "50+" },
+    { title: "My Cooking", pages: "50+" },
+    { title: "My Makeup", pages: "50+" },
+    { title: "My Opinions", pages: "50+" },
+    { title: "My Politics", pages: "50+" },
+  ];
+
+  const savedSubscriptions = [
+    { title: "Peter’s Basketball", pages: "50+" },
+    { title: "Justin’s Fitness", pages: "50+" },
+    { title: "Rose’s Cooking", pages: "50+" },
+    { title: "Sophie’s Makeup", pages: "50+" },
+    { title: "Olivia’s Opinions", pages: "50+" },
+    { title: "Adam’s Politics", pages: "50+" },
+  ];
+
+  const subscriptions =
+    activeTab === "my" ? mySubscriptions : savedSubscriptions;
+
   const toggleLike = (postId) => {
     setLiked((prev) => ({
       ...prev,
