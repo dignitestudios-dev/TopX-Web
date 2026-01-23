@@ -32,10 +32,10 @@ export const createPost = createAsyncThunk(
       return res.data?.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create post"
+        error.response?.data?.message || "Failed to create post",
       );
     }
-  }
+  },
 );
 export const createStory = createAsyncThunk(
   "posts/createStory",
@@ -47,10 +47,10 @@ export const createStory = createAsyncThunk(
       return res.data?.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create post"
+        error.response?.data?.message || "Failed to create post",
       );
     }
-  }
+  },
 );
 
 export const deleteStory = createAsyncThunk(
@@ -61,11 +61,39 @@ export const deleteStory = createAsyncThunk(
       return { storyId, data: res.data };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete story"
+        error.response?.data?.message || "Failed to delete story",
       );
     }
-  }
+  },
 );
+
+// export const deleteStory = createAsyncThunk(
+//   "posts/deleteStory",
+//   async (storyId, thunkAPI) => {
+//     try {
+//       const res = await axios.delete(`/stories/${storyId}`);
+//       return { storyId, data: res.data };
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to delete story"
+//       );
+//     }
+//   }
+// );
+
+// export const deleteStory = createAsyncThunk(
+//   "posts/deleteStory",
+//   async (storyId, thunkAPI) => {
+//     try {
+//       const res = await axios.delete(`/stories/${storyId}`);
+//       return { storyId, data: res.data };
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to delete story"
+//       );
+//     }
+//   }
+// );
 
 export const deletePost = createAsyncThunk(
   "posts/deletePost",
@@ -75,23 +103,23 @@ export const deletePost = createAsyncThunk(
       return res.data; // { success, message, data:{Post} }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete Post"
+        error.response?.data?.message || "Failed to delete Post",
       );
     }
-  }
+  },
 );
 export const editPost = createAsyncThunk(
   "posts/editPost",
-  async ({ postId,formData }, thunkAPI) => {
+  async ({ postId, formData }, thunkAPI) => {
     try {
-      const res = await axios.put(`/posts/${postId}`,formData);
+      const res = await axios.put(`/posts/${postId}`, formData);
       return res.data; // { success, message, data:{Post} }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete Post"
+        error.response?.data?.message || "Failed to delete Post",
       );
     }
-  }
+  },
 );
 
 // ====================================================
@@ -102,19 +130,19 @@ export const getPostsByPageId = createAsyncThunk(
   async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/posts/page/${pageId}?page=${page}&limit=${limit}`
+        `/posts/page/${pageId}?page=${page}&limit=${limit}`,
       );
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch posts"
+        error.response?.data?.message || "Failed to fetch posts",
       );
     }
-  }
+  },
 );
 
 export const likePost = createAsyncThunk(
-  "posts/likePost",
+  "posts/MyPostlikePost",
   async ({ id, likeToggle, isPost }, thunkAPI) => {
     try {
       const body = isPost
@@ -125,10 +153,10 @@ export const likePost = createAsyncThunk(
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike"
+        error.response?.data?.message || "Failed to like/unlike",
       );
     }
-  }
+  },
 );
 
 export const getMyPosts = createAsyncThunk(
@@ -139,11 +167,81 @@ export const getMyPosts = createAsyncThunk(
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch posts"
+        error.response?.data?.message || "Failed to fetch posts",
       );
     }
-  }
+  },
 );
+
+// ====================================================
+// 🚀 ELEVATE POST (POST /posts/elevate/:postId)
+// ====================================================
+// export const elevatePost = createAsyncThunk(
+//   "posts/elevatePost",
+//   async ({ postId, duration }, thunkAPI) => {
+//     try {
+//       const body = {};
+//       if (duration) {
+//         body.duration = duration; // "24h", "7d", "1m", "manual"
+//       }
+//       const res = await axios.post(`/posts/elevate/${postId}`, body);
+//       return res.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to elevate post",
+//       );
+//     }
+//   },
+// );
+
+// export const demotePost = createAsyncThunk(
+//   "posts/demotePost",
+//   async (postId, thunkAPI) => {
+//     try {
+//       const res = await axios.post(`/posts/demote/${postId}`);
+//       return res.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to demote post",
+//       );
+//     }
+//   },
+// );
+
+// ====================================================
+// 🚀 ELEVATE POST (POST /posts/elevate/:postId)
+// ====================================================
+// export const elevatePost = createAsyncThunk(
+//   "posts/elevatePost",
+//   async ({ postId, duration }, thunkAPI) => {
+//     try {
+//       const body = {};
+//       if (duration) {
+//         body.duration = duration; // "24h", "7d", "1m", "manual"
+//       }
+//       const res = await axios.post(`/posts/elevate/${postId}`, body);
+//       return res.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to elevate post"
+//       );
+//     }
+//   }
+// );
+
+// export const demotePost = createAsyncThunk(
+//   "posts/demotePost",
+//   async (postId, thunkAPI) => {
+//     try {
+//       const res = await axios.post(`/posts/demote/${postId}`);
+//       return res.data;
+//     } catch (error) {
+//       return thunkAPI.rejectWithValue(
+//         error.response?.data?.message || "Failed to demote post"
+//       );
+//     }
+//   }
+// );
 
 // ====================================================
 // 🚀 ELEVATE POST (POST /posts/elevate/:postId)
@@ -193,10 +291,10 @@ export const commentonpost = createAsyncThunk(
       return res.data; // { post, comment }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create comment"
+        error.response?.data?.message || "Failed to create comment",
       );
     }
-  }
+  },
 );
 
 // ====================================================
@@ -210,10 +308,10 @@ export const deleteComment = createAsyncThunk(
       return res.data; // { success, message, data:{commentId} }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment"
+        error.response?.data?.message || "Failed to delete comment",
       );
     }
-  }
+  },
 );
 
 // ====================================================
@@ -224,15 +322,15 @@ export const getcommentsofpost = createAsyncThunk(
   async ({ postId, page = 1, limit = 10 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/comments/post/${postId}?page=${page}&limit=${limit}`
+        `/comments/post/${postId}?page=${page}&limit=${limit}`,
       );
       return res.data; // { success, message, pagination, data: [] }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch comments"
+        error.response?.data?.message || "Failed to fetch comments",
       );
     }
-  }
+  },
 );
 
 // ====================================================
@@ -409,7 +507,7 @@ const postsSlice = createSlice({
 
           // Update in getPostsByPageId posts
           const pagePostIndex = state.pagepost.findIndex(
-            (p) => p._id === post._id
+            (p) => p._id === post._id,
           );
           if (pagePostIndex !== -1) {
             state.pagepost[pagePostIndex] = {
@@ -468,7 +566,7 @@ const postsSlice = createSlice({
 
           // 🔥 2) Update post in Page Posts
           const pagePostIndex = state.pagepost.findIndex(
-            (p) => p._id === post._id
+            (p) => p._id === post._id,
           );
           if (pagePostIndex !== -1) {
             state.pagepost[pagePostIndex] = {

@@ -29,28 +29,19 @@ export default function CollectionFeedPostCard({
 
   console.log(post, "post")
 
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
-
-    // Optimistic update in localStorage
-    const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
-    localStorage.setItem("postLikes", JSON.stringify(likes));
-
-    // Update UI immediately
-    toggleLike(postId, newLikeStatus, newLikesCount);
-
-    // Call API
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+  const handleLikeClick = async () => {
+    dispatch(
+      likePost({
+        postId: fullPost._id,
+        likeToggle: !fullPost.isLiked,
+      }),
+    );
   };
 
   const [selectedOption, setSelectedOption] = useState("");
   const [reportmodal, setReportmodal] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
   const [sharepost, setSharepost] = useState(false);
   const options = [
@@ -159,6 +150,7 @@ export default function CollectionFeedPostCard({
       {/* Stats - Action Bar */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
+          type="button"
           onClick={() =>
             handleLikeClick(fullPost._id, fullPost.isLiked, fullPost.likesCount)
           }
@@ -234,7 +226,7 @@ export default function CollectionFeedPostCard({
               targetModel: "Post",
               targetId: fullPost._id,
               isReported: true,
-            })
+            }),
           );
         }}
       />

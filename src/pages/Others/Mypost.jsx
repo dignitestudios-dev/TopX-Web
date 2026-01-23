@@ -175,8 +175,14 @@ export default function Mypost() {
 
       {/* Middle Feed */}
       <div className="w-1/2 overflow-y-auto px-3 py-4 scrollbar-hide">
-        <h1 className="text-2xl font-semibold pb-0 pl-1">Your Personal Post Archive</h1>
-        <p className="text-sm pl-2 pr-2 pb-4 text-slate-700">Here you can find all the posts you've ever made across all your topic pages.Easily browse, edit, or delete your past posts in one place. Stay organized and keep track of your contributions!</p>
+        <h1 className="text-2xl font-semibold pb-0 pl-1">
+          Your Personal Post Archive
+        </h1>
+        <p className="text-sm pl-2 pr-2 pb-4 text-slate-700">
+          Here you can find all the posts you've ever made across all your topic
+          pages.Easily browse, edit, or delete your past posts in one place.
+          Stay organized and keep track of your contributions!
+        </p>
 
         {postsLoading && (!posts || posts.length === 0) ? (
           <>
