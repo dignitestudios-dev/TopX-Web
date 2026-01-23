@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ChevronRight, Layers } from "lucide-react";
-import { ballone, ballthree, balltwo } from "../../assets/export";
+import { ballone, ballthree, balltwo, nofound } from "../../assets/export";
 import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
@@ -105,12 +105,13 @@ const MySubscription = () => {
         ) : (
           <div className="text-center text-gray-500">
             <div className="flex justify-center">
-              <img
-                src="https://www.profitim.com/build/images/background/no-results-bg.2d2c6ee3.png"
-                alt="No Subscription"
-              />
-            </div>
-            <p>No Subscription Found</p>
+               <div className="text-gray-500 col-span-3 text-center py-10">
+                            <div className=" flex justify-center">
+                            <img src={nofound} height={300} width={300} alt="" />
+                            </div>
+                            <p className="font-bold pt-4 text-black capitalize">You have no collections</p>
+                          </div>
+                              </div>
           </div>
         )}
       </div>

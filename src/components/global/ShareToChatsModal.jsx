@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchIndividualChats, fetchGroupChats } from "../../redux/slices/chat.slice";
 import SocketContext from "../../context/SocketContext";
 import { SuccessToast } from "./Toaster";
+import { getFollowersFollowing } from "../../redux/slices/auth.slice";
 
 const ShareToChatsModal = ({ onClose, story, post }) => {
   const [activeTab, setActiveTab] = useState("Individuals Chats");
@@ -12,15 +13,40 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
   const dispatch = useDispatch();
   const socket = useContext(SocketContext);
   const { chats, groupChats, chatsLoading, groupChatsLoading } = useSelector((state) => state.chat);
+  const { followersFollowing } = useSelector((state) => state.auth);
 
   // Fetch chats on mount
   useEffect(() => {
     dispatch(fetchIndividualChats({ page: 1, limit: 100, type: "active" }));
     dispatch(fetchGroupChats({ page: 1, limit: 100 }));
+    // Fetch only followers (network of current user)
+    dispatch(
+      getFollowersFollowing({
+        type: "followers",
+        page: 1,
+        limit: 200,
+      })
+    );
   }, [dispatch]);
 
-  // Filter chats based on search
-  const filteredIndividualChats = chats.filter((chat) =>
+  // Build follower id set (only these users should be visible in Individual Chats)
+  const followerIdSet = new Set(
+    (followersFollowing || []).map((u) => u._id)
+  );
+
+  // Base list: only chats where receiver is in followers list
+  const followerChats = chats.filter((chat) => {
+    const receiverId = chat.receiverInfo?._id || chat.receiverId;
+    if (!receiverId) return false;
+    // If we have followers data, restrict to followers
+    if (followerIdSet.size > 0) {
+      return followerIdSet.has(receiverId);
+    }
+    return false;
+  });
+
+  // Filter chats based on search (on top of follower filter)
+  const filteredIndividualChats = followerChats.filter((chat) =>
     chat.receiverInfo?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     chat.receiverInfo?.username?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -47,40 +73,123 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
       return !!groupChat;
     };
 
-    selectedChats.forEach((chatId) => {
-      const isGroup = isGroupChat(chatId);
-      
-      if (isGroup) {
+    // If sharing a story, use dedicated share payload for individual chats
+    if (story) {
+      // Collect all individual receiverIds from selected chats
+      const sendTo = selectedChats
+        .filter((chatId) => !isGroupChat(chatId))
+        .map((chatId) => {
+          const individualChat = chats.find((chat) => chat._id === chatId);
+          return (
+            individualChat?.receiverInfo?._id ||
+            individualChat?.receiverId ||
+            null
+          );
+        })
+        .filter(Boolean);
+
+      if (sendTo.length === 0) {
+        return;
+      }
+
+      const payload = {
+        sendTo,
+        sharedType: "story",
+        page: story?.page?._id,
+        pageImage: story?.page?.image,
+        media: story?.story?.media?.fileUrl,
+        name: story?.page?.name,
+        targetId: story?._id,
+        textOnImage:
+          story?.story?.textOnImage ||
+          story?.story?.backgroundCode ||
+          null,
+        imageStyle: story?.story?.imageStyle || null,
+        imageLocalPath: story?.story?.imageLocalPath || null,
+      };
+
+      socket.shareContent(payload, (response) => {
+        if (response?.success) {
+          SuccessToast("Story shared successfully");
+        }
+      });
+    } else if (post) {
+      // Share post to individual chats
+      const individualChatIds = selectedChats.filter((chatId) => !isGroupChat(chatId));
+      const groupChatIds = selectedChats.filter((chatId) => isGroupChat(chatId));
+
+      // Determine sharedType based on post contentType
+      const sharedType = post?.contentType === "knowledge" ? "knowledge" : "post";
+
+      // Get page info
+      const pageId = post?.page?._id || post?.page;
+      const pageImage = post?.page?.image || post?.pageImage;
+      const pageName = post?.page?.name || post?.pageName;
+
+      // Get media (first media item)
+      const media = post?.media?.[0]?.fileUrl || post?.media?.[0] || null;
+
+      // Get optional fields
+      const textOnImage = post?.textOnImage || post?.backgroundCode || null;
+      const imageStyle = post?.imageStyle || null;
+      const imageLocalPath = post?.imageLocalPath || null;
+
+      // Share to Individual Chats
+      if (individualChatIds.length > 0) {
+        const sendTo = individualChatIds
+          .map((chatId) => {
+            const individualChat = chats.find((chat) => chat._id === chatId);
+            return (
+              individualChat?.receiverInfo?._id ||
+              individualChat?.receiverId ||
+              null
+            );
+          })
+          .filter(Boolean);
+
+        if (sendTo.length > 0) {
+          const payload = {
+            sendTo,
+            sharedType,
+            page: pageId,
+            pageImage: pageImage,
+            media: media,
+            name: pageName,
+            targetId: post._id,
+            textOnImage: textOnImage,
+            imageStyle: imageStyle,
+            imageLocalPath: imageLocalPath,
+          };
+
+          socket.shareContent(payload, (response) => {
+            if (response?.success) {
+              SuccessToast("Post shared successfully");
+            }
+          });
+        }
+      }
+
+      // Share to Group Chats
+      if (groupChatIds.length > 0) {
         const payload = {
-          groupId: chatId,
-          targetId: story?._id || post?._id,
-          content: story ? "Check out this story!" : "Check out this post!",
-          media: story?.story?.media?.fileUrl || post?.media?.[0]?.fileUrl,
-          type: story ? "story" : "post",
+          groupIds: groupChatIds,
+          sharedType,
+          page: pageId,
+          pageImage: pageImage,
+          media: media,
+          name: pageName,
+          targetId: post._id,
+          textOnImage: textOnImage,
+          imageLocalPath: imageLocalPath,
         };
+
         socket.shareGroupContent(payload, (response) => {
           if (response?.success) {
-            SuccessToast("Story shared successfully");
-          }
-        });
-      } else {
-        // For individual chat, we need receiverId from the chat
-        const individualChat = chats.find((chat) => chat._id === chatId);
-        const receiverId = individualChat?.receiverInfo?._id || individualChat?.receiverId || chatId;
-        const payload = {
-          receiverId: receiverId,
-          targetId: story?._id || post?._id,
-          content: story ? "Check out this story!" : "Check out this post!",
-          media: story?.story?.media?.fileUrl || post?.media?.[0]?.fileUrl,
-          type: story ? "story" : "post",
-        };
-        socket.shareContent(payload, (response) => {
-          if (response?.success) {
-            SuccessToast("Story shared successfully");
+            SuccessToast("Post shared successfully");
           }
         });
       }
-    });
+    }
 
     onClose();
   };

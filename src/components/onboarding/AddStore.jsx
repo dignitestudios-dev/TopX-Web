@@ -76,6 +76,8 @@ export default function AddStore({ handleNext }) {
 
   const hasAnySubscribed = recommendations?.some((item) => item.isSubscribed) || false;
 
+  console.log(recommendations,"recommendations")
+
 
   return (
     <div className="bg-white flex items-center justify-center rounded-[19px] w-full p-6">
@@ -134,6 +136,7 @@ export default function AddStore({ handleNext }) {
                   description={item.about}
                   tags={item.keywords}
                   Follows={item.followersCount}
+                  Followers={item.followers}
                   isSubscribed={item.isSubscribed}     //  FIXED 🔥
                   buttonText={item.isSubscribed ? "Unsubscribe" : "Subscribe"}
                   header={item.topic}

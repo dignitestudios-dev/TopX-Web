@@ -48,6 +48,26 @@ export default function Home() {
     });
   };
 
+
+    // Function to convert time to human-readable "X time ago"
+  const timeAgo = (timestamp) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - new Date(timestamp)) / 1000);
+    const minutes = Math.floor(diffInSeconds / 60);
+    const hours = Math.floor(diffInSeconds / 3600);
+    const days = Math.floor(diffInSeconds / 86400);
+
+    if (days > 0) {
+      return days === 1 ? "1 day ago" : `${days} days ago`;
+    } else if (hours > 0) {
+      return hours === 1 ? "1 hour ago" : `${hours} hours ago`;
+    } else if (minutes > 0) {
+      return minutes === 1 ? "1 minute ago" : `${minutes} minutes ago`;
+    } else {
+      return "Just now";
+    }
+  };
+
  
   // Get localStorage likes for merge
   const storedLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
@@ -62,7 +82,7 @@ export default function Home() {
           username: `@${
             post.page?.user?.username || post.author?.username || "user"
           }`,
-          time: new Date(post.createdAt).toLocaleDateString(),
+          time: timeAgo(post.createdAt),  // Use the new timeAgo function here
           tag: post.page?.topic || "",
           gradient: "from-pink-500 via-orange-500 to-yellow-500",
           text: post.bodyText || "No description available",
@@ -81,10 +101,13 @@ export default function Home() {
             "https://randomuser.me/api/portraits/men/1.jpg",
           postimage: post.media?.map((m) => m.fileUrl) || [],
           author: post.author || null,
+          page: post.page || null,
           isAllowedByAdmin:post?.isAllowedByAdmin
         };
       })
     : [];
+
+    console.log(allfeedposts,"allfeedposts")
 
   return (
     <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -202,10 +225,12 @@ export default function Home() {
           ))
         ) : (
           // Show empty state
-          <div className="pl-3 pr-3">
-            <p className="text-gray-500 text-sm pl-1 border-2 flex justify-center rounded-3xl">
-              <img src={nofound} alt="" />
+          <div className="pl-3 pr-3 text-center">
+            <p className="text-gray-500 text-sm pl-1 flex justify-center rounded-3xl">
+              <img src={nofound} height={300} width={300} alt="" />
+              
             </p>
+            <p className="font-bold pt-4">Nothing in Home Feed.</p>
           </div>
         )}
       </div>

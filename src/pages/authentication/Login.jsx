@@ -135,7 +135,7 @@ const Login = () => {
                     onBlur={handleBlur}
                     touched={touched.email}
                     error={errors.email}
-                    placeholder="Email Address"
+                    placeholder="Enter email address"
                     size="md"
                   />
 
@@ -158,7 +158,7 @@ const Login = () => {
                     onBlur={handleBlur}
                     touched={touched.password}
                     error={errors.password}
-                    placeholder="Password"
+                    placeholder="Enter your password"
                     size="md"
                     iconRight={
                       isPasswordVisible ? (

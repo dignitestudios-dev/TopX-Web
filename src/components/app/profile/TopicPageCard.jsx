@@ -4,7 +4,7 @@ import { auth } from "../../../assets/export";
 
 
 
-const TopicPageCard = ({ img, title, description, tags, Follows, className, onClick,pagetype }) => {
+const TopicPageCard = ({ img, title, description, tags, Follows, className, onClick, pagetype }) => {
   const baseClasses =
     `  rounded-[12px] border border-[0.8px] flex flex-col pt-5 pb-5 pl-3 pr-3 space-y-2  ${className}`;
 
@@ -40,6 +40,7 @@ const TopicPageCard = ({ img, title, description, tags, Follows, className, onCl
           </span>
         ))}
       </div>
+
       {/* <div className="w-full flex items-center justify-between ">
         {Follows > 0 && (
           <div className="w-full flex items-center gap-[70px] relative">

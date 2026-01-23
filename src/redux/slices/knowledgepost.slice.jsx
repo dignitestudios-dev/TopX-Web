@@ -37,7 +37,7 @@ export const fetchMyKnowledgePages = createAsyncThunk(
   async ({ page = 1, limit = 10 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/pages/knowledge?page=${page}&limit=${limit}`
+        `/pages/knowledge?page=${page}&limit=${limit}`,
       );
       return {
         data: res.data?.data,
@@ -45,10 +45,10 @@ export const fetchMyKnowledgePages = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch knowledge pages"
+        error.response?.data?.message || "Failed to fetch knowledge pages",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -67,10 +67,10 @@ export const createKnowledgePage = createAsyncThunk(
       return res.data?.data; // created page object
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create knowledge page"
+        error.response?.data?.message || "Failed to create knowledge page",
       );
     }
-  }
+  },
 );
 
 export const createKnowledgePost = createAsyncThunk(
@@ -84,10 +84,10 @@ export const createKnowledgePost = createAsyncThunk(
       return res.data?.data; // created post object
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create knowledge post"
+        error.response?.data?.message || "Failed to create knowledge post",
       );
     }
-  }
+  },
 );
 
 export const getKnowledgePostDetail = createAsyncThunk(
@@ -95,15 +95,16 @@ export const getKnowledgePostDetail = createAsyncThunk(
   async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/knowledgeposts/page/${pageId}?page=${page}&limit=${limit}`
+        `/knowledgeposts/page/${pageId}?page=${page}&limit=${limit}`,
       );
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch knowledge page detail"
+        error.response?.data?.message ||
+          "Failed to fetch knowledge page detail",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -118,10 +119,10 @@ export const deleteKnowledgePost = createAsyncThunk(
       return { postId };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete post"
+        error.response?.data?.message || "Failed to delete post",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -133,7 +134,7 @@ export const fetchKnowledgeFeed = createAsyncThunk(
   async ({ page = 1, limit = 10 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/knowledgeposts/feed?page=${page}&limit=${limit}`
+        `/knowledgeposts/feed?page=${page}&limit=${limit}`,
       );
 
       return {
@@ -142,14 +143,13 @@ export const fetchKnowledgeFeed = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch feed posts"
+        error.response?.data?.message || "Failed to fetch feed posts",
       );
     }
-  }
+  },
 );
 
 // Comment
-
 
 // Like/Unlike post API call
 export const likePost = createAsyncThunk(
@@ -160,7 +160,7 @@ export const likePost = createAsyncThunk(
         knowledgePost: postId,
         likeToggle: likeToggle, // true for like, false for unlike
       });
-
+      console.log(res.data, "RESPONSE");
       return {
         postId,
         likeToggle: res.data.data.likeToggle, // true for like, false for unlike
@@ -168,21 +168,21 @@ export const likePost = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 // utils/localLikes.js
 export const getLocalLikes = () => {
-  return JSON.parse(localStorage.getItem("postLikes") || "{}");
+  return JSON.parse(localStorage.getItem("knowledgePostLikes") || "{}");
 };
 
 export const saveLocalLike = (postId, isLiked, likesCount) => {
   const likes = getLocalLikes();
   likes[postId] = { isLiked, likesCount };
-  localStorage.setItem("postLikes", JSON.stringify(likes));
+  localStorage.setItem("knowledgePostLikes", JSON.stringify(likes));
 };
 
 export const mergeLikesWithAPI = (posts) => {
@@ -206,10 +206,10 @@ export const KnowledgeCreateComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 export const KnowledgeUpdateComment = createAsyncThunk(
@@ -222,10 +222,10 @@ export const KnowledgeUpdateComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to update comment"
+        error.response?.data?.message || "Failed to update comment",
       );
     }
-  }
+  },
 );
 
 export const KnowledgeDeleteComment = createAsyncThunk(
@@ -237,10 +237,10 @@ export const KnowledgeDeleteComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment"
+        error.response?.data?.message || "Failed to delete comment",
       );
     }
-  }
+  },
 );
 export const elevateComment = createAsyncThunk(
   "comments/post/elevate/id",
@@ -251,10 +251,10 @@ export const elevateComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment"
+        error.response?.data?.message || "Failed to delete comment",
       );
     }
-  }
+  },
 );
 
 export const KnowledgeGetComment = createAsyncThunk(
@@ -266,17 +266,17 @@ export const KnowledgeGetComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 export const likeComment = createAsyncThunk(
-  "posts/likeComment",
+  "likes/KnowledgeComment",
   async ({ commentId, likeToggle }, thunkAPI) => {
     try {
-      const res = await axios.post("/likes/post", {
+      const res = await axios.post("/likes/knowledge", {
         comment: commentId,
         likeToggle, // true or false
       });
@@ -288,10 +288,10 @@ export const likeComment = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike comment"
+        error.response?.data?.message || "Failed to like/unlike comment",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -385,7 +385,7 @@ const knowledgeSlice = createSlice({
         state.deleteSuccess = true;
 
         state.knowledgePagePosts = state.knowledgePagePosts.filter(
-          (post) => post._id !== action.payload.postId
+          (post) => post._id !== action.payload.postId,
         );
       })
 
@@ -469,7 +469,13 @@ const knowledgeSlice = createSlice({
         const { postId, likeToggle } = action.meta.arg;
 
         // Optimistic update
-        const post = state.knowledgeFeed.find((p) => p._id === postId);
+        const KnowledgePageDetailPost = state.knowledgePagePosts?.find(
+          (p) => p._id === postId,
+        );
+        const knowledgeFeed = state.knowledgeFeed?.find(
+          (p) => p._id === postId,
+        );
+        const post = KnowledgePageDetailPost || knowledgeFeed;
         if (post) {
           post.isLiked = likeToggle;
           post.likesCount = likeToggle
@@ -477,22 +483,29 @@ const knowledgeSlice = createSlice({
             : post.likesCount - 1;
 
           // Save to localStorage
-          const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+          const likes = JSON.parse(
+            localStorage.getItem("knowledgePostLikes") || "{}",
+          );
           likes[postId] = {
             isLiked: post.isLiked,
             likesCount: post.likesCount,
           };
-          localStorage.setItem("postLikes", JSON.stringify(likes));
+          localStorage.setItem("knowledgePostLikes", JSON.stringify(likes));
         }
       })
       .addCase(likePost.fulfilled, (state, action) => {
         const { postId, likeToggle, likesCount: apiLikes } = action.payload;
 
-        const post = state.knowledgeFeed.find((p) => p._id === postId);
+        const post = state.knowledgePagePosts?.find((p) => p._id === postId);
+        console.log(
+          post,
+          state.knowledgePagePosts,
+          action.payload,
+          "locates---->",
+        );
         if (post) {
-          // Merge API likes with local increment/decrement
           const localLikes = JSON.parse(
-            localStorage.getItem("postLikes") || "{}"
+            localStorage.getItem("knowledgePostLikes") || "{}",
           );
           const local = localLikes[postId];
 
@@ -504,7 +517,11 @@ const knowledgeSlice = createSlice({
             isLiked: post.isLiked,
             likesCount: post.likesCount,
           };
-          localStorage.setItem("postLikes", JSON.stringify(localLikes));
+          console.log("locates---->");
+          localStorage.setItem(
+            "knowledgePostLikes",
+            JSON.stringify(localLikes),
+          );
         }
       })
 
@@ -530,13 +547,16 @@ const knowledgeSlice = createSlice({
 
               // Save to localStorage
               const localLikes = JSON.parse(
-                localStorage.getItem("commentLikes") || "{}"
+                localStorage.getItem("KnowledgecommentLikes") || "{}",
               );
               localLikes[commentId] = {
                 isLiked: c.isLiked,
                 likesCount: c.likesCount,
               };
-              localStorage.setItem("commentLikes", JSON.stringify(localLikes));
+              localStorage.setItem(
+                "KnowledgecommentLikes",
+                JSON.stringify(localLikes),
+              );
             }
 
             // Recurse into replies
@@ -553,7 +573,7 @@ const knowledgeSlice = createSlice({
           commentsList.forEach((c) => {
             if (c._id === commentId) {
               const localLikes = JSON.parse(
-                localStorage.getItem("commentLikes") || "{}"
+                localStorage.getItem("KnowledgecommentLikes") || "{}",
               );
               const local = localLikes[commentId];
 
@@ -565,7 +585,10 @@ const knowledgeSlice = createSlice({
                 isLiked: c.isLiked,
                 likesCount: c.likesCount,
               };
-              localStorage.setItem("commentLikes", JSON.stringify(localLikes));
+              localStorage.setItem(
+                "KnowledgecommentLikes",
+                JSON.stringify(localLikes),
+              );
             }
 
             if (c.replies && c.replies.length > 0) updateLike(c.replies);

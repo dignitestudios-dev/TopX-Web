@@ -15,10 +15,13 @@ const SubcriptionCard = ({
   headerbutton,
   isSubscribed,
   onSubscribe,
+  Followers,
 }) => {
 
   const baseClasses =
     `rounded-[12px] border border-[0.8px] flex flex-col p-3 space-y-2 ${className}`;
+
+    console.log(Followers,"Followers")
 
   return (
     <div>
@@ -39,16 +42,24 @@ const SubcriptionCard = ({
 
         <div className="w-full flex items-center justify-between">
           <div className="w-full flex items-center gap-[70px] relative">
-            <div className="flex items-center">
-              <img src="https://randomuser.me/api/portraits/women/1.jpg" className="w-[24px] h-[24px] rounded-full absolute top-0 left-0" />
-              <img src="https://randomuser.me/api/portraits/women/2.jpg" className="w-[24px] h-[24px] rounded-full absolute top-0 left-5" />
-              <img src="https://randomuser.me/api/portraits/women/3.jpg" className="w-[24px] h-[24px] rounded-full absolute top-0 left-10" />
-            </div>
+             {/* Display real follower images dynamically */}
+            {Followers && Followers.length > 0 && (
+              <div className="flex items-center">
+                {Followers.slice(0, 3).map((follower, index) => (
+                  <img
+                    key={index}
+                    src={follower}
+                    className={`w-[24px] h-[24px] rounded-full absolute top-0 left-${index * 5}`}
+                    alt={`follower-${index}`}
+                  />
+                ))}
+              </div>
+            )}
 
-            <div className="flex items-center gap-1">
+            {/* <div className="flex items-center gap-1">
               <p className="text-[14px] font-[600] text-[#000000]">{Follows}+</p>
               <p className="text-[14px] font-[500] text-[#ADADAD]">Follows</p>
-            </div>
+            </div> */}
           </div>
 
           {/* BUTTON */}

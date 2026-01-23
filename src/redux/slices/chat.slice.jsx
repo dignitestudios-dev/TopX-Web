@@ -54,9 +54,18 @@ export const fetchIndividualChats = createAsyncThunk(
 ================================*/
 export const fetchIndividualChatDetail = createAsyncThunk(
     "chat/fetchIndividualChatDetail",
-    async (chatId, thunkAPI) => {
+    async ({ chatId, page = 1, limit = 10 }, thunkAPI) => {
         try {
-            const res = await axios.get(`/chats/individual/${chatId}`);
+            // Try with history endpoint first
+            let res;
+            try {
+                res = await axios.get(
+                    `/chats/individual/${chatId}/history?page=${page}&limit=${limit}`
+                );
+            } catch (historyError) {
+                // Fallback to old endpoint if history endpoint doesn't exist
+                res = await axios.get(`/chats/individual/${chatId}`);
+            }
             return {
                 messages: res.data?.data || [],
                 pagination: res.data?.pagination || null,
@@ -385,7 +394,13 @@ const chatSlice = createSlice({
             const { chatId, message, unreadCount } = action.payload;
             // Add to chatDetailMessages if it's the current chat
             if (state.currentChatId === chatId) {
-                state.chatDetailMessages = [...state.chatDetailMessages, message];
+                // Check if message already exists to prevent duplicates
+                const messageExists = state.chatDetailMessages.some(
+                    (msg) => msg._id === message._id
+                );
+                if (!messageExists) {
+                    state.chatDetailMessages = [...state.chatDetailMessages, message];
+                }
             }
             // Update the chat list lastMessage
             const chatIndex = state.chats.findIndex(chat => chat._id === chatId);
@@ -475,7 +490,7 @@ const chatSlice = createSlice({
                 state.chatDetailLoading = false;
                 state.chatDetailMessages = (action.payload.messages || []).reverse();
                 state.chatDetailPagination = action.payload.pagination;
-                state.currentChatId = action.meta.arg; // chatId
+                state.currentChatId = action.meta.arg?.chatId || action.meta.arg; // chatId
             })
             .addCase(fetchIndividualChatDetail.rejected, (state, action) => {
                 state.chatDetailLoading = false;

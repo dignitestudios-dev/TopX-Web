@@ -1,15 +1,19 @@
 import { useEffect, useState, useContext } from "react";
-import { Heart, Share2, X, Send } from "lucide-react";
+import { Heart, Share2, X, Send, Trash2, Eye } from "lucide-react";
 import { timeAgo } from "../../../lib/helpers";
 import { LikeOtherStories } from "../../../redux/slices/Subscription.slice";
 import { useDispatch, useSelector } from "react-redux";
 import SocketContext from "../../../context/SocketContext";
 import ShareToChatsModal from "../../global/ShareToChatsModal";
+import { deleteStory } from "../../../redux/slices/posts.slice";
+import { SuccessToast, ErrorToast } from "../../global/Toaster";
+import StoryViewersModal from "./StoryViewersModal";
 
 export default function ActiveStoryModal({
   activeStory, // ARRAY of stories
   setActiveStory,
   handleViewStory,
+  onStoryDeleted, // Optional callback to refresh stories list
 }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -17,6 +21,8 @@ export default function ActiveStoryModal({
   const [stories, setStories] = useState(activeStory);
   const [commentText, setCommentText] = useState("");
   const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [viewersModalOpen, setViewersModalOpen] = useState(false);
   const dispatch = useDispatch();
   const { comment } = useContext(SocketContext);
   const { user } = useSelector((state) => state.auth);
@@ -77,6 +83,46 @@ export default function ActiveStoryModal({
         setCommentText("");
       }
     });
+  };
+
+  const handleDeleteStory = async () => {
+    if (!currentStory?._id) return;
+    
+    if (!window.confirm("Are you sure you want to delete this story?")) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await dispatch(deleteStory(currentStory._id)).unwrap();
+      SuccessToast("Story deleted successfully");
+      
+      // Remove deleted story from local state
+      const updatedStories = stories.filter((story) => story._id !== currentStory._id);
+      setStories(updatedStories);
+      
+      // If no stories left, close modal
+      if (updatedStories.length === 0) {
+        closeStory();
+      } else {
+        // Navigate to previous story or next story
+        if (currentIndex > 0) {
+          setCurrentIndex(currentIndex - 1);
+        } else if (currentIndex < updatedStories.length) {
+          setCurrentIndex(0);
+        }
+        setProgress(0);
+      }
+      
+      // Call refresh callback if provided
+      if (onStoryDeleted) {
+        onStoryDeleted();
+      }
+    } catch (error) {
+      ErrorToast(error || "Failed to delete story");
+    } finally {
+      setDeleteLoading(false);
+    }
   };
 
   /* ---------------- AUTO PROGRESS ---------------- */
@@ -223,8 +269,19 @@ export default function ActiveStoryModal({
       {/* Bottom Actions */}
       <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6 pb-6 px-4">
         {isStoryOwner ? (
-          // If story owner: Show only Share button
+          // If story owner: Show Viewers, Share and Delete buttons
           <div className="flex gap-3 items-center justify-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setViewersModalOpen(true);
+              }}
+              className="bg-white/20 hover:bg-white/30 p-3 rounded-full text-white transition-colors"
+              title="View Story Insights"
+            >
+              <Eye size={20} />
+            </button>
             <button
               type="button"
               onClick={(e) => {
@@ -234,6 +291,17 @@ export default function ActiveStoryModal({
               className="bg-white/20 hover:bg-white/30 p-3 rounded-full text-white transition-colors"
             >
               <Share2 size={20} />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteStory();
+              }}
+              disabled={deleteLoading}
+              className="bg-red-500/80 hover:bg-red-600/90 p-3 rounded-full text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={20} />
             </button>
           </div>
         ) : (
@@ -280,6 +348,15 @@ export default function ActiveStoryModal({
         <ShareToChatsModal
           onClose={() => setShareModalOpen(false)}
           story={currentStory}
+        />
+      )}
+
+      {/* Story Viewers Modal */}
+      {viewersModalOpen && currentStory?._id && (
+        <StoryViewersModal
+          storyId={currentStory._id}
+          isOpen={viewersModalOpen}
+          onClose={() => setViewersModalOpen(false)}
         />
       )}
 

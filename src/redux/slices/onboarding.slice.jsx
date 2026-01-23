@@ -151,8 +151,27 @@ export const checkUsername = createAsyncThunk(
         );
       }
 
+      // Check if username is not available (API returns success: true but message indicates not available)
+      if (res.data?.message?.toLowerCase().includes("not available")) {
+        // Return suggestions if available
+        if (res.data?.data?.username && Array.isArray(res.data.data.username)) {
+          return thunkAPI.rejectWithValue({
+            message: res.data.message,
+            suggestions: res.data.data.username
+          });
+        }
+        return thunkAPI.rejectWithValue(res.data.message);
+      }
+
       return res.data.message; // "Username available"
     } catch (error) {
+      // Handle error response with suggestions
+      if (error.response?.data?.success && error.response?.data?.data?.username) {
+        return thunkAPI.rejectWithValue({
+          message: error.response.data.message || "Username not available",
+          suggestions: error.response.data.data.username
+        });
+      }
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to check username"
       );

@@ -2,8 +2,12 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 import Button from "../../common/Button";
 import Input from "../../common/Input";
-import { useDispatch } from "react-redux";
-import { createPost, createStory } from "../../../redux/slices/posts.slice";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  createPost,
+  createStory,
+  getPostsByPageId,
+} from "../../../redux/slices/posts.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
 
 export default function UploadPostStory({
@@ -14,6 +18,7 @@ export default function UploadPostStory({
   selectedPages,
 }) {
   const dispatch = useDispatch();
+  const { postsLoading } = useSelector((state) => state.posts);
   console.log(title, "selectedTYpe");
   const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
@@ -84,13 +89,32 @@ export default function UploadPostStory({
 
     dispatch(title == "Create Story" ? createStory(fd) : createPost(fd))
       .unwrap()
-      .then(() => {
+      .then(async () => {
+        // Refresh page posts so new post shows in real-time
+        if (pageId) {
+          try {
+            await dispatch(
+              getPostsByPageId({ pageId, page: 1, limit: 100 })
+            ).unwrap();
+          } catch (err) {
+            // Silent fail for refresh, main post already created
+            console.error("Failed to refresh posts after create:", err);
+          }
+        }
+
         SuccessToast(title + " Successfully!");
 
         // reset
         setBodyText("");
         setImages([]);
-        setSelectedType("Done");
+
+        // Inform parent flows (if any) and close modal
+        if (setSelectedType) {
+          setSelectedType("Done");
+        }
+        if (setIsOpen) {
+          setIsOpen(false);
+        }
       })
       .catch((err) => {
         ErrorToast(err || "Failed to create post");
@@ -142,17 +166,31 @@ export default function UploadPostStory({
                   <div className="grid grid-cols-3 gap-3">
                     {images.map((image) => (
                       <div key={image.id} className="relative group">
-                        <img
-                          src={image.url}
-                          alt="Uploaded"
-                          className="w-[120px] h-[120px] object-cover rounded-xl"
-                        />
+                        {image.fileObject?.type?.startsWith("video/") ? (
+                          <video
+                            src={image.url}
+                            className="w-[120px] h-[120px] object-cover rounded-xl"
+                            controls={false}
+                            muted
+                          />
+                        ) : (
+                          <img
+                            src={image.url}
+                            alt="Uploaded"
+                            className="w-[120px] h-[120px] object-cover rounded-xl"
+                          />
+                        )}
                         <button
                           onClick={() => removeImage(image.id)}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-700 transition"
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center hover:bg-gray-700 transition z-10"
                         >
                           <X className="w-4 h-4" />
                         </button>
+                        {image.fileObject?.type?.startsWith("video/") && (
+                          <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[10px] px-1.5 py-0.5 rounded">
+                            Video
+                          </div>
+                        )}
                       </div>
                     ))}
 
@@ -175,11 +213,19 @@ export default function UploadPostStory({
                 {/* CTA */}
                 <Button
                   onClick={handlePostNow}
-                  className="w-full flex justify-center"
+                  disabled={postsLoading}
+                  className="w-full flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                   variant="orange"
                 >
-                  Post Now
+                  {postsLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Posting...</span>
+                    </>
+                  ) : (
+                    "Post Now"
+                  )}
                 </Button>
               </div>
             </div>

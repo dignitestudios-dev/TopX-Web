@@ -41,6 +41,7 @@ import {
 import SocketContext from "../../context/SocketContext";
 import { HiDotsVertical } from "react-icons/hi";
 import { SOCKET_EVENTS } from "../../constants/socketEvents";
+import { ErrorToast } from "./Toaster";
 
 const ChatApp = () => {
   const dispatch = useDispatch();
@@ -122,7 +123,12 @@ const ChatApp = () => {
 
   useEffect(() => {
     setShowChatMenu(false);
-  }, [selectedChat]);
+    // Fetch group info when group chat is selected
+    if (selectedChat?.isGroup) {
+      const groupId = selectedChat.groupId || selectedChat._id;
+      dispatch(getGroupInfo(groupId));
+    }
+  }, [selectedChat, dispatch]);
 
 
   useEffect(() => {
@@ -182,7 +188,7 @@ const ChatApp = () => {
         setScreen("chat");
 
         // ✅ FETCH MESSAGES
-        await dispatch(fetchIndividualChatDetail(chatId));
+        await dispatch(fetchIndividualChatDetail({ chatId, page: 1, limit: 50 }));
 
         // ✅ MARK READ
         socket.readChats(
@@ -398,7 +404,7 @@ const ChatApp = () => {
       );
 
     } else {
-      await dispatch(fetchIndividualChatDetail(chat._id));
+      await dispatch(fetchIndividualChatDetail({ chatId: chat._id, page: 1, limit: 50 }));
       dispatch(setCurrentChatId(chat._id));
       // Request to join the chat room
       socket.requestIndividualChat(
@@ -677,13 +683,16 @@ const ChatApp = () => {
   };
 
   const handleCreateGroup = async () => {
+    if (!groupImage) {
+      ErrorToast("Please upload a group image");
+      return;
+    }
+    
     if (groupName.trim() && selectedUsers.length > 0) {
       const formData = new FormData();
       formData.append("name", groupName);
       formData.append("bio", groupBio);
-      if (groupImage) {
-        formData.append("image", groupImage);
-      }
+      formData.append("image", groupImage); // Image is now required
 
       try {
         const result = await dispatch(createGroup(formData));
@@ -978,36 +987,103 @@ const ChatApp = () => {
 
               {showChatMenu && (
                 <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  {/* Group Chat Options */}
+                  {selectedChat?.isGroup ? (
+                    <>
+                      {/* Mute Notifications */}
+                      <button
+                        onClick={async () => {
+                          const groupId = selectedChat.groupId || selectedChat._id;
+                          const isMuted = groupInfo?.isNotificationMute || false;
+                          try {
+                            await dispatch(
+                              toggleGroupMute({
+                                groupId,
+                                mute: isMuted ? "disable" : "enable",
+                              })
+                            ).unwrap();
+                            // Refresh group info to get updated mute status
+                            dispatch(getGroupInfo(groupId));
+                            setShowChatMenu(false);
+                          } catch (error) {
+                            console.error("Failed to toggle mute:", error);
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                      >
+                        {groupInfo?.isNotificationMute ? "Unmute Notifications" : "Mute Notifications"}
+                      </button>
 
-                  {/* Delete Chat */}
-                  <button
-                    onClick={handleClearMessages}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                  >
-                    Delete Chat
-                  </button>
+                      {/* Delete Group - Only for admin */}
+                      {groupInfo?.admin?._id === (user?._id || allUserData?._id) && (
+                        <button
+                          onClick={() => {
+                            const groupId = selectedChat.groupId || selectedChat._id;
+                            if (window.confirm("Are you sure you want to delete this group? This action cannot be undone.")) {
+                              socket.deleteGroup({ groupId }, (response) => {
+                                console.log("Group deleted:", response);
+                                dispatch(removeChat({ chatId: groupId }));
+                                dispatch(resetChatDetail());
+                                setShowChatMenu(false);
+                                setScreen("list");
+                              });
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                        >
+                          Delete Group
+                        </button>
+                      )}
 
+                      {/* Leave Group */}
+                      <button
+                        onClick={() => {
+                          const groupId = selectedChat.groupId || selectedChat._id;
+                          if (window.confirm("Are you sure you want to leave this group?")) {
+                            socket.leaveGroup({ groupId }, (response) => {
+                              console.log("Left group:", response);
+                              dispatch(removeChat({ chatId: groupId }));
+                              dispatch(resetChatDetail());
+                              setShowChatMenu(false);
+                              setScreen("list");
+                            });
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                      >
+                        Leave Group
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Delete Chat */}
+                      <button
+                        onClick={handleClearMessages}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                      >
+                        Delete Chat
+                      </button>
 
-                  {/* Block User */}
-                  {!selectedChat?.isGroup && (
-                    <button
-                      onClick={handleBlockUser}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
-                    >
-                      Block User
-                    </button>
+                      {/* Block User */}
+                      <button
+                        onClick={handleBlockUser}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                      >
+                        Block User
+                      </button>
+
+                      {/* Report */}
+                      <button
+                        onClick={() => {
+                          setShowChatMenu(false);
+                          alert("Report submitted"); // replace later with API
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600"
+                      >
+                        Report
+                      </button>
+                    </>
                   )}
-
-                  {/* Report */}
-                  <button
-                    onClick={() => {
-                      setShowChatMenu(false);
-                      alert("Report submitted"); // replace later with API
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600"
-                  >
-                    Report
-                  </button>
                 </div>
               )}
 
@@ -1051,28 +1127,80 @@ const ChatApp = () => {
                       }`}
                   >
                     {msg.type === "shared" && msg.shared ? (
-                      <div className="space-y-2">
-                        <p className="text-xs opacity-80 mb-1">
-                          Shared a{" "}
+                      // If no media, show simple text
+                      !msg.shared.media ? (
+                        <p className="text-sm">
+                          {msg.sender?.name || "Someone"} shared a{" "}
                           {msg.shared.sharedType === "knowledge"
                             ? "knowledge post"
-                            : "post"}
+                            : "text post"}
                         </p>
-                        {msg.shared.pageImage && (
-                          <img
-                            src={msg.shared.pageImage}
-                            alt="Shared post"
-                            className="w-full rounded-lg"
-                          />
-                        )}
-                        {msg.shared.textOnImage && (
-                          <p className="text-sm">{msg.shared.textOnImage}</p>
-                        )}
-                        {msg.content &&
-                          msg.content !== "Shared a knowledge post" && (
-                            <p className="text-sm mt-1">{msg.content}</p>
+                      ) : (
+                        // If media exists, show full details
+                        <div className="space-y-2">
+                          {/* Page/Topic Info */}
+                          {msg.shared.name && (
+                            <div className="flex items-center gap-2 mb-2">
+                              {msg.shared.pageImage && (
+                                <img
+                                  src={msg.shared.pageImage}
+                                  alt="Page"
+                                  className="w-6 h-6 rounded-full object-cover"
+                                />
+                              )}
+                              <p className="text-xs font-semibold opacity-90">
+                                {msg.shared.name}
+                              </p>
+                            </div>
                           )}
-                      </div>
+                          
+                          {/* Shared Post Type Label */}
+                          <p className="text-xs opacity-80 mb-2">
+                            Shared a{" "}
+                            {msg.shared.sharedType === "knowledge"
+                              ? "knowledge post"
+                              : "post"}
+                          </p>
+                          
+                          {/* Post Media (Video or Image) */}
+                          {msg.shared.media && (
+                            <div className="rounded-lg overflow-hidden">
+                              {msg.shared.media.includes('.mp4') || msg.shared.media.includes('.mov') || msg.shared.media.includes('video') ? (
+                                <video
+                                  src={msg.shared.media}
+                                  controls
+                                  className="w-full max-h-64 object-contain rounded-lg"
+                                >
+                                  Your browser does not support the video tag.
+                                </video>
+                              ) : (
+                                <img
+                                  src={msg.shared.media}
+                                  alt="Shared post"
+                                  className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
+                                  onClick={() => {
+                                    setSelectedMessageImages([msg.shared.media]);
+                                    setCurrentImageIndex(0);
+                                    setShowMessageImageModal(true);
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Text on Image */}
+                          {msg.shared.textOnImage && (
+                            <p className="text-sm mt-2">{msg.shared.textOnImage}</p>
+                          )}
+                          
+                          {/* Additional Content */}
+                          {msg.content &&
+                            msg.content !== "Shared a knowledge post" &&
+                            msg.content !== "Shared a post" && (
+                              <p className="text-sm mt-2">{msg.content}</p>
+                            )}
+                        </div>
+                      )
                     ) : (
                       <p>{msg.content}</p>
                     )}
@@ -1429,7 +1557,7 @@ const ChatApp = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <h3 className="font-semibold text-sm text-gray-900">Create Group</h3>
+          <h3 className="font-semibold text-sm text-gray-900">Create New Group</h3>
         </div>
 
         <div className="px-4 py-2 border-b border-gray-200">
@@ -1779,12 +1907,13 @@ const ChatApp = () => {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <h3 className="font-semibold text-sm text-gray-900">
-            Add Group Details
+            Create Group Page
           </h3>
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <div className="flex justify-center mb-6">
+           
             <div className="relative">
               <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center border-2 border-dashed border-orange-500 overflow-hidden">
                 {groupImagePreview ? (
@@ -1804,6 +1933,7 @@ const ChatApp = () => {
                   accept="image/*"
                   onChange={handleImageChange}
                   className="hidden"
+                  required
                 />
               </label>
             </div>
@@ -1842,7 +1972,8 @@ const ChatApp = () => {
             createGroupLoading ||
             addMemberLoading ||
             !groupName.trim() ||
-            selectedUsers.length === 0
+            selectedUsers.length === 0 ||
+            !groupImage
           }
           className="w-full bg-orange-500 text-white py-2 font-semibold hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
         >

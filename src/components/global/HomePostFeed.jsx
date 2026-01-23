@@ -18,14 +18,14 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
-  
+
   const isVideo = (url) => {
     return /\.(mp4|webm|ogg)$/i.test(url);
   };
-  
+
   const [activeMedia, setActiveMedia] = useState(null);
-  console.log("post", post)
-  
+  console.log("postpostpostpostpost", post);
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isLiked = liked[post.id];
@@ -37,10 +37,15 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [selectedOption, setSelectedOption] = useState("");
   const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
+  const { user: authUser } = useSelector((state) => state.auth);
 
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
+  const handleLikeClick = async (
+    postId,
+    currentLikeStatus,
+    currentLikesCount,
+  ) => {
     const newLikeStatus = !currentLikeStatus;
     const newLikesCount = newLikeStatus
       ? (currentLikesCount ?? 0) + 1
@@ -49,9 +54,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
     likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
     localStorage.setItem("postLikes", JSON.stringify(likes));
-
     toggleLike(postId, newLikeStatus, newLikesCount);
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+    await dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
 
   const dropdownRef = useRef(null);
@@ -81,6 +85,35 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     "Share in Group Chats",
   ];
 
+  const handlePageClick = () => {
+    if (!post.page) {
+      return;
+    }
+
+    const isMyPage = post.page?.user?._id === authUser?._id;
+
+    if (isMyPage) {
+      // Open page in my Profile with ProfilePost
+      navigate("/profile", { state: { id: post.page._id } });
+    } else {
+      // Open in OtherProfile and directly open this page
+      navigate("/other-profile", {
+        state: {
+          id: post.page.user, // full user object
+          pageId: post.page._id,
+        },
+      });
+    }
+  };
+
+  const handleAuthorClick = () => {
+    if (!post.author) return;
+
+    navigate("/other-profile", {
+      state: { id: post.author },
+    });
+  };
+
   return (
     <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
@@ -91,22 +124,25 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               {post.user.split(" ")[0][0] + post.user.split(" ")[1][0]}
             </div>
             <img
-              src={post.avatar}
+              src={post.author.profilePicture}
               alt={post.user}
               className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover"
             />
           </div>
           <div>
-            <h3 className=" font-semibold text-sm text-gray-900">
-              {post.user}
-            </h3>
-            <p
-              onClick={() =>
-                navigate("/other-profile", { state: { id: post.author } })
-              }
-              className="text-xs cursor-pointer text-gray-500"
+            {/* Page Name (or fallback to user) */}
+            <h3
+              className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
+              onClick={post.page ? handlePageClick : handleAuthorClick}
             >
-              {post.username} · {post.time}
+              {post.page?.name || post.user}
+            </h3>
+            {/* Author username */}
+            <p
+              onClick={handleAuthorClick}
+              className="text-xs cursor-pointer text-gray-500 hover:text-orange-600 transition-colors"
+            >
+              {post.author.username} · {post.time}
             </p>
           </div>
         </div>
@@ -139,10 +175,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {hasImages && (
         <div
           className={`w-full bg-white overflow-hidden p-4 relative transition 
-      ${post.isAllowedByAdmin
-              ? "cursor-pointer hover:opacity-90"
-              : "cursor-not-allowed"
-            }
+      ${
+        post.isAllowedByAdmin
+          ? "cursor-pointer hover:opacity-90"
+          : "cursor-not-allowed"
+      }
     `}
           onClick={() => {
             if (post.isAllowedByAdmin) {
@@ -196,30 +233,33 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {/* Content */}
       <div className="px-4 py-3">
-        {post.isAllowedByAdmin ? (
-          <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
-        ) : (
-          <p className="text-sm text-gray-400 italic">
+        {/* {post.isAllowedByAdmin ? ( */}
+        <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
+        {/* ) : ( */}
+        {/* <p className="text-sm text-gray-400 italic">
             This post is currently under review.
           </p>
-        )}
+        )} */}
       </div>
 
       {/* Stats - Action Bar */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
+          type="button" // 👈 YE ADD KARO
           onClick={() =>
             handleLikeClick(post.id, post.isLiked, post.likesCount)
           }
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
-              }`}
+            className={`w-5 h-5 transition ${
+              post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+            }`}
           />
           <span
-            className={`text-sm font-medium ${post.isLiked ? "text-orange-500" : "text-gray-600"
-              }`}
+            className={`text-sm font-medium ${
+              post.isLiked ? "text-orange-500" : "text-gray-600"
+            }`}
           >
             {Number(post.likesCount ?? 0)}
           </span>
@@ -267,8 +307,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal onClose={setSelectedOption} />
-        )}
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
@@ -288,7 +328,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               targetModel: "Post",
               targetId: post.id,
               isReported: true,
-            })
+            }),
           );
         }}
       />

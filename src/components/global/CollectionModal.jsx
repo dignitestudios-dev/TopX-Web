@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { IoClose } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa6";
+import { FaCheck } from "react-icons/fa6";
 import SkeletonCard from "../global/SkeletonCard";
 import { getMyCollections, createCollection, addPageToCollections } from "../../redux/slices/collection.slice";
 import { useDispatch, useSelector } from "react-redux";
@@ -120,6 +121,11 @@ export default function CollectionModal({
                 <h2 className="text-center text-xl font-bold mb-4">
                     {creating ? "Create New Collection" : "Organize Your Interest!"}
                 </h2>
+                {!creating && page?.name && (
+                    <p className="text-slate-500 text-sm text-center mb-2">
+                        Add {page.name} To A New Or Existing Subscription.
+                    </p>
+                )}
 
                 {/* ================= CREATE MODE ================= */}
                 {creating ? (
@@ -146,7 +152,7 @@ export default function CollectionModal({
                             <label className="text-sm font-semibold">Collection Name</label>
                             <input
                                 className="w-full mt-1 border rounded-xl p-3 bg-gray-100"
-                                placeholder="Enter name"
+                                placeholder="Enter name here"
                                 value={collectionName}
                                 onChange={(e) => {
                                     setCollectionName(e.target.value);
@@ -187,7 +193,7 @@ export default function CollectionModal({
                                 <input
                                     type="text"
                                     className="w-full p-2 rounded-lg border border-gray-300"
-                                    placeholder="Search collections"
+                                    placeholder="Search"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -221,9 +227,16 @@ export default function CollectionModal({
                                                 </div>
 
                                                 <div
-                                                    className={`w-5 h-5 rounded border ${selectedCollections.includes(col._id) ? "bg-orange-500" : ""
-                                                        }`}
-                                                ></div>
+                                                    className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                                                        selectedCollections.includes(col._id)
+                                                            ? "bg-orange-500 border-orange-500"
+                                                            : "border-gray-300 bg-white"
+                                                    }`}
+                                                >
+                                                    {selectedCollections.includes(col._id) && (
+                                                        <FaCheck className="text-white text-xs" />
+                                                    )}
+                                                </div>
                                             </div>
                                         ))
                                     ) : (

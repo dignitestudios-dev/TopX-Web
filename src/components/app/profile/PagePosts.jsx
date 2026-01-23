@@ -1,17 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, X } from 'lucide-react';
-import { getPostsByPageId, likePost, commentonpost, getcommentsofpost } from '../../../redux/slices/posts.slice';
+import { getPostsByPageId, likePost, commentonpost, getcommentsofpost, elevatePost, demotePost } from '../../../redux/slices/posts.slice';
 import { useDispatch, useSelector } from 'react-redux';
 import CommentsSection from '../../global/CommentsSection';
 import SharePostModal from '../../global/SharePostModal';
 import ShareToChatsModal from '../../global/ShareToChatsModal';
 import PostStoryModal from '../../global/PostStoryModal';
 import ShareRepostModal from '../../global/ShareRepostModal';
+import ReportModal from '../../global/ReportModal';
+import { sendReport, resetReportState } from '../../../redux/slices/reports.slice';
+import { TiPin } from "react-icons/ti";
+import { nofound } from '../../../assets/export';
 
-const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
+
+const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevatedPosts = [] }) => {
 
     const dispatch = useDispatch();
     const { pagepost, pagepostLoading, pageposterror } = useSelector((state) => state.posts);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [moreOpenPostId, setMoreOpenPostId] = useState(null);
+    const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [reportPostId, setReportPostId] = useState(null);
+    const [elevatePostId, setElevatePostId] = useState(null);
+    const [elevateDuration, setElevateDuration] = useState("24h"); // "24h", "7d", "1m", "manual"
+    const [elevateLoading, setElevateLoading] = useState(false);
 
     const [liked, setLiked] = useState({});
     const [showImageModal, setShowImageModal] = useState(false);
@@ -21,7 +33,13 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
     const [sharepost, setSharepost] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [selectedOption, setSelectedOption] = useState("");
-    
+
+    const { reportSuccess, reportLoading } = useSelector(
+        (state) => state.reports
+    );
+
+    console.log(pagepost, "pagepostpagepostpagepostpagepost")
+
     const options = [
         "Share to your Story",
         "Share with Topic Page",
@@ -128,6 +146,27 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
         setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length);
     };
 
+    useEffect(() => {
+        if (reportSuccess) {
+            // Optional: toast already handled globally in other places
+            dispatch(resetReportState());
+            setReportModalOpen(false);
+            setReportPostId(null);
+        }
+    }, [reportSuccess, dispatch]);
+
+    const handleReportSubmit = (reason) => {
+        if (!reportPostId) return;
+        dispatch(
+            sendReport({
+                reason,
+                targetModel: "Post",
+                targetId: reportPostId,
+                isReported: true,
+            })
+        );
+    };
+
     // Loading State
     if (pagepostLoading) {
         return (
@@ -178,39 +217,108 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
         );
     }
 
+    // Merge elevatedPosts (from page) + normal page posts
+    const mergedPosts = (() => {
+        const base = pagepost || [];
+        if (!elevatedPosts || elevatedPosts.length === 0) return base;
+
+        const baseIds = new Set(base.map((p) => p._id));
+        const uniqueElevated = elevatedPosts.filter((p) => !baseIds.has(p._id));
+        // Elevated posts first, then normal posts
+        return [...uniqueElevated, ...base];
+    })();
+
     // Empty State
-    if (!pagepost || pagepost.length === 0) {
+    if (!mergedPosts || mergedPosts.length === 0) {
         return (
             <div className="max-w-2xl mx-auto p-4 bg-gray-50 min-h-screen">
                 <div className="bg-gray-100 border border-gray-300 rounded-lg p-12 text-center">
-                    <p className="text-gray-600 font-medium">📝 No posts found</p>
-                    <p className="text-gray-500 text-sm mt-1">This page hasn't posted anything yet</p>
+                    <div className=" flex justify-center">
+                        <img src={nofound} height={300} width={300} alt="" />
+                    </div>
+                    <p className="font-bold pt-4 text-black">
+                        No Posts Found
+
+                    </p>
                 </div>
             </div>
         );
     }
 
-    console.log(pagepost, "pagepost")
+    console.log(mergedPosts, "pagepost (merged with elevated)")
 
     // Filter posts based on commentFilter
     const getFilteredPosts = () => {
-        if (!pagepost || pagepost.length === 0) return [];
+        if (!mergedPosts || mergedPosts.length === 0) return [];
 
         switch (commentFilter) {
             case "all":
-                return pagepost;
+                return mergedPosts;
             case "no":
-                return pagepost.filter((post) => post.commentsCount === 0);
+                return mergedPosts.filter((post) => post.commentsCount === 0);
             case "elevated":
-                return pagepost.filter((post) => post.isElevated === true && post.likesCount > 0);
+                return mergedPosts.filter((post) => post.isElevated === true && post.likesCount > 0);
             case "userLiked":
-                return pagepost.filter((post) => post.isLiked === true);
+                return mergedPosts.filter((post) => post.isLiked === true);
             default:
-                return pagepost;
+                return mergedPosts;
         }
     };
 
     const filteredPosts = getFilteredPosts();
+
+
+    // Toggle Elevate modal
+    const handleModalToggle = (postId = null) => {
+        setIsModalOpen((prev) => !prev);
+        setElevatePostId(postId);
+        // Reset duration when opening
+        if (!isModalOpen && postId) {
+            setElevateDuration("24h");
+        }
+    };
+
+    const handleElevateSave = async () => {
+        if (!elevatePostId) return;
+        try {
+            setElevateLoading(true);
+            await dispatch(
+                elevatePost({ postId: elevatePostId, duration: elevateDuration })
+            ).unwrap();
+            // Refresh posts so isElevated updates
+            if (pageId) {
+                await dispatch(
+                    getPostsByPageId({ pageId: pageId, page: 1, limit: 100 })
+                ).unwrap();
+            }
+            setIsModalOpen(false);
+            setElevatePostId(null);
+        } catch (error) {
+            console.error("Failed to elevate post:", error);
+        } finally {
+            setElevateLoading(false);
+        }
+    };
+
+    const handleUnelevate = async (postId) => {
+        try {
+            setElevateLoading(true);
+            // Call demote endpoint to unelevate post
+            await dispatch(
+                demotePost(postId)
+            ).unwrap();
+            // Refresh posts so isElevated updates
+            if (pageId) {
+                await dispatch(
+                    getPostsByPageId({ pageId: pageId, page: 1, limit: 100 })
+                ).unwrap();
+            }
+        } catch (error) {
+            console.error("Failed to unelevate post:", error);
+        } finally {
+            setElevateLoading(false);
+        }
+    };
 
     return (
         <div className="max-w-2xl mx-auto p-4 bg-gray-50 min-h-screen">
@@ -234,16 +342,173 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
                                         className="w-10 h-10 rounded-full object-cover"
                                     />
                                     <div>
-                                        <p className="font-bold text-sm">{post.author.name}</p>
+                                        <div className='flex items-center gap-1'>
+                                            <p className="font-bold text-sm">{post.author.name}</p>
+                                            {post.isElevated && <TiPin />}
+                                        </div>
+
                                         <p className="text-xs text-gray-600">
                                             {post.author.username} • {formatDate(post.createdAt)}
                                         </p>
                                     </div>
                                 </div>
-                                <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                    <MoreHorizontal className="w-5 h-5 text-gray-500" />
-                                </button>
+                                <div className="relative">
+                                    <button
+                                        onClick={() =>
+                                            setMoreOpenPostId(
+                                                moreOpenPostId === post._id ? null : post._id
+                                            )
+                                        }
+                                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                                    >
+                                        <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                                    </button>
+
+                                    {moreOpenPostId === post._id && (
+                                        <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                            {post.isElevated ? (
+                                                <button
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                                                    disabled={elevateLoading}
+                                                    onClick={() => {
+                                                        setMoreOpenPostId(null);
+                                                        handleUnelevate(post._id);
+                                                    }}
+                                                >
+                                                    {elevateLoading ? "Updating..." : "Unelevate Post"}
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                                                    onClick={() => {
+                                                        setMoreOpenPostId(null);
+                                                        handleModalToggle(post._id);
+                                                    }}
+                                                >
+                                                    Elevate Post
+                                                </button>
+                                            )}
+                                            <button
+                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                                onClick={() => {
+                                                    setMoreOpenPostId(null);
+                                                    setReportPostId(post._id);
+                                                    setReportModalOpen(true);
+                                                }}
+                                            >
+                                                Report
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            {isModalOpen && (
+                                <div className="fixed inset-0 bg-black/20 bg-opacity-50 z-50 flex items-center justify-center">
+                                    <div className="bg-white p-6 rounded-lg shadow-lg w-[27em]">
+                                        {/* Modal Header with Close Button */}
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                                            <h3 className="text-lg font-semibold text-center">Elevated Post</h3>
+                                            <button
+                                                onClick={() => setIsModalOpen(false)} // Close modal
+                                                className="text-gray-500 hover:text-gray-700"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+
+                                        {/* Modal Body */}
+                                        <p className="text-sm text-gray-600 mt-3">
+                                            Highlight important posts for greater visibility. Choose how long they stay elevated:
+                                        </p>
+
+                                        {/* Radio Buttons */}
+                                        <div className="mt-4 space-y-2">
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="elevated-post"
+                                                    value="24h"
+                                                    id="day"
+                                                    className="appearance-none hidden"
+                                                    checked={elevateDuration === "24h"}
+                                                    onChange={() => setElevateDuration("24h")}
+                                                />
+                                                <span
+                                                    className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "24h" ? "bg-orange-500" : ""
+                                                        }`}
+                                                    onClick={() => setElevateDuration("24h")}
+                                                />
+                                                <label htmlFor="day" className="text-sm">Day (Visible for 24 hours)</label>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="elevated-post"
+                                                    value="7d"
+                                                    id="week"
+                                                    className="appearance-none hidden"
+                                                    checked={elevateDuration === "7d"}
+                                                    onChange={() => setElevateDuration("7d")}
+                                                />
+                                                <span
+                                                    className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "7d" ? "bg-orange-500" : ""
+                                                        }`}
+                                                    onClick={() => setElevateDuration("7d")}
+                                                />
+                                                <label htmlFor="week" className="text-sm">Week (Visible for 7 days)</label>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="elevated-post"
+                                                    value="1m"
+                                                    id="month"
+                                                    className="appearance-none hidden"
+                                                    checked={elevateDuration === "1m"}
+                                                    onChange={() => setElevateDuration("1m")}
+                                                />
+                                                <span
+                                                    className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "1m" ? "bg-orange-500" : ""
+                                                        }`}
+                                                    onClick={() => setElevateDuration("1m")}
+                                                />
+                                                <label htmlFor="month" className="text-sm">Month (Visible for 30 days)</label>
+                                            </div>
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="radio"
+                                                    name="elevated-post"
+                                                    value="manual"
+                                                    id="until-change"
+                                                    className="appearance-none hidden"
+                                                    checked={elevateDuration === "manual"}
+                                                    onChange={() => setElevateDuration("manual")}
+                                                />
+                                                <span
+                                                    className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "manual" ? "bg-orange-500" : ""
+                                                        }`}
+                                                    onClick={() => setElevateDuration("manual")}
+                                                />
+                                                <label htmlFor="until-change" className="text-sm">
+                                                    Until I Change It (Stay elevated until manually updated)
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        {/* Modal Footer with Buttons */}
+                                        <div className="mt-6 flex justify-between">
+                                            <button
+                                                className="bg-orange-500 text-white w-full py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                                onClick={handleElevateSave}
+                                                disabled={elevateLoading}
+                                            >
+                                                {elevateLoading ? "Saving..." : "Save"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
 
                             {/* First Image Only */}
                             {post.media && post.media.length > 0 && (
@@ -274,6 +539,19 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
                                     </div>
                                 </div>
                             )}
+
+
+                            {post.sharedBy ? (
+                                <div className='text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]'>
+                                    <img
+                                        src={post.sharedBy.profilePicture}
+                                        className="w-7 h-7 rounded-full object-cover"
+                                    />
+                                    {post.sharedBy.username} Reposted
+                                </div>
+                            ) : null}
+
+
 
 
                             {/* Topic Tag */}
@@ -412,8 +690,11 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
 
             {(selectedOption === "Share in Individuals Chats" ||
                 selectedOption === "Share in Group Chats") && (
-                <ShareToChatsModal onClose={() => setSelectedOption("")} />
-            )}
+                    <ShareToChatsModal 
+                        onClose={() => setSelectedOption("")} 
+                        post={selectedPost}
+                    />
+                )}
 
             {selectedOption === "Share to your Story" && selectedPost && (
                 <PostStoryModal post={selectedPost} onClose={() => setSelectedOption("")} />
@@ -422,6 +703,17 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false }) => {
             {selectedOption === "Share with Topic Page" && selectedPost && (
                 <ShareRepostModal postId={selectedPost._id} onClose={() => setSelectedOption("")} />
             )}
+
+            {/* Report Modal */}
+            <ReportModal
+                isOpen={reportModalOpen}
+                onClose={() => {
+                    setReportModalOpen(false);
+                    setReportPostId(null);
+                }}
+                loading={reportLoading}
+                onSubmit={handleReportSubmit}
+            />
         </div>
     );
 };

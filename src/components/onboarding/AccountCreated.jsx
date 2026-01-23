@@ -9,22 +9,13 @@ export default function AccountCreated() {
 
 useEffect(() => {
   const timer = setTimeout(() => {
-
-    // REMOVE TOKEN FROM COOKIES
-    Cookies.remove("access_token");
-    Cookies.remove("refresh_token"); // if you ever use it
-    Cookies.remove("user"); // remove if you stored user info in cookies
-    // THEN NAVIGATE
-    navigate("/");
-    // THEN RELOAD PAGE
-    setTimeout(() => {
-      window.location.reload();
-    }, 100);
-
+    // Keep tokens and navigate directly to dashboard
+    // User is already logged in from onboarding process
+    navigate("/home");
   }, 3000);
 
   return () => clearTimeout(timer);
-}, []);
+}, [navigate]);
 
 
   return (

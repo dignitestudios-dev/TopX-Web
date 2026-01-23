@@ -27,30 +27,21 @@ export default function CollectionFeedPostCard({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const dispatch = useDispatch();
 
-  console.log(post, "post")
+  console.log(post, "post");
 
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
-
-    // Optimistic update in localStorage
-    const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
-    localStorage.setItem("postLikes", JSON.stringify(likes));
-
-    // Update UI immediately
-    toggleLike(postId, newLikeStatus, newLikesCount);
-
-    // Call API
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+  const handleLikeClick = async () => {
+    dispatch(
+      likePost({
+        postId: fullPost._id,
+        likeToggle: !fullPost.isLiked,
+      }),
+    );
   };
 
   const [selectedOption, setSelectedOption] = useState("");
   const [reportmodal, setReportmodal] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
   const [sharepost, setSharepost] = useState(false);
   const options = [
@@ -159,20 +150,23 @@ export default function CollectionFeedPostCard({
       {/* Stats - Action Bar */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
+          type="button"
           onClick={() =>
             handleLikeClick(fullPost._id, fullPost.isLiked, fullPost.likesCount)
           }
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${fullPost?.isLiked
-              ? "fill-orange-500 text-orange-500"
-              : "text-gray-600"
-              }`}
+            className={`w-5 h-5 transition ${
+              fullPost?.isLiked
+                ? "fill-orange-500 text-orange-500"
+                : "text-gray-600"
+            }`}
           />
           <span
-            className={`text-sm font-medium ${fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
-              }`}
+            className={`text-sm font-medium ${
+              fullPost?.isLiked ? "text-orange-500" : "text-gray-600"
+            }`}
           >
             {fullPost?.likesCount}
           </span>
@@ -213,8 +207,8 @@ export default function CollectionFeedPostCard({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal onClose={setSelectedOption} />
-        )}
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal onClose={setSelectedOption} />
@@ -234,7 +228,7 @@ export default function CollectionFeedPostCard({
               targetModel: "Post",
               targetId: fullPost._id,
               isReported: true,
-            })
+            }),
           );
         }}
       />

@@ -9,6 +9,7 @@ import CreateKnowledgePageModal from "../../global/CreateKnowledgePageModal";
 import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
 import PageCategorySelector from "./PageCategorySelector";
 import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
+import { nofound } from "../../../assets/export";
 
 export default function KnowledgePostCard({ userKnowledgePost }) {
   const dispatch = useDispatch();
@@ -100,7 +101,12 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
 
         {/* EMPTY */}
         {!loading && knowledgePages?.length === 0 && (
-          <p className="text-center text-gray-500">No knowledge pages found.</p>
+          <div className="text-gray-500 col-span-3 text-center py-10">
+            <div className=" flex justify-center">
+              <img src={nofound} height={300} width={300} alt="" />
+            </div>
+            <p className="font-bold pt-4 text-black">No Knowledge Posts Found</p>
+          </div>
         )}
 
         {/* MODAL */}

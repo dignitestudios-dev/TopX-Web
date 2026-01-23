@@ -14,14 +14,14 @@ import {
   resetKnowledge,
   likePost,
 } from "../../../redux/slices/knowledgepost.slice";
-import { SuccessToast } from "../../global/Toaster";
-import CommentsSection from "../../global/CommentsSection";
+import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import ReportModal from "../../global/ReportModal";
 import ShareRepostModal from "../../global/ShareRepostModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareToChatsModal from "../../global/ShareToChatsModal";
 import SharePostModal from "../../global/SharePostModal";
-import { sendReport } from "../../../redux/slices/reports.slice";
+import CommentsSection from "../../global/CommentsSection";
+import KnowledgeCommentsSection from "../../global/KnowledgeCommentsSection";
 
 export default function KnowledgePostPageDetail({
   pageId,
@@ -29,40 +29,15 @@ export default function KnowledgePostPageDetail({
 }) {
   const dispatch = useDispatch();
   const [likedPosts, setLikedPosts] = useState(new Set());
+  const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
   const [showDeleteMenu, setShowDeleteMenu] = useState(null);
-
+  const [likingPostId, setLikingPostId] = useState(null);
+  const [activeSubTopic, setActiveSubTopic] = useState("All");
   const [commentsOpen, setCommentsOpen] = useState(false);
-
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
-
-    // Optimistic update in localStorage
-    const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
-    localStorage.setItem("postLikes", JSON.stringify(likes));
-
-    // Update UI immediately
-    // toggleLike(postId, newLikeStatus, newLikesCount);
-
-    // Call API
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
-  };
-
+  const [sharepost, setSharepost] = useState(false);
+  const { user } = useSelector((state) => state.auth);
   const [selectedOption, setSelectedOption] = useState("");
   const [reportmodal, setReportmodal] = useState(false);
-  const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
-  );
-  const [sharepost, setSharepost] = useState(false);
-  const options = [
-    "Share to your Story",
-    "Share with Topic Page",
-    "Share in Individuals Chats",
-    "Share in Group Chats",
-  ];
 
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
@@ -70,6 +45,12 @@ export default function KnowledgePostPageDetail({
     { id: 3, name: "bg_red_gradient", imagePath: "/bg_red_gradient.png" },
     { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
     { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" },
+  ];
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
   ];
 
   const {
@@ -79,12 +60,41 @@ export default function KnowledgePostPageDetail({
     deleteLoading,
     deleteSuccess,
   } = useSelector((state) => state.knowledgepost);
-
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports,
+  );
   useEffect(() => {
     if (pageId) {
       dispatch(getKnowledgePostDetail({ pageId, page: 1, limit: 10 }));
     }
   }, [pageId]);
+
+  // Initialize liked posts from localStorage and API data
+  useEffect(() => {
+    if (knowledgePagePosts && user?._id) {
+      const localLikes = JSON.parse(
+        localStorage.getItem("knowledgePostLikes") || "{}",
+      );
+      const initialLiked = new Set();
+      const initialCounts = {};
+
+      knowledgePagePosts.forEach((post) => {
+        // Check localStorage first, then API data
+        const isLocallyLiked = localLikes[post._id] === true;
+        const isApiLiked = post.userLikes?.includes(user._id) || post.isLiked;
+
+        if (isLocallyLiked || isApiLiked) {
+          initialLiked.add(post._id);
+        }
+
+        // Store initial counts from API
+        initialCounts[post._id] = post.likesCount || 0;
+      });
+
+      setLikedPosts(initialLiked);
+      setLikesCounts(initialCounts);
+    }
+  }, [knowledgePagePosts, user?._id]);
 
   if (deleteSuccess) {
     SuccessToast("Post deleted successfully");
@@ -94,16 +104,13 @@ export default function KnowledgePostPageDetail({
     }, 1500);
   }
 
-  const handleLike = (postId) => {
-    setLikedPosts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(postId)) {
-        newSet.delete(postId);
-      } else {
-        newSet.add(postId);
-      }
-      return newSet;
-    });
+  const handleLikeClick = async (postId, isKnowlegdeLike) => {
+    dispatch(
+      likePost({
+        postId: postId,
+        likeToggle: !isKnowlegdeLike,
+      }),
+    );
   };
 
   const handleDelete = (postId) => {
@@ -129,6 +136,19 @@ export default function KnowledgePostPageDetail({
       </div>
     );
   }
+
+  // Build unique subTopic tabs from posts (split by comma, trim)
+  const subTopicSet = new Set();
+  (knowledgePagePosts || []).forEach((post) => {
+    if (post?.subTopic) {
+      post.subTopic
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean)
+        .forEach((topic) => subTopicSet.add(topic));
+    }
+  });
+  const subTopicTabs = Array.from(subTopicSet);
 
   const timeAgo = (dateString) => {
     const now = new Date();
@@ -158,7 +178,20 @@ export default function KnowledgePostPageDetail({
       return `${Math.floor(diffInSeconds / year)} years ago`;
     }
   };
-  console.log(knowledgePagePosts, "knowledge POstsss");
+
+  // Filter posts by active subTopic
+  const filteredPosts =
+    activeSubTopic === "All"
+      ? knowledgePagePosts
+      : knowledgePagePosts?.filter((post) => {
+          if (!post?.subTopic) return false;
+          return post.subTopic
+            .split(",")
+            .map((p) => p.trim())
+            .filter(Boolean)
+            .some((topic) => topic === activeSubTopic);
+        });
+
   return (
     <div className="bg-transparent min-h-screen max-w-2xl">
       {/* Header Card */}
@@ -171,13 +204,43 @@ export default function KnowledgePostPageDetail({
           <IoChevronBackOutline size={24} /> Back
         </button>
 
-        {/* Page Header */}
+        {/* Page Header + SubTopic Tabs */}
+
+        {subTopicTabs.length > 0 && (
+          <div className="mt-4">
+            <div className="flex flex-wrap gap-2 bg-white/40 rounded-2xl p-2 backdrop-blur-sm">
+              <button
+                onClick={() => setActiveSubTopic("All")}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  activeSubTopic === "All"
+                    ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
+                }`}
+              >
+                All
+              </button>
+              {subTopicTabs.map((topic) => (
+                <button
+                  key={topic}
+                  onClick={() => setActiveSubTopic(topic)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                    activeSubTopic === topic
+                      ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
+                  }`}
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Posts Feed */}
       <div className="space-y-6">
-        {knowledgePagePosts &&
-          knowledgePagePosts.map((post) => (
+        {filteredPosts &&
+          filteredPosts.map((post) => (
             <div
               key={post._id}
               className="rounded-3xl overflow-hidden bg-white"
@@ -205,7 +268,7 @@ export default function KnowledgePostPageDetail({
                   <button
                     onClick={() =>
                       setShowDeleteMenu(
-                        showDeleteMenu === post._id ? null : post._id
+                        showDeleteMenu === post._id ? null : post._id,
                       )
                     }
                     className="p-2 hover:bg-gray-100 rounded-full transition-colors"
@@ -247,21 +310,21 @@ export default function KnowledgePostPageDetail({
                           backgroundPosition: "center",
                         }
                       : // If there's a backgroundCode, match it with presetBackgrounds
-                      post.backgroundCode
-                      ? {
-                          backgroundImage: `url(${
-                            presetBackgrounds.find(
-                              (bg) => bg.name === post.backgroundCode
-                            )?.imagePath
-                          })`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
-                      : // Default gradient background if no background or code is found
-                        {
-                          background:
-                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        }
+                        post.backgroundCode
+                        ? {
+                            backgroundImage: `url(${
+                              presetBackgrounds.find(
+                                (bg) => bg.name === post.backgroundCode,
+                              )?.imagePath
+                            })`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }
+                        : // Default gradient background if no background or code is found
+                          {
+                            background:
+                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          }
                   }
                 >
                   {/* Overlay for better text readability */}
@@ -277,9 +340,7 @@ export default function KnowledgePostPageDetail({
                   <div className="text-center w-full space-y-3 relative z-10">
                     {/* Post Text */}
                     <p
-                      className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(
-                        post.fontFamily
-                      )}`}
+                      className={`leading-relaxed drop-shadow-2xl mx-auto max-w-2xl ${getFontClass(post.fontFamily)}`}
                       style={{
                         fontSize: `${post.fontSize}px`,
                         color: post.color,
@@ -296,12 +357,10 @@ export default function KnowledgePostPageDetail({
               </div>
 
               {/* Post Footer - Interaction Buttons */}
-              {/* Stats - Action Bar */}
-              <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
+              <div className="px-6 py-5 bg-white flex items-center gap-8">
                 <button
-                  onClick={() =>
-                    handleLikeClick(post._id, post.isLiked, post.likesCount)
-                  }
+                  type="button"
+                  onClick={() => handleLikeClick(post._id, post.isLiked)}
                   className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
                 >
                   <Heart
@@ -342,7 +401,7 @@ export default function KnowledgePostPageDetail({
               </div>
 
               {/* Comments Section */}
-              {commentsOpen && <CommentsSection postId={post._id} />}
+              {commentsOpen && <KnowledgeCommentsSection postId={post._id} />}
             </div>
           ))}
         {sharepost && (
@@ -377,7 +436,7 @@ export default function KnowledgePostPageDetail({
                 targetModel: "Post",
                 targetId: post._id,
                 isReported: true,
-              })
+              }),
             );
           }}
         />

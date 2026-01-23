@@ -24,6 +24,10 @@ import { sendReport, resetReportState } from "../../../redux/slices/reports.slic
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import Input from "../../common/Input";
 import { createStory } from "../../../redux/slices/posts.slice";
+import axios from "../../../axios";
+import { nofound } from "../../../assets/export";
+import { startStream } from "../../../redux/slices/livestream.slice";
+import { FaPlus } from "react-icons/fa6";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [activeTab, setActiveTab] = useState("post");
@@ -61,9 +65,29 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [storyModal, setStoryModal] = useState(false);
   const [storyMedia, setStoryMedia] = useState(null);
   const [storyMediaPreview, setStoryMediaPreview] = useState(null);
+  const [storyTextOverlay, setStoryTextOverlay] = useState({
+    text: "",
+    x: 50,
+    y: 50,
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontFamily: "Arial",
+    isDragging: false,
+    isActive: false
+  });
+  const storyPreviewRef = useRef(null);
+  const storyTextRef = useRef(null);
+  const [createPostUploadModal, setCreatePostUploadModal] = useState(false);
+  const [postRequests, setPostRequests] = useState([]);
+  const [postRequestsLoading, setPostRequestsLoading] = useState(false);
+  const [postRequestsError, setPostRequestsError] = useState(null);
+  const [requestActionLoadingId, setRequestActionLoadingId] = useState(null);
+  const [goLiveLoading, setGoLiveLoading] = useState(false);
+  const [actionModal, setActionModal] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { livestreamError } = useSelector((state) => state.livestream);
 
   console.log(user, "userrrrrrrrrrrrrr");
 
@@ -176,6 +200,71 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch post suggestion requests for this page (Post Request tab)
+  const fetchPostRequests = async () => {
+    if (!pageId || !isPageOwner) return;
+
+    setPostRequestsLoading(true);
+    setPostRequestsError(null);
+
+    try {
+      const res = await axios.get("/requests/my", {
+        params: {
+          page: 1,
+          limit: 10,
+          status: "pending",
+          pageId,
+          type: "suggestion",
+        },
+      });
+
+      setPostRequests(res.data?.data || []);
+    } catch (error) {
+      console.error("Failed to fetch post requests", error);
+      setPostRequestsError(
+        error.response?.data?.message || "Failed to fetch post requests"
+      );
+    } finally {
+      setPostRequestsLoading(false);
+    }
+  };
+
+  // Load requests when switching to Post Request tab
+  useEffect(() => {
+    if (activeTab === "postrequest") {
+      fetchPostRequests();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, pageId, isPageOwner]);
+
+  // Handle accept / reject of a request
+  const handleRequestAction = async (requestId, status) => {
+    if (!requestId) return;
+
+    setRequestActionLoadingId(requestId);
+    try {
+      await axios.post(`/requests/${requestId}`, {
+        status,
+      });
+
+      // Remove handled request from list
+      setPostRequests((prev) => prev.filter((r) => r._id !== requestId));
+
+      SuccessToast(
+        status === "accepted"
+          ? "Request accepted successfully"
+          : "Request rejected successfully"
+      );
+    } catch (error) {
+      console.error("Failed to update request status", error);
+      ErrorToast(
+        error.response?.data?.message || "Failed to update request status"
+      );
+    } finally {
+      setRequestActionLoadingId(null);
+    }
+  };
 
   // Subscribe click handler - open modal
   const handleSubscribeClick = () => {
@@ -355,8 +444,157 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setStoryMediaPreview(reader.result);
+        // Reset text overlay when new media is uploaded
+        setStoryTextOverlay({
+          text: "",
+          x: 50,
+          y: 50,
+          color: "#FFFFFF",
+          fontSize: 24,
+          fontFamily: "Arial",
+          isDragging: false,
+          isActive: false
+        });
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Handle text overlay drag
+  const handleTextDragStart = (e) => {
+    setStoryTextOverlay(prev => ({ ...prev, isDragging: true, isActive: true }));
+  };
+
+  const handleTextDrag = (e) => {
+    if (!storyTextOverlay.isDragging || !storyPreviewRef.current) return;
+    
+    const rect = storyPreviewRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setStoryTextOverlay(prev => ({
+      ...prev,
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y))
+    }));
+  };
+
+  const handleTextDragEnd = () => {
+    setStoryTextOverlay(prev => ({ ...prev, isDragging: false }));
+  };
+
+  // Handle text input click
+  const handleTextClick = () => {
+    setStoryTextOverlay(prev => ({ ...prev, isActive: true }));
+  };
+
+  // Combine image/video with text overlay using canvas
+  const combineMediaWithText = async () => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        // Set canvas size (story format: 9:16 aspect ratio)
+        const maxWidth = 1080;
+        const maxHeight = 1920;
+        const aspectRatio = img.width / img.height;
+        
+        let width, height;
+        if (aspectRatio > maxWidth / maxHeight) {
+          width = maxWidth;
+          height = maxWidth / aspectRatio;
+        } else {
+          height = maxHeight;
+          width = maxHeight * aspectRatio;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Draw text overlay if text exists
+        if (storyTextOverlay.text && storyTextOverlay.text.trim()) {
+          ctx.font = `${storyTextOverlay.fontSize}px ${storyTextOverlay.fontFamily}`;
+          ctx.fillStyle = storyTextOverlay.color;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          // Add text shadow for better visibility
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowBlur = 4;
+          ctx.shadowOffsetX = 2;
+          ctx.shadowOffsetY = 2;
+          
+          const textX = (storyTextOverlay.x / 100) * width;
+          const textY = (storyTextOverlay.y / 100) * height;
+          
+          // Handle multiline text
+          const lines = storyTextOverlay.text.split('\n');
+          const lineHeight = storyTextOverlay.fontSize * 1.2;
+          const startY = textY - ((lines.length - 1) * lineHeight) / 2;
+          
+          lines.forEach((line, index) => {
+            ctx.fillText(line, textX, startY + (index * lineHeight));
+          });
+        }
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], 'story-with-text.png', { type: 'image/png' });
+            resolve(file);
+          } else {
+            reject(new Error('Failed to create image'));
+          }
+        }, 'image/png', 0.95);
+      };
+      
+      img.onerror = () => {
+        // If it's a video, we'll use the original file
+        resolve(storyMedia);
+      };
+      
+      if (storyMediaPreview) {
+        img.src = storyMediaPreview;
+      } else {
+        resolve(storyMedia);
+      }
+    });
+  };
+
+  // Handle Go Live
+  const handleGoLive = async () => {
+    if (!pageId) {
+      ErrorToast("Page ID is required");
+      return;
+    }
+
+    setGoLiveLoading(true);
+    try {
+      const res = await dispatch(startStream(pageId));
+
+      if (res.meta.requestStatus === "fulfilled") {
+        SuccessToast("Stream started successfully! Redirecting...");
+        setTimeout(() => {
+          navigate(`/live-stream/${pageId}`, {
+            state: { fromGoLive: true },
+          });
+          setGoLiveLoading(false);
+        }, 500);
+      } else {
+        ErrorToast(
+          res.payload || livestreamError || "Failed to start stream"
+        );
+        setGoLiveLoading(false);
+      }
+    } catch (error) {
+      ErrorToast(error.message || "Failed to start stream");
+      setGoLiveLoading(false);
     }
   };
 
@@ -372,16 +610,33 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append("pages[0]", pageId);
-    formData.append("media", storyMedia);
-
     try {
+      let mediaToUpload = storyMedia;
+      
+      // If text overlay exists and media is image, combine them
+      if (storyTextOverlay.text && storyTextOverlay.text.trim() && storyMedia?.type?.startsWith("image/")) {
+        mediaToUpload = await combineMediaWithText();
+      }
+
+      const formData = new FormData();
+      formData.append("pages[0]", pageId);
+      formData.append("media", mediaToUpload);
+
       await dispatch(createStory(formData)).unwrap();
       SuccessToast("Story created successfully");
       setStoryModal(false);
       setStoryMedia(null);
       setStoryMediaPreview(null);
+      setStoryTextOverlay({
+        text: "",
+        x: 50,
+        y: 50,
+        color: "#FFFFFF",
+        fontSize: 24,
+        fontFamily: "Arial",
+        isDragging: false,
+        isActive: false
+      });
       // Refresh page stories
       if (pageId) {
         dispatch(getPageStories({ id: pageId }));
@@ -516,6 +771,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
                   >
                     {page?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
+                  </button>
+                )}
+
+                {/* Plus Icon Button - Only show for page owner */}
+                {isPageOwner && (
+                  <button
+                    onClick={() => setActionModal(true)}
+                    className="w-10 h-10 flex items-center justify-center bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors shadow-md"
+                  >
+                    <Plus className="w-5 h-5" />
                   </button>
                 )}
 
@@ -679,10 +944,135 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           )}
         </div>
 
-        {/* POSTS LIST */}
-        <div className={!shouldShowContent ? "blur-md hidden pointer-events-none select-none" : "mr-[15em] mx-auto p-4 space-y-4"}>
-          <PagePosts pageId={pageId} commentFilter={commentFilter} isPageOwner={isPageOwner} />
-        </div>
+        {/* POSTS LIST / POST REQUEST LIST */}
+        {activeTab === "post" ? (
+          <div
+            className={
+              !shouldShowContent
+                ? "blur-md hidden pointer-events-none select-none"
+                : "mr-[15em] mx-auto p-4 space-y-4"
+            }
+          >
+            <PagePosts
+              pageId={pageId}
+              commentFilter={commentFilter}
+              isPageOwner={isPageOwner}
+              elevatedPosts={page?.elevatedPosts}
+            />
+          </div>
+        ) : (
+          isPageOwner && (
+            <div className="mx-auto p-4 space-y-4">
+              {postRequestsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : postRequestsError ? (
+                <div className="text-center text-sm text-red-500">
+                  {postRequestsError}
+                </div>
+              ) : postRequests.length === 0 ? (
+                <div className="text-center text-sm text-gray-500 border border-dashed border-gray-300 rounded-2xl py-6">
+                  <div className=" flex justify-center">
+                <img src={nofound} height={300} width={300} alt="" />
+              </div>
+              <p className="font-bold pt-4 text-black">
+                No Post request found
+              
+              </p>
+                </div>
+              ) : (
+                postRequests.map((req) => (
+                  <div
+                    key={req._id}
+                    className="border border-gray-200 rounded-2xl p-4 flex gap-4 bg-white shadow-sm"
+                  >
+                    {/* Author */}
+                    <div className="flex-shrink-0">
+                      <img
+                        src={req.author?.profilePicture}
+                        alt={req.author?.name}
+                        className="w-12 h-12 rounded-full object-cover bg-gray-200"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://via.placeholder.com/48?text=User";
+                        }}
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {req.author?.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            @{req.author?.username}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          {timeAgo(req.createdAt)}
+                        </p>
+                      </div>
+
+                      {/* Post body + media preview */}
+                      <div className="mt-1 space-y-2">
+                        {req.post?.bodyText && (
+                          <p className="text-sm text-gray-800 whitespace-pre-line">
+                            {req.post.bodyText}
+                          </p>
+                        )}
+
+                        {Array.isArray(req.post?.media) &&
+                          req.post.media.length > 0 && (
+                            <div className="mt-1 grid grid-cols-2 gap-2">
+                              {req.post.media.slice(0, 2).map((m) => (
+                                <img
+                                  key={m._id}
+                                  src={m.fileUrl}
+                                  alt={m.title || "media"}
+                                  className="w-full h-80 object-cover rounded-xl bg-gray-100"
+                                  onError={(e) => {
+                                    e.target.src =
+                                      "https://via.placeholder.com/150";
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-3 flex items-center gap-3">
+                        <button
+                          onClick={() =>
+                            handleRequestAction(req._id, "accepted")
+                          }
+                          disabled={requestActionLoadingId === req._id}
+                          className="px-10 py-1.5 rounded-[10px] text-sm font-semibold bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {requestActionLoadingId === req._id
+                            ? "Processing..."
+                            : "Accept"}
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleRequestAction(req._id, "rejected")
+                          }
+                          disabled={requestActionLoadingId === req._id}
+                          className="px-10 py-1.5 rounded-[10px] text-sm font-semibold bg-slate-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )
+        )}
       </div>
 
       {/* Story Modal */}
@@ -691,6 +1081,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         activeStory={activeStory}
         setActiveStory={setActiveStory}
         handleViewStory={handleViewStory}
+        onStoryDeleted={() => {
+          // Refresh page stories after deletion
+          if (pageId) {
+            dispatch(getPageStories({ id: pageId }));
+          }
+        }}
       />
 
       {/* Private Page Modal - Show on top of blurred content */}
@@ -1145,6 +1541,76 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         </div>
       )}
 
+      {/* Create Post Modal - Direct for this page (no page select) */}
+      <UploadPostStory
+        isOpen={createPostUploadModal}
+        setIsOpen={setCreatePostUploadModal}
+        setSelectedType={() => {}}
+        title="Create Post"
+        selectedPages={[pageId]}
+      />
+
+      {/* Action Modal - Create Post / Go Live */}
+      {actionModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <h2 className="text-xl font-semibold text-gray-900">Select Type</h2>
+              <button
+                onClick={() => setActionModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 space-y-3">
+              {/* Create Post Option */}
+              <button
+                onClick={() => {
+                  setActionModal(false);
+                  setCreatePostUploadModal(true);
+                }}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <FaPlus className="text-orange-600" />
+
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Create Post</p>
+                </div>
+              </button>
+
+              {/* Go Live Option */}
+              <button
+                onClick={() => {
+                  setActionModal(false);
+                  handleGoLive();
+                }}
+                disabled={goLiveLoading}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all text-left disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  {goLiveLoading ? (
+                    <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                        <FaPlus className="text-orange-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {goLiveLoading ? "Starting..." : "Go Live in this Topic page"}
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Story Modal */}
       {storyModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -1157,6 +1623,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   setStoryModal(false);
                   setStoryMedia(null);
                   setStoryMediaPreview(null);
+                  setStoryTextOverlay({
+                    text: "",
+                    x: 50,
+                    y: 50,
+                    color: "#FFFFFF",
+                    fontSize: 24,
+                    fontFamily: "Arial",
+                    isDragging: false,
+                    isActive: false
+                  });
                 }}
                 disabled={postsLoading}
                 className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
@@ -1166,7 +1642,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
             </div>
 
             {/* Content */}
-            <div className="p-5">
+            <div className="p-5 max-h-[80vh] overflow-y-auto">
               {/* Media Upload Area */}
               <div className="mb-5">
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -1181,26 +1657,77 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     className="hidden"
                   />
                   {storyMediaPreview ? (
-                    <div className="relative">
+                    <div 
+                      ref={storyPreviewRef}
+                      className="relative bg-black rounded-lg overflow-hidden cursor-move"
+                      onMouseMove={handleTextDrag}
+                      onMouseUp={handleTextDragEnd}
+                      onMouseLeave={handleTextDragEnd}
+                      onClick={(e) => {
+                        if (!storyTextOverlay.isActive) {
+                          handleTextClick();
+                        }
+                      }}
+                    >
                       {storyMedia?.type?.startsWith("video/") ? (
                         <video
                           src={storyMediaPreview}
                           controls
-                          className="w-full h-64 object-cover rounded-lg"
+                          className="w-full h-64 object-cover"
                         />
                       ) : (
                         <img
                           src={storyMediaPreview}
                           alt="Story preview"
-                          className="w-full h-64 object-cover rounded-lg"
+                          className="w-full h-64 object-cover"
                         />
                       )}
+                      
+                      {/* Text Overlay */}
+                      {storyTextOverlay.text && storyTextOverlay.text.trim() && (
+                        <div
+                          ref={storyTextRef}
+                          className={`absolute cursor-move select-none ${storyTextOverlay.isActive ? 'ring-2 ring-orange-500' : ''}`}
+                          style={{
+                            left: `${storyTextOverlay.x}%`,
+                            top: `${storyTextOverlay.y}%`,
+                            transform: 'translate(-50%, -50%)',
+                            color: storyTextOverlay.color,
+                            fontSize: `${storyTextOverlay.fontSize}px`,
+                            fontFamily: storyTextOverlay.fontFamily,
+                            textShadow: '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(0,0,0,0.3)',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            maxWidth: '90%',
+                            textAlign: 'center'
+                          }}
+                          onMouseDown={handleTextDragStart}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStoryTextOverlay(prev => ({ ...prev, isActive: true }));
+                          }}
+                        >
+                          {storyTextOverlay.text}
+                        </div>
+                      )}
+                      
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setStoryMedia(null);
                           setStoryMediaPreview(null);
+                          setStoryTextOverlay({
+                            text: "",
+                            x: 50,
+                            y: 50,
+                            color: "#FFFFFF",
+                            fontSize: 24,
+                            fontFamily: "Arial",
+                            isDragging: false,
+                            isActive: false
+                          });
                         }}
-                        className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors"
+                        className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors z-10"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -1221,6 +1748,93 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 </label>
               </div>
 
+              {/* Text Overlay Controls */}
+              {storyMediaPreview && (
+                <div className="mb-5 space-y-4 border-t pt-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-2">
+                      Add Text Overlay
+                    </label>
+                    <textarea
+                      value={storyTextOverlay.text}
+                      onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, text: e.target.value, isActive: true }))}
+                      placeholder="Type your text here..."
+                      rows="2"
+                      className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                      onClick={() => setStoryTextOverlay(prev => ({ ...prev, isActive: true }))}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Click and drag text on image to reposition
+                    </p>
+                  </div>
+
+                  {storyTextOverlay.text && storyTextOverlay.text.trim() && (
+                    <>
+                      {/* Color Picker */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Text Color
+                        </label>
+                        <div className="flex gap-2 flex-wrap">
+                          {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'].map((color) => (
+                            <button
+                              key={color}
+                              onClick={() => setStoryTextOverlay(prev => ({ ...prev, color }))}
+                              className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                storyTextOverlay.color === color ? 'border-orange-500 scale-110' : 'border-gray-300'
+                              }`}
+                              style={{ backgroundColor: color }}
+                            />
+                          ))}
+                          <input
+                            type="color"
+                            value={storyTextOverlay.color}
+                            onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, color: e.target.value }))}
+                            className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Font Size */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Font Size: {storyTextOverlay.fontSize}px
+                        </label>
+                        <input
+                          type="range"
+                          min="12"
+                          max="72"
+                          value={storyTextOverlay.fontSize}
+                          onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Font Family */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
+                          Font Family
+                        </label>
+                        <select
+                          value={storyTextOverlay.fontFamily}
+                          onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, fontFamily: e.target.value }))}
+                          className="w-full p-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
+                        >
+                          <option value="Arial">Arial</option>
+                          <option value="Helvetica">Helvetica</option>
+                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Courier New">Courier New</option>
+                          <option value="Verdana">Verdana</option>
+                          <option value="Georgia">Georgia</option>
+                          <option value="Impact">Impact</option>
+                          <option value="Comic Sans MS">Comic Sans MS</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <button
@@ -1228,6 +1842,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     setStoryModal(false);
                     setStoryMedia(null);
                     setStoryMediaPreview(null);
+                    setStoryTextOverlay({
+                      text: "",
+                      x: 50,
+                      y: 50,
+                      color: "#FFFFFF",
+                      fontSize: 24,
+                      fontFamily: "Arial",
+                      isDragging: false,
+                      isActive: false
+                    });
                   }}
                   disabled={postsLoading}
                   className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

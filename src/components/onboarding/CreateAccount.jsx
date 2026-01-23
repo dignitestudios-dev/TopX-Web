@@ -17,6 +17,7 @@ import {
 import { authlogo } from "../../assets/export";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 import Cookies from "js-cookie";
+import { FcGoogle } from "react-icons/fc";
 
 
 
@@ -28,7 +29,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
     (state) => state.auth
   );
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);  
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [firebaseLoading, setFirebaseLoading] = useState(false);
@@ -176,7 +177,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
               value={values.name}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="Enter your full name"
+              placeholder="Enter your name"
               touched={touched.name}
               error={errors.name}
               size="md"
@@ -185,20 +186,20 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
 
           {/* Email */}
           <div className="w-full">
-          <Input
-  label="Email Address"
-  type="email"
-  name="email"
-  value={values.email}
-  onChange={(e) => {
-    setFieldValue("email", e.target.value.toLowerCase());
-  }}
-  onBlur={handleBlur}
-  placeholder="Enter your email"
-  touched={touched.email}
-  error={errors.email}
-  size="md"
-/>
+            <Input
+              label="Email Address"
+              type="email"
+              name="email"
+              value={values.email}
+              onChange={(e) => {
+                setFieldValue("email", e.target.value.toLowerCase());
+              }}
+              onBlur={handleBlur}
+              placeholder="Enter email address"
+              touched={touched.email}
+              error={errors.email}
+              size="md"
+            />
 
           </div>
 
@@ -234,7 +235,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
                   setFieldValue("phone", formatted);
                 }}
                 onBlur={handleBlur}
-                placeholder="(234) 567-891"
+                placeholder="Add phone number"
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${touched.phone && errors.phone
                   ? "border-red-500 bg-red-50"
                   : "border-gray-300"
@@ -256,7 +257,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
               value={values.password}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="Create a password"
+              placeholder="Enter your password"
               touched={touched.password}
               error={errors.password}
               size="md"
@@ -285,7 +286,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
               value={values.cPassword}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="Confirm your password"
+              placeholder="Re-enter your password"
               touched={touched.cPassword}
               error={errors.cPassword}
               size="md"
@@ -337,7 +338,54 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
                 Log In
               </NavLink>
             </span>
+
+
           </div>
+
+          <div className="flex flex-col items-center w-full">
+            {/* OR Divider */}
+            <div className="flex items-center w-full mb-4">
+              <div className="border-t border-gray-400 flex-grow"></div>
+              <span className="mx-2 text-gray-600 text-[14px]">OR</span>
+              <div className="border-t border-gray-400 flex-grow"></div>
+            </div>
+
+            {/* Google Button */}
+            <div className="w-full flex flex-col gap-4 pt-8">
+              <button
+                className="w-full h-[49px] rounded-[8px] border-[1px] border-gray-300 shadow-xl flex items-center justify-center gap-4 text-[14px] font-medium px-3 hover:bg-[#ffe8d9] hover:border-[#e2b97f] focus:outline-none"
+              >
+                <FcGoogle className="w-[24px] h-[24px]" />
+                <span className="text-[#000]">Continue with Google</span>
+              </button>
+            </div>
+          </div>
+
+
+
+
+
+          <div className="flex justify-center w-full">
+            <span className="text-[14px] font-[500] text-[#181818] flex gap-1">
+              I accept the
+              <NavLink
+
+                className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
+              >
+                Terms & Conditions
+              </NavLink>
+              and
+              <NavLink
+
+                className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
+              >
+                Privacy Policy
+              </NavLink>
+            </span>
+          </div>
+
+
+
         </form>
       </div>
     </div>

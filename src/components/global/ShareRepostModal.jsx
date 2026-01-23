@@ -5,7 +5,7 @@ import {
   fetchMyPages,
   repostPostToPages,
 } from "../../redux/slices/pages.slice";
-import { ErrorToast } from "./Toaster";
+import { ErrorToast, SuccessToast } from "./Toaster";
 
 const ShareRepostModal = ({ onClose, postId }) => {
   const [selectedPages, setSelectedPages] = useState([]);
@@ -37,7 +37,7 @@ const ShareRepostModal = ({ onClose, postId }) => {
     )
       .unwrap()
       .then(() => {
-        ErrorToast("Post reposted successfully");
+        SuccessToast("Post reposted successfully");
         onClose();
       })
       .catch((err) => ErrorToast(err));
