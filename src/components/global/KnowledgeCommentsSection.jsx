@@ -1,38 +1,35 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Heart, MoreVertical, X, Star } from "lucide-react";
-import {
-  createComment,
-  deleteComment,
-  elevateComment,
-  getComment,
-  likeComment,
-  updateComment,
-} from "../../redux/slices/postfeed.slice";
+import { elevateComment } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
 import ReportModal from "./ReportModal"; // Report Modal
-import BlockingOptionsModal from "./BlockingOptionsModal"; // Block Modal
 import { sendReport } from "../../redux/slices/reports.slice";
-import { blockUser } from "../../redux/slices/profileSetting.slice";
-import { SuccessToast, ErrorToast } from "./Toaster";
+import { SuccessToast } from "./Toaster";
+import {
+  KnowledgeCreateComment,
+  KnowledgeDeleteComment,
+  KnowledgeGetComment,
+  KnowledgeUpdateComment,
+  likeComment,
+} from "../../redux/slices/knowledgepost.slice";
 
-export default function CommentsSection({ postId, isPageOwner = false }) {
+export default function KnowledgeCommentsSection({
+  postId,
+  isPageOwner = false,
+}) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
-    (state) => state.postsfeed
+    (state) => state.knowledgepost,
   );
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [newComment, setNewComment] = useState("");
   const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
   const [reportTargetId, setReportTargetId] = useState(null); // Store the comment ID to report
-  const [blockModal, setBlockModal] = useState(false); // To manage block modal state
-  const [blockTargetId, setBlockTargetId] = useState(null); // Store the comment/user ID to block
-  const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block
-  const { isLoading: blockLoading } = useSelector((state) => state.profileSetting || {});
   const dispatch = useDispatch();
 
   const handleGetComments = async () => {
-    await dispatch(getComment(postId));
+    await dispatch(KnowledgeGetComment(postId));
   };
 
   useEffect(() => {
@@ -46,18 +43,18 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       if (editingCommentId) {
         // 🔁 UPDATE
         await dispatch(
-          updateComment({
+          KnowledgeUpdateComment({
             commentId: editingCommentId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       } else {
         // ➕ CREATE
         await dispatch(
-          createComment({
-            post: postId,
+          KnowledgeCreateComment({
+            knowledgePost: postId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       }
 
@@ -72,12 +69,12 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
   const addReply = async (commentId, replyText) => {
     if (replyText.trim()) {
       const data = {
-        post: postId,
+        knowledgePost: postId,
         text: replyText,
         comment: commentId,
       };
 
-      await dispatch(createComment(data)).unwrap();
+      await dispatch(KnowledgeCreateComment(data)).unwrap();
       handleGetComments();
     }
   };
@@ -113,7 +110,7 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
   };
 
   const handleDeleteComment = async (commentId) => {
-    await dispatch(deleteComment(commentId)).unwrap();
+    await dispatch(KnowledgeDeleteComment(commentId)).unwrap();
     handleGetComments();
   };
 
@@ -127,41 +124,6 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
     }
   };
 
-  const handleBlockUser = (commentId, userId) => {
-    setBlockTargetId(commentId);
-    setBlockUserId(userId);
-    setBlockModal(true);
-  };
-
-  const handleBlockSubmit = async (option) => {
-    try {
-      // Map option to blockedFrom value
-      const blockedFromMap = {
-        comment: "Comment",
-        view: "Page",
-        all: "Global",
-      };
-
-      const payload = {
-        reason: "User blocked from comment",
-        userId: blockUserId,
-        blockedFrom: blockedFromMap[option] || "Comment",
-        targetId: blockTargetId,
-        isBlocked: true,
-      };
-
-      await dispatch(blockUser(payload)).unwrap();
-      SuccessToast("User blocked successfully");
-      setBlockModal(false);
-      setBlockTargetId(null);
-      setBlockUserId(null);
-      handleGetComments(); // Refresh comments
-    } catch (error) {
-      console.error("Failed to block user:", error);
-      ErrorToast(error?.message || "Failed to block user");
-    }
-  };
-
   const CommentItem = ({
     comment,
     isReply = false,
@@ -172,7 +134,6 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
     onDeleteComment,
     onElevateComment,
     onReportComment,
-    onBlockUser,
   }) => {
     const [isReplying, setIsReplying] = useState(false);
     const [replyText, setReplyText] = useState("");
@@ -199,68 +160,67 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       // Show "Edit" only if the comment belongs to the logged-in user
       ...(comment.user._id === user._id
         ? [
-          {
-            label: "Edit",
-            action: () => {
-              setNewComment(comment.text); // input fill
-              setEditingCommentId(comment._id); // edit mode ON
+            {
+              label: "Edit",
+              action: () => {
+                setNewComment(comment.text); // input fill
+                setEditingCommentId(comment._id); // edit mode ON
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // Show "Delete" if the comment belongs to the logged-in user
       ...(comment.user._id === user._id
         ? [
-          {
-            label: "Delete",
-            action: () => handleDeleteComment(comment?._id),
-          },
-        ]
+            {
+              label: "Delete",
+              action: () => handleDeleteComment(comment?._id),
+            },
+          ]
         : []),
 
-     // Show options based on whether it's user's own page or someone else's page
-  ...(comment.user._id !== user._id
-    ? isPageOwner
-      ? [
-          // If it's MY page, show these options for comments from others
-          {
-            label: "Elevate Comment",
-            action: () => {
-              onElevateComment(comment._id);
-            },
-          },
-          {
-            label: "Report and Delete",
-            action: () => {
-              onReportComment(comment._id);
-            },
-          },
-          {
-            label: "Delete.",
-            action: () => {
-              onDeleteComment(comment._id);
-            },
-          },
-          {
-            label: "Block",
-            action: () => {
-              onBlockUser(comment._id, comment.user._id);
-            },
-          },
-        ]
-      : [
-          // If it's someone else's page, only show Report
-          {
-            label: "Report",
-            action: () => {
-              onReportComment(comment._id);
-            },
-          },
-        ]
-    : []),
+      // Show options based on whether it's user's own page or someone else's page
+      ...(comment.user._id !== user._id
+        ? isPageOwner
+          ? [
+              // If it's MY page, show these options for comments from others
+              {
+                label: "Elevate Comment",
+                action: () => {
+                  onElevateComment(comment._id);
+                },
+              },
+              {
+                label: "Report and Delete",
+                action: () => {
+                  onReportComment(comment._id);
+                },
+              },
+              {
+                label: "Delete.",
+                action: () => {
+                  onDeleteComment(comment._id);
+                },
+              },
+              {
+                label: "Block",
+                action: () => {
+                  onReportComment(comment._id);
+                },
+              },
+            ]
+          : [
+              // If it's someone else's page, only show Report
+              {
+                label: "Report",
+                action: () => {
+                  onReportComment(comment._id);
+                },
+              },
+            ]
+        : []),
     ];
-
 
     const handleItemClick = (action) => {
       action();
@@ -277,7 +237,10 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
 
     useEffect(() => {
       const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target)
+        ) {
           setIsOpen(false); // Close dropdown if clicked outside
         }
       };
@@ -331,7 +294,11 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
                 <Heart
                   className={`w-4 h-4 ${comment.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
                 />
-                <span className={comment.isLiked ? "text-orange-500 font-medium" : ""}>
+                <span
+                  className={
+                    comment.isLiked ? "text-orange-500 font-medium" : ""
+                  }
+                >
                   {Number(comment.likesCount ?? 0)}
                 </span>
               </button>
@@ -421,7 +388,6 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
             onDeleteComment={onDeleteComment}
             onElevateComment={onElevateComment}
             onReportComment={onReportComment}
-            onBlockUser={onBlockUser}
           />
         ))}
       </div>
@@ -439,7 +405,9 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
         <div className="flex-1 flex gap-2">
           <input
             type="text"
-            placeholder={editingCommentId ? "Update your comment..." : "Add a comment"}
+            placeholder={
+              editingCommentId ? "Update your comment..." : "Add a comment"
+            }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && addComment()}
@@ -449,10 +417,11 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
             onClick={addOrUpdateComment}
             disabled={commentLoading}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
-    ${commentLoading
-                ? "bg-orange-300 cursor-not-allowed"
-                : "bg-orange-500 hover:bg-orange-600 text-white"
-              }
+    ${
+      commentLoading
+        ? "bg-orange-300 cursor-not-allowed"
+        : "bg-orange-500 hover:bg-orange-600 text-white"
+    }
   `}
           >
             {commentLoading
@@ -470,34 +439,33 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       <div className="space-y-1">
         {getCommentsLoading
           ? Array.from({ length: 2 }).map((_, idx) => (
-            <div key={idx} className="flex gap-3 py-3 animate-pulse">
-              {/* Avatar */}
-              <div className="w-8 h-8 bg-gray-300 rounded-full" />
+              <div key={idx} className="flex gap-3 py-3 animate-pulse">
+                {/* Avatar */}
+                <div className="w-8 h-8 bg-gray-300 rounded-full" />
 
-              {/* Content */}
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-24 bg-gray-300 rounded" />
-                <div className="h-3 w-full bg-gray-200 rounded" />
-                <div className="h-3 w-3/4 bg-gray-200 rounded" />
+                {/* Content */}
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-24 bg-gray-300 rounded" />
+                  <div className="h-3 w-full bg-gray-200 rounded" />
+                  <div className="h-3 w-3/4 bg-gray-200 rounded" />
+                </div>
               </div>
-            </div>
-          ))
+            ))
           : postComments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              onAddReply={addReply}
-              comment={comment}
-              setNewComment={setNewComment}
-              setEditingCommentId={setEditingCommentId}
-              onDeleteComment={handleDeleteComment}
-              onElevateComment={handleElevateComment}
-              onReportComment={(commentId) => {
-                setReportTargetId(commentId);
-                setReportmodal(true);
-              }}
-              onBlockUser={handleBlockUser}
-            />
-          ))}
+              <CommentItem
+                key={comment.id}
+                onAddReply={addReply}
+                comment={comment}
+                setNewComment={setNewComment}
+                setEditingCommentId={setEditingCommentId}
+                onDeleteComment={handleDeleteComment}
+                onElevateComment={handleElevateComment}
+                onReportComment={(commentId) => {
+                  setReportTargetId(commentId);
+                  setReportmodal(true);
+                }}
+              />
+            ))}
       </div>
 
       {/* Report Modal */}
@@ -512,21 +480,9 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
               targetModel: "Comment",
               targetId: reportTargetId, // Use the comment's target ID for reporting
               isReported: true,
-            })
+            }),
           );
         }}
-      />
-
-      {/* Block Modal */}
-      <BlockingOptionsModal
-        isOpen={blockModal}
-        onClose={() => {
-          setBlockModal(false);
-          setBlockTargetId(null);
-          setBlockUserId(null);
-        }}
-        onSubmit={handleBlockSubmit}
-        loading={blockLoading}
       />
     </div>
   );

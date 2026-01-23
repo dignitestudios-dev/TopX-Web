@@ -32,6 +32,20 @@ export const getBlockedUsers = createAsyncThunk(
   }
 );
 
+export const blockUser = createAsyncThunk(
+  "profile/blockUser",
+  async (payload, thunkAPI) => {
+    try {
+      const res = await axios.post(`/blocks`, payload);
+      return res?.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to block user"
+      );
+    }
+  }
+);
+
 export const unblockUser = createAsyncThunk(
   `/blocks/id`,
   async (payload, thunkAPI) => {

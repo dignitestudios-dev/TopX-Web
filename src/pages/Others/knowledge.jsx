@@ -31,10 +31,7 @@ import {
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import KnowledgePostComments from "../../components/global/KnowledgePostComments";
-import SharePostModal from "../../components/global/SharePostModal";
 import ShareToChatsModal from "../../components/global/ShareToChatsModal";
-import PostStoryModal from "../../components/global/PostStoryModal";
-import ShareRepostModal from "../../components/global/ShareRepostModal";
 import ReportModal from "../../components/global/ReportModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "../../components/global/Toaster";
@@ -51,10 +48,9 @@ export default function Knowledge() {
   const [moreOpenId, setMoreOpenId] = useState(null);
 
   const [reportmodal, setReportmodal] = useState(false);
-  const [selectedOption, setSelectedOption] = useState("");
   const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
   const dropdownRef = useRef(null);
   useEffect(() => {
@@ -80,7 +76,7 @@ export default function Knowledge() {
           setPage((prev) => prev + 1);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     if (observerTarget.current) {
@@ -121,24 +117,10 @@ export default function Knowledge() {
     if (minutes > 0) return `${minutes}m ago`;
     return "just now";
   };
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
+  const handleLikeClick = async (postId, currentLikeStatus) => {
     const newLikeStatus = !currentLikeStatus;
-
-    // Calculate increment based on toggle
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
-
-    // Optimistic update in localStorage
-    const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
-    localStorage.setItem("postLikes", JSON.stringify(likes));
-
-    // Update UI immediately
-    toggleLike(postId, newLikeStatus, newLikesCount);
-
     // Call API
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+    await dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
 
   // Close dropdown on outside click
@@ -162,12 +144,6 @@ export default function Knowledge() {
       setReportmodal(false);
     }
   }, [reportSuccess, dispatch]);
-  const options = [
-    "Share to your Story",
-    "Share with Topic Page",
-    "Share in Individuals Chats",
-    "Share in Group Chats",
-  ];
 
   return (
     <div className="flex  min-h-screen max-w-7xl mx-auto">
@@ -196,7 +172,10 @@ export default function Knowledge() {
                 <div className="p-4 flex items-start justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3 flex-1">
                     <img
-                      src={post.author.profilePicture || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"}
+                      src={
+                        post.author.profilePicture ||
+                        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"
+                      }
                       alt="User"
                       className="w-10 h-10 rounded-full object-cover"
                     />
@@ -242,7 +221,7 @@ export default function Knowledge() {
                 {/* Post Content */}
                 <div
                   className={`bg-gradient-to-br ${getGradient(
-                    index
+                    index,
                   )} rounded-2xl m-3 p-[10em] min-h-[200px] flex items-center justify-center relative`}
                   style={
                     post.background
@@ -265,21 +244,31 @@ export default function Knowledge() {
                 {/* Stats */}
                 <div className="flex items-center gap-10 text-sm text-orange-500 p-4 border-t border-gray-100">
                   <button
+                    type="button"
                     onClick={() =>
-                      handleLikeClick(post._id, post.isLiked, post.likesCount)
+                      handleLikeClick(
+                        post?._id,
+                        post?.isLiked,
+                        post?.likesCount,
+                      )
                     }
-                    className="flex items-center gap-2 hover:text-orange-600"
+                    className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
                   >
                     <Heart
                       className={`w-5 h-5 transition ${
-                        post.isLiked
+                        post?.isLiked
                           ? "fill-orange-500 text-orange-500"
                           : "text-gray-600"
                       }`}
                     />
-                    <span>{post.likesCount}</span>
+                    <span
+                      className={`text-sm font-medium ${
+                        post?.isLiked ? "text-orange-500" : "text-gray-600"
+                      }`}
+                    >
+                      {post?.likesCount}
+                    </span>
                   </button>
-
                   <button
                     onClick={() => {
                       setCommentsOpen(!commentsOpen);
@@ -304,28 +293,23 @@ export default function Knowledge() {
                 {commentsOpen && commentedId == post?._id && (
                   <KnowledgePostComments postId={post._id} />
                 )}
-                {/* Share Post Modal */}
+                {/* Share Modal - Directly open ShareToChatsModal for knowledge posts */}
                 {sharepost && (
-                  <SharePostModal
-                    selectedOption={selectedOption}
-                    setSelectedOption={setSelectedOption}
-                    setSharepost={setSharepost}
-                    options={options}
-                  />
-                )}
-
-                {(selectedOption === "Share in Individuals Chats" ||
-                  selectedOption === "Share in Group Chats") && (
-                  <ShareToChatsModal onClose={setSelectedOption} />
-                )}
-
-                {selectedOption === "Share to your Story" && (
-                  <PostStoryModal onClose={setSelectedOption} />
-                )}
-                {selectedOption === "Share with Topic Page" && (
-                  <ShareRepostModal
-                    postId={post?._id}
-                    onClose={setSelectedOption}
+                  <ShareToChatsModal 
+                    onClose={() => setSharepost(false)} 
+                    post={{
+                      _id: post._id,
+                      contentType: "knowledge",
+                      type: "knowledge",
+                      text: post.text,
+                      bodyText: post.text,
+                      content: post.text,
+                      backgroundCode: post.background,
+                      page: post.page,
+                      pageImage: post.page?.image,
+                      pageName: post.page?.name,
+                      author: post.author,
+                    }}
                   />
                 )}
 
@@ -340,7 +324,7 @@ export default function Knowledge() {
                         targetModel: "Post",
                         targetId: post?._id,
                         isReported: true,
-                      })
+                      }),
                     );
                   }}
                 />
@@ -371,12 +355,14 @@ export default function Knowledge() {
           <div ref={observerTarget} className="h-0 -mt-[1.4em]" />
 
           {!knowledgeFeedLoading && knowledgeFeed?.length === 0 && (
-             <div className="text-gray-500 col-span-3 text-center py-10">
-                            <div className=" flex justify-center">
-                            <img src={nofound} height={300} width={300} alt="" />
-                            </div>
-                            <p className="font-bold pt-4 text-black">No Knowledge Posts Found.</p>
-                          </div>
+            <div className="text-gray-500 col-span-3 text-center py-10">
+              <div className=" flex justify-center">
+                <img src={nofound} height={300} width={300} alt="" />
+              </div>
+              <p className="font-bold pt-4 text-black">
+                No Knowledge Posts Found.
+              </p>
+            </div>
           )}
         </div>
       </div>

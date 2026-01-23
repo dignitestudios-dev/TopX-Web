@@ -26,6 +26,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [activeMedia, setActiveMedia] = useState(null);
   console.log("postpostpostpostpost", post)
 
+ 
+
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const isLiked = liked[post.id];
@@ -37,11 +39,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [selectedOption, setSelectedOption] = useState("");
   const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
   const { user: authUser } = useSelector((state) => state.auth);
 
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
+  const handleLikeClick = async(postId, currentLikeStatus, currentLikesCount) => {
     const newLikeStatus = !currentLikeStatus;
     const newLikesCount = newLikeStatus
       ? (currentLikesCount ?? 0) + 1
@@ -50,9 +52,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
     likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
     localStorage.setItem("postLikes", JSON.stringify(likes));
-
     toggleLike(postId, newLikeStatus, newLikesCount);
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+    await dispatch(likePost({ postId, likeToggle: newLikeStatus }));
   };
 
   const dropdownRef = useRef(null);
@@ -241,6 +242,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {/* Stats - Action Bar */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
+          type="button" // 👈 YE ADD KARO
           onClick={() =>
             handleLikeClick(post.id, post.isLiked, post.likesCount)
           }
@@ -300,7 +302,16 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal onClose={setSelectedOption} />
+          <ShareToChatsModal 
+            onClose={setSelectedOption} 
+            post={{
+              _id: post.id,
+              page: post.page,
+              media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
+              bodyText: post.text,
+              author: post.author,
+            }}
+          />
         )}
 
       {selectedOption === "Share to your Story" && (
@@ -321,7 +332,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               targetModel: "Post",
               targetId: post.id,
               isReported: true,
-            })
+            }),
           );
         }}
       />

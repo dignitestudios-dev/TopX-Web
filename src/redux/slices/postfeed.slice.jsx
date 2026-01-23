@@ -36,6 +36,7 @@ export const likePost = createAsyncThunk(
   "posts/likePost",
   async ({ postId, likeToggle }, thunkAPI) => {
     try {
+      console.log(postId,likeToggle,"tottk")
       const res = await axios.post("/likes/post", {
         post: postId,
         likeToggle: likeToggle, // true for like, false for unlike

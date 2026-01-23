@@ -1,47 +1,121 @@
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { IoChevronBackOutline } from "react-icons/io5";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Trash2 } from "lucide-react";
-import { getKnowledgePostDetail, deleteKnowledgePost, resetKnowledge, likePost } from "../../../redux/slices/knowledgepost.slice";
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  Trash2,
+} from "lucide-react";
+import {
+  getKnowledgePostDetail,
+  deleteKnowledgePost,
+  resetKnowledge,
+  likePost,
+} from "../../../redux/slices/knowledgepost.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
-import ShareToChatsModal from "../../global/ShareToChatsModal";
+import ReportModal from "../../global/ReportModal";
+import ShareRepostModal from "../../global/ShareRepostModal";
+import PostStoryModal from "./PostStoryModal";
+import SharePostModal from "../../global/SharePostModal";
+import CommentsSection from "../../global/CommentsSection";
+import KnowledgeCommentsSection from "../../global/KnowledgeCommentsSection";
+import ShareToChatsModal from "../../global/ShareToChatsModal"
 
-export default function KnowledgePostPageDetail({ pageId, setIsKnowledgePageOpen }) {
-    const dispatch = useDispatch();
-    const [likedPosts, setLikedPosts] = useState(new Set());
-    const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
-    const [showDeleteMenu, setShowDeleteMenu] = useState(null);
-    const [likingPostId, setLikingPostId] = useState(null);
-    const [activeSubTopic, setActiveSubTopic] = useState("All");
-    const [shareModalOpen, setShareModalOpen] = useState(false);
-    const [selectedPostForShare, setSelectedPostForShare] = useState(null);
+export default function KnowledgePostPageDetail({
+  pageId,
+  setIsKnowledgePageOpen,
+}) {
+  const dispatch = useDispatch();
+  const [likedPosts, setLikedPosts] = useState(new Set());
+  const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
+  const [showDeleteMenu, setShowDeleteMenu] = useState(null);
+  const [likingPostId, setLikingPostId] = useState(null);
+  const [activeSubTopic, setActiveSubTopic] = useState("All");
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [sharepost, setSharepost] = useState(false);
+  const { user } = useSelector((state) => state.auth);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [reportmodal, setReportmodal] = useState(false);
 
-    const { user } = useSelector((state) => state.auth);
-
-    const presetBackgrounds = [
-        { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
-        { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
-        { id: 3, name: "bg_red_gradient", imagePath: "/bg_orange_gradient.jpg" },
-        { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
-        { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" }
-    ];
-
-    const {
-        knowledgePageDetail,
-        knowledgePagePosts,
-        knowledgePageLoading,
-        deleteLoading,
-        deleteSuccess
-    } = useSelector((state) => state.knowledgepost);
-
-    const deleteMenuRefs = useRef({}); // Use ref to track delete menus for each post
+  const presetBackgrounds = [
+    { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
+    { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
+    { id: 3, name: "bg_red_gradient", imagePath: "/bg_red_gradient.png" },
+    { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
+    { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" },
+  ];
+  const [shareModalOpen,setShareModalOpen]= useState(false);
+  const options = [
+    "Share to your Story",
+    "Share with Topic Page",
+    "Share in Individuals Chats",
+    "Share in Group Chats",
+  ];
+  const [selectedPostForShare, setSelectedPostForShare] = useState(null);
 
 
+  const deleteMenuRefs = useRef({});
+
+
+  const {
+    knowledgePageDetail,
+    knowledgePagePosts,
+    knowledgePageLoading,
+    deleteLoading,
+    deleteSuccess,
+  } = useSelector((state) => state.knowledgepost);
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports,
+  );
+  useEffect(() => {
+    if (pageId) {
+      dispatch(getKnowledgePostDetail({ pageId, page: 1, limit: 10 }));
+    }
+  }, [pageId]);
+
+    // Initialize liked posts from localStorage and API data
     useEffect(() => {
-        if (pageId) {
-            dispatch(getKnowledgePostDetail({ pageId, page: 1, limit: 10 }));
+        if (knowledgePagePosts && user?._id) {
+            const localLikes = JSON.parse(localStorage.getItem("knowledgePostLikes") || "{}");
+            const initialLiked = new Set();
+            const initialCounts = {};
+
+            knowledgePagePosts.forEach(post => {
+                // Check localStorage first, then API data
+                const isLocallyLiked = localLikes[post._id] === true;
+                const isApiLiked = post.userLikes?.includes(user._id) || post.isLiked;
+
+                if (isLocallyLiked || isApiLiked) {
+                    initialLiked.add(post._id);
+                }
+
+                // Store initial counts from API
+                initialCounts[post._id] = post.likesCount || 0;
+            });
+
+            setLikedPosts(initialLiked);
+            setLikesCounts(initialCounts);
         }
-    }, [pageId]);
+    }, [knowledgePagePosts, user?._id]);
+
+    // Close the delete menu when clicked outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            // Check if click is outside any open menu
+            if (showDeleteMenu) {
+                const menuRef = deleteMenuRefs.current[showDeleteMenu];
+                if (menuRef && !menuRef.contains(event.target)) {
+                    setShowDeleteMenu(null);
+                }
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showDeleteMenu]);
 
     // Initialize liked posts from localStorage and API data
     useEffect(() => {
@@ -93,112 +167,38 @@ export default function KnowledgePostPageDetail({ pageId, setIsKnowledgePageOpen
         }, 1500);
     }
 
-    console.log(knowledgePagePosts, "knowledgePagePosts")
+  const handleLikeClick = async (postId, isKnowlegdeLike) => {
+    dispatch(
+      likePost({
+        postId: postId,
+        likeToggle: !isKnowlegdeLike,
+      }),
+    );
+  };
 
+  const handleDelete = (postId) => {
+    dispatch(deleteKnowledgePost(postId));
+    setShowDeleteMenu(null);
+  };
 
-    const handleLike = async (postId) => {
-        const post = knowledgePagePosts?.find(p => p._id === postId);
-        if (!post) return;
-
-        // Check if user has already liked the post (check localStorage first, then API data)
-        const localLikes = JSON.parse(localStorage.getItem("knowledgePostLikes") || "{}");
-        const isLocallyLiked = localLikes[postId] === true;
-        const isCurrentlyLiked = isLocallyLiked || post.userLikes?.includes(user?._id) || post.isLiked || likedPosts.has(postId);
-        const newLikeToggle = !isCurrentlyLiked;
-
-        // Get current count (use optimistic count if available, otherwise API count)
-        const currentCount = likesCounts[postId] !== undefined ? likesCounts[postId] : (post.likesCount || 0);
-        const newCount = newLikeToggle
-            ? currentCount + 1
-            : Math.max(currentCount - 1, 0);
-
-        // Update local state immediately - Heart icon
-        setLikedPosts(prev => {
-            const newSet = new Set(prev);
-            if (newLikeToggle) {
-                newSet.add(postId);
-            } else {
-                newSet.delete(postId);
-            }
-            return newSet;
-        });
-
-        // Update count immediately - Optimistic update
-        setLikesCounts(prev => ({
-            ...prev,
-            [postId]: newCount
-        }));
-
-        // Save to localStorage immediately
-        const updatedLocalLikes = { ...localLikes, [postId]: newLikeToggle };
-        localStorage.setItem("knowledgePostLikes", JSON.stringify(updatedLocalLikes));
-
-        setLikingPostId(postId);
-
-        try {
-            // API hit
-            await dispatch(likePost({
-                postId,
-                likeToggle: newLikeToggle
-            })).unwrap();
-
-            // Note: Count will be updated from API when page reloads/refetches
-        } catch (error) {
-            // Revert local state on error
-            setLikedPosts(prev => {
-                const newSet = new Set(prev);
-                if (isCurrentlyLiked) {
-                    newSet.add(postId);
-                } else {
-                    newSet.delete(postId);
-                }
-                return newSet;
-            });
-
-            // Revert count on error
-            setLikesCounts(prev => ({
-                ...prev,
-                [postId]: currentCount
-            }));
-
-            // Revert localStorage on error
-            const revertedLikes = { ...localLikes };
-            if (isCurrentlyLiked) {
-                revertedLikes[postId] = true;
-            } else {
-                delete revertedLikes[postId];
-            }
-            localStorage.setItem("knowledgePostLikes", JSON.stringify(revertedLikes));
-
-            ErrorToast(error);
-        } finally {
-            setLikingPostId(null);
-        }
+  const getFontClass = (fontFamily) => {
+    const fontMap = {
+      Classic: "font-sans",
+      Signature: "font-serif",
+      Editor: "font-mono",
+      Poster: "font-black",
+      Bubble: "font-serif",
     };
+    return fontMap[fontFamily] || "font-sans";
+  };
 
-    const handleDelete = (postId) => {
-        dispatch(deleteKnowledgePost(postId));
-        setShowDeleteMenu(null);
-    };
-
-    const getFontClass = (fontFamily) => {
-        const fontMap = {
-            "Classic": "font-sans",
-            "Signature": "font-serif",
-            "Editor": "font-mono",
-            "Poster": "font-black",
-            "Bubble": "font-serif"
-        };
-        return fontMap[fontFamily] || "font-sans";
-    };
-
-    if (knowledgePageLoading || !knowledgePageDetail) {
-        return (
-            <div className="p-6 text-center text-gray-500 font-semibold">
-                Loading page...
-            </div>
-        );
-    }
+  if (knowledgePageLoading || !knowledgePageDetail) {
+    return (
+      <div className="p-6 text-center text-gray-500 font-semibold">
+        Loading page...
+      </div>
+    );
+  }
 
     // Build unique subTopic tabs from posts (split by comma, trim)
     const subTopicSet = new Set();
@@ -425,40 +425,38 @@ export default function KnowledgePostPageDetail({ pageId, setIsKnowledgePageOpen
                                 </div>
                             ) : null}
 
-                        {/* Post Footer - Interaction Buttons */}
-                        <div className="px-6 py-5 bg-white flex items-center gap-8">
-                            <button
-                                onClick={() => handleLike(post._id)}
-                                disabled={likingPostId === post._id}
-                                className="flex items-center gap-2 group transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Heart
-                                    size={22}
-                                    className={`${post.userLikes?.includes(user?._id) || post.isLiked || likedPosts.has(post._id)
-                                        ? "fill-red-500 text-red-500"
-                                        : "text-gray-500 group-hover:text-red-500"
-                                        } transition-colors`}
-                                />
-                                <span className={`text-sm font-semibold transition-colors ${likedPosts.has(post._id)
-                                    ? "text-red-500"
-                                    : "text-gray-600"
-                                    }`}>
-                                    {likesCounts[post._id] !== undefined
-                                        ? likesCounts[post._id]
-                                        : (post.likesCount || 0)
-                                    }
-                                </span>
-                            </button>
+              {/* Post Footer - Interaction Buttons */}
+              <div className="px-6 py-5 bg-white flex items-center gap-8">
+                <button
+                  type="button"
+                  onClick={() => handleLikeClick(post._id, post.isLiked)}
+                  className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+                >
+                  <Heart
+                    className={`w-5 h-5 transition ${
+                      post?.isLiked
+                        ? "fill-orange-500 text-orange-500"
+                        : "text-gray-600"
+                    }`}
+                  />
+                  <span
+                    className={`text-sm font-medium ${
+                      post?.isLiked ? "text-orange-500" : "text-gray-600"
+                    }`}
+                  >
+                    {post?.likesCount}
+                  </span>
+                </button>
 
-                            <button className="flex items-center gap-2 group transition-colors">
-                                <MessageCircle
-                                    size={22}
-                                    className="text-gray-500 group-hover:text-orange-500 transition-colors"
-                                />
-                                <span className="text-sm font-semibold text-gray-600">
-                                    {post.commentsCount}
-                                </span>
-                            </button>
+                <button
+                  onClick={() => setCommentsOpen(!commentsOpen)}
+                  className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="text-sm font-medium">
+                    {post?.commentsCount}
+                  </span>
+                </button>
 
                             <button 
                                 onClick={() => {

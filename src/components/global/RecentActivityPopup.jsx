@@ -58,14 +58,14 @@ const RecentActivityPopup = ({ onClose }) => {
   return (
     <div className="absolute right-[10em] top-[6em] w-[22rem] bg-white shadow-xl rounded-xl border scrollbar-hide border-gray-200 z-50">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-        <h3 className="text-[16px] font-semibold">Recent Activity</h3>
+        <h3 className="text-[16px] font-semibold">Recent Post Engagments</h3>
         <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
           <X size={20} />
         </button>
       </div>
       <div className="px-4 py-2">
         <div className="flex items-center justify-between">
-          <p className="text-[16px] font-[500]">Turn ON Recent Post Activity</p>
+          <p className="text-[14px] font-[500]">Turn ON Recent Post Engagments</p>
 
           <div className="flex items-center gap-2">
             {updateLoader ? (
@@ -261,7 +261,7 @@ const RecentActivityPopup = ({ onClose }) => {
           })
         ) : (
           <div className="text-center text-sm text-gray-400 py-10">
-            No recent activity
+            No Recent Post Engagments
           </div>
         )}
       </div>

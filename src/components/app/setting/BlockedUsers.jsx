@@ -69,10 +69,10 @@ export default function BlockedUsers() {
         onClose={() => setOpenModal(false)}
         heading="Unblock User"
         message="Are you sure you want to unblock this user?"
-        confirmText="Unblock"
+        confirmText="Unblock Now"
         confirmBgColor="bg-orange-600"
         confirmHoverColor="hover:bg-orange-700"
-        autoCloseDuration={2000}
+       
       />
     </div>
   );

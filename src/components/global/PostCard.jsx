@@ -27,6 +27,7 @@ import SharePostModal from "./SharePostModal";
 import ShareToChatsModal from "./ShareToChatsModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
+import CommentsSection from "./CommentsSection";
 
 const Button = ({ size = "md", variant = "orange", children, onClick }) => {
   const sizeClasses = {
@@ -91,7 +92,7 @@ const PostCard = ({
   ];
 
   const { comments, commentsLoading, isLoading } = useSelector(
-    (state) => state.posts
+    (state) => state.posts,
   );
 
   console.log(comments, "comments");
@@ -126,7 +127,7 @@ const PostCard = ({
       commentonpost({
         postId: post._id,
         text: commentInput,
-      })
+      }),
     ).then(() => {
       dispatch(getcommentsofpost({ postId: post._id }));
     });
@@ -169,7 +170,7 @@ const PostCard = ({
         id: postId,
         likeToggle: newLikeStatus,
         isPost: true,
-      })
+      }),
     ).unwrap();
     await dispatch(getMyPosts({ page: 1, limit: 100 })).unwrap();
   };
@@ -192,7 +193,7 @@ const PostCard = ({
         id: comment._id, // comment ID
         likeToggle: newLikeStatus,
         isPost: false, // IMPORTANT
-      })
+      }),
     ).then(() => {
       // Refresh comments after like
       dispatch(getcommentsofpost({ postId: post._id }));
@@ -335,8 +336,8 @@ const PostCard = ({
                     isPostLiked
                       ? "fill-orange-500 text-orange-500"
                       : likeLoading
-                      ? "text-gray-400"
-                      : "text-orange-500"
+                        ? "text-gray-400"
+                        : "text-orange-500"
                   }`}
                 />
                 <span className="text-orange-500">
@@ -377,184 +378,7 @@ const PostCard = ({
           )}
 
           {/* Comments Section */}
-          {showComments && (
-            <div className="mt-4 space-y-4">
-              <h3 className="font-semibold text-gray-800 text-sm">Comments</h3>
-
-              {/* Add Comment */}
-              <div className="flex items-center gap-2">
-                <img
-                  src="https://randomuser.me/api/portraits/lego/1.jpg"
-                  alt="User"
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-                <div className="flex-1 flex items-center border rounded-full px-3 py-2">
-                  <input
-                    type="text"
-                    placeholder="Add a comment"
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    className="w-full text-sm outline-none"
-                  />
-                  <button
-                    onClick={handleAddComment}
-                    className="text-orange-500 hover:text-orange-600"
-                  >
-                    <SendHorizontal className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Comment List */}
-              <div className="space-y-4">
-                {commentsLoading && (
-                  <div className="flex justify-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500 border-t-transparent"></div>
-                  </div>
-                )}
-
-                {!commentsLoading && comments.length === 0 && (
-                  <p className="text-gray-500 text-sm">No comments yet.</p>
-                )}
-
-                {comments.map((comment) => (
-                  <div key={comment._id} className="flex flex-col gap-2">
-                    <div className="flex items-start gap-3 relative">
-                      {/* Avatar */}
-                      <img
-                        src={comment.user?.profilePicture}
-                        alt={comment.user?.name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-
-                      {/* Comment Content */}
-                      <div className="flex-1">
-                        <div className="bg-gray-50 rounded-xl px-3 py-2 inline-block">
-                          <p className="text-sm font-semibold">
-                            {comment.user?.name}{" "}
-                            <span className="text-xs text-gray-500">
-                              @{comment.user?.username}
-                            </span>
-                          </p>
-                          <p className="text-sm text-gray-700">
-                            {comment.text}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                          <button
-                            onClick={() =>
-                              !likeLoading && handleLikeComment(comment)
-                            }
-                            disabled={likeLoading}
-                            className={`flex items-center gap-1 transition-all ${
-                              likeLoading
-                                ? "opacity-50 cursor-not-allowed"
-                                : "hover:text-orange-600 text-orange-500"
-                            }`}
-                          >
-                            {likeLoading ? (
-                              <svg
-                                className="animate-spin h-4 w-4 text-orange-500"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                              >
-                                <circle
-                                  className="opacity-25"
-                                  cx="12"
-                                  cy="12"
-                                  r="10"
-                                  stroke="currentColor"
-                                  strokeWidth="4"
-                                ></circle>
-                                <path
-                                  className="opacity-75"
-                                  fill="currentColor"
-                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                                ></path>
-                              </svg>
-                            ) : (
-                              <Heart
-                                className={`w-4 h-4 transition-all ${
-                                  comment.isLiked
-                                    ? "fill-orange-500 text-orange-500"
-                                    : ""
-                                }`}
-                              />
-                            )}
-                            <span>{comment.likesCount}</span>
-                          </button>
-
-                          <button className="hover:text-orange-600">
-                            Reply
-                          </button>
-                          <span>
-                            {new Date(comment.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* DELETE COMMENT BUTTON */}
-                      <button
-                        onClick={() => handleDeleteComment(comment._id)}
-                        className="absolute right-0 top-6 text-gray-400 hover:text-red-500 transition"
-                        title="Delete Comment"
-                      >
-                        <FaRegTrashCan color="#FB903A" size={16} />
-                      </button>
-                    </div>
-
-                    {/* REPLIES */}
-                    {comment.replies && comment.replies.length > 0 && (
-                      <div className="ml-10 mt-2 space-y-3">
-                        {comment.replies.map((reply) => (
-                          <div
-                            key={reply._id}
-                            className="flex items-start gap-3"
-                          >
-                            <img
-                              src={reply.user?.profilePicture}
-                              alt={reply.user?.name}
-                              className="w-7 h-7 rounded-full object-cover"
-                            />
-                            <div className="flex-1">
-                              <div className="bg-gray-100 rounded-xl px-3 py-2 inline-block">
-                                <p className="text-sm font-semibold">
-                                  {reply.user?.name}{" "}
-                                  <span className="text-xs text-gray-500">
-                                    @{reply.user?.username}
-                                  </span>
-                                </p>
-                                <p className="text-sm text-gray-700">
-                                  {reply.text}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                                <button className="flex items-center gap-1 text-orange-500 hover:text-orange-600">
-                                  <Heart
-                                    className={`w-4 h-4 ${
-                                      reply.isLiked
-                                        ? "fill-orange-500 text-orange-500"
-                                        : ""
-                                    }`}
-                                  />
-                                  <span>{reply.likesCount}</span>
-                                </button>
-                                <span>
-                                  {new Date(reply.createdAt).toLocaleString()}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {showComments && <CommentsSection postId={post._id} />}
         </div>
       </div>
 
@@ -663,7 +487,7 @@ const PostCard = ({
               editPost({
                 postId: selectedPost?._id,
                 formData: updatedPost,
-              })
+              }),
             );
             await dispatch(getMyPosts({}));
           }}
