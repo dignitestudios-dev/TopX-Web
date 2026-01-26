@@ -15,19 +15,30 @@ import BlockingOptionsModal from "./BlockingOptionsModal"; // Block Modal
 import { sendReport } from "../../redux/slices/reports.slice";
 import { blockUser } from "../../redux/slices/profileSetting.slice";
 import { SuccessToast, ErrorToast } from "./Toaster";
+import { TiPin } from "react-icons/ti";
 
-export default function CommentsSection({ postId, isPageOwner = false }) {
+export default function CommentsSection({ postId, isPageOwner = false, pageId = null }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed
   );
+  // Get post from Redux state to extract pageId and page owner
+  const { posts, pagepost, allfeedposts } = useSelector((state) => state.posts || {});
+  const allPosts = [...(posts || []), ...(pagepost || []), ...(allfeedposts || [])];
+  const currentPost = allPosts.find((p) => p._id === postId);
+  // Extract pageId from post
+  const postPageId = currentPost?.page?._id || currentPost?.pageId || currentPost?.page || pageId;
+  // Extract page owner ID (user who owns the page)
+  const pageOwnerId = currentPost?.page?.user?._id || currentPost?.page?.user || currentPost?.author?._id || currentPost?.author || user?._id;
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [newComment, setNewComment] = useState("");
   const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
   const [reportTargetId, setReportTargetId] = useState(null); // Store the comment ID to report
   const [blockModal, setBlockModal] = useState(false); // To manage block modal state
   const [blockTargetId, setBlockTargetId] = useState(null); // Store the comment/user ID to block
-  const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block
+  const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block (comment user)
+  const [blockPageId, setBlockPageId] = useState(null); // Store the page ID for blocking
+  const [blockPageOwnerId, setBlockPageOwnerId] = useState(null); // Store the page owner ID for blocking
   const { isLoading: blockLoading } = useSelector((state) => state.profileSetting || {});
   const dispatch = useDispatch();
 
@@ -124,12 +135,24 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
+      // Extract error message from different possible structures
+      const errorMessage =
+        error?.message ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.payload?.message ||
+        "Failed to elevate comment";
+      ErrorToast(errorMessage);
     }
   };
 
-  const handleBlockUser = (commentId, userId) => {
+  const handleBlockUser = (commentId, userId, commentPageId = null) => {
     setBlockTargetId(commentId);
-    setBlockUserId(userId);
+    setBlockUserId(userId); // Comment user ID (who is being blocked)
+    // Use pageId from comment, post, prop, or fallback
+    setBlockPageId(commentPageId || postPageId || pageId);
+    // Set page owner ID (page owner who is blocking)
+    setBlockPageOwnerId(pageOwnerId);
     setBlockModal(true);
   };
 
@@ -142,11 +165,35 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
         all: "Global",
       };
 
+      // Determine targetId based on option:
+      // - "view": use pageId
+      // - "all": use pageOwnerId (page owner's ID who is blocking)
+      // - "comment": use commentId
+      let targetId;
+      if (option === "view") {
+        targetId = blockPageId;
+      } else if (option === "all") {
+        targetId = blockPageOwnerId; // Use page owner ID for global block
+      } else {
+        targetId = blockTargetId; // Use comment ID for comment block
+      }
+
+      if (!targetId) {
+        if (option === "view") {
+          ErrorToast("Page ID not found. Unable to block from viewing.");
+        } else if (option === "all") {
+          ErrorToast("Page owner ID not found. Unable to block user.");
+        } else {
+          ErrorToast("Target ID not found");
+        }
+        return;
+      }
+
       const payload = {
         reason: "User blocked from comment",
         userId: blockUserId,
         blockedFrom: blockedFromMap[option] || "Comment",
-        targetId: blockTargetId,
+        targetId: targetId,
         isBlocked: true,
       };
 
@@ -155,6 +202,8 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       setBlockModal(false);
       setBlockTargetId(null);
       setBlockUserId(null);
+      setBlockPageId(null);
+      setBlockPageOwnerId(null);
       handleGetComments(); // Refresh comments
     } catch (error) {
       console.error("Failed to block user:", error);
@@ -219,46 +268,69 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
         ]
         : []),
 
-     // Show options based on whether it's user's own page or someone else's page
-  ...(comment.user._id !== user._id
-    ? isPageOwner
-      ? [
-          // If it's MY page, show these options for comments from others
+      // Show "Elevate Comment" if the comment belongs to the logged-in user
+      ...(comment.user._id === user._id
+        ? [
           {
             label: "Elevate Comment",
             action: () => {
               onElevateComment(comment._id);
             },
           },
-          {
-            label: "Report and Delete",
-            action: () => {
-              onReportComment(comment._id);
-            },
-          },
-          {
-            label: "Delete.",
-            action: () => {
-              onDeleteComment(comment._id);
-            },
-          },
-          {
-            label: "Block",
-            action: () => {
-              onBlockUser(comment._id, comment.user._id);
-            },
-          },
         ]
-      : [
-          // If it's someone else's page, only show Report
-          {
-            label: "Report",
-            action: () => {
-              onReportComment(comment._id);
+        : []),
+
+      // Show options based on whether it's user's own page or someone else's page
+      ...(comment.user._id !== user._id
+        ? isPageOwner
+          ? [
+            // If it's MY page, show these options for comments from others
+            {
+              label: "Elevate Comment",
+              action: () => {
+                onElevateComment(comment._id);
+              },
             },
-          },
-        ]
-    : []),
+            // Only show "Report and Delete" if not already reported
+            ...(!comment.reportedByCurrentUser
+              ? [
+                {
+                  label: "Report and Delete",
+                  action: () => {
+                    onReportComment(comment._id);
+                  },
+                },
+              ]
+              : []),
+            {
+              label: "Delete.",
+              action: () => {
+                onDeleteComment(comment._id);
+              },
+            },
+            {
+              label: "Block",
+              action: () => {
+                // Extract pageId from comment.post.page._id or comment.post.pageId
+                const commentPageId = comment?.post?.page?._id || comment?.post?.pageId || comment?.page?._id || comment?.pageId || null;
+                onBlockUser(comment._id, comment.user._id, commentPageId);
+              },
+            },
+          ]
+          : [
+            // If it's someone else's page, only show Report if not already reported
+            ...(!comment.reportedByCurrentUser
+              ? [
+                {
+                  label: "Report",
+                  action: () => {
+                    onReportComment(comment._id);
+                  },
+                },
+              ]
+              : []),
+          ]
+        : []),
     ];
 
 
@@ -313,7 +385,8 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
                 {comment.user?.name}
                 {comment.isElevated && (
-                  <Star className="w-4 h-4 text-pink-500 fill-pink-500" />
+                  <TiPin />
+
                 )}
                 {comment.isAdmin && (
                   <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
@@ -322,6 +395,11 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
                 )}
               </p>
               <p className="text-sm text-gray-700">{comment.text}</p>
+              {comment.reportedByCurrentUser && (
+                <p className="text-xs text-orange-500 font-medium mt-2">
+                  This Comment has been reported
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <button
@@ -344,36 +422,39 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
               <span>{timeAgo(comment.createdAt)}</span>
             </div>
           </div>
-          <div className="relative z-50">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-
-            {isOpen && (
-              <div
-                ref={dropdownRef} // Attach ref to the dropdown menu
-                className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+          {/* Only show three dots icon if there are menu items available */}
+          {menuItems.length > 0 && (
+            <div className="relative z-50">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
               >
-                {menuItems.map((item, index) => {
-                  if (!isAuthor && item.label === "Delete") {
-                    return null; // Prevent the delete option from showing for other users
-                  }
-                  return (
-                    <button
-                      key={index}
-                      onClick={item.action}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {isOpen && (
+                <div
+                  ref={dropdownRef} // Attach ref to the dropdown menu
+                  className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 -z-1"
+                >
+                  {menuItems.map((item, index) => {
+                    if (!isAuthor && item.label === "Delete") {
+                      return null; // Prevent the delete option from showing for other users
+                    }
+                    return (
+                      <button
+                        key={index}
+                        onClick={item.action}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Reply Input */}
@@ -466,40 +547,54 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
         </div>
       </div>
 
-      {/* Comments List */}
-      <div className="space-y-1">
-        {getCommentsLoading
-          ? Array.from({ length: 2 }).map((_, idx) => (
-            <div key={idx} className="flex gap-3 py-3 animate-pulse">
-              {/* Avatar */}
-              <div className="w-8 h-8 bg-gray-300 rounded-full" />
+      {/* Top-level comments: elevated first */}
+      {(() => {
+        const sortedComments = Array.isArray(postComments)
+          ? [...postComments].sort((a, b) => {
+              const aElevated = a?.isElevated ? 1 : 0;
+              const bElevated = b?.isElevated ? 1 : 0;
+              // Elevated comments first; keep relative order otherwise
+              return bElevated - aElevated;
+            })
+          : [];
 
-              {/* Content */}
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-24 bg-gray-300 rounded" />
-                <div className="h-3 w-full bg-gray-200 rounded" />
-                <div className="h-3 w-3/4 bg-gray-200 rounded" />
-              </div>
-            </div>
-          ))
-          : postComments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              onAddReply={addReply}
-              comment={comment}
-              setNewComment={setNewComment}
-              setEditingCommentId={setEditingCommentId}
-              onDeleteComment={handleDeleteComment}
-              onElevateComment={handleElevateComment}
-              onReportComment={(commentId) => {
-                setReportTargetId(commentId);
-                setReportmodal(true);
-              }}
-              onBlockUser={handleBlockUser}
-            />
-          ))}
-      </div>
+        return (
+          <div className="space-y-1">
+            {getCommentsLoading
+              ? Array.from({ length: 2 }).map((_, idx) => (
+                  <div key={idx} className="flex gap-3 py-3 animate-pulse">
+                    {/* Avatar */}
+                    <div className="w-8 h-8 bg-gray-300 rounded-full" />
 
+                    {/* Content */}
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 bg-gray-300 rounded" />
+                      <div className="h-3 w-full bg-gray-200 rounded" />
+                      <div className="h-3 w-3/4 bg-gray-200 rounded" />
+                    </div>
+                  </div>
+                ))
+              : sortedComments.map((comment) => (
+                  <CommentItem
+                    key={comment.id}
+                    onAddReply={addReply}
+                    comment={comment}
+                    setNewComment={setNewComment}
+                    setEditingCommentId={setEditingCommentId}
+                    onDeleteComment={handleDeleteComment}
+                    onElevateComment={handleElevateComment}
+                    onReportComment={(commentId) => {
+                      setReportTargetId(commentId);
+                      setReportmodal(true);
+                    }}
+                    onBlockUser={handleBlockUser}
+                  />
+                ))}
+          </div>
+        );
+      })()}
+
+      {/* Old list kept for reference
       {/* Report Modal */}
       <ReportModal
         isOpen={reportmodal}
@@ -524,6 +619,8 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
           setBlockModal(false);
           setBlockTargetId(null);
           setBlockUserId(null);
+          setBlockPageId(null);
+          setBlockPageOwnerId(null);
         }}
         onSubmit={handleBlockSubmit}
         loading={blockLoading}

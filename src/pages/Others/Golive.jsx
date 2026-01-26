@@ -11,6 +11,7 @@ import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import ChatWidget from "../../components/global/ChatWidget";
 import FloatingChatButton from "../../components/global/ChatWidget";
+import { nofound } from "../../assets/export";
 
 export default function Golive() {
   const [liked, setLiked] = useState({});
@@ -142,9 +143,12 @@ export default function Golive() {
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
-                <p className="text-gray-500">No pages found</p>
-              </div>
+                <div className="text-gray-500 col-span-3 text-center py-10">
+            <div className=" flex justify-center">
+              <img src={nofound} height={300} width={300} alt="" />
+            </div>
+            <p className="font-bold pt-4 text-black">No Pages Found</p>
+          </div>
             )}
           </div>
         </div>

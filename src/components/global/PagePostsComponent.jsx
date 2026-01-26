@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageCircleWarning,
+  Filter,
 } from "lucide-react";
 import { fetchPagePosts } from "../../redux/slices/trending.slice";
 import ReportModal from "./ReportModal";
@@ -19,6 +20,7 @@ import ShareToChatsModal from "./ShareToChatsModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
 import ShareToPagesModal from "./ShareToPagesModal";
+import CommentFilterModal from "../app/profile/CommentFilterModal";
 
 export default function PagePostsComponent({ pageId }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -40,6 +42,8 @@ export default function PagePostsComponent({ pageId }) {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [postLikes, setPostLikes] = useState({}); // Track like state and count
   const [selectedPostForShare, setSelectedPostForShare] = useState(null);
+  const [commentFilter, setCommentFilter] = useState("all");
+  const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   useEffect(() => {
     if (pageId) {
@@ -143,6 +147,31 @@ export default function PagePostsComponent({ pageId }) {
     });
   };
 
+  // Filter posts based on commentFilter
+  const getFilteredPosts = () => {
+    if (!pagePosts || pagePosts.length === 0) return [];
+
+    switch (commentFilter) {
+      case "all":
+        return pagePosts;
+      case "no":
+        return pagePosts.filter((post) => (post.commentsCount || 0) === 0);
+      case "elevated":
+        return pagePosts.filter(
+          (post) => post.isElevated === true && (post.likesCount || 0) > 0
+        );
+      case "userLiked":
+        return pagePosts.filter((post) => {
+          const likeData = getPostLikeData(post._id, post);
+          return likeData.isLiked === true;
+        });
+      default:
+        return pagePosts;
+    }
+  };
+
+  const filteredPosts = getFilteredPosts();
+
   if (pagePostsLoading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -164,9 +193,28 @@ export default function PagePostsComponent({ pageId }) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
         {/* Posts Column - Left Side */}
         <div className="lg:col-span-2">
+          {/* Comment Filter Button */}
+          <div className="mb-4 flex justify-end">
+            <button
+              onClick={() => setFilterModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+            >
+              <Filter size={18} className="text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">
+                {commentFilter === "all"
+                  ? "All Comments"
+                  : commentFilter === "no"
+                  ? "No Comments"
+                  : commentFilter === "elevated"
+                  ? "Elevated and Liked"
+                  : "User Liked"}
+              </span>
+            </button>
+          </div>
+
           <div className="space-y-6">
-            {pagePosts && pagePosts.length > 0 ? (
-              pagePosts.map((post) => {
+            {filteredPosts && filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => {
                 const mediaIndex = currentMediaIndex[post._id] || 0;
                 const currentMedia = post.media?.[mediaIndex];
                 const hasMultipleMedia = post.media && post.media.length > 1;
@@ -347,7 +395,11 @@ export default function PagePostsComponent({ pageId }) {
               })
             ) : (
               <div className="text-center py-12 bg-white rounded-lg">
-                <p className="text-gray-500 text-lg">No posts available</p>
+                <p className="text-gray-500 text-lg">
+                  {pagePosts && pagePosts.length > 0
+                    ? `No posts found for selected filter`
+                    : "No posts available"}
+                </p>
               </div>
             )}
           </div>
@@ -495,6 +547,17 @@ export default function PagePostsComponent({ pageId }) {
         onClose={() => setReportmodal(false)}
         loading={reportLoading}
         onSubmit={handleReportSubmit}
+      />
+
+      {/* Comment Filter Modal */}
+      <CommentFilterModal
+        isOpen={filterModalOpen}
+        onClose={() => setFilterModalOpen(false)}
+        onApply={(filter) => {
+          setCommentFilter(filter);
+          setFilterModalOpen(false);
+        }}
+        selectedFilter={commentFilter}
       />
     </div>
   );

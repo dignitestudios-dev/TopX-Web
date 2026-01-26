@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
+import { ErrorToast } from "../../components/global/Toaster";
 
 const initialState = {
   loading: false,
@@ -100,9 +101,12 @@ export const shareKnowledgePostToCategory = createAsyncThunk(
   async ({ postId, pageId, subTopics }, thunkAPI) => {
     try {
       // subTopics is an array, take the first element as sharedToCategory
-      const sharedToCategory = Array.isArray(subTopics) && subTopics.length > 0 
-        ? subTopics[0] 
-        : (typeof subTopics === 'string' ? subTopics : '');
+      const sharedToCategory =
+        Array.isArray(subTopics) && subTopics.length > 0
+          ? subTopics[0]
+          : typeof subTopics === "string"
+            ? subTopics
+            : "";
 
       const res = await axios.post("/knowledgeposts/share", {
         originalKnowledgePost: postId,
@@ -113,10 +117,11 @@ export const shareKnowledgePostToCategory = createAsyncThunk(
       return res.data?.data; // shared post object
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to share knowledge post to category"
+        error.response?.data?.message ||
+          "Failed to share knowledge post to category",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -129,8 +134,8 @@ export const shareKnowledgePostToCategory = createAsyncThunk(
 //   async ({ postId, pageId, subTopics }, thunkAPI) => {
 //     try {
 //       // subTopics is an array, take the first element as sharedToCategory
-//       const sharedToCategory = Array.isArray(subTopics) && subTopics.length > 0 
-//         ? subTopics[0] 
+//       const sharedToCategory = Array.isArray(subTopics) && subTopics.length > 0
+//         ? subTopics[0]
 //         : (typeof subTopics === 'string' ? subTopics : '');
 
 //       const res = await axios.post("/knowledgeposts/share", {
@@ -178,6 +183,24 @@ export const deleteKnowledgePost = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to delete post",
+      );
+    }
+  },
+);
+
+/* ===============================
+   TOGGLE KNOWLEDGE PAGE SUBSCRIPTION
+   API → POST /knowledgeposts/subscription/:pageId
+================================*/
+export const toggleKnowledgePageSubscription = createAsyncThunk(
+  "knowledgepost/toggleKnowledgePageSubscription",
+  async ({ pageId }, thunkAPI) => {
+    try {
+      const res = await axios.post(`/knowledgeposts/subscription/${pageId}`);
+      return res.data; // expect { success, message, data }
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update subscription",
       );
     }
   },
@@ -264,6 +287,7 @@ export const KnowledgeCreateComment = createAsyncThunk(
 
       return res.data.data;
     } catch (error) {
+      ErrorToast(error.response?.data?.message);
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to like/unlike post",
       );
@@ -566,7 +590,12 @@ const knowledgeSlice = createSlice({
         }
       })
       .addCase(likePost.fulfilled, (state, action) => {
-        const { postId, commentId, likeToggle, likesCount: apiLikes } = action.payload;
+        const {
+          postId,
+          commentId,
+          likeToggle,
+          likesCount: apiLikes,
+        } = action.payload;
 
         const post = state.knowledgePagePosts?.find((p) => p._id === postId);
         console.log(
@@ -581,8 +610,8 @@ const knowledgeSlice = createSlice({
           );
           const local = localLikes[postId];
 
-            post.isLiked = likeToggle;
-            post.likesCount = local?.likesCount ?? apiLikes; // Use local increment if exists
+          post.isLiked = likeToggle;
+          post.likesCount = local?.likesCount ?? apiLikes; // Use local increment if exists
 
           // Save merged to localStorage
           localLikes[postId] = {

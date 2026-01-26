@@ -99,11 +99,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   );
   const { reportLoading, reportSuccess } = useSelector((state) => state.reports);
   const page = pageDetail;
-  const isPrivatePage = page?.pageType === "pr  ivate";
+  const isPrivatePage = page?.pageType === "private" || page?.pageType === "pr  ivate";
   const isRequestPending = page?.requestStatus === "pending";
   const isRequestAccepted = page?.requestStatus === "accepted";
-  const shouldShowContent = !isPrivatePage || isSubscribed || isRequestAccepted;
   const isPageOwner = user?._id === page?.user?._id || user?._id === page?.user;
+
+  // Show content if: not private, OR subscribed, OR request accepted, OR is page owner
+  const shouldShowContent = !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
+
+  // Check if should show private page overlay: private page, not subscribed, not page owner
+  const shouldShowPrivateOverlay = isPrivatePage && !isSubscribed && !isPageOwner;
+
+  console.log(page, "page")
 
   // Fetch page details and stories on mount
   useEffect(() => {
@@ -112,6 +119,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       dispatch(getPageDetail(pageId));
     }
   }, [pageId, dispatch]);
+
+  console.log(pageDetail, "pageDetail")
 
   // Set subscription state from pageDetail
   useEffect(() => {
@@ -347,7 +356,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
     const formData = new FormData();
     formData.append("pageName", pageName.trim());
-    
+
     // Only append image if a new one is selected
     if (editImageFile) {
       formData.append("image", editImageFile);
@@ -467,11 +476,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   const handleTextDrag = (e) => {
     if (!storyTextOverlay.isDragging || !storyPreviewRef.current) return;
-    
+
     const rect = storyPreviewRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
-    
+
     setStoryTextOverlay(prev => ({
       ...prev,
       x: Math.max(0, Math.min(100, x)),
@@ -493,16 +502,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     return new Promise((resolve, reject) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      
+
       img.onload = () => {
         // Set canvas size (story format: 9:16 aspect ratio)
         const maxWidth = 1080;
         const maxHeight = 1920;
         const aspectRatio = img.width / img.height;
-        
+
         let width, height;
         if (aspectRatio > maxWidth / maxHeight) {
           width = maxWidth;
@@ -511,39 +520,39 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           height = maxHeight;
           width = maxHeight * aspectRatio;
         }
-        
+
         canvas.width = width;
         canvas.height = height;
-        
+
         // Draw image
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Draw text overlay if text exists
         if (storyTextOverlay.text && storyTextOverlay.text.trim()) {
           ctx.font = `${storyTextOverlay.fontSize}px ${storyTextOverlay.fontFamily}`;
           ctx.fillStyle = storyTextOverlay.color;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          
+
           // Add text shadow for better visibility
           ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
           ctx.shadowBlur = 4;
           ctx.shadowOffsetX = 2;
           ctx.shadowOffsetY = 2;
-          
+
           const textX = (storyTextOverlay.x / 100) * width;
           const textY = (storyTextOverlay.y / 100) * height;
-          
+
           // Handle multiline text
           const lines = storyTextOverlay.text.split('\n');
           const lineHeight = storyTextOverlay.fontSize * 1.2;
           const startY = textY - ((lines.length - 1) * lineHeight) / 2;
-          
+
           lines.forEach((line, index) => {
             ctx.fillText(line, textX, startY + (index * lineHeight));
           });
         }
-        
+
         canvas.toBlob((blob) => {
           if (blob) {
             const file = new File([blob], 'story-with-text.png', { type: 'image/png' });
@@ -553,12 +562,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           }
         }, 'image/png', 0.95);
       };
-      
+
       img.onerror = () => {
         // If it's a video, we'll use the original file
         resolve(storyMedia);
       };
-      
+
       if (storyMediaPreview) {
         img.src = storyMediaPreview;
       } else {
@@ -612,7 +621,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
     try {
       let mediaToUpload = storyMedia;
-      
+
       // If text overlay exists and media is image, combine them
       if (storyTextOverlay.text && storyTextOverlay.text.trim() && storyMedia?.type?.startsWith("image/")) {
         mediaToUpload = await combineMediaWithText();
@@ -664,7 +673,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     );
   }
 
-  const maxLength = 70;
+  const maxLength = 100;
 
   console.log(pageDetail, "pageDetail")
 
@@ -688,18 +697,44 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               {/* IMAGE + NAME */}
               <div className="flex items-center gap-4">
                 <div className="relative">
+                  {/* Outer glow wrapper when stories exist */}
                   <div
-                    onClick={() => {
-                      setActiveStory(PageStories);
-                      handleViewStory(PageStories[0]?._id);
-                    }}
-                    className="w-[135px] cursor-pointer h-[135px] rounded-full p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
+                    className={`rounded-full ${PageStories && PageStories.length > 0
+                        ? "p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906] shadow-[0_0_16px_rgba(245,158,11,0.8)]"
+                        : ""
+                      }`}
                   >
-                    <img
-                      src={page?.image}
-                      alt="Page"
-                      className="w-full h-full rounded-full object-cover bg-white"
-                    />
+                    <div
+                      onClick={() => {
+                        if (PageStories && PageStories.length > 0) {
+                          setActiveStory(PageStories);
+                          handleViewStory(PageStories[0]?._id);
+                        }
+                      }}
+                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${PageStories && PageStories.length > 0
+                          ? "bg-white"
+                          : "bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
+                        }`}
+                    >
+                      {page?.image ? (
+                        <img
+                          src={page.image}
+                          alt="Page"
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center">
+                          <span className="text-6xl font-semibold text-white">
+                            {(() => {
+                              if (!page?.name) return "P";
+                              const words = page.name.trim().split(/\s+/);
+                              const targetWord = words[1] || words[0];
+                              return targetWord.charAt(0).toUpperCase();
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {isPageOwner && (
@@ -717,7 +752,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   <h1 className="text-[18px] font-[500] text-[#000000] mb-2">
                     {page?.name}
                   </h1>
-                  <p className="text-gray-500 text-sm leading-relaxed flex-1">
+                  <p className="text-gray-500 text-sm leading-relaxed flex-1 w-[30em]">
                     {page?.about.substring(0, maxLength)}...
                   </p>
                   <div className="flex items-center gap-[70px] relative">
@@ -725,13 +760,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       {/* Add followers count if necessary */}
                     </span>
                   </div>
+
+
                 </div>
               </div>
 
+
+
+
               {/* ACTION BUTTONS */}
               <div className="flex items-center gap-2 mt-14">
-                {/* Request Pending Button - Show when requestStatus is pending */}
-                {isPrivatePage && isRequestPending && (
+                {/* Request Pending Button - Show when requestStatus is pending (only for non-owners) */}
+                {isPrivatePage && isRequestPending && !isPageOwner && (
                   <button
                     disabled
                     className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-gray-200 text-gray-700 cursor-not-allowed border-2"
@@ -761,8 +801,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   </button>
                 )}
 
-                {/* Live Chat Button - Only show when subscribed */}
-                {isSubscribed && (!isPrivatePage || isRequestAccepted) && (
+                {/* Live Chat Button - Show when subscribed OR user is page owner */}
+                {(isSubscribed || isPageOwner) && (!isPrivatePage || isRequestAccepted || isPageOwner) && (
                   <button
                     onClick={() => {
                       console.log("Button clicked, navigating with:", { pageId, pageName: pageDetail?.name });
@@ -888,6 +928,34 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 </span>
               ))}
             </div>
+            {page.followersCount > 0 && (
+              <div className="flex gap-1 items-center">
+                {/* Followers Images */}
+                <div className="flex items-center">
+                  {page.followers.slice(0, 3).map((follower, index) => (
+                    <img
+                      key={index}
+                      src={
+                        follower ||
+                        "https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg"
+                      } // Use follower image or default image if null
+                      alt={`Follower ${index + 1}`}
+                      className="w-[24px] h-[24px] object-cover rounded-full"
+                    />
+                  ))}
+                </div>
+
+                {/* Followers Count */}
+                <div className="flex items-center gap-1 pl-1">
+                  <p className="text-[14px] font-[600] text-[#000000]">
+                    {page.followersCount}+
+                  </p>
+                  <p className="text-[14px] font-[500] text-[#ADADAD]">
+                    Follows
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -932,16 +1000,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           </div>
 
           {/* Filter Icon - Show only for post tab when content is visible */}
-          {activeTab === "post" && shouldShowContent && (
+          {!isPageOwner && activeTab === "post" && shouldShowContent && (
             <button
               onClick={() => setFilterModal(true)}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors mr-4"
               title="Filter Comments"
             >
               <LucideSettings2 className="w-5 h-5 text-gray-600" />
-
             </button>
           )}
+
         </div>
 
         {/* POSTS LIST / POST REQUEST LIST */}
@@ -974,12 +1042,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               ) : postRequests.length === 0 ? (
                 <div className="text-center text-sm text-gray-500 border border-dashed border-gray-300 rounded-2xl py-6">
                   <div className=" flex justify-center">
-                <img src={nofound} height={300} width={300} alt="" />
-              </div>
-              <p className="font-bold pt-4 text-black">
-                No Post request found
-              
-              </p>
+                    <img src={nofound} height={300} width={300} alt="" />
+                  </div>
+                  <p className="font-bold pt-4 text-black">
+                    No Post request found
+
+                  </p>
                 </div>
               ) : (
                 postRequests.map((req) => (
@@ -1090,7 +1158,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       />
 
       {/* Private Page Modal - Show on top of blurred content */}
-      {isPrivatePage && !isSubscribed && !isRequestAccepted && (
+      {shouldShowPrivateOverlay && (
         <div className="absolute inset-0 top-[30em] flex items-center justify-center z-50 rounded-2xl">
           <div className="bg-white/90 backdrop-blur-sm px-8 py-6 rounded-2xl shadow-xl flex flex-col items-center gap-3">
             <div className="w-14 h-14 flex items-center justify-center rounded-full bg-orange-100">
@@ -1160,7 +1228,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b">
-             
+
               <h2 className="text-xl font-semibold text-gray-900 flex-1 text-center">
                 Settings
               </h2>
@@ -1183,14 +1251,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   </h3>
                   <button
                     onClick={() => setIsPrivate(!isPrivate)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isPrivate ? "bg-orange-500" : "bg-gray-300"
-                    }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPrivate ? "bg-orange-500" : "bg-gray-300"
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        isPrivate ? "translate-x-6" : "translate-x-1"
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPrivate ? "translate-x-6" : "translate-x-1"
+                        }`}
                     />
                   </button>
                 </div>
@@ -1424,7 +1490,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       Identification Docs <span className="text-gray-500 font-normal">(Required)</span>
                     </label>
                     <p className="text-sm text-gray-500 mb-3">Drivers License (Front/Back)</p>
-                    
+
                     {/* Front */}
                     <div className="mb-3">
                       <label className="block text-xs text-gray-600 mb-1">Front</label>
@@ -1545,7 +1611,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       <UploadPostStory
         isOpen={createPostUploadModal}
         setIsOpen={setCreatePostUploadModal}
-        setSelectedType={() => {}}
+        setSelectedType={() => { }}
         title="Create Post"
         selectedPages={[pageId]}
       />
@@ -1597,7 +1663,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   {goLiveLoading ? (
                     <div className="w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                   ) : (
-                        <FaPlus className="text-orange-600" />
+                    <FaPlus className="text-orange-600" />
                   )}
                 </div>
                 <div>
@@ -1657,7 +1723,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     className="hidden"
                   />
                   {storyMediaPreview ? (
-                    <div 
+                    <div
                       ref={storyPreviewRef}
                       className="relative bg-black rounded-lg overflow-hidden cursor-move"
                       onMouseMove={handleTextDrag}
@@ -1682,7 +1748,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           className="w-full h-64 object-cover"
                         />
                       )}
-                      
+
                       {/* Text Overlay */}
                       {storyTextOverlay.text && storyTextOverlay.text.trim() && (
                         <div
@@ -1710,7 +1776,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           {storyTextOverlay.text}
                         </div>
                       )}
-                      
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1780,9 +1846,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                             <button
                               key={color}
                               onClick={() => setStoryTextOverlay(prev => ({ ...prev, color }))}
-                              className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                                storyTextOverlay.color === color ? 'border-orange-500 scale-110' : 'border-gray-300'
-                              }`}
+                              className={`w-10 h-10 rounded-lg border-2 transition-all ${storyTextOverlay.color === color ? 'border-orange-500 scale-110' : 'border-gray-300'
+                                }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
