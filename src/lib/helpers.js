@@ -18,7 +18,7 @@ export function timeAgo(dateString) {
   if (interval >= 1) return `${interval} hour${interval > 1 ? "s" : ""} ago`;
 
   interval = Math.floor(seconds / 60);
-  if (interval >= 1) return `${interval} minute${interval > 1 ? "s" : ""} ago`;
+  if (interval >= 1) return `${interval} min${interval > 1 ? "s" : ""} ago`;
 
   return "Just now";
 }
