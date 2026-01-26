@@ -3,7 +3,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
-import { likePost } from "../../redux/slices/postfeed.slice";
+import { likePost } from "../../redux/slices/posts.slice";
 import { useNavigate } from "react-router";
 import { PostUnderReview } from "../../assets/export";
 import ReportModal from "./ReportModal";
@@ -30,7 +30,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const isLiked = liked[post.id];
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
@@ -43,17 +42,114 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   );
   const { user: authUser } = useSelector((state) => state.auth);
 
-  const handleLikeClick = async(postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
+  // Get initial like state from post or localStorage
+  const getInitialLikeState = () => {
+    const postId = post.id || post._id;
+    
+    // Check localStorage first (for optimistic updates)
+    const localLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+    const cachedLike = localLikes[postId];
+    
+    if (cachedLike) {
+      return {
+        isLiked: cachedLike.isLiked || false,
+        likesCount: cachedLike.likesCount || 0,
+      };
+    }
+    
+    // Use post data
+    return {
+      isLiked: post.isLiked || false,
+      likesCount: post.likesCount || 0,
+    };
+  };
 
+  const [localLikeState, setLocalLikeState] = useState(getInitialLikeState());
+
+  // Update local state when post changes
+  useEffect(() => {
+    const newState = getInitialLikeState();
+    setLocalLikeState(newState);
+  }, [post.id, post.isLiked, post.likesCount]);
+
+  const handleLikeClick = async () => {
+    const postId = post.id || post._id;
+    if (!postId) {
+      console.error("Post ID not found", { post });
+      return;
+    }
+
+    const currentIsLiked = localLikeState.isLiked;
+    const currentLikesCount = localLikeState.likesCount || 0;
+    const newIsLiked = !currentIsLiked;
+    const newLikesCount = newIsLiked
+      ? currentLikesCount + 1
+      : Math.max(currentLikesCount - 1, 0);
+
+    console.log("🔵 Like clicked - Post ID:", postId, "New Like Status:", newIsLiked);
+
+    // Optimistic update - update UI immediately
+    setLocalLikeState({
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    });
+
+    // Call parent toggleLike callback if provided
+    if (toggleLike && typeof toggleLike === "function") {
+      toggleLike(postId);
+    }
+
+    // Save to localStorage for persistence
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
+    likes[postId] = {
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    };
     localStorage.setItem("postLikes", JSON.stringify(likes));
-    toggleLike(postId, newLikeStatus, newLikesCount);
-    await dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+
+    // Call API - Same as PostCard/Mypost.jsx
+    try {
+      console.log("🔵 Dispatching likePost API:", { id: postId, likeToggle: newIsLiked, isPost: true });
+      const result = await dispatch(
+        likePost({
+          id: postId,
+          likeToggle: newIsLiked,
+          isPost: true,
+        }),
+      ).unwrap();
+
+      console.log("✅ Like API success:", result);
+
+      // Update with API response - check result.data structure
+      if (result?.data) {
+        const apiData = result.data;
+        setLocalLikeState({
+          isLiked: apiData.likeToggle ?? newIsLiked,
+          likesCount: apiData.likesCount ?? newLikesCount,
+        });
+      } else {
+        // If response structure is different, keep optimistic update
+        setLocalLikeState({
+          isLiked: newIsLiked,
+          likesCount: newLikesCount,
+        });
+      }
+    } catch (error) {
+      // If API call failed, revert optimistic update
+      console.error("❌ Like API failed:", error);
+      setLocalLikeState({
+        isLiked: currentIsLiked,
+        likesCount: currentLikesCount,
+      });
+      
+      // Also revert localStorage
+      const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+      likes[postId] = {
+        isLiked: currentIsLiked,
+        likesCount: currentLikesCount,
+      };
+      localStorage.setItem("postLikes", JSON.stringify(likes));
+    }
   };
 
   const dropdownRef = useRef(null);
@@ -242,21 +338,19 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {/* Stats - Action Bar */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
-          type="button" // 👈 YE ADD KARO
-          onClick={() =>
-            handleLikeClick(post.id, post.isLiked, post.likesCount)
-          }
+          type="button"
+          onClick={handleLikeClick}
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Heart
-            className={`w-5 h-5 transition ${post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+            className={`w-5 h-5 transition ${localLikeState.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
               }`}
           />
           <span
-            className={`text-sm font-medium ${post.isLiked ? "text-orange-500" : "text-gray-600"
+            className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
               }`}
           >
-            {Number(post.likesCount ?? 0)}
+            {Number(localLikeState.likesCount ?? 0)}
           </span>
         </button>
 

@@ -5,6 +5,7 @@ import Button from "../common/Button";
 import { useDispatch, useSelector } from "react-redux";
 import { getFollowersFollowing } from "../../redux/slices/auth.slice";
 import { useNavigate } from "react-router";
+import { ErrorToast } from "./Toaster";
 const UserSkeleton = () => (
   <div className="flex items-center justify-between p-3 rounded-xl animate-pulse">
     <div className="flex items-center gap-3">
@@ -36,17 +37,17 @@ export default function FollowersFollowingModal({
         page: 1,
         limit: 10,
         userId: otherProfile,
-      })
+      }),
     );
   }, [type]);
   const filteredUsers = followersFollowing?.filter(
     (user) =>
       user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.username?.toLowerCase().includes(searchQuery.toLowerCase())
+      user.username?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   if (!isOpen) return null;
-
+  console.log(filteredUsers, "filteredUser");
   return (
     <>
       {/* Backdrop */}
@@ -113,11 +114,15 @@ export default function FollowersFollowingModal({
                     </div>
 
                     <Button
-                      onClick={() =>
-                        navigate("/other-profile", {
-                          state: { id: user },
-                        })
-                      }
+                      onClick={() => {
+                        if (user.isBlocked) {
+                          ErrorToast("You'r Blocked");
+                        } else {
+                          navigate("/other-profile", {
+                            state: { id: user },
+                          });
+                        }
+                      }}
                       size="sm"
                       variant="outline"
                     >

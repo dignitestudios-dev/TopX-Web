@@ -16,18 +16,28 @@ import { sendReport } from "../../redux/slices/reports.slice";
 import { blockUser } from "../../redux/slices/profileSetting.slice";
 import { SuccessToast, ErrorToast } from "./Toaster";
 
-export default function CommentsSection({ postId, isPageOwner = false }) {
+export default function CommentsSection({ postId, isPageOwner = false, pageId = null }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed
   );
+  // Get post from Redux state to extract pageId and page owner
+  const { posts, pagepost, allfeedposts } = useSelector((state) => state.posts || {});
+  const allPosts = [...(posts || []), ...(pagepost || []), ...(allfeedposts || [])];
+  const currentPost = allPosts.find((p) => p._id === postId);
+  // Extract pageId from post
+  const postPageId = currentPost?.page?._id || currentPost?.pageId || currentPost?.page || pageId;
+  // Extract page owner ID (user who owns the page)
+  const pageOwnerId = currentPost?.page?.user?._id || currentPost?.page?.user || currentPost?.author?._id || currentPost?.author || user?._id;
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [newComment, setNewComment] = useState("");
   const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
   const [reportTargetId, setReportTargetId] = useState(null); // Store the comment ID to report
   const [blockModal, setBlockModal] = useState(false); // To manage block modal state
   const [blockTargetId, setBlockTargetId] = useState(null); // Store the comment/user ID to block
-  const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block
+  const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block (comment user)
+  const [blockPageId, setBlockPageId] = useState(null); // Store the page ID for blocking
+  const [blockPageOwnerId, setBlockPageOwnerId] = useState(null); // Store the page owner ID for blocking
   const { isLoading: blockLoading } = useSelector((state) => state.profileSetting || {});
   const dispatch = useDispatch();
 
@@ -127,9 +137,13 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
     }
   };
 
-  const handleBlockUser = (commentId, userId) => {
+  const handleBlockUser = (commentId, userId, commentPageId = null) => {
     setBlockTargetId(commentId);
-    setBlockUserId(userId);
+    setBlockUserId(userId); // Comment user ID (who is being blocked)
+    // Use pageId from comment, post, prop, or fallback
+    setBlockPageId(commentPageId || postPageId || pageId);
+    // Set page owner ID (page owner who is blocking)
+    setBlockPageOwnerId(pageOwnerId);
     setBlockModal(true);
   };
 
@@ -142,11 +156,35 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
         all: "Global",
       };
 
+      // Determine targetId based on option:
+      // - "view": use pageId
+      // - "all": use pageOwnerId (page owner's ID who is blocking)
+      // - "comment": use commentId
+      let targetId;
+      if (option === "view") {
+        targetId = blockPageId;
+      } else if (option === "all") {
+        targetId = blockPageOwnerId; // Use page owner ID for global block
+      } else {
+        targetId = blockTargetId; // Use comment ID for comment block
+      }
+
+      if (!targetId) {
+        if (option === "view") {
+          ErrorToast("Page ID not found. Unable to block from viewing.");
+        } else if (option === "all") {
+          ErrorToast("Page owner ID not found. Unable to block user.");
+        } else {
+          ErrorToast("Target ID not found");
+        }
+        return;
+      }
+
       const payload = {
         reason: "User blocked from comment",
         userId: blockUserId,
         blockedFrom: blockedFromMap[option] || "Comment",
-        targetId: blockTargetId,
+        targetId: targetId,
         isBlocked: true,
       };
 
@@ -155,6 +193,8 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
       setBlockModal(false);
       setBlockTargetId(null);
       setBlockUserId(null);
+      setBlockPageId(null);
+      setBlockPageOwnerId(null);
       handleGetComments(); // Refresh comments
     } catch (error) {
       console.error("Failed to block user:", error);
@@ -245,7 +285,9 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
           {
             label: "Block",
             action: () => {
-              onBlockUser(comment._id, comment.user._id);
+              // Extract pageId from comment.post.page._id or comment.post.pageId
+              const commentPageId = comment?.post?.page?._id || comment?.post?.pageId || comment?.page?._id || comment?.pageId || null;
+              onBlockUser(comment._id, comment.user._id, commentPageId);
             },
           },
         ]
@@ -524,6 +566,8 @@ export default function CommentsSection({ postId, isPageOwner = false }) {
           setBlockModal(false);
           setBlockTargetId(null);
           setBlockUserId(null);
+          setBlockPageId(null);
+          setBlockPageOwnerId(null);
         }}
         onSubmit={handleBlockSubmit}
         loading={blockLoading}

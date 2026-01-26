@@ -2,7 +2,7 @@ import { HiMail } from "react-icons/hi";
 import { auth, emailimag, mobile } from "../../assets/export";
 import { IoIosArrowForward } from "react-icons/io";
 import VerificationModal from "./VerificationModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router";
 import Card from "../common/Card";
 import Button from "../common/Button";
@@ -26,6 +26,7 @@ export default function VerifyAccount({
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isType, setIsType] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
   const dispatch = useDispatch();
   const { isLoading, emailOTPLoading, emailVerifyLoading, otpVerified, emailVerified } = useSelector(
     (state) => state.onboarding
@@ -46,6 +47,7 @@ export default function VerifyAccount({
       SuccessToast(res.payload || "OTP sent to email successfully");
       setIsType("email");
       setIsModalOpen(true);
+      setResendTimer(30); // Start 30 second timer
     } else {
       ErrorToast(res.payload || "Unable to send email OTP");
     }
@@ -64,6 +66,7 @@ export default function VerifyAccount({
       SuccessToast(res.payload || "OTP sent successfully");
       setIsType("phone");
       setIsModalOpen(true);
+      setResendTimer(30); // Start 30 second timer
     } else {
       ErrorToast(res.payload || "Unable to send OTP");
     }
@@ -75,6 +78,7 @@ export default function VerifyAccount({
       const res = await dispatch(sendEmailOTP());
       if (res.meta.requestStatus === "fulfilled") {
         SuccessToast(res.payload || "Email OTP sent again");
+        setResendTimer(30); // Reset timer to 30 seconds
       } else {
         ErrorToast(res.payload || "Unable to send email OTP");
       }
@@ -82,11 +86,35 @@ export default function VerifyAccount({
       const res = await dispatch(sendPhoneOTP());
       if (res.meta.requestStatus === "fulfilled") {
         SuccessToast(res.payload || "OTP sent again");
+        setResendTimer(30); // Reset timer to 30 seconds
       } else {
         ErrorToast(res.payload || "Unable to send OTP");
       }
     }
   };
+
+  // ⭐ TIMER COUNTDOWN EFFECT
+  useEffect(() => {
+    if (resendTimer === 0) return;
+
+    const interval = setInterval(() => {
+      setResendTimer((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  // Reset timer when modal closes
+  useEffect(() => {
+    if (!isModalOpen) {
+      setResendTimer(0);
+    }
+  }, [isModalOpen]);
 
   // ⭐ VERIFY OTP FUNCTION
   const handleVerifyOTP = async (code) => {
@@ -208,7 +236,7 @@ export default function VerifyAccount({
           size="full"
           loading={isLoading || emailOTPLoading || emailVerifyLoading}
           disabled={!bothVerified} // 🔥 Both Email and Phone must be verified
-          className={`w-full flex items-center justify-center ${!bothVerified ? "opacity-60 cursor-not-allowed" : ""
+          className={`!w-[30em] flex items-center justify-center ${!bothVerified ? "opacity-60 cursor-not-allowed" : ""
             }`}
         >
           {isLoading || emailOTPLoading || emailVerifyLoading
@@ -229,6 +257,8 @@ export default function VerifyAccount({
         onVerify={handleVerifyOTP}
         onResend={handleResend}
         isVerifying={isLoading || emailOTPLoading || emailVerifyLoading}
+        resendTimer={resendTimer}
+        setResendTimer={setResendTimer}
       />
     </div>
   );

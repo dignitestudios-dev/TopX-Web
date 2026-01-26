@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { Edit } from "lucide-react";
+import { Edit, MessageCircle } from "lucide-react";
 import { profilehigh } from "../../../assets/export";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../../redux/slices/auth.slice";
 import FollowersFollowingModal from "../../global/FollowersFollowingModal";
+import ChatWidget from "../../global/ChatWidget";
 
 export default function LargeProfile({
   setIsEditProfile,
@@ -13,6 +14,7 @@ export default function LargeProfile({
   const dispatch = useDispatch();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState("followers"); // or "following"
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const { allUserData } = useSelector((state) => state.auth);
   const userRecord = profileData || allUserData;
   console.log(profileData, "profileData-record");
@@ -117,19 +119,44 @@ export default function LargeProfile({
           title={modalType === "followers" ? "Followers" : "Following"}
           type={modalType == "followers" ? "followers" : "followings"}
         />
+        
         {/* Bottom White Section - Bio */}
         <div className="pt-20 px-6 pb-8 space-y-1 bg-slate-50">
+          <div className="flex justify-between items-center">
            <p className="text-[16px] font-[700] text-[#000]">
             {userRecord.name || "No username Available"}
           </p>
+             {/* Message Button - Only show on other profile */}
+             <div className="-mt-[7em] z-10">
+          {isFromOtherProfile && userRecord && (
+            <button
+              onClick={() => setIsChatOpen(true)}
+              className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>Message</span>
+            </button>
+          )}
+          </div>
+          </div>
           <p className="text-[14px] font-[400] text-[#413b3b99]">
             @{userRecord.username || "No username Available"}
           </p>
           <p className="text-[14px] font-[400] text-[#413b3b99]">
             {userRecord.bio || "No Bio Available"}
           </p>
+          
+       
         </div>
       </div>
+      
+      {/* Chat Widget */}
+      {isChatOpen && (
+        <ChatWidget 
+          initialUser={userRecord}
+          onClose={() => setIsChatOpen(false)}
+        />
+      )}
     </div>
   );
 }

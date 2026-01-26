@@ -13,9 +13,10 @@ export default function VerificationModal({
   isVerifying = false,
   length = 5,
   isType,
+  resendTimer = 0,
+  setResendTimer,
 }) {
   const [values, setValues] = useState(Array.from({ length }, () => ""));
-  const [timer, setTimer] = useState(0);
 
   const{user} = useSelector((state)=>state.auth);
 
@@ -23,35 +24,22 @@ export default function VerificationModal({
 
   const inputsRef = useRef([]);
 
+  // Use parent timer if provided, otherwise use local state
+  const [localTimer, setLocalTimer] = useState(0);
+  const timer = setResendTimer ? resendTimer : localTimer;
+  const setTimer = setResendTimer || setLocalTimer;
 
   const handleResendClick = async () => {
     if (onResend) onResend();
 
     setValues(Array.from({length},()=>""));
 
-    setTimer(30); // start 15 sec timer
+    setTimer(30); // Reset timer to 30 seconds
 
     setTimeout(()=>{
       focusIndex(0);
     },0)
   };
-
-
-  useEffect(() => {
-    if (timer === 0) return;
-
-    const interval = setInterval(() => {
-      setTimer(prev => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [timer]);
 
 
 
@@ -130,7 +118,7 @@ export default function VerificationModal({
       <div className="px-8 pt-12 pb-8 text-center">
         <h2 className="text-[28px] md:text-[32px] font-bold">Verification</h2>
         <p className="mt-2 text-[#565656] leading-7">
-          Enter the OTP code sent to <br /> {isType === "email" ? email : phone}
+          Enter the OTP code sent to <br /> {isType === "email" ? email : `+1 ${phone}`}
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
@@ -158,7 +146,7 @@ export default function VerificationModal({
         </div>
 
         <div className="mt-6 text-[15px]">
-          <span className="text-[#111]">Didn’t receive code? </span>
+          <span className="text-[#111]">Didn't receive code? </span>
           <button
             type="button"
             onClick={handleResendClick}
@@ -168,7 +156,6 @@ export default function VerificationModal({
           >
             {timer > 0 ? `Resend in ${timer}s` : "Resend now"}
           </button>
-
         </div>
 
         <button

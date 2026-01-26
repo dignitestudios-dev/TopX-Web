@@ -12,10 +12,17 @@ export default function VerificationModal({
   length = 5,
   isType,
   mode = "", // <-- "forget" OR "delete" OR "onboarding"
+  resendTimer = 0,
+  setResendTimer,
 }) {
   const [values, setValues] = useState(Array.from({ length }, () => ""));
   const inputsRef = useRef([]);
   const navigate = useNavigate();
+
+  // Use parent timer if provided, otherwise use local state
+  const [localTimer, setLocalTimer] = useState(0);
+  const timer = setResendTimer ? resendTimer : localTimer;
+  const setTimer = setResendTimer || setLocalTimer;
 
   useEffect(() => {
     if (!isOpen) setValues(Array.from({ length }, () => ""));
@@ -115,16 +122,15 @@ export default function VerificationModal({
           ))}
         </div>
         <div className="mt-6 text-[15px]">
-          {" "}
-          <span className="text-[#111]">Didn't receive code? </span>{" "}
+          <span className="text-[#111]">Didn't receive code? </span>
           <button
             type="button"
             onClick={onResend}
-            className="text-[#F85E00] font-semibold hover:underline"
+            disabled={timer > 0}
+            className={`font-semibold ${timer > 0 ? "text-gray-400 cursor-not-allowed" : "text-[#F85E00] hover:underline"}`}
           >
-            {" "}
-            Resend now{" "}
-          </button>{" "}
+            {timer > 0 ? `Resend in ${timer}s` : "Resend now"}
+          </button>
         </div>
         <button
           disabled={code.length !== length || isVerifying}

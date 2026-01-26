@@ -1,4 +1,4 @@
-import { user } from "../../../assets/export";
+import { nofound, user } from "../../../assets/export";
 import Button from "../../common/Button";
 import { useEffect, useState } from "react";
 import ErrorModal from "../../common/ErrorModal";
@@ -59,7 +59,12 @@ export default function BlockedUsers() {
     </div>
   ))
 ) : (
-  <p>No Block User Found</p>
+    <div className="text-gray-500 col-span-3 text-center py-10">
+            <div className=" flex justify-center">
+              <img src={nofound} height={200} width={200} alt="" />
+            </div>
+            <p className="font-bold pt-4 text-black">No Blocked users yet</p>
+          </div>
 )}
 
       </div>

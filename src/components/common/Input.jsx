@@ -111,7 +111,7 @@ const Input = forwardRef(
                   value={opt.value}
                   checked={value === opt.value}
                   onChange={onChange}
-                  className="w-5 h-5 accent-black outline-none"
+                  className="w-5 h-5 accent-[#F85E00] outline-none cursor-pointer"
                 />
                 <span>{opt.label}</span>
               </label>

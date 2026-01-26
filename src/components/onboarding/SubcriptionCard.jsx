@@ -48,7 +48,7 @@ const SubcriptionCard = ({
                 {Followers.slice(0, 3).map((follower, index) => (
                   <img
                     key={index}
-                    src={follower}
+                    src={follower || "https://cdn.pixabay.com/photo/2023/02/18/11/00/icon-7797704_640.png"}
                     className={`w-[24px] h-[24px] rounded-full absolute top-0 left-${index * 5}`}
                     alt={`follower-${index}`}
                   />

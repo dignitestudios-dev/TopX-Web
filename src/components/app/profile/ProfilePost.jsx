@@ -99,11 +99,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   );
   const { reportLoading, reportSuccess } = useSelector((state) => state.reports);
   const page = pageDetail;
-  const isPrivatePage = page?.pageType === "pr  ivate";
+  const isPrivatePage = page?.pageType === "private" || page?.pageType === "pr  ivate";
   const isRequestPending = page?.requestStatus === "pending";
   const isRequestAccepted = page?.requestStatus === "accepted";
-  const shouldShowContent = !isPrivatePage || isSubscribed || isRequestAccepted;
   const isPageOwner = user?._id === page?.user?._id || user?._id === page?.user;
+  
+  // Show content if: not private, OR subscribed, OR request accepted, OR is page owner
+  const shouldShowContent = !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
+  
+  // Check if should show private page overlay: private page, not subscribed, not page owner
+  const shouldShowPrivateOverlay = isPrivatePage && !isSubscribed && !isPageOwner;
 
   // Fetch page details and stories on mount
   useEffect(() => {
@@ -1090,7 +1095,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       />
 
       {/* Private Page Modal - Show on top of blurred content */}
-      {isPrivatePage && !isSubscribed && !isRequestAccepted && (
+      {shouldShowPrivateOverlay && (
         <div className="absolute inset-0 top-[30em] flex items-center justify-center z-50 rounded-2xl">
           <div className="bg-white/90 backdrop-blur-sm px-8 py-6 rounded-2xl shadow-xl flex flex-col items-center gap-3">
             <div className="w-14 h-14 flex items-center justify-center rounded-full bg-orange-100">
