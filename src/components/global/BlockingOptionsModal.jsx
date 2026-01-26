@@ -93,9 +93,16 @@ const BlockingOptionsModal = ({ isOpen, onClose, onSubmit, loading = false }) =>
         <button
           onClick={handleSubmit}
           disabled={loading}
-          className="w-full bg-orange-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer mt-2.5 hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-orange-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer mt-2.5 hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {loading ? "Submitting..." : "Save"}
+          {loading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Submitting...</span>
+            </>
+          ) : (
+            "Save"
+          )}
         </button>
       </div>
     </div>

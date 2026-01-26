@@ -9,6 +9,8 @@ import {
   KnowledgeUpdateComment,
   likeComment,
 } from "../../redux/slices/knowledgepost.slice";
+import { elevateComment } from "../../redux/slices/postfeed.slice";
+import { SuccessToast, ErrorToast } from "./Toaster";
 
 export default function KnowledgePostComments({ postId }) {
   const { user } = useSelector((state) => state.auth);
@@ -105,8 +107,21 @@ export default function KnowledgePostComments({ postId }) {
     handleGetComments();
   };
   const handleElevateComment = async (commentId) => {
-    await dispatch(elevateComment(commentId)).unwrap();
-    handleGetComments();
+    try {
+      await dispatch(elevateComment(commentId)).unwrap();
+      SuccessToast("Comment elevated successfully");
+      handleGetComments();
+    } catch (error) {
+      console.error("Failed to elevate comment:", error);
+      const apiMessage =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.payload?.message ||
+        error?.message ||
+        "Failed to elevate comment";
+      ErrorToast(apiMessage);
+    }
   };
 
   const CommentItem = ({

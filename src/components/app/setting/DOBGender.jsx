@@ -24,16 +24,28 @@ export default function DOBGender() {
       initialValues: {
         dob: formatDate(user?.dob) || "",
         gender: user?.gender || "",
+        // Optional custom gender text when "Other" is selected
+        customGender: "",
       },
       validationSchema: changeDOBGenderSchema,
       validateOnChange: true,
       validateOnBlur: true,
       onSubmit: (values) => {
         if (values.dob && values.gender) {
+          // If user selected "Other" and typed a custom gender, send that to API
+          let finalGender = values.gender;
+          if (
+            values.gender === "other" &&
+            values.customGender &&
+            values.customGender.trim()
+          ) {
+            finalGender = values.customGender.trim();
+          }
+
           const data = {
             username: user?.username,
             dob: values.dob,
-            gender: values.gender,
+            gender: finalGender,
           };
           dispatch(completeProfile(data));
           setOpenModal(!openModal);
@@ -84,6 +96,23 @@ export default function DOBGender() {
             error={errors.gender}
             touched={touched.gender}
           />
+          {/* Custom gender input when "Other" is selected */}
+          {values.gender === "other" && (
+            <Input
+              
+              type="text"
+              placeholder="Specify here"
+              variant="default"
+              size="md"
+              id="customGender"
+              name="customGender"
+              onChange={handleChange}
+              onBlur={handleBlur}
+              value={values.customGender}
+              error={errors.customGender}
+              touched={touched.customGender}
+            />
+          )}
         </div>
         <Button
           type="submit"

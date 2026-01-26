@@ -18,6 +18,7 @@ import FloatingChatButton from '../components/global/ChatWidget';
 import ProtectedRoute from "./ProtectedRoute";
 import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
 import Trendingpagedetail from "../pages/Others/Trendingpagedetail";
+import KnowledgePageDetail from "../pages/Others/KnowledgePageDetail";
 import LiveStreampage from "../pages/Others/LiveStreampage";
 import Livechat from "../pages/Others/Livechat";
 
@@ -66,6 +67,14 @@ const MainRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <Trendingpagedetail />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/knowledge-page-detail/:id"
+                        element={
+                            <ProtectedRoute>
+                                <KnowledgePageDetail />
                             </ProtectedRoute>
                         }
                     />

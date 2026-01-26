@@ -294,7 +294,7 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
   // Show initial selection screen for knowledge posts
   if (isKnowledgePost && !selectedOption) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50">
         <div className="bg-white w-[380px] rounded-2xl shadow-xl flex flex-col overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-5 py-3">
@@ -369,7 +369,7 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+    <div className="fixed inset-0 !bg-black/30 flex items-center justify-center z-50">
       <div className="bg-white w-[400px] rounded-2xl shadow-xl flex flex-col max-h-[85vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-3">

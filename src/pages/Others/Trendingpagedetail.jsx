@@ -1,14 +1,13 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Profilecard from '../../components/homepage/Profilecard';
 import MySubscription from '../../components/homepage/MySubscription';
 import { useNavigate, useParams } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchPageById, fetchPagePosts } from '../../redux/slices/trending.slice';
-import { Lock, MessageCircleWarning, MessageSquareText } from 'lucide-react';
+import { Lock, MessageCircleWarning, MessageSquareText, MoreHorizontal } from 'lucide-react';
 import CollectionModal from '../../components/global/CollectionModal';
-import { addPageToCollections } from '../../redux/slices/collection.slice';
+import { addPageToCollections, removePageFromCollections } from '../../redux/slices/collection.slice';
 import { getMyCollections } from '../../redux/slices/collection.slice';
-import { VscReport } from "react-icons/vsc";
 
 
 import {
@@ -21,6 +20,7 @@ import { SuccessToast, ErrorToast } from '../../components/global/Toaster';
 import { FaArrowLeft } from 'react-icons/fa6';
 import PagePostsComponent from '../../components/global/PagePostsComponent';
 import { RiLiveLine } from 'react-icons/ri';
+import { BsThreeDotsVertical } from 'react-icons/bs';
 
 const Trendingpagedetail = () => {
     const dispatch = useDispatch();
@@ -31,6 +31,11 @@ const Trendingpagedetail = () => {
     const [openModal, setOpenModal] = useState(false);
     const [selectedPage, setSelectedPage] = useState(null);
     const [reportmodal, setReportmodal] = useState(false);
+    const [showDropdown, setShowDropdown] = useState(false);
+    const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+    const [unsubscribing, setUnsubscribing] = useState(false);
+    const dropdownRef = useRef(null);
+    const optionsDropdownRef = useRef(null);
 
     /* ================= FETCH PAGE DETAIL ================= */
     useEffect(() => {
@@ -112,6 +117,49 @@ const Trendingpagedetail = () => {
             }
         });
     };
+
+    /* ================= UNSUBSCRIBE ================= */
+    const handleUnsubscribe = () => {
+        setUnsubscribing(true);
+        dispatch(
+            removePageFromCollections({
+                collections: pageDetail?.collections || [],
+                page: id,
+            })
+        ).then((res) => {
+            if (!res.error) {
+                setIsSubscribed(false);
+                dispatch(fetchPageById(id));
+                setShowDropdown(false);
+                dispatch(getMyCollections({ page: 1, limit: 100 }));
+                dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
+                dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
+            }
+            setUnsubscribing(false);
+        });
+    };
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+                // Close subscribe dropdown if clicked outside
+            if (showDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+            // Close options dropdown if clicked outside
+            if (showOptionsDropdown && optionsDropdownRef.current && !optionsDropdownRef.current.contains(event.target)) {
+                setShowOptionsDropdown(false);
+            }
+        };
+        
+        if (showDropdown || showOptionsDropdown) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [showDropdown, showOptionsDropdown]);
 
     /* ================= LOADING STATE ================= */
     if (pageDetailLoading) {
@@ -225,56 +273,93 @@ const Trendingpagedetail = () => {
                                 </div>
                             </div>
 
-                            {/* Report Icon */}
-                            <div className="absolute top-[6.8em] right-[18em]">
-                                <VscReport 
-                                    color='white' 
-                                    size={26} 
-                                    onClick={() => setReportmodal(true)} 
-                                    className='cursor-pointer' 
-                                />
+                            {/* Options Dropdown (Unsubscribe & Report) */}
+                            <div className="absolute top-[6em] right-[10em]" ref={optionsDropdownRef}>
+                                <button
+                                    onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                                    className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
+                                >
+                                    <BsThreeDotsVertical color='white' size={24} />
+                                </button>
+                                {showOptionsDropdown && (
+                                    <div className="absolute top-full mt-2 right-0 bg-white border rounded-lg shadow-lg z-50 min-w-[160px]">
+                                        {isSubscribed && (
+                                            <button
+                                                onClick={() => {
+                                                    handleUnsubscribe();
+                                                    setShowOptionsDropdown(false);
+                                                }}
+                                                disabled={unsubscribing}
+                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setReportmodal(true);
+                                                setShowOptionsDropdown(false);
+                                            }}
+                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                                        >
+                                            Report
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex gap-3 mb-[0em]">
-                                {/* Subscribe Button */}
-                                <button
-                                    onClick={handleSubscribeClick}
-                                    disabled={isSubscribed}
-                                    className={`p-2 px-8 rounded-2xl font-semibold transition-all duration-300 ${isSubscribed
-                                        ? 'bg-gray-200 text-gray-700 cursor-not-allowed'
-                                        : 'bg-white text-orange-500 hover:bg-orange-50'
-                                        }`}
-                                >
-                                    {isSubscribed ? 'UnSubscribe' : 'Subscribe'}
-                                </button>
+                            <div className="flex gap-3 mb-[0em] items-center">
+                                {/* Subscribe Button - Show when not subscribed */}
+                                {!isSubscribed && (
+                                    <button
+                                        onClick={handleSubscribeClick}
+                                        className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                                    >
+                                        Subscribe
+                                    </button>
+                                )}
 
-                                {/* Live Chat Button */}
-                                <button
-                                    onClick={() => navigate(`/live-chat`, { 
-                                        state: { 
-                                            pageId: id, 
-                                            pageName: pageDetail?.name 
-                                        } 
-                                    })}
-                                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
-                                >
-                                    <MessageSquareText size={20} />
-                                {pageDetail?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
-                                </button>
+                                {/* Subscribed State - Show when subscribed */}
+                                {isSubscribed && (
+                                    <button
+                                        disabled
+                                        className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                                    >
+                                        Subscribed
+                                    </button>
+                                )}
+
+
+
+                                {/* Live Chat Button - Only show when subscribed */}
+                                {isSubscribed && (
+                                    <button
+                                        onClick={() => navigate(`/live-chat`, {
+                                            state: {
+                                                pageId: id,
+                                                pageName: pageDetail?.name
+                                            }
+                                        })}
+                                        className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                                    >
+                                        <MessageSquareText size={20} />
+                                        {pageDetail?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
+                                    </button>
+                                )}
                             </div>
 
                             <div className="mb-[0em]">
                                 {pageDetail?.isLiveStreaming && (
                                     <button
                                         onClick={() => handleJoinStream(pageDetail._id)} // Pass the pageId here
-                                       
+
                                         className="p-2 px-4 flex gap-4 rounded-2xl items-center cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
                                     >
-                                      
-                                                <RiLiveLine size={20} />
-                                                Join Live Stream
-                                        
+
+                                        <RiLiveLine size={20} />
+                                        Join Live Stream
+
                                     </button>
                                 )}
 
@@ -297,7 +382,7 @@ const Trendingpagedetail = () => {
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">
                                 {pageDetail.requestStatus === "pending"
                                     ? "Request Pending"
-                                    : "This is a Private Page"}
+                                    : "This Page is Private"}
                             </h2>
 
                             <p className="text-gray-600 mb-6">

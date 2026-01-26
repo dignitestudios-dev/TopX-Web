@@ -1,6 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Heart, MessageCircle, Share2, MoreHorizontal, X } from 'lucide-react';
-import { getPostsByPageId, likePost, commentonpost, getcommentsofpost, elevatePost, demotePost } from '../../../redux/slices/posts.slice';
+import {
+  getPostsByPageId,
+  likePost,
+  commentonpost,
+  getcommentsofpost,
+  elevatePost,
+  demotePost,
+  deletePost,
+  editPost,
+} from '../../../redux/slices/posts.slice';
 import { useDispatch, useSelector } from 'react-redux';
 import CommentsSection from '../../global/CommentsSection';
 import SharePostModal from '../../global/SharePostModal';
@@ -16,7 +25,8 @@ import { nofound } from '../../../assets/export';
 const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevatedPosts = [] }) => {
 
     const dispatch = useDispatch();
-    const { pagepost, pagepostLoading, pageposterror } = useSelector((state) => state.posts);
+    const { pagepost, pagepostLoading, pageposterror, isLoading: postsUpdating } = useSelector((state) => state.posts);
+    const { user } = useSelector((state) => state.auth);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [moreOpenPostId, setMoreOpenPostId] = useState(null);
     const [reportModalOpen, setReportModalOpen] = useState(false);
@@ -33,6 +43,14 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
     const [sharepost, setSharepost] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [selectedOption, setSelectedOption] = useState("");
+    const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editingPost, setEditingPost] = useState(null);
+    const [editText, setEditText] = useState("");
+    const [editFiles, setEditFiles] = useState([]);
+    const [editFilePreviews, setEditFilePreviews] = useState([]);
+    const [editSaving, setEditSaving] = useState(false);
+    const fileInputRef = useRef(null);
 
     const { reportSuccess, reportLoading } = useSelector(
         (state) => state.reports
@@ -320,6 +338,103 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
         }
     };
 
+    const handleDeletePost = async (postId) => {
+        if (!postId) return;
+        setDeleteLoadingId(postId);
+        try {
+            await dispatch(deletePost({ postId })).unwrap();
+            if (pageId) {
+                await dispatch(
+                    getPostsByPageId({ pageId: pageId, page: 1, limit: 100 })
+                ).unwrap();
+            }
+        } catch (error) {
+            console.error("Failed to delete post:", error);
+        } finally {
+            setDeleteLoadingId(null);
+        }
+    };
+
+    const openEditModal = (post) => {
+        setEditingPost(post);
+        setEditText(post.bodyText || "");
+        setEditFiles([]);
+        setEditFilePreviews([]);
+        setEditModalOpen(true);
+    };
+
+    const handleEditFilesChange = (e) => {
+        const files = Array.from(e.target.files || []);
+        setEditFiles(files);
+        
+        // Create previews for selected files
+        const previews = files.map((file) => ({
+            file,
+            preview: URL.createObjectURL(file),
+            type: file.type.startsWith('video/') ? 'video' : 'image'
+        }));
+        setEditFilePreviews(previews);
+    };
+
+    const handleImageClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const removeEditFile = (index) => {
+        const newFiles = editFiles.filter((_, i) => i !== index);
+        const newPreviews = editFilePreviews.filter((_, i) => i !== index);
+        setEditFiles(newFiles);
+        setEditFilePreviews(newPreviews);
+        
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleEditSave = async () => {
+        if (!editingPost) return;
+        try {
+            setEditSaving(true);
+            
+            // If new files are selected, use FormData
+            if (editFiles.length > 0) {
+                const formData = new FormData();
+                formData.append("bodyText", editText || "");
+                editFiles.forEach((file) => {
+                    formData.append("media", file);
+                });
+                await dispatch(
+                    editPost({ postId: editingPost._id, formData, isFormData: true })
+                ).unwrap();
+            } else {
+                // If no new files, send JSON with just bodyText
+                const jsonData = { bodyText: editText || "" };
+                await dispatch(
+                    editPost({ postId: editingPost._id, formData: jsonData, isFormData: false })
+                ).unwrap();
+            }
+            
+            if (pageId) {
+                await dispatch(
+                    getPostsByPageId({ pageId: pageId, page: 1, limit: 100 })
+                ).unwrap();
+            }
+            setEditModalOpen(false);
+            setEditingPost(null);
+            setEditFiles([]);
+            // Clean up preview URLs
+            editFilePreviews.forEach((preview) => {
+                URL.revokeObjectURL(preview.preview);
+            });
+            setEditFilePreviews([]);
+        } catch (error) {
+            console.error("Failed to edit post:", error);
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
     return (
         <div className="max-w-2xl mx-auto p-4 bg-gray-50 min-h-screen">
 
@@ -353,6 +468,12 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
                                     </div>
                                 </div>
                                 <div className="relative">
+                                    {(() => {
+                                        // Determine if this is the current user's post
+                                        // so we can change menu options (Edit/Delete vs Report)
+                                        const isMyPost = post?.author?._id === user?._id;
+                                        return null;
+                                    })()}
                                     <button
                                         onClick={() =>
                                             setMoreOpenPostId(
@@ -366,6 +487,7 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
 
                                     {moreOpenPostId === post._id && (
                                         <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                                            {/* Elevate / Unelevate (keep for page owner) */}
                                             {post.isElevated ? (
                                                 <button
                                                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
@@ -388,16 +510,42 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
                                                     Elevate Post
                                                 </button>
                                             )}
-                                            <button
-                                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                                                onClick={() => {
-                                                    setMoreOpenPostId(null);
-                                                    setReportPostId(post._id);
-                                                    setReportModalOpen(true);
-                                                }}
-                                            >
-                                                Report
-                                            </button>
+
+                                            {/* If this is my post: show Edit / Delete, hide Report */}
+                                            {post.author?._id === user?._id ? (
+                                                <>
+                                                    <button
+                                                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            setMoreOpenPostId(null);
+                                                            openEditModal(post);
+                                                        }}
+                                                    >
+                                                        Edit Post
+                                                    </button>
+                                                    <button
+                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                                                        disabled={deleteLoadingId === post._id}
+                                                        onClick={() => {
+                                                            setMoreOpenPostId(null);
+                                                            handleDeletePost(post._id);
+                                                        }}
+                                                    >
+                                                        {deleteLoadingId === post._id ? "Deleting..." : "Delete Post"}
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                                    onClick={() => {
+                                                        setMoreOpenPostId(null);
+                                                        setReportPostId(post._id);
+                                                        setReportModalOpen(true);
+                                                    }}
+                                                >
+                                                    Report
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -714,6 +862,168 @@ const PagePosts = ({ pageId, commentFilter = "all", isPageOwner = false, elevate
                 loading={reportLoading}
                 onSubmit={handleReportSubmit}
             />
+
+            {/* Edit Post Modal */}
+            {editModalOpen && editingPost && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-semibold text-gray-900">Edit Post</h2>
+                            <button
+                                onClick={() => setEditModalOpen(false)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Text */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Text
+                                </label>
+                                <textarea
+                                    rows={4}
+                                    value={editText}
+                                    onChange={(e) => setEditText(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                    placeholder="Write your post text..."
+                                />
+                            </div>
+
+                            {/* Existing media preview - Clickable (only when no new media selected) */}
+                            {editFilePreviews.length === 0 &&
+                              Array.isArray(editingPost.media) &&
+                              editingPost.media.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Current Media (Click to replace)
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {editingPost.media.map((m) => (
+                                            <div
+                                                key={m._id}
+                                                onClick={handleImageClick}
+                                                className="relative w-full overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-all group"
+                                            >
+                                                {m.type === "image" ? (
+                                                    <img
+                                                        src={m.fileUrl}
+                                                        alt="Post media"
+                                                        className="w-full h-32 object-cover"
+                                                    />
+                                                ) : (
+                                                    <video
+                                                        src={m.fileUrl}
+                                                        className="w-full h-32 object-cover"
+                                                        controls
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                    <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        Click to Replace
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*,video/*"
+                                multiple
+                                onChange={handleEditFilesChange}
+                                className="hidden"
+                            />
+
+                            {/* New file previews */}
+                            {editFilePreviews.length > 0 && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        New Media (Selected)
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {editFilePreviews.map((preview, index) => (
+                                            <div
+                                                key={index}
+                                                className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+                                            >
+                                                {preview.type === "image" ? (
+                                                    <img
+                                                        src={preview.preview}
+                                                        alt="Preview"
+                                                        className="w-full h-32 object-cover"
+                                                    />
+                                                ) : (
+                                                    <video
+                                                        src={preview.preview}
+                                                        className="w-full h-32 object-cover"
+                                                        controls
+                                                    />
+                                                )}
+                                                <button
+                                                    onClick={() => removeEditFile(index)}
+                                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Add more media button */}
+                            <div>
+                                <button
+                                    type="button"
+                                    onClick={handleImageClick}
+                                    className="w-full border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:border-orange-500 hover:bg-orange-50 transition-colors"
+                                >
+                                    {editFilePreviews.length > 0 ? "+ Add More Media" : "+ Add Media (Optional)"}
+                                </button>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {editFilePreviews.length > 0 
+                                        ? "New media will replace existing media. Click existing images above to replace them."
+                                        : "Click existing images above or this button to add/replace media. Leave empty to keep existing media."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    // Clean up preview URLs
+                                    editFilePreviews.forEach((preview) => {
+                                        URL.revokeObjectURL(preview.preview);
+                                    });
+                                    setEditModalOpen(false);
+                                    setEditingPost(null);
+                                    setEditFiles([]);
+                                    setEditFilePreviews([]);
+                                }}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                                disabled={editSaving}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleEditSave}
+                                className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                                disabled={editSaving}
+                            >
+                                {editSaving ? "Saving..." : "Save Changes"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

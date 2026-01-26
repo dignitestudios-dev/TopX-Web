@@ -82,7 +82,7 @@ export default function Home() {
           username: `@${
             post.page?.user?.username || post.author?.username || "user"
           }`,
-          time: timeAgo(post.createdAt),  // Use the new timeAgo function here
+          time: timeAgo(post.createdAt), // Use the new timeAgo function here
           tag: post.page?.topic || "",
           gradient: "from-pink-500 via-orange-500 to-yellow-500",
           text: post.bodyText || "No description available",
@@ -102,7 +102,9 @@ export default function Home() {
           postimage: post.media?.map((m) => m.fileUrl) || [],
           author: post.author || null,
           page: post.page || null,
-          isAllowedByAdmin:post?.isAllowedByAdmin
+          isAllowedByAdmin: post?.isAllowedByAdmin,
+          // ✅ pass reported flag to HomePostFeed
+          isReported: post?.isReported,
         };
       })
     : [];

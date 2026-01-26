@@ -20,7 +20,6 @@ const presetBackgrounds = [
 const ActivitySkeleton = () => (
   <div className="space-y-3">
     <div className="h-3 w-2/3 bg-gray-200 rounded animate-pulse" />
-
     <div className="bg-gray-100 p-3 rounded-xl border">
       <div className="flex items-center gap-2 mb-2">
         <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse" />
@@ -29,7 +28,6 @@ const ActivitySkeleton = () => (
           <div className="h-2 w-1/2 bg-gray-200 rounded animate-pulse" />
         </div>
       </div>
-
       <div className="h-32 w-full bg-gray-200 rounded-lg animate-pulse mb-2" />
       <div className="h-3 w-full bg-gray-200 rounded animate-pulse" />
       <div className="h-3 w-5/6 bg-gray-200 rounded animate-pulse mt-2" />
@@ -40,20 +38,38 @@ const ActivitySkeleton = () => (
 const RecentActivityPopup = ({ onClose }) => {
   const dispatch = useDispatch();
   const { recentActivity, isLoading, settings, updateLoader } = useSelector(
-    (state) => state?.profileSetting
+    (state) => state?.profileSetting,
   );
+
+  // ✅ Local optimistic state
+  const [localStatus, setLocalStatus] = useState(null);
 
   useEffect(() => {
     dispatch(getSettings({}));
     dispatch(getRecentActivity({}));
   }, [dispatch]);
 
-  const isOn = settings?.activityStatus === "on";
+  // ✅ Sync local state with redux
+  useEffect(() => {
+    if (settings?.activityStatus) {
+      setLocalStatus(settings.activityStatus);
+    }
+  }, [settings?.activityStatus]);
+
+  const isOn =
+    localStatus !== null
+      ? localStatus === "on"
+      : settings?.activityStatus === "on";
+
   const handleToggle = () => {
     const newStatus = isOn ? "off" : "on";
+
+    // Optimistic UI update
+    setLocalStatus(newStatus);
+
     dispatch(updateActivityStatus({ activityStatus: newStatus }));
-    dispatch(getSettings({}));
   };
+  console.log(isOn, "isOn");
 
   return (
     <div className="absolute right-[10em] top-[6em] w-[22rem] bg-white shadow-xl rounded-xl border scrollbar-hide border-gray-200 z-50">
@@ -63,194 +79,194 @@ const RecentActivityPopup = ({ onClose }) => {
           <X size={20} />
         </button>
       </div>
+
       <div className="px-4 py-2">
         <div className="flex items-center justify-between">
-          <p className="text-[14px] font-[500]">Turn ON Recent Post Engagments</p>
+          <p className="text-[14px] font-[500]">
+            Turn ON Recent Post Engagments
+          </p>
 
-          <div className="flex items-center gap-2">
-            {updateLoader ? (
-              <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-            ) : (
-              <Button isToggle isOn={isOn} onClick={handleToggle} />
-            )}
-          </div>
+          {updateLoader ? (
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+          ) : (
+            <Button isToggle isOn={isOn} onClick={handleToggle} />
+          )}
         </div>
       </div>
+
       {/* Activity Content */}
       <div className="max-h-[75vh] overflow-y-auto scrollbar-hide p-4 space-y-4">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <ActivitySkeleton key={i} />)
-        ) : recentActivity?.length > 0 ? (
+        ) : recentActivity?.length > 0 && isOn ? (
           recentActivity.map((item, i) => {
             const actor = item?.actor || {};
             const post = item?.post;
             const kp = item?.knowledgePost;
             const comment = item?.comment;
-            const media = post?.media && post.media.length > 0 ? post.media[0] : null;
+            const media =
+              post?.media && post.media.length > 0 ? post.media[0] : null;
 
             const targetType = post
               ? "post"
               : kp
-              ? "knowledge post"
-              : "activity";
+                ? "knowledge post"
+                : "activity";
 
             const actionText =
               item?.action === "like"
                 ? `liked a ${targetType}`
                 : item?.action === "comment"
-                ? `commented on a ${targetType}`
-                : `performed ${item?.action} on a ${targetType}`;
+                  ? `commented on a ${targetType}`
+                  : `performed ${item?.action} on a ${targetType}`;
 
             const page = post?.page || kp?.page || null;
-
             const bodyText = post?.bodyText || "";
 
-            // Knowledge post background mapping
             const kpPresetBg = kp?.backgroundCode
-              ? presetBackgrounds.find(
-                  (bg) => bg.name === kp.backgroundCode
-                )
+              ? presetBackgrounds.find((bg) => bg.name === kp.backgroundCode)
               : null;
 
             const kpBackgroundImage = kp?.background
               ? `url(${kp.background})`
               : kpPresetBg
-              ? `url(${kpPresetBg.imagePath})`
-              : null;
+                ? `url(${kpPresetBg.imagePath})`
+                : null;
 
             return (
               <div key={item?._id || i} className="space-y-2">
-                {/* Top line */}
                 <div className="text-xs text-gray-500 flex items-center justify-between">
                   <span>
                     You {actionText}
                     {page?.name ? ` in "${page.name}"` : ""}.
                   </span>
-                  <span className="ml-2 whitespace-nowrap">
-                    {timeAgo(item?.createdAt)}
-                  </span>
+                  <span className="text-nowrap">{timeAgo(item?.createdAt)}</span>
                 </div>
 
                 {/* Card */}
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  {/* Actor row */}
+                  {/* Actor */}
                   <div className="flex items-center gap-3 mb-3">
                     <img
                       src={actor?.profilePicture}
                       alt={actor?.name}
                       className="w-9 h-9 rounded-full object-cover bg-gray-200"
-                      onError={(e) => {
-                        e.target.src =
-                          "https://via.placeholder.com/40?text=User";
-                      }}
+                      onError={(e) =>
+                        (e.target.src =
+                          "https://via.placeholder.com/40?text=User")
+                      }
                     />
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {actor?.name}
-                      </p>
+                    <div>
+                      <p className="text-sm font-semibold">{actor?.name}</p>
                       <p className="text-xs text-gray-500">
                         @{actor?.username}
                       </p>
                     </div>
                   </div>
 
-                  {/* Page badge */}
-                  {page && (
-                    <div className="flex items-center gap-2 mb-2">
+                  {/* Post Author Info */}
+                  {post?.author && (
+                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                       <img
-                        src={page?.image}
-                        alt={page?.name}
-                        className="w-7 h-7 rounded-full object-cover bg-gray-200"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/32?text=P";
-                        }}
+                        src={post.author.profilePicture}
+                        alt={post.author.name}
+                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                        onError={(e) =>
+                          (e.target.src =
+                            "https://via.placeholder.com/24?text=User")
+                        }
                       />
-                      <span className="text-xs text-gray-600 font-medium">
-                        {page?.name}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Knowledge Post Preview */}
-                  {kp ? (
-                    <div className="mb-2 rounded-2xl overflow-hidden border border-gray-200">
-                      <div
-                        className="w-full min-h-[120px] flex items-center justify-center px-4 py-6 text-center bg-gray-900/80 bg-cover bg-center"
-                        style={{
-                          backgroundImage: kpBackgroundImage || undefined,
-                          backgroundColor: kpBackgroundImage
-                            ? undefined
-                            : "#111827",
-                        }}
-                      >
-                        <p
-                          className="text-sm font-medium max-w-full break-words"
-                          style={{
-                            color: kp.color || "#ffffff",
-                            fontWeight: kp.isBold ? 700 : 500,
-                            fontStyle: kp.isItalic ? "italic" : "normal",
-                            textDecoration: kp.isUnderline
-                              ? "underline"
-                              : "none",
-                            textAlign: kp.textAlignment || "center",
-                          }}
-                        >
-                          {kp.text}
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-gray-700">
+                          {post.author.name}
                         </p>
-                      </div>
-                     
-                    </div>
-                  ) : (
-                    <>
-                      {/* Media preview (for normal post) */}
-                      {media && media.fileUrl && (() => {
-                        // Check if it's a video by type or file extension
-                        const isVideo = 
-                          media.type === "video" || 
-                          /\.(mp4|webm|ogg|mov|avi|mkv|flv|wmv|m4v)$/i.test(media.fileUrl);
-                        
-                        return (
-                          <div className="mb-2">
-                            {isVideo ? (
-                              <video
-                                src={media.fileUrl}
-                                controls
-                                className="w-full h-40 object-cover rounded-lg bg-black"
-                                preload="metadata"
-                                playsInline
-                              >
-                                Your browser does not support the video tag.
-                              </video>
-                            ) : (
+                        {page && (
+                          <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
+                            {page.image && (
                               <img
-                                src={media.fileUrl}
-                                alt={media.title || "media"}
-                                className="w-full h-40 object-cover rounded-lg bg-gray-100"
-                                onError={(e) => {
-                                  e.target.src =
-                                    "https://via.placeholder.com/300x160?text=Media";
-                                }}
+                                src={page.image}
+                                alt={page.name}
+                                className="w-4 h-4 rounded-full object-cover"
                               />
                             )}
+                            <p className="text-xs text-gray-500">
+                              {page.name}
+                            </p>
                           </div>
-                        );
-                      })()}
-
-                      {/* Body / text (for normal post) */}
-                      {bodyText && (
-                        <p className="text-sm text-gray-800 mb-2 line-clamp-3">
-                          {bodyText}
-                        </p>
-                      )}
-                    </>
+                        )}
+                      </div>
+                    </div>
                   )}
 
-                  {/* Comment text (if any) */}
+                  {/* Knowledge Post */}
+                  {kp && (
+                    <div className="mb-2">
+                      {kpBackgroundImage && (
+                        <div
+                          className="rounded-lg overflow-hidden min-h-[120px] flex items-center justify-center p-4 relative mb-2"
+                          style={{
+                            backgroundImage: kpBackgroundImage,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-black/5 rounded-lg"></div>
+                          {kp.textOnImage && (
+                            <p className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg">
+                              {kp.textOnImage}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      {kp.text && !kp.textOnImage && (
+                        <p className="text-sm text-gray-700 mb-2">{kp.text}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Post Body Text */}
+                  {bodyText && (
+                    <p className="text-sm text-gray-700 mb-2">{bodyText}</p>
+                  )}
+
+                  {/* Post Media */}
+                  {post?.media && post.media.length > 0 && (
+                    <div className="mb-2">
+                      {post.media[0].type === "image" ? (
+                        <img
+                          src={post.media[0].fileUrl}
+                          alt="Post media"
+                          className="w-full rounded-lg object-cover max-h-48"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : post.media[0].type === "video" ? (
+                        <video
+                          src={post.media[0].fileUrl}
+                          controls
+                          className="w-full rounded-lg max-h-48"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <img
+                          src={post.media[0].fileUrl || post.media[0]}
+                          alt="Post media"
+                          className="w-full rounded-lg object-cover max-h-48"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Comment Text */}
                   {comment?.text && (
-                    <div className="mt-1 px-3 py-2 bg-white rounded-lg border border-gray-200">
-                      <p className="text-xs text-gray-500 mb-0.5">Your comment</p>
-                      <p className="text-sm text-gray-800 whitespace-pre-line">
+                    <div className="mt-2 pt-2 border-t border-gray-200">
+                      <p className="text-xs text-gray-500 mb-1">Comment:</p>
+                      <p className="text-sm text-gray-700 bg-white p-2 rounded border border-gray-200">
                         {comment.text}
                       </p>
                     </div>
