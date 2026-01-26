@@ -110,13 +110,16 @@ export const deletePost = createAsyncThunk(
 );
 export const editPost = createAsyncThunk(
   "posts/editPost",
-  async ({ postId, formData }, thunkAPI) => {
+  async ({ postId, formData, isFormData = true }, thunkAPI) => {
     try {
-      const res = await axios.put(`/posts/${postId}`, formData);
+      const config = isFormData
+        ? { headers: { "Content-Type": "multipart/form-data" } }
+        : { headers: { "Content-Type": "application/json" } };
+      const res = await axios.put(`/posts/${postId}`, formData, config);
       return res.data; // { success, message, data:{Post} }
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete Post",
+        error.response?.data?.message || "Failed to edit Post",
       );
     }
   },

@@ -11,13 +11,14 @@ import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import ChatWidget from "../../components/global/ChatWidget";
 import FloatingChatButton from "../../components/global/ChatWidget";
+import { nofound } from "../../assets/export";
 
 export default function Golive() {
   const [liked, setLiked] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [loadingPageId, setLoadingPageId] = useState(null);
-  
+
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { myPages } = useSelector((state) => state.pages);
@@ -109,11 +110,17 @@ export default function Golive() {
                   className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={page.image || "https://blog.holosophic.org/wp-content/uploads/2018/05/Countries-page-image-placeholder-800x500.jpg"}
-                      alt={page.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {page.image ? (
+                      <img
+                        src={page.image}
+                        alt={page.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white font-semibold uppercase">
+                        {page.name?.charAt(0)}
+                      </div>
+                    )}
                     <span
                       onClick={() =>
                         navigate(`/profile`, {
@@ -142,8 +149,11 @@ export default function Golive() {
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
-                <p className="text-gray-500">No pages found</p>
+              <div className="text-gray-500 col-span-3 text-center py-10">
+                <div className=" flex justify-center">
+                  <img src={nofound} height={300} width={300} alt="" />
+                </div>
+                <p className="font-bold pt-4 text-black">No Pages Found</p>
               </div>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
+import { ErrorToast } from "../../components/global/Toaster";
 
 // Initial state for the post feed
 const initialState = {
@@ -25,10 +26,10 @@ export const fetchpostfeed = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch posts"
+        error.response?.data?.message || "Failed to fetch posts",
       );
     }
-  }
+  },
 );
 
 // Like/Unlike post API call
@@ -36,7 +37,7 @@ export const likePost = createAsyncThunk(
   "posts/likePost",
   async ({ postId, likeToggle }, thunkAPI) => {
     try {
-      console.log(postId,likeToggle,"tottk")
+      console.log(postId, likeToggle, "tottk");
       const res = await axios.post("/likes/post", {
         post: postId,
         likeToggle: likeToggle, // true for like, false for unlike
@@ -49,10 +50,10 @@ export const likePost = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 // utils/localLikes.js
@@ -88,11 +89,12 @@ export const createComment = createAsyncThunk(
 
       return res.data.data;
     } catch (error) {
+      ErrorToast(error.response?.data?.message);
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 export const updateComment = createAsyncThunk(
@@ -105,10 +107,10 @@ export const updateComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to update comment"
+        error.response?.data?.message || "Failed to update comment",
       );
     }
-  }
+  },
 );
 
 export const deleteComment = createAsyncThunk(
@@ -120,10 +122,10 @@ export const deleteComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment"
+        error.response?.data?.message || "Failed to delete comment",
       );
     }
-  }
+  },
 );
 export const elevateComment = createAsyncThunk(
   "comments/post/elevate/id",
@@ -134,10 +136,10 @@ export const elevateComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment"
+        error.response?.data?.message || "Failed to delete comment",
       );
     }
-  }
+  },
 );
 
 export const getComment = createAsyncThunk(
@@ -149,10 +151,10 @@ export const getComment = createAsyncThunk(
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post"
+        error.response?.data?.message || "Failed to like/unlike post",
       );
     }
-  }
+  },
 );
 
 export const likeComment = createAsyncThunk(
@@ -171,10 +173,10 @@ export const likeComment = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike comment"
+        error.response?.data?.message || "Failed to like/unlike comment",
       );
     }
-  }
+  },
 );
 
 /* ===============================
@@ -202,7 +204,7 @@ const postFeedSlice = createSlice({
         state.postsLoading = false;
         state.allfeedposts = postsFromAPI.map((post) => {
           const localLikes = JSON.parse(
-            localStorage.getItem("postLikes") || "{}"
+            localStorage.getItem("postLikes") || "{}",
           );
           const local = localLikes[post._id];
 
@@ -316,7 +318,7 @@ const postFeedSlice = createSlice({
         if (post) {
           // Merge API likes with local increment/decrement
           const localLikes = JSON.parse(
-            localStorage.getItem("postLikes") || "{}"
+            localStorage.getItem("postLikes") || "{}",
           );
           const local = localLikes[postId];
 
@@ -354,7 +356,7 @@ const postFeedSlice = createSlice({
 
               // Save to localStorage
               const localLikes = JSON.parse(
-                localStorage.getItem("commentLikes") || "{}"
+                localStorage.getItem("commentLikes") || "{}",
               );
               localLikes[commentId] = {
                 isLiked: c.isLiked,
@@ -377,7 +379,7 @@ const postFeedSlice = createSlice({
           commentsList.forEach((c) => {
             if (c._id === commentId) {
               const localLikes = JSON.parse(
-                localStorage.getItem("commentLikes") || "{}"
+                localStorage.getItem("commentLikes") || "{}",
               );
               const local = localLikes[commentId];
 

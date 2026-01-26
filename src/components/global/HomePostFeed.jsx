@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, AlertTriangle } from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
-import { likePost } from "../../redux/slices/postfeed.slice";
+import { likePost } from "../../redux/slices/posts.slice";
 import { useNavigate } from "react-router";
 import { PostUnderReview } from "../../assets/export";
 import ReportModal from "./ReportModal";
@@ -13,6 +13,7 @@ import SharePostModal from "./SharePostModal";
 import ShareToChatsModal from "./ShareToChatsModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
+import { IoWarning } from "react-icons/io5";
 
 export default function HomePostFeed({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
@@ -26,14 +27,15 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const [activeMedia, setActiveMedia] = useState(null);
   console.log("postpostpostpostpost", post)
 
- 
+
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const isLiked = liked[post.id];
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
+  const isUnderReview = Boolean(post?.isReported);
+
 
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
@@ -43,17 +45,114 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   );
   const { user: authUser } = useSelector((state) => state.auth);
 
-  const handleLikeClick = async(postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
+  // Get initial like state from post or localStorage
+  const getInitialLikeState = () => {
+    const postId = post.id || post._id;
 
+    // Check localStorage first (for optimistic updates)
+    const localLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+    const cachedLike = localLikes[postId];
+
+    if (cachedLike) {
+      return {
+        isLiked: cachedLike.isLiked || false,
+        likesCount: cachedLike.likesCount || 0,
+      };
+    }
+
+    // Use post data
+    return {
+      isLiked: post.isLiked || false,
+      likesCount: post.likesCount || 0,
+    };
+  };
+
+  const [localLikeState, setLocalLikeState] = useState(getInitialLikeState());
+
+  // Update local state when post changes
+  useEffect(() => {
+    const newState = getInitialLikeState();
+    setLocalLikeState(newState);
+  }, [post.id, post.isLiked, post.likesCount]);
+
+  const handleLikeClick = async () => {
+    const postId = post.id || post._id;
+    if (!postId) {
+      console.error("Post ID not found", { post });
+      return;
+    }
+
+    const currentIsLiked = localLikeState.isLiked;
+    const currentLikesCount = localLikeState.likesCount || 0;
+    const newIsLiked = !currentIsLiked;
+    const newLikesCount = newIsLiked
+      ? currentLikesCount + 1
+      : Math.max(currentLikesCount - 1, 0);
+
+    console.log("🔵 Like clicked - Post ID:", postId, "New Like Status:", newIsLiked);
+
+    // Optimistic update - update UI immediately
+    setLocalLikeState({
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    });
+
+    // Call parent toggleLike callback if provided
+    if (toggleLike && typeof toggleLike === "function") {
+      toggleLike(postId);
+    }
+
+    // Save to localStorage for persistence
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
+    likes[postId] = {
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    };
     localStorage.setItem("postLikes", JSON.stringify(likes));
-    toggleLike(postId, newLikeStatus, newLikesCount);
-    await dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+
+    // Call API - Same as PostCard/Mypost.jsx
+    try {
+      console.log("🔵 Dispatching likePost API:", { id: postId, likeToggle: newIsLiked, isPost: true });
+      const result = await dispatch(
+        likePost({
+          id: postId,
+          likeToggle: newIsLiked,
+          isPost: true,
+        }),
+      ).unwrap();
+
+      console.log("✅ Like API success:", result);
+
+      // Update with API response - check result.data structure
+      if (result?.data) {
+        const apiData = result.data;
+        setLocalLikeState({
+          isLiked: apiData.likeToggle ?? newIsLiked,
+          likesCount: apiData.likesCount ?? newLikesCount,
+        });
+      } else {
+        // If response structure is different, keep optimistic update
+        setLocalLikeState({
+          isLiked: newIsLiked,
+          likesCount: newLikesCount,
+        });
+      }
+    } catch (error) {
+      // If API call failed, revert optimistic update
+      console.error("❌ Like API failed:", error);
+      setLocalLikeState({
+        isLiked: currentIsLiked,
+        likesCount: currentLikesCount,
+      });
+
+      // Also revert localStorage
+      const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+      likes[postId] = {
+        isLiked: currentIsLiked,
+        likesCount: currentLikesCount,
+      };
+      localStorage.setItem("postLikes", JSON.stringify(likes));
+    }
   };
 
   const dropdownRef = useRef(null);
@@ -173,13 +272,10 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       {hasImages && (
         <div
           className={`w-full bg-white overflow-hidden p-4 relative transition 
-      ${post.isAllowedByAdmin
-              ? "cursor-pointer hover:opacity-90"
-              : "cursor-not-allowed"
-            }
+      ${!isUnderReview ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed"}
     `}
           onClick={() => {
-            if (post.isAllowedByAdmin) {
+            if (!isUnderReview) {
               setActiveMedia(post); // ✅ CHANGE: Pass entire post object, not just URL
               setImageViewerOpen(true);
             }
@@ -190,7 +286,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             <video
               src={firstMedia}
               className={`w-full rounded-2xl max-h-96 object-cover
-    ${!post?.isAllowedByAdmin ? "blur-sm" : ""}`}
+    ${isUnderReview ? "blur-sm" : ""}`}
               muted
               controls
               playsInline
@@ -201,19 +297,19 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               src={firstMedia}
               alt="post"
               className={`w-full h-auto rounded-2xl object-cover max-h-96
-    ${!post?.isAllowedByAdmin ? "blur-sm" : ""}`}
+    ${isUnderReview ? "blur-sm" : ""}`}
             />
           )}
 
           {/* Image count badge */}
-          {post.postimage.length > 1 && post.isAllowedByAdmin && (
+          {post.postimage.length > 1 && !isUnderReview && (
             <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
               +{post.postimage.length}
             </div>
           )}
 
           {/* 🔒 Under Review Overlay */}
-          {!post.isAllowedByAdmin && (
+          {isUnderReview && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center 
                 bg-black/40 backdrop-blur-md rounded-2xl"
@@ -223,6 +319,10 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
                 className="w-[150px]"
                 alt="postUnderreview"
               />
+              <div className="mt-3 flex items-center gap-2 text-sm font-medium text-orange-100">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Post is under review</span>
+              </div>
             </div>
           )}
         </div>
@@ -230,52 +330,65 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {/* Content */}
       <div className="px-4 py-3">
-        {/* {post.isAllowedByAdmin ? ( */}
+        {!isUnderReview ? (
           <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
-        {/* ) : ( */}
-          {/* <p className="text-sm text-gray-400 italic">
-            This post is currently under review.
-          </p>
-        )} */}
+        ) : (
+          <div className="items-center gap-2 text-sm text-orange-600 p-10">
+            <div className="flex justify-center">
+              <IoWarning size={70} />
+            </div>
+            <div className="flex justify-center mt-3">
+              <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">Post Under Review</p>
+            </div>
+          </div>
+
+        )}
       </div>
 
       {/* Stats - Action Bar */}
-      <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
-        <button
-          type="button" // 👈 YE ADD KARO
-          onClick={() =>
-            handleLikeClick(post.id, post.isLiked, post.likesCount)
-          }
-          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-        >
-          <Heart
-            className={`w-5 h-5 transition ${post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
-              }`}
-          />
-          <span
-            className={`text-sm font-medium ${post.isLiked ? "text-orange-500" : "text-gray-600"
-              }`}
+      {!isUnderReview && (
+        <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
+          <button
+            type="button"
+            onClick={handleLikeClick}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
           >
-            {Number(post.likesCount ?? 0)}
-          </span>
-        </button>
+            <Heart
+              className={`w-5 h-5 transition ${localLikeState.isLiked
+                  ? "fill-orange-500 text-orange-500"
+                  : "text-gray-600"
+                }`}
+            />
+            <span
+              className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                }`}
+            >
+              {Number(localLikeState.likesCount ?? 0)}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setCommentsOpen(!commentsOpen)}
-          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-        >
-          <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{post.stats.comments}</span>
-        </button>
+          <button
+            onClick={() => setCommentsOpen(!commentsOpen)}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+          >
+            <MessageCircle className="w-5 h-5" />
+            <span className="text-sm font-medium">
+              {post.stats.comments}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setSharepost(true)}
-          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-        >
-          <Share2 className="w-5 h-5" />
-          <span className="text-sm font-medium">{post.stats.shares}</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setSharepost(true)}
+            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+          >
+            <Share2 className="w-5 h-5" />
+            <span className="text-sm font-medium">
+              {post.stats.shares}
+            </span>
+          </button>
+        </div>
+      )}
+
 
       {/* Image Viewer Modal */}
       <PostImageViewerModal
@@ -302,8 +415,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal 
-            onClose={setSelectedOption} 
+          <ShareToChatsModal
+            onClose={setSelectedOption}
             post={{
               _id: post.id,
               page: post.page,

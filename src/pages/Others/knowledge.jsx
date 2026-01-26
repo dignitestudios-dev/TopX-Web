@@ -64,6 +64,40 @@ export default function Knowledge() {
     error,
   } = useSelector((state) => state.knowledgepost);
 
+  // Preset background images for knowledge posts
+  const presetBackgrounds = [
+    { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
+    { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
+    { id: 3, name: "bg_red_gradient", imagePath: "/bg_red_gradient.png" },
+    { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
+    { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" },
+  ];
+
+  const getBackgroundStyle = (post) => {
+    // 1) If direct background image URL aaraha hai, wahi use karo
+    if (post?.background) {
+      return {
+        backgroundImage: `url(${post.background})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
+    }
+
+    // 2) Warna backgroundCode ke basis par preset image use karo
+    const bgCode = post?.backgroundCode;
+    const preset = presetBackgrounds.find((bg) => bg.name === bgCode);
+
+    const imageUrl = preset
+      ? preset.imagePath
+      : presetBackgrounds[0].imagePath; // Fallback: bg_blue
+
+    return {
+      backgroundImage: `url(${imageUrl})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  };
+
   // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -93,16 +127,6 @@ export default function Knowledge() {
     }));
   };
 
-  const getGradient = (index) => {
-    const gradients = [
-      "from-pink-500 via-orange-500 to-yellow-500",
-      "from-blue-600 to-blue-400",
-      "from-purple-500 to-pink-400",
-      "from-green-400 to-blue-500",
-      "from-orange-400 to-red-500",
-    ];
-    return gradients[index % gradients.length];
-  };
 
   const timeAgo = (createdAt) => {
     const now = new Date();
@@ -220,18 +244,8 @@ export default function Knowledge() {
 
                 {/* Post Content */}
                 <div
-                  className={`bg-gradient-to-br ${getGradient(
-                    index,
-                  )} rounded-2xl m-3 p-[10em] min-h-[200px] flex items-center justify-center relative`}
-                  style={
-                    post.background
-                      ? {
-                          backgroundImage: `url(${post.background})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
-                      : {}
-                  }
+                  className="rounded-2xl m-3 p-[10em] min-h-[200px] flex items-center justify-center relative"
+                  style={getBackgroundStyle(post)}
                 >
                   <span className="bg-white/20 text-white text-xs px-3 py-1 rounded-full absolute top-6 left-6">
                     {post.page.topic}
@@ -240,6 +254,20 @@ export default function Knowledge() {
                     {post.text}
                   </p>
                 </div>
+
+                {/* Repost badge */}
+                {post.sharedBy ? (
+                  <div className="text-sm flex gap-4 ml-4 mb-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+                    <img
+                      src={post.sharedBy.profilePicture}
+                      alt={post.sharedBy.username}
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                    <span className="text-gray-800 font-medium">
+                      {post.sharedBy.username} Reposted
+                    </span>
+                  </div>
+                ) : null}
 
                 {/* Stats */}
                 <div className="flex items-center gap-10 text-sm text-orange-500 p-4 border-t border-gray-100">

@@ -5,7 +5,7 @@ import Input from "../../components/common/Input";
 import { authBg } from "../../assets/export";
 import Button from "../../components/common/Button";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { forgotPassword, verifyOTP } from "../../redux/slices/auth.slice";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
@@ -14,6 +14,7 @@ import VerificationModal from "../../components/authentication/VerificationModal
 export default function ForgotPassword() {
     const [openModal, setOpenModal] = useState(false);
     const [email, setEmail] = useState("");
+    const [resendTimer, setResendTimer] = useState(0);
 
     const dispatch = useDispatch();
     const { forgotLoading, forgotError, verifyOtpLoading, verifyOtpError } = useSelector(
@@ -37,6 +38,7 @@ export default function ForgotPassword() {
                     SuccessToast(res.payload || "OTP sent successfully");
                     setEmail(values.email);
                     setOpenModal(true);
+                    setResendTimer(30); // Start 30 second timer
                 } else {
                     ErrorToast(res.payload || "Failed to send OTP");
                 }
@@ -87,10 +89,34 @@ export default function ForgotPassword() {
 
         if (res.meta.requestStatus === "fulfilled") {
             SuccessToast("OTP resent successfully");
+            setResendTimer(30); // Reset timer to 30 seconds
         } else {
             ErrorToast(res.payload || "Failed to resend OTP");
         }
     };
+
+    // ⭐ TIMER COUNTDOWN EFFECT
+    useEffect(() => {
+        if (resendTimer === 0) return;
+
+        const interval = setInterval(() => {
+            setResendTimer((prev) => {
+                if (prev <= 1) {
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [resendTimer]);
+
+    // Reset timer when modal closes
+    useEffect(() => {
+        if (!openModal) {
+            setResendTimer(0);
+        }
+    }, [openModal]);
 
     return (
         <div className="w-full grid md:grid-cols-2 grid-cols-1 gap-10 overflow-hidden">
@@ -141,6 +167,8 @@ export default function ForgotPassword() {
                     onResend={handleResendOTP}
                     isVerifying={verifyOtpLoading}
                     mode="forget"
+                    resendTimer={resendTimer}
+                    setResendTimer={setResendTimer}
                 />
             </div>
         </div>
