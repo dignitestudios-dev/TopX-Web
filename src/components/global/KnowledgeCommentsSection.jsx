@@ -5,7 +5,7 @@ import { elevateComment } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
 import ReportModal from "./ReportModal"; // Report Modal
 import { sendReport } from "../../redux/slices/reports.slice";
-import { SuccessToast } from "./Toaster";
+import { SuccessToast, ErrorToast } from "./Toaster";
 import {
   KnowledgeCreateComment,
   KnowledgeDeleteComment,
@@ -121,6 +121,14 @@ export default function KnowledgeCommentsSection({
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
+      // error from unwrap can be a plain string (rejectWithValue) OR an error object
+      const apiMessage =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to elevate comment";
+      ErrorToast(apiMessage);
     }
   };
 
@@ -176,6 +184,18 @@ export default function KnowledgeCommentsSection({
             {
               label: "Delete",
               action: () => handleDeleteComment(comment?._id),
+            },
+          ]
+        : []),
+
+      // Show "Elevate Comment" for user's own comments as well
+      ...(comment.user._id === user._id
+        ? [
+            {
+              label: "Elevate Comment",
+              action: () => {
+                onElevateComment(comment._id);
+              },
             },
           ]
         : []),

@@ -135,14 +135,15 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
-      // Extract error message from different possible structures
-      const errorMessage =
-        error?.message ||
+      // Prefer exact API message over generic text
+      const apiMessage =
+        (typeof error === "string" && error) ||
         error?.response?.data?.message ||
         error?.data?.message ||
         error?.payload?.message ||
+        error?.message ||
         "Failed to elevate comment";
-      ErrorToast(errorMessage);
+      ErrorToast(apiMessage);
     }
   };
 
