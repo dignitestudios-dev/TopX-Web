@@ -13,7 +13,7 @@ import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchRecommendedPages } from '../../redux/slices/trending.slice';
 import CollectionModal from "../../components/global/CollectionModal";
-import { addPageToCollections, getMyCollections, removePageFromCollections } from "../../redux/slices/collection.slice";
+import { addPageToCollections, getMyCollections } from "../../redux/slices/collection.slice";
 
 export default function Suggestpage() {
   const [liked, setLiked] = useState({});
@@ -21,7 +21,6 @@ export default function Suggestpage() {
   const [open, setOpen] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
-  const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const navigation = useNavigate();
   const observerTarget = useRef(null);
@@ -77,17 +76,6 @@ export default function Suggestpage() {
     });
   };
 
-  const handleUnsubscribe = (pageItem) => {
-    setUnsubscribingPageId(pageItem._id);
-
-    dispatch(removePageFromCollections({
-      collections: pageItem.collections || [],
-      page: pageItem._id,
-    })).then(() => {
-      dispatch(fetchRecommendedPages({ page: 1, limit: 12 }));
-      setUnsubscribingPageId(null);
-    });
-  };
 
   const handleSubscribeClick = (pageItem) => {
     setSelectedPage(pageItem);
@@ -215,22 +203,10 @@ export default function Suggestpage() {
 
                       {item.isSubscribed ? (
                         <button
-                          onClick={() => handleUnsubscribe(item)}
-                          disabled={unsubscribingPageId === item._id}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-                            ${unsubscribingPageId === item._id
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-gray-200 text-gray-700"
-                            }`}
+                          onClick={() => navigation(`/trending-page-detail/${item._id}`)}
+                          className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
                         >
-                          {unsubscribingPageId === item._id ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
-                              Removing...
-                            </span>
-                          ) : (
-                            "Unsubscribe"
-                          )}
+                          Subscribed
                         </button>
                       ) : (
                         <button

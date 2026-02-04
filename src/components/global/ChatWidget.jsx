@@ -84,7 +84,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [activeTab, setActiveTab] = useState("Chat");
   const [open, setOpen] = useState(!!initialUser); // Open if initialUser is provided
   const [selectedChat, setSelectedChat] = useState(null);
-  
+
   // Handle close with callback
   const handleClose = () => {
     setOpen(false);
@@ -92,7 +92,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       onClose();
     }
   };
-  
+
   // Auto-start chat when initialUser is provided
   useEffect(() => {
     if (initialUser && socket && open) {
@@ -621,7 +621,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       };
 
       await dispatch(blockUser(payload)).unwrap();
-      
+
       // Also emit socket event for real-time update
       socket.socket.emit("individual:block:user", {
         chatId: selectedChat._id,
@@ -629,7 +629,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       });
 
       SuccessToast("User blocked successfully");
-      
+
       // ✅ UI cleanup
       dispatch(resetChatDetail());
       setShowBlockConfirmModal(false);
@@ -644,8 +644,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     if (!selectedChat?._id) return;
 
     socket.socket.emit("individual:chat:delete", {
-      groupId: selectedChat._id,
-      memberIds: [user?._id || allUserData?._id],
+      chatId: selectedChat._id
     });
 
     // ✅ ONLY clear messages from UI
@@ -779,7 +778,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     return (
       <div
-        onClick={() => handleSelectUser(user)}
+        // onClick={() => handleSelectUser(user)}
         className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded mb-1"
       >
         <div className="flex items-center gap-2">
@@ -794,12 +793,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           <span className="text-sm text-gray-900">{user.name}</span>
         </div>
 
-        <div
+        {/* <div
           className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"
             }`}
         >
           {isSelected && <Check className="w-3 h-3 text-white" />}
-        </div>
+        </div> */}
       </div>
     );
   };
@@ -973,398 +972,277 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     console.log(selectedChat, "selectedChat");
     return (
       <>
-      <div
-        ref={chatPopupRef}
-        className="fixed bottom-6 right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]"
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <div className="flex items-center w-full justify-between gap-3">
-            {/* Left Section: Back + Avatar + Info */}
-            <div className="flex items-center gap-3">
-              {/* Back Button */}
-              <button
-                onClick={() => {
-                  if (selectedChat?.isGroup) {
-                    socket.leaveGroupRoom(
-                      { groupId: selectedChat.groupId || selectedChat._id },
-                      () => { },
-                    );
-                  } else {
-                    socket.leaveChats({ chatId: selectedChat._id }, () => { });
-                  }
-                  setShowMediaOptions(false);
-                  dispatch(resetChatDetail());
-                  setScreen("list");
-                }}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-
-              {/* Avatar */}
-              <img
-                src={
-                  selectedChat?.avatar ||
-                  selectedChat?.receiverInfo?.profilePicture ||
-                  selectedChat?.image
-                }
-                alt={
-                  selectedChat?.name ||
-                  selectedChat?.receiverInfo?.name ||
-                  "Chat"
-                }
-                className="w-10 h-10 rounded-full object-cover"
-              />
-
-              {/* Name + Status */}
-              <div className="flex flex-col leading-tight">
-                <p
-                  className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
+        <div
+          ref={chatPopupRef}
+          className="fixed bottom-6 right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]"
+        >
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <div className="flex items-center w-full justify-between gap-3">
+              {/* Left Section: Back + Avatar + Info */}
+              <div className="flex items-center gap-3">
+                {/* Back Button */}
+                <button
                   onClick={() => {
                     if (selectedChat?.isGroup) {
-                      const groupId = selectedChat.groupId || selectedChat._id;
-                      dispatch(getGroupInfo(groupId));
-                      setScreen("groupInfo");
+                      socket.leaveGroupRoom(
+                        { groupId: selectedChat.groupId || selectedChat._id },
+                        () => { },
+                      );
+                    } else {
+                      socket.leaveChats({ chatId: selectedChat._id }, () => { });
                     }
+                    setShowMediaOptions(false);
+                    dispatch(resetChatDetail());
+                    setScreen("list");
                   }}
+                  className="text-gray-600 hover:text-gray-900"
                 >
-                  {selectedChat?.name ||
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                {/* Avatar */}
+                <img
+                  src={
+                    selectedChat?.avatar ||
+                    selectedChat?.receiverInfo?.profilePicture ||
+                    selectedChat?.image
+                  }
+                  alt={
+                    selectedChat?.name ||
                     selectedChat?.receiverInfo?.name ||
-                    "Unknown"}
-                </p>
+                    "Chat"
+                  }
+                  className="w-10 h-10 rounded-full object-cover"
+                />
 
-                <p className="text-xs text-gray-500 flex items-center gap-1">
-                  {selectedChat?.isGroup ? (
-                    `${getMemberCount()} members`
-                  ) : onlineUsers[selectedChat?.receiverInfo?._id] ? (
-                    <>
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      Online
-                    </>
-                  ) : (
-                    "Offline"
-                  )}
-                </p>
+                {/* Name + Status */}
+                <div className="flex flex-col leading-tight">
+                  <p
+                    className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
+                    onClick={() => {
+                      if (selectedChat?.isGroup) {
+                        const groupId = selectedChat.groupId || selectedChat._id;
+                        dispatch(getGroupInfo(groupId));
+                        setScreen("groupInfo");
+                      }
+                    }}
+                  >
+                    {selectedChat?.name ||
+                      selectedChat?.receiverInfo?.name ||
+                      "Unknown"}
+                  </p>
+
+                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                    {selectedChat?.isGroup ? (
+                      `${getMemberCount()} members`
+                    ) : onlineUsers[selectedChat?.receiverInfo?._id] ? (
+                      <>
+                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                        Online
+                      </>
+                    ) : (
+                      "Offline"
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="relative">
-              {/* Right Section: Menu */}
-              <button
-                onClick={() => setShowChatMenu((prev) => !prev)}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <HiDotsVertical className="w-5 h-5" />
-              </button>
+              <div className="relative">
+                {/* Right Section: Menu */}
+                <button
+                  onClick={() => setShowChatMenu((prev) => !prev)}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  <HiDotsVertical className="w-5 h-5" />
+                </button>
 
-              {showChatMenu && (
-                <div className="absolute right-0 mt-2 w-[11em] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                  {/* Group Chat Options */}
-                  {selectedChat?.isGroup ? (
-                    <>
-                      {/* Mute Notifications */}
-                      <button
-                        onClick={async () => {
-                          const groupId =
-                            selectedChat.groupId || selectedChat._id;
-                          const isMuted =
-                            groupInfo?.isNotificationMute || false;
-                          try {
-                            await dispatch(
-                              toggleGroupMute({
-                                groupId,
-                                mute: isMuted ? "disable" : "enable",
-                              }),
-                            ).unwrap();
-                            // Refresh group info to get updated mute status
-                            dispatch(getGroupInfo(groupId));
+                {showChatMenu && (
+                  <div className="absolute right-0 mt-2 w-[11em] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    {/* Group Chat Options */}
+                    {selectedChat?.isGroup ? (
+                      <>
+                        {/* Mute Notifications */}
+                        <button
+                          onClick={async () => {
+                            const groupId =
+                              selectedChat.groupId || selectedChat._id;
+                            const isMuted =
+                              groupInfo?.isNotificationMute || false;
+                            try {
+                              await dispatch(
+                                toggleGroupMute({
+                                  groupId,
+                                  mute: isMuted ? "disable" : "enable",
+                                }),
+                              ).unwrap();
+                              // Refresh group info to get updated mute status
+                              dispatch(getGroupInfo(groupId));
+                              setShowChatMenu(false);
+                            } catch (error) {
+                              console.error("Failed to toggle mute:", error);
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                        >
+                          {groupInfo?.isNotificationMute
+                            ? "Unmute Notifications"
+                            : "Mute Notifications"}
+                        </button>
+
+                        {/* Delete Group - Only for admin */}
+                        {groupInfo?.admin?._id ===
+                          (user?._id || allUserData?._id) && (
+                            <button
+                              onClick={() => {
+                                const groupId =
+                                  selectedChat.groupId || selectedChat._id;
+                                if (
+                                  window.confirm(
+                                    "Are you sure you want to delete this group? This action cannot be undone.",
+                                  )
+                                ) {
+                                  socket.deleteGroup({ groupId }, (response) => {
+                                    console.log("Group deleted:", response);
+                                    dispatch(removeChat({ chatId: groupId }));
+                                    dispatch(resetChatDetail());
+                                    setShowChatMenu(false);
+                                    setScreen("list");
+                                  });
+                                }
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                            >
+                              Delete Group
+                            </button>
+                          )}
+
+                        {/* Leave Group */}
+                        <button
+                          onClick={() => {
+                            const groupId =
+                              selectedChat.groupId || selectedChat._id;
+                            if (
+                              window.confirm(
+                                "Are you sure you want to leave this group?",
+                              )
+                            ) {
+                              socket.leaveGroup({ groupId }, (response) => {
+                                console.log("Left group:", response);
+                                dispatch(removeChat({ chatId: groupId }));
+                                dispatch(resetChatDetail());
+                                setShowChatMenu(false);
+                                setScreen("list");
+                              });
+                            }
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                        >
+                          Leave Group
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Delete Chat */}
+                        <button
+                          onClick={handleClearMessages}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                        >
+                          Delete Chat
+                        </button>
+
+                        {/* Create Group Chat with this user */}
+                        <button
+                          onClick={() => {
+                            if (!selectedChat?.receiverInfo?._id) return;
+
+                            // Pre-select this user for group creation
+                            setSelectedUsers([
+                              {
+                                _id: selectedChat.receiverInfo._id,
+                                name: selectedChat.receiverInfo.name,
+                                profilePicture:
+                                  selectedChat.receiverInfo.profilePicture,
+                                hasConnection: true,
+                              },
+                            ]);
+
+                            setGroupName("");
+                            setGroupBio("");
+                            setGroupImage(null);
+                            setGroupImagePreview(null);
+                            setSearchTerm("");
+
                             setShowChatMenu(false);
-                          } catch (error) {
-                            console.error("Failed to toggle mute:", error);
-                          }
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                      >
-                        {groupInfo?.isNotificationMute
-                          ? "Unmute Notifications"
-                          : "Mute Notifications"}
-                      </button>
+                            setScreen("createGroup");
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                        >
+                          Create Group Chat
+                        </button>
 
-                      {/* Delete Group - Only for admin */}
-                      {groupInfo?.admin?._id ===
-                        (user?._id || allUserData?._id) && (
+                        {/* Block User */}
+                        {!isBlocked && (
                           <button
-                            onClick={() => {
-                              const groupId =
-                                selectedChat.groupId || selectedChat._id;
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this group? This action cannot be undone.",
-                                )
-                              ) {
-                                socket.deleteGroup({ groupId }, (response) => {
-                                  console.log("Group deleted:", response);
-                                  dispatch(removeChat({ chatId: groupId }));
-                                  dispatch(resetChatDetail());
-                                  setShowChatMenu(false);
-                                  setScreen("list");
-                                });
-                              }
-                            }}
+                            onClick={handleBlockUser}
                             className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
                           >
-                            Delete Group
+                            Block Users
                           </button>
                         )}
 
-                      {/* Leave Group */}
-                      <button
-                        onClick={() => {
-                          const groupId =
-                            selectedChat.groupId || selectedChat._id;
-                          if (
-                            window.confirm(
-                              "Are you sure you want to leave this group?",
-                            )
-                          ) {
-                            socket.leaveGroup({ groupId }, (response) => {
-                              console.log("Left group:", response);
-                              dispatch(removeChat({ chatId: groupId }));
-                              dispatch(resetChatDetail());
-                              setShowChatMenu(false);
-                              setScreen("list");
-                            });
-                          }
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
-                      >
-                        Leave Group
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Delete Chat */}
-                      <button
-                        onClick={handleClearMessages}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                      >
-                        Delete Chat
-                      </button>
-
-                      {/* Create Group Chat with this user */}
-                      <button
-                        onClick={() => {
-                          if (!selectedChat?.receiverInfo?._id) return;
-
-                          // Pre-select this user for group creation
-                          setSelectedUsers([
-                            {
-                              _id: selectedChat.receiverInfo._id,
-                              name: selectedChat.receiverInfo.name,
-                              profilePicture:
-                                selectedChat.receiverInfo.profilePicture,
-                              hasConnection: true,
-                            },
-                          ]);
-
-                          setGroupName("");
-                          setGroupBio("");
-                          setGroupImage(null);
-                          setGroupImagePreview(null);
-                          setSearchTerm("");
-
-                          setShowChatMenu(false);
-                          setScreen("createGroup");
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                      >
-                        Create Group Chat
-                      </button>
-
-                      {/* Block User */}
-                      {!isBlocked && (
+                        {/* Report */}
                         <button
-                          onClick={handleBlockUser}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                          onClick={() => {
+                            setShowChatMenu(false);
+                            setReportModalOpen(true);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600"
                         >
-                          Block Users
+                          Report
                         </button>
-                      )}
-
-                      {/* Report */}
-                      <button
-                        onClick={() => {
-                          setShowChatMenu(false);
-                          setReportModalOpen(true);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-orange-600"
-                      >
-                        Report
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3">
-          {chatDetailLoading ? (
-            <p className="text-center text-gray-400 text-sm mt-10">
-              Loading messages...
-            </p>
-          ) : chatDetailMessages && chatDetailMessages.length > 0 ? (
-            chatDetailMessages.map((msg, i) => {
-              const currentUserId = user?._id || allUserData?._id;
-              const isCurrentUser = msg.sender?._id === currentUserId;
+          <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3">
+            {chatDetailLoading ? (
+              <p className="text-center text-gray-400 text-sm mt-10">
+                Loading messages...
+              </p>
+            ) : chatDetailMessages && chatDetailMessages.length > 0 ? (
+              chatDetailMessages.map((msg, i) => {
+                const currentUserId = user?._id || allUserData?._id;
+                const isCurrentUser = msg.sender?._id === currentUserId;
 
-              return (
-                <div
-                  key={msg._id}
-                  className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
-                >
-                  {!isCurrentUser && (
-                    <img
-                      src={
-                        msg.sender?.profilePicture ||
-                        "https://randomuser.me/api/portraits/men/1.jpg"
-                      }
-                      alt={msg.sender?.name || "User"}
-                      className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1"
-                    />
-                  )}
+                return (
                   <div
-                    className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
-                      ? "bg-orange-500 text-white rounded-br-none"
-                      : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                    key={msg._id}
+                    className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
                       }`}
                   >
-                    {msg.type === "shared" && msg.shared ? (
-                      // Knowledge post - show styled card
-                      msg.shared.sharedType === "knowledge" ? (
-                        <div className="space-y-2">
-                          {/* Page/Topic Info */}
-                          {msg.shared.name && (
-                            <div className="flex items-center gap-2 mb-2">
-                              {msg.shared.pageImage && (
-                                <img
-                                  src={msg.shared.pageImage}
-                                  alt="Page"
-                                  className="w-6 h-6 rounded-full object-cover"
-                                />
-                              )}
-                              <p className="text-xs font-semibold opacity-90">
-                                {msg.shared.name}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Shared Post Type Label */}
-                          <p className="text-xs opacity-80 mb-2">
-                            Shared a knowledge post
-                          </p>
-
-                          {/* Knowledge Post Card */}
-                          <div
-                            className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
-                            style={
-                              // Check if imageStyle is a JSON string or simple string
-                              (() => {
-                                let backgroundCode = null;
-                                let styleData = null;
-
-                                if (msg.shared.imageStyle) {
-                                  try {
-                                    // Try to parse as JSON
-                                    styleData = JSON.parse(
-                                      msg.shared.imageStyle,
-                                    );
-                                    backgroundCode =
-                                      styleData.backgroundCode ||
-                                      msg.shared.imageLocalPath;
-                                  } catch (e) {
-                                    // If not JSON, use as string
-                                    backgroundCode =
-                                      msg.shared.imageStyle ||
-                                      msg.shared.imageLocalPath;
-                                  }
-                                } else {
-                                  backgroundCode = msg.shared.imageLocalPath;
-                                }
-
-                                // Find background from presetBackgrounds
-                                const bgPreset = presetBackgrounds.find(
-                                  (bg) => bg.name === backgroundCode,
-                                );
-
-                                if (bgPreset) {
-                                  return {
-                                    backgroundImage: `url(${bgPreset.imagePath})`,
-                                    backgroundSize: "cover",
-                                    backgroundPosition: "center",
-                                  };
-                                }
-
-                                // Default gradient if no background found
-                                return {
-                                  background:
-                                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                };
-                              })()
-                            }
-                          >
-                            {/* Overlay for better text readability */}
-                            <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
-
-                            {/* Text Content */}
-                            {msg.shared.textOnImage && (
-                              <p
-                                className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg"
-                                style={(() => {
-                                  let styleData = null;
-                                  if (msg.shared.imageStyle) {
-                                    try {
-                                      styleData = JSON.parse(
-                                        msg.shared.imageStyle,
-                                      );
-                                    } catch (e) {
-                                      styleData = null;
-                                    }
-                                  }
-
-                                  return {
-                                    fontSize: styleData?.fontSize
-                                      ? `${styleData.fontSize}px`
-                                      : "18px",
-                                    color: styleData?.color || "#ffffff",
-                                    fontWeight: styleData?.isBold
-                                      ? "700"
-                                      : "500",
-                                    fontStyle: styleData?.isItalic
-                                      ? "italic"
-                                      : "normal",
-                                    textDecoration: styleData?.isUnderline
-                                      ? "underline"
-                                      : "none",
-                                    textAlign:
-                                      styleData?.textAlignment || "center",
-                                  };
-                                })()}
-                              >
-                                {msg.shared.textOnImage}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ) : // Regular post with media
-                        !msg.shared.media ? (
-                          <p className="text-sm">
-                            {msg.sender?.name || "Someone"} shared a text post
-                          </p>
-                        ) : (
-                          // If media exists, show full details
+                    {!isCurrentUser && (
+                      <img
+                        src={
+                          msg.sender?.profilePicture ||
+                          "https://randomuser.me/api/portraits/men/1.jpg"
+                        }
+                        alt={msg.sender?.name || "User"}
+                        className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1"
+                      />
+                    )}
+                    <div
+                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
+                        ? "bg-orange-500 text-white rounded-br-none"
+                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                        }`}
+                    >
+                      {msg.type === "shared" && msg.shared ? (
+                        // Knowledge post - show styled card
+                        msg.shared.sharedType === "knowledge" ? (
                           <div className="space-y-2">
                             {/* Page/Topic Info */}
                             {msg.shared.name && (
@@ -1384,457 +1262,578 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
                             {/* Shared Post Type Label */}
                             <p className="text-xs opacity-80 mb-2">
-                              Shared a post
+                              Shared a knowledge post
                             </p>
 
-                            {/* Post Media (Video or Image) */}
-                            {msg.shared.media && (
-                              <div className="rounded-lg overflow-hidden">
-                                {msg.shared.media.includes(".mp4") ||
-                                  msg.shared.media.includes(".mov") ||
-                                  msg.shared.media.includes("video") ? (
-                                  <video
-                                    src={msg.shared.media}
-                                    controls
-                                    className="w-full max-h-64 object-contain rounded-lg"
-                                  >
-                                    Your browser does not support the video tag.
-                                  </video>
-                                ) : (
-                                  <img
-                                    src={msg.shared.media}
-                                    alt="Shared post"
-                                    className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
-                                    onClick={() => {
-                                      setSelectedMessageImages([
-                                        msg.shared.media,
-                                      ]);
-                                      setCurrentImageIndex(0);
-                                      setShowMessageImageModal(true);
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            )}
+                            {/* Knowledge Post Card */}
+                            <div
+                              className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
+                              style={
+                                // Check if imageStyle is a JSON string or simple string
+                                (() => {
+                                  let backgroundCode = null;
+                                  let styleData = null;
 
-                            {/* Text on Image */}
-                            {msg.shared.textOnImage && (
-                              <p className="text-sm mt-2">
-                                {msg.shared.textOnImage}
-                              </p>
-                            )}
+                                  if (msg.shared.imageStyle) {
+                                    try {
+                                      // Try to parse as JSON
+                                      styleData = JSON.parse(
+                                        msg.shared.imageStyle,
+                                      );
+                                      backgroundCode =
+                                        styleData.backgroundCode ||
+                                        msg.shared.imageLocalPath;
+                                    } catch (e) {
+                                      // If not JSON, use as string
+                                      backgroundCode =
+                                        msg.shared.imageStyle ||
+                                        msg.shared.imageLocalPath;
+                                    }
+                                  } else {
+                                    backgroundCode = msg.shared.imageLocalPath;
+                                  }
 
-                            {/* Additional Content */}
-                            {msg.content &&
-                              msg.content !== "Shared a knowledge post" &&
-                              msg.content !== "Shared a post" && (
-                                <p className="text-sm mt-2">{msg.content}</p>
+                                  // Find background from presetBackgrounds
+                                  const bgPreset = presetBackgrounds.find(
+                                    (bg) => bg.name === backgroundCode,
+                                  );
+
+                                  if (bgPreset) {
+                                    return {
+                                      backgroundImage: `url(${bgPreset.imagePath})`,
+                                      backgroundSize: "cover",
+                                      backgroundPosition: "center",
+                                    };
+                                  }
+
+                                  // Default gradient if no background found
+                                  return {
+                                    background:
+                                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                  };
+                                })()
+                              }
+                            >
+                              {/* Overlay for better text readability */}
+                              <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
+
+                              {/* Text Content */}
+                              {msg.shared.textOnImage && (
+                                <p
+                                  className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg"
+                                  style={(() => {
+                                    let styleData = null;
+                                    if (msg.shared.imageStyle) {
+                                      try {
+                                        styleData = JSON.parse(
+                                          msg.shared.imageStyle,
+                                        );
+                                      } catch (e) {
+                                        styleData = null;
+                                      }
+                                    }
+
+                                    return {
+                                      fontSize: styleData?.fontSize
+                                        ? `${styleData.fontSize}px`
+                                        : "18px",
+                                      color: styleData?.color || "#ffffff",
+                                      fontWeight: styleData?.isBold
+                                        ? "700"
+                                        : "500",
+                                      fontStyle: styleData?.isItalic
+                                        ? "italic"
+                                        : "normal",
+                                      textDecoration: styleData?.isUnderline
+                                        ? "underline"
+                                        : "none",
+                                      textAlign:
+                                        styleData?.textAlignment || "center",
+                                    };
+                                  })()}
+                                >
+                                  {msg.shared.textOnImage}
+                                </p>
                               )}
-                          </div>
-                        )
-                    ) : (
-                      <p>{msg.content}</p>
-                    )}
-                    {msg.mediaUrls &&
-                      msg.mediaUrls.length > 0 &&
-                      (() => {
-                        const mediaCount = msg.mediaUrls.length;
-                        if (mediaCount === 1) {
-                          return (
-                            <img
-                              src={msg.mediaUrls[0]}
-                              alt="Media"
-                              className="w-full rounded mt-2 cursor-pointer"
-                              onClick={() => {
-                                setSelectedMessageImages(msg.mediaUrls);
-                                setCurrentImageIndex(0);
-                                setShowMessageImageModal(true);
-                              }}
-                            />
-                          );
-                        } else if (mediaCount === 2) {
-                          return (
-                            <div className="mt-2 grid grid-cols-2 gap-1">
-                              {msg.mediaUrls.map((url, idx) => (
-                                <img
-                                  key={idx}
-                                  src={url}
-                                  alt={`Media ${idx + 1}`}
-                                  className="w-full h-20 object-cover rounded cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedMessageImages(msg.mediaUrls);
-                                    setCurrentImageIndex(idx);
-                                    setShowMessageImageModal(true);
-                                  }}
-                                />
-                              ))}
                             </div>
-                          );
-                        } else {
-                          // 3 or more, 2x2 grid
-                          return (
-                            <div className="mt-2 grid grid-cols-2 gap-1">
-                              {msg.mediaUrls.slice(0, 4).map((url, idx) => {
-                                if (idx === 3 && mediaCount > 4) {
-                                  return (
-                                    <div
-                                      key={idx}
-                                      className="relative cursor-pointer"
+                          </div>
+                        ) : // Regular post with media
+                          !msg.shared.media ? (
+                            <p className="text-sm">
+                              {msg.sender?.name || "Someone"} shared a text post
+                            </p>
+                          ) : (
+                            // If media exists, show full details
+                            <div className="space-y-2">
+                              {/* Page/Topic Info */}
+                              {msg.shared.name && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold opacity-90">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Shared Post Type Label */}
+                              <p className="text-xs opacity-80 mb-2">
+                                Shared a post
+                              </p>
+
+                              {/* Post Media (Video or Image) */}
+                              {msg.shared.media && (
+                                <div className="rounded-lg overflow-hidden">
+                                  {msg.shared.media.includes(".mp4") ||
+                                    msg.shared.media.includes(".mov") ||
+                                    msg.shared.media.includes("video") ? (
+                                    <video
+                                      src={msg.shared.media}
+                                      controls
+                                      className="w-full max-h-64 object-contain rounded-lg"
+                                    >
+                                      Your browser does not support the video tag.
+                                    </video>
+                                  ) : (
+                                    <img
+                                      src={msg.shared.media}
+                                      alt="Shared post"
+                                      className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
                                       onClick={() => {
-                                        setSelectedMessageImages(msg.mediaUrls);
+                                        setSelectedMessageImages([
+                                          msg.shared.media,
+                                        ]);
                                         setCurrentImageIndex(0);
                                         setShowMessageImageModal(true);
                                       }}
-                                    >
+                                    />
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Text on Image */}
+                              {msg.shared.textOnImage && (
+                                <p className="text-sm mt-2">
+                                  {msg.shared.textOnImage}
+                                </p>
+                              )}
+
+                              {/* Additional Content */}
+                              {msg.content &&
+                                msg.content !== "Shared a knowledge post" &&
+                                msg.content !== "Shared a post" && (
+                                  <p className="text-sm mt-2">{msg.content}</p>
+                                )}
+                            </div>
+                          )
+                      ) : (
+                        <p>{msg.content}</p>
+                      )}
+                      {msg.mediaUrls &&
+                        msg.mediaUrls.length > 0 &&
+                        (() => {
+                          const mediaCount = msg.mediaUrls.length;
+                          if (mediaCount === 1) {
+                            return (
+                              <img
+                                src={msg.mediaUrls[0]}
+                                alt="Media"
+                                className="w-full rounded mt-2 cursor-pointer"
+                                onClick={() => {
+                                  setSelectedMessageImages(msg.mediaUrls);
+                                  setCurrentImageIndex(0);
+                                  setShowMessageImageModal(true);
+                                }}
+                              />
+                            );
+                          } else if (mediaCount === 2) {
+                            return (
+                              <div className="mt-2 grid grid-cols-2 gap-1">
+                                {msg.mediaUrls.map((url, idx) => (
+                                  <img
+                                    key={idx}
+                                    src={url}
+                                    alt={`Media ${idx + 1}`}
+                                    className="w-full h-20 object-cover rounded cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedMessageImages(msg.mediaUrls);
+                                      setCurrentImageIndex(idx);
+                                      setShowMessageImageModal(true);
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            );
+                          } else {
+                            // 3 or more, 2x2 grid
+                            return (
+                              <div className="mt-2 grid grid-cols-2 gap-1">
+                                {msg.mediaUrls.slice(0, 4).map((url, idx) => {
+                                  if (idx === 3 && mediaCount > 4) {
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="relative cursor-pointer"
+                                        onClick={() => {
+                                          setSelectedMessageImages(msg.mediaUrls);
+                                          setCurrentImageIndex(0);
+                                          setShowMessageImageModal(true);
+                                        }}
+                                      >
+                                        <img
+                                          src={url}
+                                          alt={`Media ${idx + 1}`}
+                                          className="w-full h-20 object-cover rounded"
+                                        />
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded">
+                                          <span className="text-white font-bold text-sm">
+                                            +{mediaCount - 3}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
                                       <img
+                                        key={idx}
                                         src={url}
                                         alt={`Media ${idx + 1}`}
-                                        className="w-full h-20 object-cover rounded"
+                                        className="w-full h-20 object-cover rounded cursor-pointer"
+                                        onClick={() => {
+                                          setSelectedMessageImages(msg.mediaUrls);
+                                          setCurrentImageIndex(idx);
+                                          setShowMessageImageModal(true);
+                                        }}
                                       />
-                                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded">
-                                        <span className="text-white font-bold text-sm">
-                                          +{mediaCount - 3}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                } else {
-                                  return (
-                                    <img
-                                      key={idx}
-                                      src={url}
-                                      alt={`Media ${idx + 1}`}
-                                      className="w-full h-20 object-cover rounded cursor-pointer"
-                                      onClick={() => {
-                                        setSelectedMessageImages(msg.mediaUrls);
-                                        setCurrentImageIndex(idx);
-                                        setShowMessageImageModal(true);
-                                      }}
-                                    />
-                                  );
-                                }
-                              })}
-                            </div>
-                          );
-                        }
-                      })()}
-                    <p
-                      className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
-                        }`}
-                    >
-                      {new Date(msg.createdAt).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  {isCurrentUser && (
-                    <img
-                      src={
-                        user?.profilePicture ||
-                        allUserData?.profilePicture ||
-                        "https://randomuser.me/api/portraits/men/1.jpg"
-                      }
-                      alt="You"
-                      className="w-8 h-8 rounded-full object-cover ml-2 self-end mb-1"
-                    />
-                  )}
-                </div>
-              );
-            })
-          ) : (
-            <p className="text-center text-gray-400 text-sm mt-10">
-              No messages yet
-            </p>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-
-
-        <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-          {!selectedChat?.isGroup && isBlocked ? (
-            isBlocked === receiverId ? (
-              // 🟥 Receiver blocked YOU
-              <div className="text-center text-sm text-gray-500 py-3">
-               You can't send messages - this user has blocked you
-              </div>
-            ) : isBlocked === myUserId ? (
-              // 🟥 YOU blocked receiver
-              <div className="text-center text-sm text-gray-500 py-3 px-4">
-                You've blocked this user. Unblock them to start chatting again
-              </div>
-            ) : null
-          ) : (
-            <>
-              {/* ✅ Input & media visible when NOT blocked */}
-              {mediaPreview.length > 0 && (
-                <div className="mb-2">
-                  <div className="grid grid-cols-4 gap-2">
-                    {mediaPreview.slice(0, 4).map((url, i) => (
-                      <img
-                        key={i}
-                        src={url}
-                        alt={`Preview ${i + 1}`}
-                        className="w-16 h-16 object-cover rounded"
-                      />
-                    ))}
-                    {mediaPreview.length > 4 && (
-                      <div
-                        className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
-                        onClick={() => setShowImageModal(true)}
+                                    );
+                                  }
+                                })}
+                              </div>
+                            );
+                          }
+                        })()}
+                      <p
+                        className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
+                          }`}
                       >
-                        <span className="text-sm font-semibold">
-                          +{mediaPreview.length - 4}
-                        </span>
-                      </div>
+                        {new Date(msg.createdAt).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    {isCurrentUser && (
+                      <img
+                        src={
+                          user?.profilePicture ||
+                          allUserData?.profilePicture ||
+                          "https://randomuser.me/api/portraits/men/1.jpg"
+                        }
+                        alt="You"
+                        className="w-8 h-8 rounded-full object-cover ml-2 self-end mb-1"
+                      />
                     )}
                   </div>
-                </div>
-              )}
+                );
+              })
+            ) : (
+              <p className="text-center text-gray-400 text-sm mt-10">
+                No messages yet
+              </p>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
 
-              <div className="flex items-center gap-2">
+
+
+          <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
+            {!selectedChat?.isGroup && isBlocked ? (
+              isBlocked === receiverId ? (
+                // 🟥 Receiver blocked YOU
+                <div className="text-center text-sm text-gray-500 py-3">
+                  You can't send messages - this user has blocked you
+                </div>
+              ) : isBlocked === myUserId ? (
+                // 🟥 YOU blocked receiver
+                <div className="text-center text-sm text-gray-500 py-3 px-4">
+                  You've blocked this user. Unblock them to start chatting again
+                </div>
+              ) : null
+            ) : (
+              <>
+                {/* ✅ Input & media visible when NOT blocked */}
+                {mediaPreview.length > 0 && (
+                  <div className="mb-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {mediaPreview.slice(0, 4).map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt={`Preview ${i + 1}`}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      ))}
+                      {mediaPreview.length > 4 && (
+                        <div
+                          className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
+                          onClick={() => setShowImageModal(true)}
+                        >
+                          <span className="text-sm font-semibold">
+                            +{mediaPreview.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Message"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+                    className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+                    disabled={mediaPreview.length > 0}
+                  />
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMediaOptions((prev) => !prev);
+                    }}
+                    className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={handleSendMessage}
+                    className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {showMediaOptions && (
+            <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Share Media
+                </span>
+                <button
+                  onClick={() => setShowMediaOptions(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex justify-around">
+                <button
+                  onClick={() => {
+                    fileInputRef.current.click();
+                    setShowMediaOptions(false);
+                  }}
+                  className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
+                >
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+                    <FaCamera />
+                  </div>
+                  <span className="text-sm text-gray-700">Image</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowGifModal(true);
+                    setShowMediaOptions(false);
+                  }}
+                  className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
+                >
+                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+                    <MdGif size={28} />
+                  </div>
+                  <span className="text-sm text-gray-700">GIF</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {showGifModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-4 w-96 max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-gray-900">Select GIF</h3>
+                  <button
+                    onClick={() => setShowGifModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
                 <input
                   type="text"
-                  placeholder="Message"
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                  className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
-                  disabled={mediaPreview.length > 0}
+                  placeholder="Search GIFs"
+                  value={gifSearch}
+                  onChange={(e) => setGifSearch(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && fetchGifs(gifSearch)}
+                  className="w-full border border-gray-200 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:border-orange-500"
                 />
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMediaOptions((prev) => !prev);
-                  }}
-                  className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={handleSendMessage}
-                  className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
+                <div className="grid grid-cols-3 gap-2">
+                  {gifs.map((gif) => (
+                    <img
+                      key={gif.id}
+                      src={gif.images.fixed_height.url}
+                      alt={gif.title}
+                      onClick={() => {
+                        setSelectedGif(gif.images.original.url);
+                        setMediaPreview([gif.images.original.url]);
+                        setShowGifModal(false);
+                      }}
+                      className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80"
+                    />
+                  ))}
+                </div>
               </div>
-            </>
+            </div>
           )}
+
+          {showImageModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-4 max-w-md max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-semibold text-gray-900">All Images</h3>
+                  <button
+                    onClick={() => setShowImageModal(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {mediaPreview.map((url, i) => (
+                    <img
+                      key={i}
+                      src={url}
+                      alt={`Image ${i + 1}`}
+                      className="w-full h-32 object-cover rounded"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showMessageImageModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+              <div className="relative max-w-4xl max-h-[80vh]">
+                <button
+                  onClick={() => setShowMessageImageModal(false)}
+                  className="absolute top-2 right-2 text-white text-2xl z-10"
+                >
+                  ×
+                </button>
+                <img
+                  src={selectedMessageImages[currentImageIndex]}
+                  alt="Full image"
+                  className="max-w-full max-h-full object-contain"
+                />
+                {selectedMessageImages.length > 1 && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setCurrentImageIndex(
+                          (prev) =>
+                            (prev - 1 + selectedMessageImages.length) %
+                            selectedMessageImages.length,
+                        )
+                      }
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      onClick={() =>
+                        setCurrentImageIndex(
+                          (prev) => (prev + 1) % selectedMessageImages.length,
+                        )
+                      }
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Block User Confirmation Modal */}
+          {showBlockConfirmModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999]">
+              <div className="bg-white w-[360px] rounded-2xl shadow-xl p-6 relative">
+                <h2 className="text-lg font-semibold text-center mb-2">
+                  Block User
+                </h2>
+                <p className="text-sm text-gray-600 text-center mb-6">
+                  Are you sure you want to block this user?
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBlockConfirmModal(false)}
+                    disabled={blockLoading}
+                    className="flex-1 bg-gray-100 text-gray-700 border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Don't Block
+                  </button>
+                  <button
+                    onClick={confirmBlockUser}
+                    disabled={blockLoading}
+                    className="flex-1 bg-orange-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {blockLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Blocking...</span>
+                      </>
+                    ) : (
+                      "Block"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Report User Modal */}
+          <ReportModal
+            isOpen={reportModalOpen}
+            onClose={() => setReportModalOpen(false)}
+            loading={reportLoading}
+            onSubmit={(reason) => {
+              if (!selectedChat?.receiverInfo?._id) return;
+
+              dispatch(
+                sendReport({
+                  reason,
+                  targetModel: "User",
+                  targetId: selectedChat.receiverInfo._id,
+                  isReported: true,
+                }),
+              );
+            }}
+          />
         </div>
-
-        {showMediaOptions && (
-          <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Share Media
-              </span>
-              <button
-                onClick={() => setShowMediaOptions(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex justify-around">
-              <button
-                onClick={() => {
-                  fileInputRef.current.click();
-                  setShowMediaOptions(false);
-                }}
-                className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
-              >
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
-                  <FaCamera />
-                </div>
-                <span className="text-sm text-gray-700">Image</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowGifModal(true);
-                  setShowMediaOptions(false);
-                }}
-                className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
-              >
-                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
-                  <MdGif size={28} />
-                </div>
-                <span className="text-sm text-gray-700">GIF</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {showGifModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-4 w-96 max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">Select GIF</h3>
-                <button
-                  onClick={() => setShowGifModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <input
-                type="text"
-                placeholder="Search GIFs"
-                value={gifSearch}
-                onChange={(e) => setGifSearch(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && fetchGifs(gifSearch)}
-                className="w-full border border-gray-200 rounded px-3 py-2 mb-4 text-sm focus:outline-none focus:border-orange-500"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                {gifs.map((gif) => (
-                  <img
-                    key={gif.id}
-                    src={gif.images.fixed_height.url}
-                    alt={gif.title}
-                    onClick={() => {
-                      setSelectedGif(gif.images.original.url);
-                      setMediaPreview([gif.images.original.url]);
-                      setShowGifModal(false);
-                    }}
-                    className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showImageModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-4 max-w-md max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-semibold text-gray-900">All Images</h3>
-                <button
-                  onClick={() => setShowImageModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {mediaPreview.map((url, i) => (
-                  <img
-                    key={i}
-                    src={url}
-                    alt={`Image ${i + 1}`}
-                    className="w-full h-32 object-cover rounded"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showMessageImageModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-            <div className="relative max-w-4xl max-h-[80vh]">
-              <button
-                onClick={() => setShowMessageImageModal(false)}
-                className="absolute top-2 right-2 text-white text-2xl z-10"
-              >
-                ×
-              </button>
-              <img
-                src={selectedMessageImages[currentImageIndex]}
-                alt="Full image"
-                className="max-w-full max-h-full object-contain"
-              />
-              {selectedMessageImages.length > 1 && (
-                <>
-                  <button
-                    onClick={() =>
-                      setCurrentImageIndex(
-                        (prev) =>
-                          (prev - 1 + selectedMessageImages.length) %
-                          selectedMessageImages.length,
-                      )
-                    }
-                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
-                  >
-                    ‹
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentImageIndex(
-                        (prev) => (prev + 1) % selectedMessageImages.length,
-                      )
-                    }
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
-                  >
-                    ›
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Block User Confirmation Modal */}
-        {showBlockConfirmModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999]">
-            <div className="bg-white w-[360px] rounded-2xl shadow-xl p-6 relative">
-              <h2 className="text-lg font-semibold text-center mb-2">
-                Block User
-              </h2>
-              <p className="text-sm text-gray-600 text-center mb-6">
-                Are you sure you want to block this user?
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowBlockConfirmModal(false)}
-                  disabled={blockLoading}
-                  className="flex-1 bg-gray-100 text-gray-700 border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-gray-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Don't Block
-                </button>
-                <button
-                  onClick={confirmBlockUser}
-                  disabled={blockLoading}
-                  className="flex-1 bg-orange-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {blockLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Blocking...</span>
-                    </>
-                  ) : (
-                    "Block"
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Report User Modal */}
-        <ReportModal
-          isOpen={reportModalOpen}
-          onClose={() => setReportModalOpen(false)}
-          loading={reportLoading}
-          onSubmit={(reason) => {
-            if (!selectedChat?.receiverInfo?._id) return;
-
-            dispatch(
-              sendReport({
-                reason,
-                targetModel: "User",
-                targetId: selectedChat.receiverInfo._id,
-                isReported: true,
-              }),
-            );
-          }}
-        />
-      </div>
       </>
     );
   }
@@ -1911,16 +1910,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             availableUsers.map((user) => {
               const isDisabled = user.isGroupInviteOpen === false;
               const isSelected = selectedUsers.find((u) => u._id === user._id);
-              
+
               return (
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -1941,11 +1939,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                    }`}
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2137,16 +2134,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             availableUsers.map((user) => {
               const isDisabled = user.isGroupInviteOpen === false;
               const isSelected = selectedUsers.find((u) => u._id === user._id);
-              
+
               return (
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -2167,11 +2163,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                    }`}
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>

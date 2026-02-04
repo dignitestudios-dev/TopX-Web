@@ -25,7 +25,6 @@ import CollectionModal from "../../components/global/CollectionModal";
 import {
   addPageToCollections,
   getMyCollections,
-  removePageFromCollections,
 } from "../../redux/slices/collection.slice";
 
 export default function Trending() {
@@ -36,7 +35,6 @@ export default function Trending() {
   const postsObserverTarget = useRef(null);
   const [openModal, setOpenModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
-  const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
   const navigate = useNavigate();
 
   const {
@@ -79,21 +77,6 @@ export default function Trending() {
     });
   };
 
-  const handleUnsubscribe = (page) => {
-    setUnsubscribingPageId(page._id); // mark specific page as loading
-
-    dispatch(
-      removePageFromCollections({
-        collections: page.collections || [],
-        page: page._id,
-      })
-    ).then(() => {
-      dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
-      dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
-
-      setUnsubscribingPageId(null); // stop loader for that page only
-    });
-  };
 
   // Infinite scroll for posts
   useEffect(() => {
@@ -150,35 +133,34 @@ export default function Trending() {
 
   const transformedPosts = Array.isArray(trendingPosts)
     ? trendingPosts.map((post) => {
-        const local = storedLikes[post._id]; // merge saved likes
+      const local = storedLikes[post._id]; // merge saved likes
 
-        return {
-          id: post._id,
-          user: post.page?.name || post.author?.name || "Unknown User",
-          username: `@${
-            post.page?.user?.username || post.author?.username || "user"
+      return {
+        id: post._id,
+        user: post.page?.name || post.author?.name || "Unknown User",
+        username: `@${post.page?.user?.username || post.author?.username || "user"
           }`,
-          time: new Date(post.createdAt).toLocaleDateString(),
-          tag: post.page?.topic || "",
-          gradient: "from-pink-500 via-orange-500 to-yellow-500",
-          text: post.bodyText || "No description available",
-          // 🔥 STATS FOR DISPLAY
-          stats: {
-            likes: (local?.likesCount ?? post.likesCount ?? 0).toString(),
-            comments: (post.commentsCount ?? 0).toString(),
-            shares: (post.sharesCount ?? 0).toString(),
-          },
-          // 🔥 NORMALIZED KEYS (UI + optimistic updates)
-          isLiked: local?.isLiked ?? post.isLiked ?? false,
-          likesCount: local?.likesCount ?? post.likesCount ?? 0,
-          avatar:
-            post.page?.user?.profilePicture ||
-            post.author?.profilePicture ||
-            "https://randomuser.me/api/portraits/men/1.jpg",
-          postimage: post.media?.map((m) => m) || [],
-          author: post.author || null,
-        };
-      })
+        time: new Date(post.createdAt).toLocaleDateString(),
+        tag: post.page?.topic || "",
+        gradient: "from-pink-500 via-orange-500 to-yellow-500",
+        text: post.bodyText || "No description available",
+        // 🔥 STATS FOR DISPLAY
+        stats: {
+          likes: (local?.likesCount ?? post.likesCount ?? 0).toString(),
+          comments: (post.commentsCount ?? 0).toString(),
+          shares: (post.sharesCount ?? 0).toString(),
+        },
+        // 🔥 NORMALIZED KEYS (UI + optimistic updates)
+        isLiked: local?.isLiked ?? post.isLiked ?? false,
+        likesCount: local?.likesCount ?? post.likesCount ?? 0,
+        avatar:
+          post.page?.user?.profilePicture ||
+          post.author?.profilePicture ||
+          "https://randomuser.me/api/portraits/men/1.jpg",
+        postimage: post.media?.map((m) => m) || [],
+        author: post.author || null,
+      };
+    })
     : [];
 
   return (
@@ -288,24 +270,10 @@ export default function Trending() {
                       </div>
                       {item.isSubscribed ? (
                         <button
-                          onClick={() => handleUnsubscribe(item)}
-                          disabled={unsubscribingPageId === item._id}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-                                                  ${
-                                                    unsubscribingPageId ===
-                                                    item._id
-                                                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                                      : "bg-gray-200 text-gray-700"
-                                                  }`}
+                          onClick={() => navigate(`/trending-page-detail/${item._id}`)}
+                          className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
                         >
-                          {unsubscribingPageId === item._id ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
-                              Removing...
-                            </span>
-                          ) : (
-                            "Unsubscribe"
-                          )}
+                          Subscribed
                         </button>
                       ) : (
                         <button
@@ -436,23 +404,10 @@ export default function Trending() {
                       </div>
                       {item.isSubscribed ? (
                         <button
-                          onClick={() => handleUnsubscribe(item)}
-                          disabled={unsubscribingPageId === item._id}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all
-                                             ${
-                                               unsubscribingPageId === item._id
-                                                 ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                                 : "bg-gray-200 text-gray-700"
-                                             }`}
+                          onClick={() => navigate(`/trending-page-detail/${item._id}`)}
+                          className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
                         >
-                          {unsubscribingPageId === item._id ? (
-                            <span className="flex items-center gap-2">
-                              <span className="w-3 h-3 border-2 border-gray-600 border-t-transparent rounded-full animate-spin"></span>
-                              Removing...
-                            </span>
-                          ) : (
-                            "Unsubscribe"
-                          )}
+                          Subscribed
                         </button>
                       ) : (
                         <button
