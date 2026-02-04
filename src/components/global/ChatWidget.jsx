@@ -778,10 +778,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     const isSelected = selectedUsers.some((u) => u._id === user._id);
 
     return (
-      <div
-        onClick={() => handleSelectUser(user)}
-        className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded mb-1"
-      >
+      <div className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded mb-1">
         <div className="flex items-center gap-2">
           <img
             src={
@@ -794,13 +791,13 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           <span className="text-sm text-gray-900">{user.name}</span>
         </div>
 
-        <div
+        {/* <div
           className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
             isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"
           }`}
         >
           {isSelected && <Check className="w-3 h-3 text-white" />}
-        </div>
+        </div> */}
       </div>
     );
   };

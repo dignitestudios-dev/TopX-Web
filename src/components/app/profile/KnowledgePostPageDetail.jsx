@@ -22,6 +22,7 @@ import SharePostModal from "../../global/SharePostModal";
 import CommentsSection from "../../global/CommentsSection";
 import KnowledgeCommentsSection from "../../global/KnowledgeCommentsSection";
 import ShareToChatsModal from "../../global/ShareToChatsModal";
+import { sendReport } from "../../../redux/slices/reports.slice";
 
 export default function KnowledgePostPageDetail({
   pageId,
@@ -354,28 +355,22 @@ export default function KnowledgePostPageDetail({
 
                   {/* Delete Menu */}
                   {showDeleteMenu === post._id && (
-                    <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                    <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(post._id);
+                        onClick={() => {
+                          setSelectedPostForShare(post);
+                          setReportmodal(!reportmodal);
+                          console.log("Report clicked");
                         }}
-                        disabled={deleteLoading}
-                        className={`w-full px-4 py-3 flex items-center gap-2 transition-colors rounded-lg text-sm font-semibold ${
-                          deleteLoading
-                            ? "text-gray-400 cursor-not-allowed"
-                            : "text-red-600 hover:bg-red-50"
-                        }`}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                       >
-                        <Trash2 size={18} />
-                        {deleteLoading ? "Deleting..." : "Delete"}
+                        Report
                       </button>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Post Card with Background */}
               {/* Post Card with Background */}
               <div className="px-6 py-4">
                 <div
@@ -532,6 +527,23 @@ export default function KnowledgePostPageDetail({
           post={selectedPostForShare}
         />
       )}
+
+      <ReportModal
+        isOpen={reportmodal}
+        onClose={() => setReportmodal(false)}
+        loading={reportLoading}
+        onSubmit={(reason) => {
+          dispatch(
+            sendReport({
+              reason,
+              targetModel: "Post",
+              targetId: selectedPostForShare._id,
+              isReported: true,
+            }),
+          );
+          setReportmodal(false);
+        }}
+      />
     </div>
   );
 }
