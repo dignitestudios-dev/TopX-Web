@@ -75,7 +75,6 @@ export default function Home() {
   const transformedPosts = Array.isArray(allfeedposts)
     ? allfeedposts.map((post) => {
         const local = storedLikes[post._id]; // merge saved likes
-
         return {
           id: post._id,
           user: post.page?.name || post.author?.name || "Unknown User",
@@ -105,6 +104,7 @@ export default function Home() {
           isAllowedByAdmin: post?.isAllowedByAdmin,
           // ✅ pass reported flag to HomePostFeed
           isReported: post?.isReported,
+          sharedBy: post?.sharedBy,
         };
       })
     : [];

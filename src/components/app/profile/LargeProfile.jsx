@@ -34,7 +34,7 @@ export default function LargeProfile({
     );
   }
 
-  console.log(allUserData,"allUserData")
+  console.log(userRecord, "allUserData");
 
   return (
     <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
@@ -42,14 +42,17 @@ export default function LargeProfile({
       <div className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41]">
         <div className="flex relative -bottom-[62px] px-4 gap-3">
           <div className="relative">
-            <img
-              src={
-                userRecord?.profilePicture ||
-                "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"
-              }
-              alt=""
-              className="w-[135px] h-[135px] rounded-full object-cover"
-            />
+            {userRecord?.profilePicture ? (
+              <img
+                src={userRecord?.profilePicture}
+                alt=""
+                className="w-[135px] h-[135px] rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-[135px] h-[135px] text-[25px] font-thik bg-green-500 text-white flex justify-center items-center rounded-full object-cover capitalize">
+                {userRecord?.name.split(" ")[0][0]}
+              </div>
+            )}
 
             {/* Edit Button */}
             {!isFromOtherProfile && (
@@ -119,25 +122,25 @@ export default function LargeProfile({
           title={modalType === "followers" ? "Followers" : "Following"}
           type={modalType == "followers" ? "followers" : "followings"}
         />
-        
+
         {/* Bottom White Section - Bio */}
         <div className="pt-20 px-6 pb-8 space-y-1 bg-slate-50">
           <div className="flex justify-between items-center">
-           <p className="text-[16px] font-[700] text-[#000]">
-            {userRecord.name || "No username Available"}
-          </p>
-             {/* Message Button - Only show on other profile */}
-             <div className="-mt-[7em] z-10">
-          {isFromOtherProfile && userRecord && (
-            <button
-              onClick={() => setIsChatOpen(true)}
-              className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span>Message</span>
-            </button>
-          )}
-          </div>
+            <p className="text-[16px] font-[700] text-[#000]">
+              {userRecord.name || "No username Available"}
+            </p>
+            {/* Message Button - Only show on other profile */}
+            <div className="-mt-[7em] z-10">
+              {isFromOtherProfile && userRecord && (
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span>Message</span>
+                </button>
+              )}
+            </div>
           </div>
           <p className="text-[14px] font-[400] text-[#413b3b99]">
             @{userRecord.username || "No username Available"}
@@ -145,14 +148,12 @@ export default function LargeProfile({
           <p className="text-[14px] font-[400] text-[#413b3b99]">
             {userRecord.bio || "No Bio Available"}
           </p>
-          
-       
         </div>
       </div>
-      
+
       {/* Chat Widget */}
       {isChatOpen && (
-        <ChatWidget 
+        <ChatWidget
           initialUser={userRecord}
           onClose={() => setIsChatOpen(false)}
         />

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal, AlertTriangle } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  AlertTriangle,
+} from "lucide-react";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
@@ -25,9 +31,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   };
 
   const [activeMedia, setActiveMedia] = useState(null);
-  console.log("postpostpostpostpost", post)
-
-
+  console.log("postpostpostpostpost", post);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -35,7 +39,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
   const isUnderReview = Boolean(post?.isReported);
-
 
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
@@ -89,7 +92,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       ? currentLikesCount + 1
       : Math.max(currentLikesCount - 1, 0);
 
-    console.log("🔵 Like clicked - Post ID:", postId, "New Like Status:", newIsLiked);
+    console.log(
+      "🔵 Like clicked - Post ID:",
+      postId,
+      "New Like Status:",
+      newIsLiked,
+    );
 
     // Optimistic update - update UI immediately
     setLocalLikeState({
@@ -112,7 +120,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
     // Call API - Same as PostCard/Mypost.jsx
     try {
-      console.log("🔵 Dispatching likePost API:", { id: postId, likeToggle: newIsLiked, isPost: true });
+      console.log("🔵 Dispatching likePost API:", {
+        id: postId,
+        likeToggle: newIsLiked,
+        isPost: true,
+      });
       const result = await dispatch(
         likePost({
           id: postId,
@@ -210,9 +222,9 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       state: { id: post.author },
     });
   };
-
+  console.log(post, "post-detail");
   return (
-    <div className="bg-white rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
+    <div className="bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -220,11 +232,17 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize">
               {post.user.split(" ")[0][0] + post.user.split(" ")[1][0]}
             </div>
-            <img
-              src={post.author.profilePicture}
-              alt={post.user}
-              className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover"
-            />
+            {post.author.profilePicture ? (
+              <img
+                src={post.author.profilePicture}
+                alt={post.user}
+                className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-5 h-5 absolute -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                {post.user.split(" ")[0][0] + post.user.split(" ")[1][0]}
+              </div>
+            )}
           </div>
           <div>
             {/* Page Name (or fallback to user) */}
@@ -267,7 +285,15 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           )}
         </div>
       </div>
-
+      {post.sharedBy ? (
+        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+          <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          />
+          {post.sharedBy.name} Reposted
+        </div>
+      ) : null}
       {/* Post Images - Thumbnail */}
       {hasImages && (
         <div
@@ -327,7 +353,18 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           )}
         </div>
       )}
-
+      {post?.page?.pageType == "private" && (
+        <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
+          <div className="text-center px-6">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-orange-500" />
+            </div>
+            <p className="text-base font-semibold text-orange-500">
+              Private post
+            </p>
+          </div>
+        </div>
+      )}
       {/* Content */}
       <div className="px-4 py-3">
         {!isUnderReview ? (
@@ -338,10 +375,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               <IoWarning size={70} />
             </div>
             <div className="flex justify-center mt-3">
-              <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">Post Under Review</p>
+              <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">
+                Post Under Review
+              </p>
             </div>
           </div>
-
         )}
       </div>
 
@@ -354,14 +392,16 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
           >
             <Heart
-              className={`w-5 h-5 transition ${localLikeState.isLiked
+              className={`w-5 h-5 transition ${
+                localLikeState.isLiked
                   ? "fill-orange-500 text-orange-500"
                   : "text-gray-600"
-                }`}
+              }`}
             />
             <span
-              className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-                }`}
+              className={`text-sm font-medium ${
+                localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
             >
               {Number(localLikeState.likesCount ?? 0)}
             </span>
@@ -372,9 +412,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
           >
             <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">
-              {post.stats.comments}
-            </span>
+            <span className="text-sm font-medium">{post.stats.comments}</span>
           </button>
 
           <button
@@ -382,13 +420,10 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
           >
             <Share2 className="w-5 h-5" />
-            <span className="text-sm font-medium">
-              {post.stats.shares}
-            </span>
+            <span className="text-sm font-medium">{post.stats.shares}</span>
           </button>
         </div>
       )}
-
 
       {/* Image Viewer Modal */}
       <PostImageViewerModal
@@ -415,17 +450,17 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal
-            onClose={setSelectedOption}
-            post={{
-              _id: post.id,
-              page: post.page,
-              media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
-              bodyText: post.text,
-              author: post.author,
-            }}
-          />
-        )}
+        <ShareToChatsModal
+          onClose={setSelectedOption}
+          post={{
+            _id: post.id,
+            page: post.page,
+            media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
+            bodyText: post.text,
+            author: post.author,
+          }}
+        />
+      )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
