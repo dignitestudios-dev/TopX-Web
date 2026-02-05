@@ -140,9 +140,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   const fetchGifs = async (query = "") => {
     try {
-      const url = `https://api.giphy.com/v1/gifs/${
-        query ? "search" : "trending"
-      }?api_key=${giphyApiKey}&q=${query}&limit=20`;
+      const url = `https://api.giphy.com/v1/gifs/${query ? "search" : "trending"
+        }?api_key=${giphyApiKey}&q=${query}&limit=20`;
       const res = await fetch(url);
       const data = await res.json();
       setGifs(data.data || []);
@@ -575,17 +574,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     const payload = isGroup
       ? {
-          groupId: selectedChat.groupId || selectedChat._id,
-          type,
-          content,
-          mediaUrls,
-        }
+        groupId: selectedChat.groupId || selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      }
       : {
-          chatId: selectedChat._id,
-          type,
-          content,
-          mediaUrls,
-        };
+        chatId: selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      };
 
     if (isGroup) {
       socket.sendGroupMessage(payload, (response) => {
@@ -645,7 +644,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     if (!selectedChat?._id) return;
 
     socket.socket.emit("individual:chat:delete", {
-      chatId: selectedChat._id,
+      chatId: selectedChat._id
     });
 
     // ✅ ONLY clear messages from UI
@@ -821,19 +820,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <span className="text-gray-800 font-medium text-sm">Message</span>
           </div>
           <ChevronUp
-            className={`w-5 h-5 text-orange-500 transition-transform ${
-              open ? "rotate-180" : ""
-            }`}
+            className={`w-5 h-5 text-orange-500 transition-transform ${open ? "rotate-180" : ""
+              }`}
           />
         </button>
 
         <div
           ref={chatPopupRef}
-          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${
-            open
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-5 pointer-events-none"
-          } z-40`}
+          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-5 pointer-events-none"
+            } z-40`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
@@ -864,11 +861,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 ${
-                  activeTab === tab
-                    ? "text-orange-500 border-b-2 border-orange-500"
-                    : "text-gray-500"
-                }`}
+                className={`flex-1 py-2 ${activeTab === tab
+                  ? "text-orange-500 border-b-2 border-orange-500"
+                  : "text-gray-500"
+                  }`}
               >
                 {tab}
               </button>
@@ -877,7 +873,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
           <div className="h-[50vh] overflow-y-auto">
             {chatsLoading ||
-            (activeTab === "Group Chat" && groupChatsLoading) ? (
+              (activeTab === "Group Chat" && groupChatsLoading) ? (
               <p className="text-sm text-gray-500 text-center py-6 flex justify-center items-center">
                 <img
                   src="https://assets-v2.lottiefiles.com/a/90a4c0f2-1152-11ee-bda3-830a7a1975f2/iBALXy6uaH.gif"
@@ -910,12 +906,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {chat.name}
                       </p>
                       <p
-                        className={`text-xs text-gray-500 truncate ${
-                          chat.unread > 0 ? "font-semibold" : ""
-                        }`}
+                        className={`text-xs text-gray-500 truncate ${chat.unread > 0 ? "font-semibold" : ""
+                          }`}
                       >
                         {chat.lastMessage?.mediaUrls &&
-                        chat.lastMessage.mediaUrls.length > 0 ? (
+                          chat.lastMessage.mediaUrls.length > 0 ? (
                           <span className="flex items-center gap-1">
                             <FaCamera className="w-3 h-3" />
                             Media
@@ -989,10 +984,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     if (selectedChat?.isGroup) {
                       socket.leaveGroupRoom(
                         { groupId: selectedChat.groupId || selectedChat._id },
-                        () => {},
+                        () => { },
                       );
                     } else {
-                      socket.leaveChats({ chatId: selectedChat._id }, () => {});
+                      socket.leaveChats({ chatId: selectedChat._id }, () => { });
                     }
                     setShowMediaOptions(false);
                     dispatch(resetChatDetail());
@@ -1024,8 +1019,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
                     onClick={() => {
                       if (selectedChat?.isGroup) {
-                        const groupId =
-                          selectedChat.groupId || selectedChat._id;
+                        const groupId = selectedChat.groupId || selectedChat._id;
                         dispatch(getGroupInfo(groupId));
                         setScreen("groupInfo");
                       }
@@ -1096,29 +1090,29 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {/* Delete Group - Only for admin */}
                         {groupInfo?.admin?._id ===
                           (user?._id || allUserData?._id) && (
-                          <button
-                            onClick={() => {
-                              const groupId =
-                                selectedChat.groupId || selectedChat._id;
-                              if (
-                                window.confirm(
-                                  "Are you sure you want to delete this group? This action cannot be undone.",
-                                )
-                              ) {
-                                socket.deleteGroup({ groupId }, (response) => {
-                                  console.log("Group deleted:", response);
-                                  dispatch(removeChat({ chatId: groupId }));
-                                  dispatch(resetChatDetail());
-                                  setShowChatMenu(false);
-                                  setScreen("list");
-                                });
-                              }
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
-                          >
-                            Delete Group
-                          </button>
-                        )}
+                            <button
+                              onClick={() => {
+                                const groupId =
+                                  selectedChat.groupId || selectedChat._id;
+                                if (
+                                  window.confirm(
+                                    "Are you sure you want to delete this group? This action cannot be undone.",
+                                  )
+                                ) {
+                                  socket.deleteGroup({ groupId }, (response) => {
+                                    console.log("Group deleted:", response);
+                                    dispatch(removeChat({ chatId: groupId }));
+                                    dispatch(resetChatDetail());
+                                    setShowChatMenu(false);
+                                    setScreen("list");
+                                  });
+                                }
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                            >
+                              Delete Group
+                            </button>
+                          )}
 
                         {/* Leave Group */}
                         <button
@@ -1225,9 +1219,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 return (
                   <div
                     key={msg._id}
-                    className={`flex ${
-                      isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
+                    className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
+                      }`}
                   >
                     {!isCurrentUser && (
                       <img
@@ -1240,11 +1233,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       />
                     )}
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                        isCurrentUser
-                          ? "bg-orange-500 text-white rounded-br-none"
-                          : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
-                      }`}
+                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
+                        ? "bg-orange-500 text-white rounded-br-none"
+                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                        }`}
                     >
                       {msg.type === "shared" && msg.shared ? (
                         // Knowledge post - show styled card
@@ -1364,79 +1356,79 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                             </div>
                           </div>
                         ) : // Regular post with media
-                        !msg.shared.media ? (
-                          <p className="text-sm">
-                            {msg.sender?.name || "Someone"} shared a text post
-                          </p>
-                        ) : (
-                          // If media exists, show full details
-                          <div className="space-y-2">
-                            {/* Page/Topic Info */}
-                            {msg.shared.name && (
-                              <div className="flex items-center gap-2 mb-2">
-                                {msg.shared.pageImage && (
-                                  <img
-                                    src={msg.shared.pageImage}
-                                    alt="Page"
-                                    className="w-6 h-6 rounded-full object-cover"
-                                  />
-                                )}
-                                <p className="text-xs font-semibold opacity-90">
-                                  {msg.shared.name}
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Shared Post Type Label */}
-                            <p className="text-xs opacity-80 mb-2">
-                              Shared a post
+                          !msg.shared.media ? (
+                            <p className="text-sm">
+                              {msg.sender?.name || "Someone"} shared a text post
                             </p>
-
-                            {/* Post Media (Video or Image) */}
-                            {msg.shared.media && (
-                              <div className="rounded-lg overflow-hidden">
-                                {msg.shared.media.includes(".mp4") ||
-                                msg.shared.media.includes(".mov") ||
-                                msg.shared.media.includes("video") ? (
-                                  <video
-                                    src={msg.shared.media}
-                                    controls
-                                    className="w-full max-h-64 object-contain rounded-lg"
-                                  >
-                                    Your browser does not support the video tag.
-                                  </video>
-                                ) : (
-                                  <img
-                                    src={msg.shared.media}
-                                    alt="Shared post"
-                                    className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
-                                    onClick={() => {
-                                      setSelectedMessageImages([
-                                        msg.shared.media,
-                                      ]);
-                                      setCurrentImageIndex(0);
-                                      setShowMessageImageModal(true);
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            )}
-
-                            {/* Text on Image */}
-                            {msg.shared.textOnImage && (
-                              <p className="text-sm mt-2">
-                                {msg.shared.textOnImage}
-                              </p>
-                            )}
-
-                            {/* Additional Content */}
-                            {msg.content &&
-                              msg.content !== "Shared a knowledge post" &&
-                              msg.content !== "Shared a post" && (
-                                <p className="text-sm mt-2">{msg.content}</p>
+                          ) : (
+                            // If media exists, show full details
+                            <div className="space-y-2">
+                              {/* Page/Topic Info */}
+                              {msg.shared.name && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-6 h-6 rounded-full object-cover"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold opacity-90">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
                               )}
-                          </div>
-                        )
+
+                              {/* Shared Post Type Label */}
+                              <p className="text-xs opacity-80 mb-2">
+                                Shared a post
+                              </p>
+
+                              {/* Post Media (Video or Image) */}
+                              {msg.shared.media && (
+                                <div className="rounded-lg overflow-hidden">
+                                  {msg.shared.media.includes(".mp4") ||
+                                    msg.shared.media.includes(".mov") ||
+                                    msg.shared.media.includes("video") ? (
+                                    <video
+                                      src={msg.shared.media}
+                                      controls
+                                      className="w-full max-h-64 object-contain rounded-lg"
+                                    >
+                                      Your browser does not support the video tag.
+                                    </video>
+                                  ) : (
+                                    <img
+                                      src={msg.shared.media}
+                                      alt="Shared post"
+                                      className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
+                                      onClick={() => {
+                                        setSelectedMessageImages([
+                                          msg.shared.media,
+                                        ]);
+                                        setCurrentImageIndex(0);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Text on Image */}
+                              {msg.shared.textOnImage && (
+                                <p className="text-sm mt-2">
+                                  {msg.shared.textOnImage}
+                                </p>
+                              )}
+
+                              {/* Additional Content */}
+                              {msg.content &&
+                                msg.content !== "Shared a knowledge post" &&
+                                msg.content !== "Shared a post" && (
+                                  <p className="text-sm mt-2">{msg.content}</p>
+                                )}
+                            </div>
+                          )
                       ) : (
                         <p>{msg.content}</p>
                       )}
@@ -1486,9 +1478,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                         key={idx}
                                         className="relative cursor-pointer"
                                         onClick={() => {
-                                          setSelectedMessageImages(
-                                            msg.mediaUrls,
-                                          );
+                                          setSelectedMessageImages(msg.mediaUrls);
                                           setCurrentImageIndex(0);
                                           setShowMessageImageModal(true);
                                         }}
@@ -1513,9 +1503,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                         alt={`Media ${idx + 1}`}
                                         className="w-full h-20 object-cover rounded cursor-pointer"
                                         onClick={() => {
-                                          setSelectedMessageImages(
-                                            msg.mediaUrls,
-                                          );
+                                          setSelectedMessageImages(msg.mediaUrls);
                                           setCurrentImageIndex(idx);
                                           setShowMessageImageModal(true);
                                         }}
@@ -1528,9 +1516,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           }
                         })()}
                       <p
-                        className={`text-[10px] mt-1 ${
-                          isCurrentUser ? "text-orange-100" : "text-gray-400"
-                        }`}
+                        className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
+                          }`}
                       >
                         {new Date(msg.createdAt).toLocaleTimeString("en-US", {
                           hour: "2-digit",
@@ -1559,6 +1546,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             )}
             <div ref={messagesEndRef} />
           </div>
+
+
 
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
             {!selectedChat?.isGroup && isBlocked ? (
@@ -1924,11 +1913,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -1949,11 +1937,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                    }`}
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2150,11 +2137,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -2175,11 +2161,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                    }`}
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2344,14 +2329,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     {isMuted ? "Unmute Notifications" : "Mute Notifications"}
                   </span>
                   <div
-                    className={`w-10 h-6 rounded-full ${
-                      isMuted ? "bg-orange-500" : "bg-gray-300"
-                    } transition-colors`}
+                    className={`w-10 h-6 rounded-full ${isMuted ? "bg-orange-500" : "bg-gray-300"
+                      } transition-colors`}
                   >
                     <div
-                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
-                        isMuted ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${isMuted ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </div>
                 </button>
@@ -2629,11 +2612,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 {/* Checkbox */}
                 <div
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-      ${
-        selectedNewChatUser?._id === u._id
-          ? "bg-orange-500 border-orange-500"
-          : "border-gray-300"
-      }`}
+      ${selectedNewChatUser?._id === u._id
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-300"
+                    }`}
                 >
                   {selectedNewChatUser?._id === u._id && (
                     <Check className="w-3 h-3 text-white" />

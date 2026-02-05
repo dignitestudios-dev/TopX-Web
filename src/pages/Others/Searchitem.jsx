@@ -275,13 +275,16 @@ const SearchItem = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleKnowledgePageSubscribe(page);
+                            if (isSubscribed) {
+                              navigate(`/trending-page-detail/${page._id}`);
+                            } else {
+                              handleKnowledgePageSubscribe(page);
+                            }
                           }}
-                          disabled={isSubscribed}
                           className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                             ${
                               isSubscribed
-                                ? "bg-gray-200 text-gray-700 cursor-not-allowed"
+                                ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                             }`}
                         >
@@ -620,13 +623,16 @@ const SearchItem = () => {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleKnowledgePageSubscribe(page);
+                                  if (isSubscribed) {
+                                    navigate(`/trending-page-detail/${page._id}`);
+                                  } else {
+                                    handleKnowledgePageSubscribe(page);
+                                  }
                                 }}
-                                disabled={isSubscribed}
                                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                                   ${
                                     isSubscribed
-                                      ? "bg-gray-200 text-gray-700 cursor-not-allowed"
+                                      ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                       : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                                   }`}
                               >
@@ -1017,13 +1023,16 @@ const SearchItem = () => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleKnowledgePageSubscribe(page);
+                                if (isSubscribed) {
+                                  navigate(`/trending-page-detail/${page._id}`);
+                                } else {
+                                  handleKnowledgePageSubscribe(page);
+                                }
                               }}
-                              disabled={isSubscribed}
                               className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                                 ${
                                   isSubscribed
-                                    ? "bg-gray-200 text-gray-700 cursor-not-allowed"
+                                    ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                     : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                                 }`}
                             >

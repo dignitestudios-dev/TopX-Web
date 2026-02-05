@@ -2,18 +2,14 @@ import React, { useState } from "react";
 import { Layers, BookmarkMinus } from "lucide-react";
 import { FaBookmark } from "react-icons/fa6";
 import { ballone, balltwo, nofound } from "../../assets/export";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
 
 const MySubscriptiononprofile = ({ userCollections, toggleBookmark }) => {
   const [bookmarked, setBookmarked] = useState({});
   const dispatch = useDispatch();
-  const subscriptions = [
-    { id: 1, title: "My Basketball", url: "/subscriptions-category" },
-    { id: 2, title: "My Fitness", url: "/subscriptions-category" },
-    { id: 3, title: "My Cooking", url: "/subscriptions-category" },
-  ];
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-full bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -32,17 +28,22 @@ const MySubscriptiononprofile = ({ userCollections, toggleBookmark }) => {
         ) : (
           userCollections?.map((item) => (
             <div
-              key={item.id}
+              key={item._id || item.id}
               className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
             >
               <div className="flex items-start gap-3">
                 <div>
-                  <Link to={item.url}>
-                    <p className="font-medium text-gray-900 flex items-center gap-1">
-                      {item.name}
-                      <Layers className="w-4 h-4 text-gray-500" />
-                    </p>
-                  </Link>
+                  <p
+                    className="font-medium text-gray-900 flex items-center gap-1 cursor-pointer"
+                    onClick={() =>
+                      navigate("/subscriptions-category", {
+                        state: { id: item._id || item.id },
+                      })
+                    }
+                  >
+                    {item.name}
+                    <Layers className="w-4 h-4 text-gray-500" />
+                  </p>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex -space-x-2">
                       {item?.pages?.slice(0, 3).map((img, index) => (
