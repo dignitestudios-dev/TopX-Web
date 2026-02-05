@@ -192,7 +192,9 @@ export default function KnowledgeCommentsSection({
       ...(comment.user._id === user._id
         ? [
             {
-              label: "Elevate Comment",
+              label: comment?.isElevated
+                ? "Undo Elevate Comment"
+                : "Elevate Comment",
               action: () => {
                 onElevateComment(comment._id);
               },
@@ -206,7 +208,9 @@ export default function KnowledgeCommentsSection({
           ? [
               // If it's MY page, show these options for comments from others
               {
-                label: "Elevate Comment",
+                label: comment?.isElevated
+                  ? "Undo Elevate"
+                  : "Elevate Comment",
                 action: () => {
                   onElevateComment(comment._id);
                 },

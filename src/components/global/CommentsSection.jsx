@@ -4,6 +4,7 @@ import { Heart, MoreVertical, X, Star } from "lucide-react";
 import {
   createComment,
   deleteComment,
+  demoteComment,
   elevateComment,
   getComment,
   likeComment,
@@ -17,19 +18,38 @@ import { blockUser } from "../../redux/slices/profileSetting.slice";
 import { SuccessToast, ErrorToast } from "./Toaster";
 import { TiPin } from "react-icons/ti";
 
-export default function CommentsSection({ postId, isPageOwner = false, pageId = null }) {
+export default function CommentsSection({
+  postId,
+  isPageOwner = false,
+  pageId = null,
+}) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
-    (state) => state.postsfeed
+    (state) => state.postsfeed,
   );
   // Get post from Redux state to extract pageId and page owner
-  const { posts, pagepost, allfeedposts } = useSelector((state) => state.posts || {});
-  const allPosts = [...(posts || []), ...(pagepost || []), ...(allfeedposts || [])];
+  const { posts, pagepost, allfeedposts } = useSelector(
+    (state) => state.posts || {},
+  );
+  const allPosts = [
+    ...(posts || []),
+    ...(pagepost || []),
+    ...(allfeedposts || []),
+  ];
   const currentPost = allPosts.find((p) => p._id === postId);
   // Extract pageId from post
-  const postPageId = currentPost?.page?._id || currentPost?.pageId || currentPost?.page || pageId;
+  const postPageId =
+    currentPost?.page?._id ||
+    currentPost?.pageId ||
+    currentPost?.page ||
+    pageId;
   // Extract page owner ID (user who owns the page)
-  const pageOwnerId = currentPost?.page?.user?._id || currentPost?.page?.user || currentPost?.author?._id || currentPost?.author || user?._id;
+  const pageOwnerId =
+    currentPost?.page?.user?._id ||
+    currentPost?.page?.user ||
+    currentPost?.author?._id ||
+    currentPost?.author ||
+    user?._id;
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [newComment, setNewComment] = useState("");
   const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
@@ -39,7 +59,9 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
   const [blockUserId, setBlockUserId] = useState(null); // Store the user ID to block (comment user)
   const [blockPageId, setBlockPageId] = useState(null); // Store the page ID for blocking
   const [blockPageOwnerId, setBlockPageOwnerId] = useState(null); // Store the page owner ID for blocking
-  const { isLoading: blockLoading } = useSelector((state) => state.profileSetting || {});
+  const { isLoading: blockLoading } = useSelector(
+    (state) => state.profileSetting || {},
+  );
   const dispatch = useDispatch();
 
   const handleGetComments = async () => {
@@ -60,7 +82,7 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
           updateComment({
             commentId: editingCommentId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       } else {
         // ➕ CREATE
@@ -68,7 +90,7 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
           createComment({
             post: postId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       }
 
@@ -128,10 +150,18 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
     handleGetComments();
   };
 
-  const handleElevateComment = async (commentId) => {
+  const handleElevateComment = async (commentId, status) => {
     try {
-      await dispatch(elevateComment(commentId)).unwrap();
-      SuccessToast("Comment elevated successfully");
+      if (status == "demote") {
+        await dispatch(demoteComment(commentId)).unwrap();
+      } else {
+        await dispatch(elevateComment(commentId)).unwrap();
+      }
+      SuccessToast(
+        status == "demote"
+          ? "Comment undo elevated successfully"
+          : "Comment elevated successfully",
+      );
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
@@ -228,7 +258,7 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
     const [replyText, setReplyText] = useState("");
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
-
+    console.log(comment, "comments--->");
     useEffect(() => {
       function handleClickOutside(event) {
         if (
@@ -249,91 +279,103 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
       // Show "Edit" only if the comment belongs to the logged-in user
       ...(comment.user._id === user._id
         ? [
-          {
-            label: "Edit",
-            action: () => {
-              setNewComment(comment.text); // input fill
-              setEditingCommentId(comment._id); // edit mode ON
+            {
+              label: "Edit",
+              action: () => {
+                setNewComment(comment.text); // input fill
+                setEditingCommentId(comment._id); // edit mode ON
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // Show "Delete" if the comment belongs to the logged-in user
       ...(comment.user._id === user._id
         ? [
-          {
-            label: "Delete",
-            action: () => handleDeleteComment(comment?._id),
-          },
-        ]
+            {
+              label: "Delete",
+              action: () => handleDeleteComment(comment?._id),
+            },
+          ]
         : []),
 
       // Show "Elevate Comment" if the comment belongs to the logged-in user
       ...(comment.user._id === user._id
         ? [
-          {
-            label: "Elevate Comment",
-            action: () => {
-              onElevateComment(comment._id);
+            {
+              label: comment?.isElevated
+                ? "Undo Elevate Comment"
+                : "Elevate Comment",
+              action: () => {
+                onElevateComment(
+                  comment._id,
+                  comment?.isElevated ? "demote" : "elevate",
+                );
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // Show options based on whether it's user's own page or someone else's page
       ...(comment.user._id !== user._id
         ? isPageOwner
           ? [
-            // If it's MY page, show these options for comments from others
-            {
-              label: "Elevate Comment",
-              action: () => {
-                onElevateComment(comment._id);
-              },
-            },
-            // Only show "Report and Delete" if not already reported
-            ...(!comment.reportedByCurrentUser
-              ? [
-                {
-                  label: "Report and Delete",
-                  action: () => {
-                    onReportComment(comment._id);
-                  },
+              // If it's MY page, show these options for comments from others
+              {
+                label: comment?.isElevated ? "Undo Elevate" : "Elevate Comment",
+                action: () => {
+                  onElevateComment(
+                    comment._id,
+                    comment?.isElevated ? "demote" : "elevate",
+                  );
                 },
-              ]
-              : []),
-            {
-              label: "Delete.",
-              action: () => {
-                onDeleteComment(comment._id);
               },
-            },
-            {
-              label: "Block",
-              action: () => {
-                // Extract pageId from comment.post.page._id or comment.post.pageId
-                const commentPageId = comment?.post?.page?._id || comment?.post?.pageId || comment?.page?._id || comment?.pageId || null;
-                onBlockUser(comment._id, comment.user._id, commentPageId);
+              // Only show "Report and Delete" if not already reported
+              ...(!comment.reportedByCurrentUser
+                ? [
+                    {
+                      label: "Report and Delete",
+                      action: () => {
+                        onReportComment(comment._id);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                label: "Delete.",
+                action: () => {
+                  onDeleteComment(comment._id);
+                },
               },
-            },
-          ]
+              {
+                label: "Block",
+                action: () => {
+                  // Extract pageId from comment.post.page._id or comment.post.pageId
+                  const commentPageId =
+                    comment?.post?.page?._id ||
+                    comment?.post?.pageId ||
+                    comment?.page?._id ||
+                    comment?.pageId ||
+                    null;
+                  onBlockUser(comment._id, comment.user._id, commentPageId);
+                },
+              },
+            ]
           : [
-            // If it's someone else's page, only show Report if not already reported
-            ...(!comment.reportedByCurrentUser
-              ? [
-                {
-                  label: "Report",
-                  action: () => {
-                    onReportComment(comment._id);
-                  },
-                },
-              ]
-              : []),
-          ]
+              // If it's someone else's page, only show Report if not already reported
+              ...(!comment.reportedByCurrentUser
+                ? [
+                    {
+                      label: "Report",
+                      action: () => {
+                        onReportComment(comment._id);
+                      },
+                    },
+                  ]
+                : []),
+            ]
         : []),
     ];
-
 
     const handleItemClick = (action) => {
       action();
@@ -350,7 +392,10 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
 
     useEffect(() => {
       const handleClickOutside = (event) => {
-        if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        if (
+          dropdownRef.current &&
+          !dropdownRef.current.contains(event.target)
+        ) {
           setIsOpen(false); // Close dropdown if clicked outside
         }
       };
@@ -385,10 +430,7 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
             <div className="bg-gray-100 rounded-lg px-3 py-2">
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
                 {comment.user?.name}
-                {comment.isElevated && (
-                  <TiPin />
-
-                )}
+                {comment.isElevated && <TiPin />}
                 {comment.isAdmin && (
                   <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
                     Admin
@@ -410,7 +452,11 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
                 <Heart
                   className={`w-4 h-4 ${comment.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
                 />
-                <span className={comment.isLiked ? "text-orange-500 font-medium" : ""}>
+                <span
+                  className={
+                    comment.isLiked ? "text-orange-500 font-medium" : ""
+                  }
+                >
                   {Number(comment.likesCount ?? 0)}
                 </span>
               </button>
@@ -521,7 +567,9 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
         <div className="flex-1 flex gap-2">
           <input
             type="text"
-            placeholder={editingCommentId ? "Update your comment..." : "Add a comment"}
+            placeholder={
+              editingCommentId ? "Update your comment..." : "Add a comment"
+            }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && addComment()}
@@ -531,10 +579,11 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
             onClick={addOrUpdateComment}
             disabled={commentLoading}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
-    ${commentLoading
-                ? "bg-orange-300 cursor-not-allowed"
-                : "bg-orange-500 hover:bg-orange-600 text-white"
-              }
+    ${
+      commentLoading
+        ? "bg-orange-300 cursor-not-allowed"
+        : "bg-orange-500 hover:bg-orange-600 text-white"
+    }
   `}
           >
             {commentLoading
@@ -608,7 +657,7 @@ export default function CommentsSection({ postId, isPageOwner = false, pageId = 
               targetModel: "Comment",
               targetId: reportTargetId, // Use the comment's target ID for reporting
               isReported: true,
-            })
+            }),
           );
         }}
       />

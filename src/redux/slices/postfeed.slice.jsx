@@ -141,6 +141,20 @@ export const elevateComment = createAsyncThunk(
     }
   },
 );
+export const demoteComment = createAsyncThunk(
+  "comments/post/id/demoteComment",
+  async (data, thunkAPI) => {
+    try {
+      const res = await axios.post(`/comments/post/${data}/demote`);
+
+      return res.data.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete comment",
+      );
+    }
+  },
+);
 
 export const getComment = createAsyncThunk(
   "posts/commentsGet",

@@ -9,7 +9,12 @@ import FloatingChatButton from "../../components/global/ChatWidget";
 import SubscriptionStories from "../../components/global/SubscriptionStories";
 import { useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
-import { getCollectionFeed, getPageStories, viewOtherStories, getMySubsctiptions } from "../../redux/slices/Subscription.slice";
+import {
+  getCollectionFeed,
+  getPageStories,
+  viewOtherStories,
+  getMySubsctiptions,
+} from "../../redux/slices/Subscription.slice";
 import CollectionFeedPostCard from "../../components/global/CollectionFeedPostCard";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
@@ -29,20 +34,18 @@ export default function SubscriptionsCategory() {
   const { CollectionFeeds } = useSelector((state) => state.subscriptions);
   useEffect(() => {
     if (location.state && location.state.id) {
-      // Fetch data based on the passed ID
+      // Fetch data based on the passed ID  
       dispatch(getCollectionFeed({ id: location.state.id }));
       // You can dispatch an action here to fetch data if needed
     }
   }, [location.state]);
-
-  console.log(CollectionFeeds, "CollectionFeeds")
 
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
 
-  console.log(CollectionFeeds, "CollectionFeeds")
+  console.log(CollectionFeeds, "CollectionFeeds");
   const mySubscriptions = [
     { title: "My Basketball", pages: "50+" },
     { title: "My Fitness", pages: "50+" },
@@ -75,7 +78,9 @@ export default function SubscriptionsCategory() {
   const [activeStory, setActiveStory] = useState(null);
   const [collectionName, setCollectionName] = useState("");
   const [pagesWithStories, setPagesWithStories] = useState(new Set());
-  const { PageStories, mySubscriptions: reduxSubscriptions } = useSelector((state) => state.subscriptions);
+  const { PageStories, mySubscriptions: reduxSubscriptions } = useSelector(
+    (state) => state.subscriptions,
+  );
 
   // Fetch collection name from mySubscriptions
   useEffect(() => {
@@ -83,7 +88,9 @@ export default function SubscriptionsCategory() {
       if (location.state?.id) {
         // First try from reduxSubscriptions
         if (reduxSubscriptions && Array.isArray(reduxSubscriptions)) {
-          const collection = reduxSubscriptions.find((col) => col._id === location.state.id);
+          const collection = reduxSubscriptions.find(
+            (col) => col._id === location.state.id,
+          );
           if (collection) {
             setCollectionName(collection.name || "");
             return;
@@ -107,7 +114,9 @@ export default function SubscriptionsCategory() {
           try {
             const altRes = await axios.get(`/collections/my`);
             if (altRes.data?.success && altRes.data?.data) {
-              const collection = altRes.data.data.find((col) => col._id === location.state.id);
+              const collection = altRes.data.data.find(
+                (col) => col._id === location.state.id,
+              );
               if (collection) {
                 setCollectionName(collection.name || "");
               }
@@ -128,7 +137,7 @@ export default function SubscriptionsCategory() {
     }
   }, [location.state?.id, reduxSubscriptions, dispatch]);
 
-  console.log(collectionName, "collectionName")
+  console.log(collectionName, "collectionName");
 
   // Check stories for each page
   useEffect(() => {
@@ -146,14 +155,20 @@ export default function SubscriptionsCategory() {
       await Promise.all(
         Array.from(pageIds).map(async (pageId) => {
           try {
-            const result = await dispatch(getPageStories({ id: pageId })).unwrap();
-            if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
+            const result = await dispatch(
+              getPageStories({ id: pageId }),
+            ).unwrap();
+            if (
+              result?.data &&
+              Array.isArray(result.data) &&
+              result.data.length > 0
+            ) {
               storiesSet.add(pageId);
             }
           } catch (error) {
             // Ignore errors for individual pages
           }
-        })
+        }),
       );
       setPagesWithStories(storiesSet);
     };
@@ -180,10 +195,11 @@ export default function SubscriptionsCategory() {
 
   // Filter posts based on selected page
   const filteredPosts = selectedPageId
-    ? CollectionFeeds?.filter((post) => post?.page?._id === selectedPageId) || []
+    ? CollectionFeeds?.filter((post) => post?.page?._id === selectedPageId) ||
+      []
     : CollectionFeeds || [];
 
-  console.log(uniquePages, "uniquePages")
+  console.log(PageStories, "uniquePages");
 
   // Handle page click - check for stories or navigate
   const handlePageClick = async (pageId) => {
@@ -192,7 +208,11 @@ export default function SubscriptionsCategory() {
       const result = await dispatch(getPageStories({ id: pageId })).unwrap();
 
       // Check if stories exist (response structure: { data: [...stories], pagination: {...} })
-      if (result?.data && Array.isArray(result.data) && result.data.length > 0) {
+      if (
+        result?.data &&
+        Array.isArray(result.data) &&
+        result.data.length > 0
+      ) {
         // Open story modal
         setActiveStory(result.data);
         if (result.data[0]?._id) {
@@ -231,72 +251,72 @@ export default function SubscriptionsCategory() {
           <div className="space-y-4">
             {pagesLoading
               ? Array.from({ length: 3 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
-                >
-                  {/* Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gray-300" />
 
-                    <div className="flex-1 space-y-1">
-                      <div className="h-3 w-32 bg-gray-300 rounded" />
-                      <div className="h-3 w-20 bg-gray-200 rounded" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 w-32 bg-gray-300 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* About */}
-                  <div className="space-y-2">
-                    <div className="h-3 w-full bg-gray-200 rounded" />
-                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
-                  </div>
+                    {/* About */}
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-gray-200 rounded" />
+                      <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                    </div>
 
-                  {/* Followers */}
-                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
-                </div>
-              ))
+                    {/* Followers */}
+                    <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                  </div>
+                ))
               : myPages?.slice(0, 3).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-10 h-10 flex-shrink-0">
-                      <img
-                        src={item?.image}
-                        className="w-full h-full object-cover rounded-full"
-                        alt=""
-                      />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt=""
+                        />
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <p
+                          onClick={() =>
+                            navigate(`/profile`, {
+                              state: { id: item._id },
+                            })
+                          }
+                          className="cursor-pointer font-[400] text-[14px] hover:text-orange-600 transition-colors"
+                        >
+                          {item?.name}
+                        </p>
+                        <img src={notes} alt="" />
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                      <p
-                        onClick={() =>
-                          navigate(`/profile`, {
-                            state: { id: item._id },
-                          })
-                        }
-                        className="cursor-pointer font-[400] text-[14px] hover:text-orange-600 transition-colors"
-                      >
-                        {item?.name}
-                      </p>
-                      <img src={notes} alt="" />
-                    </div>
+                    <p className="text-[14px] text-gray-600 leading-snug">
+                      {item?.about}
+                    </p>
+
+                    <p className="text-[14px] text-gray-700 mt-1">
+                      <span className="text-black font-[600]">
+                        {item?.followersCount}+
+                      </span>{" "}
+                      Follows
+                    </p>
                   </div>
-
-                  <p className="text-[14px] text-gray-600 leading-snug">
-                    {item?.about}
-                  </p>
-
-                  <p className="text-[14px] text-gray-700 mt-1">
-                    <span className="text-black font-[600]">
-                      {item?.followersCount}+
-                    </span>{" "}
-                    Follows
-                  </p>
-                </div>
-              ))}
+                ))}
           </div>
 
           <Link to="/profile">
@@ -323,9 +343,10 @@ export default function SubscriptionsCategory() {
             <div className="flex justify-center w-full">
               {collectionName && (
                 <div className="mb-4">
-                  <h2 className="text-[20px] text-white text-center pt-3">{collectionName}</h2>
+                  <h2 className="text-[20px] text-white text-center pt-3">
+                    {collectionName}
+                  </h2>
                 </div>
-
               )}
             </div>
           </div>
@@ -342,8 +363,12 @@ export default function SubscriptionsCategory() {
                       className="flex flex-col items-center gap-2 min-w-[80px] p-3 rounded-xl transition-all bg-transparent text-white hover:bg-orange-300 relative"
                     >
                       {/* Page Image with Glow Effect */}
-                      <div className={`relative ${hasStories ? 'ring-4 ring-orange-300 ring-offset-2 ring-offset-orange-500 rounded-full' : ''}`}>
-                        <div className={`w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md ${hasStories ? 'shadow-yellow-200' : ''}`}>
+                      <div
+                        className={`relative ${hasStories ? "ring-4 ring-orange-300 ring-offset-2 ring-offset-orange-500 rounded-full" : ""}`}
+                      >
+                        <div
+                          className={`w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md ${hasStories ? "shadow-yellow-200" : ""}`}
+                        >
                           {page.image ? (
                             <img
                               src={page.image}
