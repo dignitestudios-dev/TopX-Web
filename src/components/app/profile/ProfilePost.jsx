@@ -1,8 +1,26 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Plus, MoreVertical, Lightbulb, X, Heart, Share2, Filter, LucideSettings2, Cross } from "lucide-react";
+import {
+  Plus,
+  MoreVertical,
+  Lightbulb,
+  X,
+  Heart,
+  Share2,
+  Filter,
+  LucideSettings2,
+  Cross,
+} from "lucide-react";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
-import { getPageDetail, deletePage, resetDeletePageSuccess, updatePage, resetUpdatePageSuccess, applyExpertStatus, resetExpertStatusSuccess } from "../../../redux/slices/pages.slice";
+import {
+  getPageDetail,
+  deletePage,
+  resetDeletePageSuccess,
+  updatePage,
+  resetUpdatePageSuccess,
+  applyExpertStatus,
+  resetExpertStatusSuccess,
+} from "../../../redux/slices/pages.slice";
 import { BsFileEarmarkTextFill } from "react-icons/bs";
 import PagePosts from "./PagePosts";
 import CommentFilterModal from "./CommentFilterModal";
@@ -18,9 +36,16 @@ import ActiveStoryModal from "./ActiveStoryModal";
 import { useNavigate } from "react-router";
 import { Lock } from "lucide-react";
 import CollectionModal from "../../global/CollectionModal";
-import { addPageToCollections, getMyCollections, removePageFromCollections } from "../../../redux/slices/collection.slice";
+import {
+  addPageToCollections,
+  getMyCollections,
+  removePageFromCollections,
+} from "../../../redux/slices/collection.slice";
 import ReportModal from "../../global/ReportModal";
-import { sendReport, resetReportState } from "../../../redux/slices/reports.slice";
+import {
+  sendReport,
+  resetReportState,
+} from "../../../redux/slices/reports.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import Input from "../../common/Input";
 import { createStory } from "../../../redux/slices/posts.slice";
@@ -73,7 +98,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     fontSize: 24,
     fontFamily: "Arial",
     isDragging: false,
-    isActive: false
+    isActive: false,
   });
   const storyPreviewRef = useRef(null);
   const storyTextRef = useRef(null);
@@ -92,25 +117,39 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   console.log(user, "userrrrrrrrrrrrrr");
 
   const dispatch = useDispatch();
-  const { pageDetail, pageDetailLoading, deletePageLoading, deletePageSuccess, updatePageLoading, updatePageSuccess, expertStatusLoading, expertStatusSuccess } = useSelector((state) => state.pages);
+  const {
+    pageDetail,
+    pageDetailLoading,
+    deletePageLoading,
+    deletePageSuccess,
+    updatePageLoading,
+    updatePageSuccess,
+    expertStatusLoading,
+    expertStatusSuccess,
+  } = useSelector((state) => state.pages);
   const { postsLoading } = useSelector((state) => state.posts);
   const { PageStories, isLoading } = useSelector(
-    (state) => state.subscriptions
+    (state) => state.subscriptions,
   );
-  const { reportLoading, reportSuccess } = useSelector((state) => state.reports);
+  const { reportLoading, reportSuccess } = useSelector(
+    (state) => state.reports,
+  );
   const page = pageDetail;
-  const isPrivatePage = page?.pageType === "private" || page?.pageType === "pr  ivate";
+  const isPrivatePage =
+    page?.pageType === "private" || page?.pageType === "pr  ivate";
   const isRequestPending = page?.requestStatus === "pending";
   const isRequestAccepted = page?.requestStatus === "accepted";
   const isPageOwner = user?._id === page?.user?._id || user?._id === page?.user;
 
   // Show content if: not private, OR subscribed, OR request accepted, OR is page owner
-  const shouldShowContent = !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
+  const shouldShowContent =
+    !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
 
   // Check if should show private page overlay: private page, not subscribed, not page owner
-  const shouldShowPrivateOverlay = isPrivatePage && !isSubscribed && !isPageOwner;
+  const shouldShowPrivateOverlay =
+    isPrivatePage && !isSubscribed && !isPageOwner;
 
-  console.log(page, "page")
+  console.log(page, "page");
 
   // Fetch page details and stories on mount
   useEffect(() => {
@@ -120,7 +159,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     }
   }, [pageId, dispatch]);
 
-  console.log(pageDetail, "pageDetail")
+  console.log(pageDetail, "pageDetail");
 
   // Set subscription state from pageDetail
   useEffect(() => {
@@ -232,7 +271,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     } catch (error) {
       console.error("Failed to fetch post requests", error);
       setPostRequestsError(
-        error.response?.data?.message || "Failed to fetch post requests"
+        error.response?.data?.message || "Failed to fetch post requests",
       );
     } finally {
       setPostRequestsLoading(false);
@@ -263,12 +302,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       SuccessToast(
         status === "accepted"
           ? "Request accepted successfully"
-          : "Request rejected successfully"
+          : "Request rejected successfully",
       );
     } catch (error) {
       console.error("Failed to update request status", error);
       ErrorToast(
-        error.response?.data?.message || "Failed to update request status"
+        error.response?.data?.message || "Failed to update request status",
       );
     } finally {
       setRequestActionLoadingId(null);
@@ -287,7 +326,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       addPageToCollections({
         collections: selectedCollections,
         page: pageId,
-      })
+      }),
     ).then((res) => {
       if (!res.error) {
         setIsSubscribed(true);
@@ -304,7 +343,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       removePageFromCollections({
         collections: page?.collections || [],
         page: pageId,
-      })
+      }),
     ).then((res) => {
       if (!res.error) {
         setIsSubscribed(false);
@@ -323,7 +362,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         targetModel: "Page",
         targetId: pageId,
         isReported: true,
-      })
+      }),
     );
   };
 
@@ -462,7 +501,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           fontSize: 24,
           fontFamily: "Arial",
           isDragging: false,
-          isActive: false
+          isActive: false,
         });
       };
       reader.readAsDataURL(file);
@@ -471,7 +510,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   // Handle text overlay drag
   const handleTextDragStart = (e) => {
-    setStoryTextOverlay(prev => ({ ...prev, isDragging: true, isActive: true }));
+    setStoryTextOverlay((prev) => ({
+      ...prev,
+      isDragging: true,
+      isActive: true,
+    }));
   };
 
   const handleTextDrag = (e) => {
@@ -481,30 +524,30 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-    setStoryTextOverlay(prev => ({
+    setStoryTextOverlay((prev) => ({
       ...prev,
       x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y))
+      y: Math.max(0, Math.min(100, y)),
     }));
   };
 
   const handleTextDragEnd = () => {
-    setStoryTextOverlay(prev => ({ ...prev, isDragging: false }));
+    setStoryTextOverlay((prev) => ({ ...prev, isDragging: false }));
   };
 
   // Handle text input click
   const handleTextClick = () => {
-    setStoryTextOverlay(prev => ({ ...prev, isActive: true }));
+    setStoryTextOverlay((prev) => ({ ...prev, isActive: true }));
   };
 
   // Combine image/video with text overlay using canvas
   const combineMediaWithText = async () => {
     return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
       const img = new Image();
-      img.crossOrigin = 'anonymous';
+      img.crossOrigin = "anonymous";
 
       img.onload = () => {
         // Set canvas size (story format: 9:16 aspect ratio)
@@ -531,11 +574,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         if (storyTextOverlay.text && storyTextOverlay.text.trim()) {
           ctx.font = `${storyTextOverlay.fontSize}px ${storyTextOverlay.fontFamily}`;
           ctx.fillStyle = storyTextOverlay.color;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
 
           // Add text shadow for better visibility
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+          ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
           ctx.shadowBlur = 4;
           ctx.shadowOffsetX = 2;
           ctx.shadowOffsetY = 2;
@@ -544,23 +587,29 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           const textY = (storyTextOverlay.y / 100) * height;
 
           // Handle multiline text
-          const lines = storyTextOverlay.text.split('\n');
+          const lines = storyTextOverlay.text.split("\n");
           const lineHeight = storyTextOverlay.fontSize * 1.2;
           const startY = textY - ((lines.length - 1) * lineHeight) / 2;
 
           lines.forEach((line, index) => {
-            ctx.fillText(line, textX, startY + (index * lineHeight));
+            ctx.fillText(line, textX, startY + index * lineHeight);
           });
         }
 
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], 'story-with-text.png', { type: 'image/png' });
-            resolve(file);
-          } else {
-            reject(new Error('Failed to create image'));
-          }
-        }, 'image/png', 0.95);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const file = new File([blob], "story-with-text.png", {
+                type: "image/png",
+              });
+              resolve(file);
+            } else {
+              reject(new Error("Failed to create image"));
+            }
+          },
+          "image/png",
+          0.95,
+        );
       };
 
       img.onerror = () => {
@@ -596,9 +645,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           setGoLiveLoading(false);
         }, 500);
       } else {
-        ErrorToast(
-          res.payload || livestreamError || "Failed to start stream"
-        );
+        ErrorToast(res.payload || livestreamError || "Failed to start stream");
         setGoLiveLoading(false);
       }
     } catch (error) {
@@ -623,7 +670,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       let mediaToUpload = storyMedia;
 
       // If text overlay exists and media is image, combine them
-      if (storyTextOverlay.text && storyTextOverlay.text.trim() && storyMedia?.type?.startsWith("image/")) {
+      if (
+        storyTextOverlay.text &&
+        storyTextOverlay.text.trim() &&
+        storyMedia?.type?.startsWith("image/")
+      ) {
         mediaToUpload = await combineMediaWithText();
       }
 
@@ -644,7 +695,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         fontSize: 24,
         fontFamily: "Arial",
         isDragging: false,
-        isActive: false
+        isActive: false,
       });
       // Refresh page stories
       if (pageId) {
@@ -675,11 +726,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   const maxLength = 100;
 
-  console.log(pageDetail, "pageDetail")
+  console.log(pageDetail, "pageDetail");
 
   return (
     <div className="relative">
-      <div >
+      <div>
         <div className="bg-white rounded-[15px] overflow-hidden">
           {/* HEADER */}
           <div className="h-28 bg-gradient-to-l from-[#DE4B12] to-[#E56F41] p-2">
@@ -699,10 +750,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 <div className="relative">
                   {/* Outer glow wrapper when stories exist */}
                   <div
-                    className={`rounded-full ${PageStories && PageStories.length > 0
+                    className={`rounded-full ${
+                      PageStories && PageStories.length > 0
                         ? "p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906] shadow-[0_0_16px_rgba(245,158,11,0.8)]"
                         : ""
-                      }`}
+                    }`}
                   >
                     <div
                       onClick={() => {
@@ -711,10 +763,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           handleViewStory(PageStories[0]?._id);
                         }
                       }}
-                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${PageStories && PageStories.length > 0
+                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${
+                        PageStories && PageStories.length > 0
                           ? "bg-white"
                           : "bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
-                        }`}
+                      }`}
                     >
                       {page?.image ? (
                         <img
@@ -760,13 +813,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       {/* Add followers count if necessary */}
                     </span>
                   </div>
-
-
                 </div>
               </div>
-
-
-
 
               {/* ACTION BUTTONS */}
               <div className="flex items-center gap-2 mt-14">
@@ -781,38 +829,48 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 )}
 
                 {/* Subscribe Button - Only show when subscribed (to show UnSubscribe) */}
-                {isSubscribed && (!isPrivatePage || (isPrivatePage && !isRequestPending)) && !isPageOwner && (
-                  <button
-                    // onClick={handleUnsubscribe}
-                    className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2"
-                  >
-                    Subscribed
-                  </button>
-                )}
-
+                {isSubscribed &&
+                  (!isPrivatePage || (isPrivatePage && !isRequestPending)) &&
+                  !isPageOwner && (
+                    <button
+                      // onClick={handleUnsubscribe}
+                      className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2"
+                    >
+                      Subscribed
+                    </button>
+                  )}
 
                 {/* Subscribe Button - Show when not subscribed */}
-                {!isSubscribed && (!isPrivatePage || (isPrivatePage && !isRequestPending)) && (
-                  <button
-                    onClick={handleSubscribeClick}
-                    className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2"
-                  >
-                    Subscribe
-                  </button>
-                )}
+                {!isSubscribed &&
+                  (!isPrivatePage || (isPrivatePage && !isRequestPending)) && (
+                    <button
+                      onClick={handleSubscribeClick}
+                      className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2"
+                    >
+                      Subscribe
+                    </button>
+                  )}
 
                 {/* Live Chat Button - Show when subscribed OR user is page owner */}
-                {(isSubscribed || isPageOwner) && (!isPrivatePage || isRequestAccepted || isPageOwner) && (
-                  <button
-                    onClick={() => {
-                      console.log("Button clicked, navigating with:", { pageId, pageName: pageDetail?.name });
-                      navigate(`/live-chat`, { state: { pageId: pageId, pageName: pageDetail?.name } });
-                    }}
-                    className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
-                  >
-                    {page?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
-                  </button>
-                )}
+                {(isSubscribed || isPageOwner) &&
+                  (!isPrivatePage || isRequestAccepted || isPageOwner) && (
+                    <button
+                      onClick={() => {
+                        console.log("Button clicked, navigating with:", {
+                          pageId,
+                          pageName: pageDetail?.name,
+                        });
+                        navigate(`/live-chat`, {
+                          state: { pageId: pageId, pageName: pageDetail?.name },
+                        });
+                      }}
+                      className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
+                    >
+                      {page?.liveChat
+                        ? "Join A Live Chat"
+                        : "Start A Live Chat"}
+                    </button>
+                  )}
 
                 {/* Plus Icon Button - Only show for page owner */}
                 {isPageOwner && (
@@ -835,7 +893,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   </button>
                   {showDropdown && (
                     <div className="absolute right-0 -bottom-[6em] mt-1 w-[13em] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-
                       {/* Only show these items if the user is the page owner */}
                       {isPageOwner && (
                         <>
@@ -912,10 +969,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           )}
                         </>
                       )}
-
                     </div>
                   )}
-
                 </div>
               </div>
             </div>
@@ -960,14 +1015,21 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         </div>
 
         {/* TABS */}
-        <div className={!shouldShowContent ? "blur-md pointer-events-none select-none" : "flex items-center justify-between border-b border-gray-200"} >
+        <div
+          className={
+            !shouldShowContent
+              ? "blur-md pointer-events-none select-none"
+              : "flex items-center justify-between border-b border-gray-200"
+          }
+        >
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("post")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "post"
-                ? "text-orange-600"
-                : "text-gray-500 hover:text-gray-700"
-                }`}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                activeTab === "post"
+                  ? "text-orange-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
             >
               <BsFileEarmarkTextFill size={19} />
               <span className="text-[14px] font-[500]">Post</span>
@@ -980,14 +1042,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
             {isPageOwner && (
               <button
                 onClick={() => setActiveTab("postrequest")}
-                className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
-                  ? "text-orange-600"
-                  : "text-gray-500 hover:text-gray-700"
-                  }`}
+                className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                  activeTab === "postrequest"
+                    ? "text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
               >
                 <div
-                  className={`p-1.5 rounded ${activeTab === "postrequest" ? "bg-orange-600" : "bg-gray-400"
-                    }`}
+                  className={`p-1.5 rounded ${
+                    activeTab === "postrequest"
+                      ? "bg-orange-600"
+                      : "bg-gray-400"
+                  }`}
                 >
                   <Lightbulb className="text-white" size={16} />
                 </div>
@@ -1009,7 +1075,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               <LucideSettings2 className="w-5 h-5 text-gray-600" />
             </button>
           )}
-
         </div>
 
         {/* POSTS LIST / POST REQUEST LIST */}
@@ -1046,7 +1111,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   </div>
                   <p className="font-bold pt-4 text-black">
                     No Post request found
-
                   </p>
                 </div>
               ) : (
@@ -1217,7 +1281,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       <UploadPostStory
         isOpen={suggestPostModal}
         setIsOpen={setSuggestPostModal}
-        setSelectedType={() => { }}
+        setSelectedType={() => {}}
         title="Suggest Post"
         selectedPages={[pageId]}
       />
@@ -1228,7 +1292,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b">
-
               <h2 className="text-xl font-semibold text-gray-900 flex-1 text-center">
                 Settings
               </h2>
@@ -1251,12 +1314,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   </h3>
                   <button
                     onClick={() => setIsPrivate(!isPrivate)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPrivate ? "bg-orange-500" : "bg-gray-300"
-                      }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      isPrivate ? "bg-orange-500" : "bg-gray-300"
+                    }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPrivate ? "translate-x-6" : "translate-x-1"
-                        }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        isPrivate ? "translate-x-6" : "translate-x-1"
+                      }`}
                     />
                   </button>
                 </div>
@@ -1265,13 +1330,17 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   <div>
                     <p className="text-black mb-1 font-bold">Private Page:</p>
                     <p>
-                      When enabled, only users you approve (followers) can see your posts, page information, and interactions. Your content will not be visible to anyone who is not a follower.
+                      When enabled, only users you approve (followers) can see
+                      your posts, page information, and interactions. Your
+                      content will not be visible to anyone who is not a
+                      follower.
                     </p>
                   </div>
                   <div>
                     <p className="text-black mb-1 font-bold">Public Page:</p>
                     <p>
-                      When disabled, anyone on the platform can view your posts and page information, even if they do not follow you.
+                      When disabled, anyone on the platform can view your posts
+                      and page information, even if they do not follow you.
                     </p>
                   </div>
                 </div>
@@ -1454,13 +1523,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   {/* Topic Of Expertise */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Topic Of Expertise <span className="text-gray-500 font-normal">(Required)</span>
+                      Topic Of Expertise{" "}
+                      <span className="text-gray-500 font-normal">
+                        (Required)
+                      </span>
                     </label>
                     <input
                       type="text"
                       placeholder="Text goes here"
                       value={expertForm.topic}
-                      onChange={(e) => handleExpertInputChange("topic", e.target.value)}
+                      onChange={(e) =>
+                        handleExpertInputChange("topic", e.target.value)
+                      }
                       disabled={expertStatusLoading}
                       className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-orange-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                     />
@@ -1474,7 +1548,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     <textarea
                       placeholder="Explain your knowledge and experience"
                       value={expertForm.summary}
-                      onChange={(e) => handleExpertInputChange("summary", e.target.value)}
+                      onChange={(e) =>
+                        handleExpertInputChange("summary", e.target.value)
+                      }
                       rows={6}
                       disabled={expertStatusLoading}
                       className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-700 focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -1487,13 +1563,20 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   {/* Identification Docs */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Identification Docs <span className="text-gray-500 font-normal">(Required)</span>
+                      Identification Docs{" "}
+                      <span className="text-gray-500 font-normal">
+                        (Required)
+                      </span>
                     </label>
-                    <p className="text-sm text-gray-500 mb-3">Drivers License (Front/Back)</p>
+                    <p className="text-sm text-gray-500 mb-3">
+                      Drivers License (Front/Back)
+                    </p>
 
                     {/* Front */}
                     <div className="mb-3">
-                      <label className="block text-xs text-gray-600 mb-1">Front</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Front
+                      </label>
                       <label className="block">
                         <input
                           type="file"
@@ -1510,12 +1593,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                                 alt="Front Preview"
                                 className="max-h-24 mx-auto rounded"
                               />
-                              <p className="text-xs text-gray-700">Click to change</p>
+                              <p className="text-xs text-gray-700">
+                                Click to change
+                              </p>
                             </div>
                           ) : (
                             <div className="space-y-1">
-                              <p className="text-xs font-medium text-gray-900">Upload "document name"</p>
-                              <p className="text-xs text-gray-500">Upto 20mb JPG, PNG</p>
+                              <p className="text-xs font-medium text-gray-900">
+                                Upload "document name"
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Upto 20mb JPG, PNG
+                              </p>
                             </div>
                           )}
                         </div>
@@ -1524,7 +1613,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
                     {/* Back */}
                     <div>
-                      <label className="block text-xs text-gray-600 mb-1">Back</label>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Back
+                      </label>
                       <label className="block">
                         <input
                           type="file"
@@ -1541,12 +1632,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                                 alt="Back Preview"
                                 className="max-h-24 mx-auto rounded"
                               />
-                              <p className="text-xs text-gray-700">Click to change</p>
+                              <p className="text-xs text-gray-700">
+                                Click to change
+                              </p>
                             </div>
                           ) : (
                             <div className="space-y-1">
-                              <p className="text-xs font-medium text-gray-900">Upload "document name"</p>
-                              <p className="text-xs text-gray-500">Upto 20mb JPG, PNG</p>
+                              <p className="text-xs font-medium text-gray-900">
+                                Upload "document name"
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Upto 20mb JPG, PNG
+                              </p>
                             </div>
                           )}
                         </div>
@@ -1557,10 +1654,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   {/* Expertise Docs */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Expertise Docs <span className="text-gray-500 font-normal">(Optional)</span>
+                      Expertise Docs{" "}
+                      <span className="text-gray-500 font-normal">
+                        (Optional)
+                      </span>
                     </label>
                     <p className="text-sm text-gray-500 mb-3">
-                      i.e. Certifications / Degrees, Portfolio / Published Work, Awards / Recognitions, Videos / Articles / Other Proof
+                      i.e. Certifications / Degrees, Portfolio / Published Work,
+                      Awards / Recognitions, Videos / Articles / Other Proof
                     </p>
                     <label className="block">
                       <input
@@ -1578,12 +1679,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                               alt="Preview"
                               className="max-h-24 mx-auto rounded"
                             />
-                            <p className="text-xs text-gray-700">Click to change</p>
+                            <p className="text-xs text-gray-700">
+                              Click to change
+                            </p>
                           </div>
                         ) : (
                           <div className="space-y-1">
-                            <p className="text-xs font-medium text-gray-900">Upload "document name"</p>
-                            <p className="text-xs text-gray-500">Upto 20mb JPG, PNG</p>
+                            <p className="text-xs font-medium text-gray-900">
+                              Upload "document name"
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Upto 20mb JPG, PNG
+                            </p>
                           </div>
                         )}
                       </div>
@@ -1611,7 +1718,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       <UploadPostStory
         isOpen={createPostUploadModal}
         setIsOpen={setCreatePostUploadModal}
-        setSelectedType={() => { }}
+        setSelectedType={() => {}}
         title="Create Post"
         selectedPages={[pageId]}
       />
@@ -1622,7 +1729,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Select Type</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Select Type
+              </h2>
               <button
                 onClick={() => setActionModal(false)}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -1643,7 +1752,6 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               >
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                   <FaPlus className="text-orange-600" />
-
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">Create Post</p>
@@ -1668,7 +1776,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {goLiveLoading ? "Starting..." : "Go Live in this Topic page"}
+                    {goLiveLoading
+                      ? "Starting..."
+                      : "Go Live on this Topic page"}
                   </p>
                 </div>
               </button>
@@ -1683,7 +1793,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b">
-              <h2 className="text-xl font-semibold text-gray-900">Create Story</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Create Story
+              </h2>
               <button
                 onClick={() => {
                   setStoryModal(false);
@@ -1697,7 +1809,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     fontSize: 24,
                     fontFamily: "Arial",
                     isDragging: false,
-                    isActive: false
+                    isActive: false,
                   });
                 }}
                 disabled={postsLoading}
@@ -1750,32 +1862,37 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       )}
 
                       {/* Text Overlay */}
-                      {storyTextOverlay.text && storyTextOverlay.text.trim() && (
-                        <div
-                          ref={storyTextRef}
-                          className={`absolute cursor-move select-none ${storyTextOverlay.isActive ? 'ring-2 ring-orange-500' : ''}`}
-                          style={{
-                            left: `${storyTextOverlay.x}%`,
-                            top: `${storyTextOverlay.y}%`,
-                            transform: 'translate(-50%, -50%)',
-                            color: storyTextOverlay.color,
-                            fontSize: `${storyTextOverlay.fontSize}px`,
-                            fontFamily: storyTextOverlay.fontFamily,
-                            textShadow: '2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(0,0,0,0.3)',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                            maxWidth: '90%',
-                            textAlign: 'center'
-                          }}
-                          onMouseDown={handleTextDragStart}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setStoryTextOverlay(prev => ({ ...prev, isActive: true }));
-                          }}
-                        >
-                          {storyTextOverlay.text}
-                        </div>
-                      )}
+                      {storyTextOverlay.text &&
+                        storyTextOverlay.text.trim() && (
+                          <div
+                            ref={storyTextRef}
+                            className={`absolute cursor-move select-none ${storyTextOverlay.isActive ? "ring-2 ring-orange-500" : ""}`}
+                            style={{
+                              left: `${storyTextOverlay.x}%`,
+                              top: `${storyTextOverlay.y}%`,
+                              transform: "translate(-50%, -50%)",
+                              color: storyTextOverlay.color,
+                              fontSize: `${storyTextOverlay.fontSize}px`,
+                              fontFamily: storyTextOverlay.fontFamily,
+                              textShadow:
+                                "2px 2px 4px rgba(0,0,0,0.5), -1px -1px 2px rgba(0,0,0,0.3)",
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                              maxWidth: "90%",
+                              textAlign: "center",
+                            }}
+                            onMouseDown={handleTextDragStart}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setStoryTextOverlay((prev) => ({
+                                ...prev,
+                                isActive: true,
+                              }));
+                            }}
+                          >
+                            {storyTextOverlay.text}
+                          </div>
+                        )}
 
                       <button
                         onClick={(e) => {
@@ -1790,7 +1907,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                             fontSize: 24,
                             fontFamily: "Arial",
                             isDragging: false,
-                            isActive: false
+                            isActive: false,
                           });
                         }}
                         className="absolute top-2 right-2 bg-black/50 hover:bg-black/70 text-white rounded-full p-1.5 transition-colors z-10"
@@ -1805,8 +1922,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           <Plus className="w-8 h-8 text-orange-500" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Add Photo or Video</p>
-                          <p className="text-xs text-gray-500 mt-1">Tap to upload</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Add Photo or Video
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Tap to upload
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1823,11 +1944,22 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     </label>
                     <textarea
                       value={storyTextOverlay.text}
-                      onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, text: e.target.value, isActive: true }))}
+                      onChange={(e) =>
+                        setStoryTextOverlay((prev) => ({
+                          ...prev,
+                          text: e.target.value,
+                          isActive: true,
+                        }))
+                      }
                       placeholder="Type your text here..."
                       rows="2"
                       className="w-full p-3 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500 resize-none"
-                      onClick={() => setStoryTextOverlay(prev => ({ ...prev, isActive: true }))}
+                      onClick={() =>
+                        setStoryTextOverlay((prev) => ({
+                          ...prev,
+                          isActive: true,
+                        }))
+                      }
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Click and drag text on image to reposition
@@ -1842,19 +1974,41 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           Text Color
                         </label>
                         <div className="flex gap-2 flex-wrap">
-                          {['#FFFFFF', '#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'].map((color) => (
+                          {[
+                            "#FFFFFF",
+                            "#000000",
+                            "#FF0000",
+                            "#00FF00",
+                            "#0000FF",
+                            "#FFFF00",
+                            "#FF00FF",
+                            "#00FFFF",
+                          ].map((color) => (
                             <button
                               key={color}
-                              onClick={() => setStoryTextOverlay(prev => ({ ...prev, color }))}
-                              className={`w-10 h-10 rounded-lg border-2 transition-all ${storyTextOverlay.color === color ? 'border-orange-500 scale-110' : 'border-gray-300'
-                                }`}
+                              onClick={() =>
+                                setStoryTextOverlay((prev) => ({
+                                  ...prev,
+                                  color,
+                                }))
+                              }
+                              className={`w-10 h-10 rounded-lg border-2 transition-all ${
+                                storyTextOverlay.color === color
+                                  ? "border-orange-500 scale-110"
+                                  : "border-gray-300"
+                              }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}
                           <input
                             type="color"
                             value={storyTextOverlay.color}
-                            onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, color: e.target.value }))}
+                            onChange={(e) =>
+                              setStoryTextOverlay((prev) => ({
+                                ...prev,
+                                color: e.target.value,
+                              }))
+                            }
                             className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
                           />
                         </div>
@@ -1870,7 +2024,12 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           min="12"
                           max="72"
                           value={storyTextOverlay.fontSize}
-                          onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, fontSize: parseInt(e.target.value) }))}
+                          onChange={(e) =>
+                            setStoryTextOverlay((prev) => ({
+                              ...prev,
+                              fontSize: parseInt(e.target.value),
+                            }))
+                          }
                           className="w-full"
                         />
                       </div>
@@ -1882,12 +2041,19 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                         </label>
                         <select
                           value={storyTextOverlay.fontFamily}
-                          onChange={(e) => setStoryTextOverlay(prev => ({ ...prev, fontFamily: e.target.value }))}
+                          onChange={(e) =>
+                            setStoryTextOverlay((prev) => ({
+                              ...prev,
+                              fontFamily: e.target.value,
+                            }))
+                          }
                           className="w-full p-2 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-orange-500"
                         >
                           <option value="Arial">Arial</option>
                           <option value="Helvetica">Helvetica</option>
-                          <option value="Times New Roman">Times New Roman</option>
+                          <option value="Times New Roman">
+                            Times New Roman
+                          </option>
                           <option value="Courier New">Courier New</option>
                           <option value="Verdana">Verdana</option>
                           <option value="Georgia">Georgia</option>
@@ -1915,7 +2081,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       fontSize: 24,
                       fontFamily: "Arial",
                       isDragging: false,
-                      isActive: false
+                      isActive: false,
                     });
                   }}
                   disabled={postsLoading}

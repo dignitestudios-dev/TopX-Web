@@ -3,25 +3,28 @@ import { Heart, MoreVertical, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { timeAgo } from "../../lib/helpers";
 import {
+  elevateComment,
   KnowledgeCreateComment,
   KnowledgeDeleteComment,
   KnowledgeGetComment,
   KnowledgeUpdateComment,
   likeComment,
 } from "../../redux/slices/knowledgepost.slice";
-import { elevateComment } from "../../redux/slices/postfeed.slice";
 import { SuccessToast, ErrorToast } from "./Toaster";
+import { sendReport } from "../../redux/slices/reports.slice";
+import ReportModal from "./ReportModal";
 
 export default function KnowledgePostComments({ postId }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
-    (state) => state.knowledgepost
+    (state) => state.knowledgepost,
   );
+  const [reportmodal, setReportmodal] = useState(false); // To manage report modal state
   const [editingCommentId, setEditingCommentId] = useState(null);
-
+  const [reportTargetId, setReportTargetId] = useState(null); // Store the comment ID to report
   const [newComment, setNewComment] = useState("");
   const dispatch = useDispatch();
-  console.log(postComments, "postComments");
+
   const handleGetComments = async () => {
     await dispatch(KnowledgeGetComment(postId));
   };
@@ -39,7 +42,7 @@ export default function KnowledgePostComments({ postId }) {
           KnowledgeUpdateComment({
             commentId: editingCommentId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       } else {
         // ➕ CREATE
@@ -47,7 +50,7 @@ export default function KnowledgePostComments({ postId }) {
           KnowledgeCreateComment({
             knowledgePost: postId,
             text: newComment,
-          })
+          }),
         ).unwrap();
       }
 
@@ -106,13 +109,22 @@ export default function KnowledgePostComments({ postId }) {
     await dispatch(KnowledgeDeleteComment(commentId)).unwrap();
     handleGetComments();
   };
-  const handleElevateComment = async (commentId) => {
+  const handleElevateComment = async (commentId, status) => {
     try {
-      await dispatch(elevateComment(commentId)).unwrap();
-      SuccessToast("Comment elevated successfully");
+      if (status == "demote") {
+        await dispatch(demoteComment(commentId)).unwrap();
+      } else {
+        await dispatch(elevateComment(commentId)).unwrap();
+      }
+      SuccessToast(
+        status == "demote"
+          ? "Comment undo elevated successfully"
+          : "Comment elevated successfully",
+      );
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
+      // Prefer exact API message over generic text
       const apiMessage =
         (typeof error === "string" && error) ||
         error?.response?.data?.message ||
@@ -151,19 +163,46 @@ export default function KnowledgePostComments({ postId }) {
         document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const menuItems = [
-      {
-        label: "Edit",
-        action: () => {
-          setNewComment(comment.text); // input fill
-          setEditingCommentId(comment._id); // edit mode ON
-        },
-      },
-      {
-        label: "Delete",
-        action: () => handleDeleteComment(comment?._id),
-      },
-    ];
+    const isAuthor = comment?.user?._id === user?._id;
+    const menuItems = isAuthor
+      ? [
+          {
+            label: "Edit",
+            action: () => {
+              setNewComment(comment.text);
+              setEditingCommentId(comment._id);
+            },
+          },
+          {
+            label: "Delete",
+            action: () => handleDeleteComment(comment._id),
+          },
+          {
+            label: comment.isElevated
+              ? "Undo Elevate Comment"
+              : "Elevate Comment",
+            action: () => {
+              handleElevateComment(
+                comment._id,
+                comment.isElevated ? "demote" : "elevate",
+              );
+            },
+          },
+        ]
+      : [
+          // 👇 ONLY for other users' comments
+          ...(!comment.reportedByCurrentUser
+            ? [
+                {
+                  label: "Report",
+                  action: () => {
+                    setReportTargetId(comment?._id);
+                    setReportmodal(true);
+                  },
+                },
+              ]
+            : []),
+        ];
 
     const handleItemClick = (action) => {
       action();
@@ -175,16 +214,27 @@ export default function KnowledgePostComments({ postId }) {
       setReplyText("");
       setIsReplying(false);
     };
-    const isAuthor = comment?.user?._id === user?._id;
+
+    console.log(postComments, "postComments");
 
     return (
       <div className={`py-5 ${isReply ? "ml-12 mt-3" : "mt-4"}`}>
         <div className="flex gap-3 ">
-          <img
-            src={comment.user?.profilePicture}
-            alt={comment.user?.username}
-            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-          />
+          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ED6416] text-white flex-shrink-0">
+            {comment.user?.profilePicture ? (
+              <>
+                <img
+                  src={comment.user?.profilePicture}
+                  alt={comment.user?.username}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </>
+            ) : (
+              <span className="font-[600] text-sm uppercase">
+                {comment?.user?.username ? comment.user.username[0] : "?"}
+              </span>
+            )}
+          </div>
           <div className="flex-1">
             <div className="bg-gray-100 rounded-lg px-3 py-2">
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
@@ -196,6 +246,11 @@ export default function KnowledgePostComments({ postId }) {
                 )}
               </p>
               <p className="text-sm text-gray-700">{comment.text}</p>
+              {comment?.reportedByCurrentUser && (
+                <p className="text-xs text-orange-500 font-medium mt-2">
+                  This Comment has been reported
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <button
@@ -224,31 +279,30 @@ export default function KnowledgePostComments({ postId }) {
               <span>{timeAgo(comment.createdAt)}</span>
             </div>
           </div>
-          <div className="relative z-50">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
+          <div className="relative">
+            {!comment?.reportedByCurrentUser && (
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            )}
 
             {isOpen && (
               <div className="absolute  right-0 mt-1 w-40  bg-white rounded-lg shadow-lg border border-gray-200 py-1  z-50">
-                {menuItems.map((item, index) => {
-                  if (!isAuthor && !["Delete", "Report"].includes(item.label)) {
-                    return null;
-                  }
-
-                  return (
-                    <button
-                      key={index}
-                      onClick={item.action}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
+                {menuItems.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      item.action();
+                      setIsOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -337,8 +391,8 @@ export default function KnowledgePostComments({ postId }) {
                 ? "Updating..."
                 : "Posting..."
               : editingCommentId
-              ? "Update"
-              : "Post"}
+                ? "Update"
+                : "Post"}
           </button>
         </div>
       </div>
@@ -369,6 +423,23 @@ export default function KnowledgePostComments({ postId }) {
               />
             ))}
       </div>
+
+      <ReportModal
+        isOpen={reportmodal}
+        onClose={() => setReportmodal(false)}
+        loading={commentLoading}
+        onSubmit={async (reason) => {
+          await dispatch(
+            sendReport({
+              reason,
+              targetModel: "Comment",
+              targetId: reportTargetId, // Use the comment's target ID for reporting
+              isReported: true,
+            }),
+            setReportmodal(!reportmodal),
+          );
+        }}
+      />
     </div>
   );
 }

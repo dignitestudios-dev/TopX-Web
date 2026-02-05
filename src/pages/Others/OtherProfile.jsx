@@ -26,7 +26,7 @@ export default function OtherProfile() {
 
   const location = useLocation();
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
-
+  const pageId = location.state.pageId;
   const dispatch = useDispatch();
   const { topicPages, userCollections, userKnowledgePost, isLoading } =
     useSelector((state) => state.otherProfile);
@@ -38,7 +38,7 @@ export default function OtherProfile() {
         page: 1,
         limit: 10,
         search: "",
-      })
+      }),
     ).unwrap();
     await dispatch(
       getUserCollections({
@@ -46,7 +46,7 @@ export default function OtherProfile() {
         page: 1,
         limit: 10,
         search: "",
-      })
+      }),
     ).unwrap();
     await dispatch(
       getUserKnowledgePost({
@@ -54,7 +54,7 @@ export default function OtherProfile() {
         page: 1,
         limit: 10,
         search: "",
-      })
+      }),
     ).unwrap();
   };
   useEffect(() => {
@@ -67,7 +67,14 @@ export default function OtherProfile() {
     handleGetUserProfile();
   };
 
-  console.log(topicPages,"topicPages")
+  useEffect(() => {
+    if (pageId) {
+      setSelectedPageId(pageId);
+      setIsProfilePostOpen(true);
+    }
+  }, [[pageId]]);
+
+  console.log(topicPages, "topicPages");
   return (
     <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 px-3 overflow-y-hidden">
       {/* Left Side */}

@@ -20,9 +20,11 @@ import ShareToChatsModal from "./ShareToChatsModal";
 import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
 import { IoWarning } from "react-icons/io5";
+import PrivatePostModal from "./PrivatePostModal";
 
 export default function HomePostFeed({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [isPrivatePost, setIsPrivatePost] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
 
@@ -222,7 +224,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       state: { id: post.author },
     });
   };
-  console.log(post, "post-detail");
   return (
     <div className="bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
@@ -285,15 +286,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           )}
         </div>
       </div>
-      {post.sharedBy ? (
-        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
-          <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          />
-          {post.sharedBy.name} Reposted
-        </div>
-      ) : null}
+
       {/* Post Images - Thumbnail */}
       {hasImages && (
         <div
@@ -353,13 +346,37 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           )}
         </div>
       )}
+      {post.sharedBy ? (
+        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+          {post.sharedBy?.profilePicture ? (
+            <img
+              src={post.sharedBy.profilePicture}
+              className="w-7 h-7 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+              {post.sharedBy?.name.split(" ")[0][0]}
+            </div>
+          )}
+          {/* <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          /> */}
+          {post.sharedBy.name} Reposted
+        </div>
+      ) : null}
       {post?.page?.pageType == "private" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
               <AlertTriangle className="w-6 h-6 text-orange-500" />
             </div>
-            <p className="text-base font-semibold text-orange-500">
+            <p
+              onClick={() => {
+                setIsPrivatePost(!isPrivatePost);
+              }}
+              className="text-base cursor-pointer  font-semibold text-orange-500"
+            >
               Private post
             </p>
           </div>
@@ -484,6 +501,12 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           );
         }}
       />
+      {isPrivatePost && (
+        <PrivatePostModal
+          post={post}
+          onClose={() => setIsPrivatePost(!isPrivatePost)}
+        />
+      )}
     </div>
   );
 }

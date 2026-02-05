@@ -22,6 +22,7 @@ export default function CommentsSection({
   postId,
   isPageOwner = false,
   pageId = null,
+  postDetail,
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
@@ -242,6 +243,9 @@ export default function CommentsSection({
     }
   };
 
+  const isSharedPost = Boolean(postDetail?.sharedBy);
+
+  console.log(postDetail, "postDetail");
   const CommentItem = ({
     comment,
     isReply = false,
@@ -275,107 +279,129 @@ export default function CommentsSection({
     }, []);
 
     // Menu items for comment actions
-    const menuItems = [
-      // Show "Edit" only if the comment belongs to the logged-in user
-      ...(comment.user._id === user._id
-        ? [
-            {
-              label: "Edit",
-              action: () => {
-                setNewComment(comment.text); // input fill
-                setEditingCommentId(comment._id); // edit mode ON
-              },
-            },
-          ]
-        : []),
-
-      // Show "Delete" if the comment belongs to the logged-in user
-      ...(comment.user._id === user._id
-        ? [
-            {
-              label: "Delete",
-              action: () => handleDeleteComment(comment?._id),
-            },
-          ]
-        : []),
-
-      // Show "Elevate Comment" if the comment belongs to the logged-in user
-      ...(comment.user._id === user._id
-        ? [
-            {
-              label: comment?.isElevated
-                ? "Undo Elevate Comment"
-                : "Elevate Comment",
-              action: () => {
-                onElevateComment(
-                  comment._id,
-                  comment?.isElevated ? "demote" : "elevate",
-                );
-              },
-            },
-          ]
-        : []),
-
-      // Show options based on whether it's user's own page or someone else's page
-      ...(comment.user._id !== user._id
-        ? isPageOwner
-          ? [
-              // If it's MY page, show these options for comments from others
-              {
-                label: comment?.isElevated ? "Undo Elevate" : "Elevate Comment",
-                action: () => {
-                  onElevateComment(
-                    comment._id,
-                    comment?.isElevated ? "demote" : "elevate",
-                  );
+    const menuItems = isSharedPost
+      ? [
+          // ONLY Report (if not already reported)
+          ...(!comment.reportedByCurrentUser
+            ? [
+                {
+                  label: "Report",
+                  action: () => onReportComment(comment._id),
                 },
-              },
-              // Only show "Report and Delete" if not already reported
-              ...(!comment.reportedByCurrentUser
-                ? [
-                    {
-                      label: "Report and Delete",
-                      action: () => {
-                        onReportComment(comment._id);
-                      },
+              ]
+            : []),
+          ...(comment.user._id === user._id
+            ? [
+                {
+                  label: "Edit",
+                  action: () => {
+                    setNewComment(comment.text);
+                    setEditingCommentId(comment._id);
+                  },
+                },
+                {
+                  label: "Delete",
+                  action: () => handleDeleteComment(comment._id),
+                },
+                {
+                  label: comment.isElevated
+                    ? "Undo Elevate Comment"
+                    : "Elevate Comment",
+                  action: () => {
+                    onElevateComment(
+                      comment._id,
+                      comment.isElevated ? "demote" : "elevate",
+                    );
+                  },
+                },
+              ]
+            : []),
+        ]
+      : [
+          // ================= NORMAL LOGIC =================
+
+          ...(comment.user._id === user._id
+            ? [
+                {
+                  label: "Edit",
+                  action: () => {
+                    setNewComment(comment.text);
+                    setEditingCommentId(comment._id);
+                  },
+                },
+                {
+                  label: "Delete",
+                  action: () => handleDeleteComment(comment._id),
+                },
+                {
+                  label: comment.isElevated
+                    ? "Undo Elevate Comment"
+                    : "Elevate Comment",
+                  action: () => {
+                    onElevateComment(
+                      comment._id,
+                      comment.isElevated ? "demote" : "elevate",
+                    );
+                  },
+                },
+              ]
+            : []),
+
+          ...(comment.user._id !== user._id
+            ? isPageOwner
+              ? [
+                  {
+                    label: comment.isElevated
+                      ? "Undo Elevate"
+                      : "Elevate Comment",
+                    action: () => {
+                      onElevateComment(
+                        comment._id,
+                        comment.isElevated ? "demote" : "elevate",
+                      );
                     },
-                  ]
-                : []),
-              {
-                label: "Delete.",
-                action: () => {
-                  onDeleteComment(comment._id);
-                },
-              },
-              {
-                label: "Block",
-                action: () => {
-                  // Extract pageId from comment.post.page._id or comment.post.pageId
-                  const commentPageId =
-                    comment?.post?.page?._id ||
-                    comment?.post?.pageId ||
-                    comment?.page?._id ||
-                    comment?.pageId ||
-                    null;
-                  onBlockUser(comment._id, comment.user._id, commentPageId);
-                },
-              },
-            ]
-          : [
-              // If it's someone else's page, only show Report if not already reported
-              ...(!comment.reportedByCurrentUser
-                ? [
-                    {
-                      label: "Report",
-                      action: () => {
-                        onReportComment(comment._id);
-                      },
+                  },
+
+                  ...(!comment.reportedByCurrentUser
+                    ? [
+                        {
+                          label: "Report and Delete",
+                          action: () => onReportComment(comment._id),
+                        },
+                      ]
+                    : []),
+
+                  {
+                    label: "Delete",
+                    action: () => onDeleteComment(comment._id),
+                  },
+
+                  {
+                    label: "Block",
+                    action: () => {
+                      const commentPageId =
+                        comment?.post?.page?._id ||
+                        comment?.post?.pageId ||
+                        comment?.page?._id ||
+                        comment?.pageId ||
+                        null;
+
+                      onBlockUser(comment._id, comment.user._id, commentPageId);
                     },
-                  ]
-                : []),
-            ]
-        : []),
-    ];
+                  },
+                ]
+              : [
+                  ...(!comment.reportedByCurrentUser
+                    ? [
+                        {
+                          label: "Report",
+                          action: () => onReportComment(comment._id),
+                        },
+                      ]
+                    : []),
+                ]
+            : []),
+        ];
 
     const handleItemClick = (action) => {
       action();
@@ -414,11 +440,13 @@ export default function CommentsSection({
         <div className="flex gap-3 ">
           <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ED6416] text-white flex-shrink-0">
             {comment.user?.profilePicture ? (
-              <img
-                src={comment.user?.profilePicture}
-                alt={comment.user?.username}
-                className="w-8 h-8 rounded-full object-cover"
-              />
+              <>
+                <img
+                  src={comment.user?.profilePicture}  
+                  alt={comment.user?.username}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </>
             ) : (
               <span className="font-[600] text-sm uppercase">
                 {comment?.user?.username ? comment.user.username[0] : "?"}
@@ -471,7 +499,7 @@ export default function CommentsSection({
           </div>
           {/* Only show three dots icon if there are menu items available */}
           {menuItems.length > 0 && (
-            <div className="relative z-50">
+            <div className="relative">
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="text-gray-400 hover:text-gray-600 p-1 rounded hover:bg-gray-100 transition"
@@ -482,7 +510,7 @@ export default function CommentsSection({
               {isOpen && (
                 <div
                   ref={dropdownRef} // Attach ref to the dropdown menu
-                  className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 -z-1"
+                  className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-40"
                 >
                   {menuItems.map((item, index) => {
                     if (!isAuthor && item.label === "Delete") {
@@ -559,11 +587,18 @@ export default function CommentsSection({
   return (
     <div className="mt-6 border-t border-gray-200 p-6">
       <div className="flex gap-3 mb-4">
-        <img
-          src={user?.profilePicture}
-          alt="You"
-          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-        />
+        {user.profilePicture ? (
+          <img
+            src={user?.profilePicture}
+            alt={user.name}
+            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-8 h-8 object-cover text-[16px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+            {user.name.split(" ")[0][0]}
+          </div>
+        )}
+
         <div className="flex-1 flex gap-2">
           <input
             type="text"

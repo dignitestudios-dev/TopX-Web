@@ -87,9 +87,7 @@ export default function Knowledge() {
     const bgCode = post?.backgroundCode;
     const preset = presetBackgrounds.find((bg) => bg.name === bgCode);
 
-    const imageUrl = preset
-      ? preset.imagePath
-      : presetBackgrounds[0].imagePath; // Fallback: bg_blue
+    const imageUrl = preset ? preset.imagePath : presetBackgrounds[0].imagePath; // Fallback: bg_blue
 
     return {
       backgroundImage: `url(${imageUrl})`,
@@ -126,7 +124,6 @@ export default function Knowledge() {
       [postId]: !prev[postId],
     }));
   };
-
 
   const timeAgo = (createdAt) => {
     const now = new Date();
@@ -190,19 +187,23 @@ export default function Knowledge() {
             knowledgeFeed.map((post, index) => (
               <div
                 key={post._id}
-                className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
+                className="bg-white pb-10 rounded-2xl shadow-sm overflow-hidden border border-gray-100"
               >
                 {/* Header */}
                 <div className="p-4 flex items-start justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3 flex-1">
-                    <img
-                      src={
-                        post.author.profilePicture ||
-                        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"
-                      }
-                      alt="User"
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {post.author.profilePicture ? (
+                      <img
+                        src={post.author.profilePicture}
+                        alt="User"
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                        {post.author?.name?.split(" ")[0][0]}
+                      </div>
+                    )}
+
                     <div>
                       <p className="font-semibold text-sm text-gray-800">
                         {post.author.name}
@@ -258,11 +259,16 @@ export default function Knowledge() {
                 {/* Repost badge */}
                 {post.sharedBy ? (
                   <div className="text-sm flex gap-4 ml-4 mb-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
-                    <img
-                      src={post.sharedBy.profilePicture}
-                      alt={post.sharedBy.username}
-                      className="w-7 h-7 rounded-full object-cover"
-                    />
+                    {post.sharedBy?.profilePicture ? (
+                      <img
+                        src={post.sharedBy.profilePicture}
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                        {post.sharedBy?.name.split(" ")[0][0]}
+                      </div>
+                    )}
                     <span className="text-gray-800 font-medium">
                       {post.sharedBy.username} Reposted
                     </span>
@@ -323,8 +329,8 @@ export default function Knowledge() {
                 )}
                 {/* Share Modal - Directly open ShareToChatsModal for knowledge posts */}
                 {sharepost && (
-                  <ShareToChatsModal 
-                    onClose={() => setSharepost(false)} 
+                  <ShareToChatsModal
+                    onClose={() => setSharepost(false)}
                     post={{
                       _id: post._id,
                       contentType: "knowledge",
