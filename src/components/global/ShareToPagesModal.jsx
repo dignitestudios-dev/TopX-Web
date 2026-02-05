@@ -43,7 +43,13 @@ const ShareToPagesModal = ({ postId, onClose }) => {
       onClose("");
       setSelectedPages([]);
     } catch (error) {
-      ErrorToast(error || "Failed to share post");
+      const message =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to share post";
+      ErrorToast(message);
     } finally {
       setLoading(false);
     }
@@ -168,6 +174,8 @@ const ShareToPagesModal = ({ postId, onClose }) => {
 };
 
 export default ShareToPagesModal;
+
+
 
 
 

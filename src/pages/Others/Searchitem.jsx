@@ -1,5 +1,12 @@
-import { ChevronRight, Heart, MessageCircle, Share2, AlertTriangle } from "lucide-react";
-import React, { useState } from "react";
+import {
+  ChevronRight,
+  Heart,
+  MessageCircle,
+  Share2,
+  AlertTriangle,
+  MoreHorizontal,
+} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import PostCard from "../../components/global/PostCard";
 import { useDispatch, useSelector } from "react-redux";
 import CollectionFeedPostCard from "../../components/global/CollectionFeedPostCard";
@@ -20,6 +27,8 @@ import {
 } from "../../redux/slices/knowledgepost.slice";
 import { nofound, notes, topics } from "../../assets/export";
 import { SuccessToast } from "../../components/global/Toaster";
+import ReportModal from "../../components/global/ReportModal";
+import { sendReport } from "../../redux/slices/reports.slice";
 
 const SearchItem = () => {
   const [activeTab, setActiveTab] = useState("Pages");
@@ -27,6 +36,9 @@ const SearchItem = () => {
   const { user, allUserData } = useSelector((state) => state.auth);
   const [liked, setLiked] = useState({});
   const dispatch = useDispatch();
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports,
+  );
   const [openModal, setOpenModal] = useState(false);
   const [unsubscribingPageId, setUnsubscribingPageId] = useState(null);
   const [selectedPage, setSelectedPage] = useState(null);
@@ -35,13 +47,25 @@ const SearchItem = () => {
   const [kpSharePost, setKpSharePost] = useState(null);
   const [kpLocalReactions, setKpLocalReactions] = useState({});
   const [knowledgeSubs, setKnowledgeSubs] = useState({});
+  const dropdownRef = useRef(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [reportmodal, setReportmodal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
   const toggleLike = (postId) => {
     setLiked((prev) => ({
       ...prev,
       [postId]: !prev[postId],
     }));
   };
-
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   // Extract data from globalSearch
   const pages = globalSearch?.pages || [];
   const posts = globalSearch?.posts || [];
@@ -61,8 +85,7 @@ const SearchItem = () => {
     return gradients[index % gradients.length];
   };
 
-
-  console.log(pages, "pagespagespages")
+  console.log(pages, "pagespagespages");
 
   const getKnowledgeReaction = (post) => {
     const baseIsLiked = currentUserId
@@ -123,7 +146,7 @@ const SearchItem = () => {
       removePageFromCollections({
         collections: page.collections || [],
         page: page._id,
-      })
+      }),
     ).then(() => {
       dispatch(setApiTrigger(true));
       setUnsubscribingPageId(null); // stop loader for that page only
@@ -134,7 +157,7 @@ const SearchItem = () => {
       addPageToCollections({
         collections: selectedCollections,
         page: selectedPage._id,
-      })
+      }),
     ).then(() => {
       dispatch(setApiTrigger(true));
       setOpenModal(false);
@@ -162,9 +185,7 @@ const SearchItem = () => {
         toggleKnowledgePageSubscription({ pageId }),
       ).unwrap();
 
-      SuccessToast(
-        res?.message || "Subscribed to knowledge page successfully",
-      );
+      SuccessToast(res?.message || "Subscribed to knowledge page successfully");
     } catch (error) {
       console.error("Knowledge page subscription failed:", error);
       // Revert optimistic state
@@ -178,14 +199,22 @@ const SearchItem = () => {
     <div className="container max-w-6xl mx-auto p-5">
       {/* Tabs */}
       <div className="flex items-center justify-center space-x-6 mb-6">
-        {["For You", "Pages", "Keywords", "Post", "Knowledge Posts", "People"].map((tab) => (
+        {[
+          "For You",
+          "Pages",
+          "Keywords",
+          "Post",
+          "Knowledge Posts",
+          "People",
+        ].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full ${activeTab === tab
-              ? "bg-orange-500 text-white"
-              : "bg-white text-gray-700"
-              }`}
+            className={`px-4 py-2 rounded-full ${
+              activeTab === tab
+                ? "bg-orange-500 text-white"
+                : "bg-white text-gray-700"
+            }`}
           >
             {tab}
           </button>
@@ -222,7 +251,11 @@ const SearchItem = () => {
                         <p className="font-semibold text-[14px] text-gray-900 truncate">
                           {page.name}
                         </p>
-                        <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
+                        <img
+                          src={notes}
+                          alt=""
+                          className="w-4 h-4 flex-shrink-0"
+                        />
                       </div>
                       <p className="text-[12px] text-gray-500 mt-1 truncate">
                         {page.topic}
@@ -247,51 +280,54 @@ const SearchItem = () => {
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-2">
                         {page.followers &&
-                          page.followers.slice(0, 3).map((img, i) =>
-                            img ? (
-                              <img
-                                key={i}
-                                src={img}
-                                alt="follower"
-                                className="w-6 h-6 rounded-full border-2 border-white object-cover"
-                              />
-                            ) : (
-                              <div
-                                key={i}
-                                className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
-                              />
-                            ),
-                          )}
+                          page.followers
+                            .slice(0, 3)
+                            .map((img, i) =>
+                              img ? (
+                                <img
+                                  key={i}
+                                  src={img}
+                                  alt="follower"
+                                  className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                                />
+                              ) : (
+                                <div
+                                  key={i}
+                                  className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
+                                />
+                              ),
+                            )}
                       </div>
                       <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
                         {page.followersCount || 0}+ Follows
                       </p>
                     </div>
                     {/* Subscribe Button - Only for knowledge pages (direct subscribe) */}
-                    {page.contentType === "knowledge" && (() => {
-                      const isSubscribed =
-                        knowledgeSubs[page._id] ?? page.isSubscribed;
-                      return (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isSubscribed) {
-                              navigate(`/trending-page-detail/${page._id}`);
-                            } else {
-                              handleKnowledgePageSubscribe(page);
-                            }
-                          }}
-                          className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
+                    {page.contentType === "knowledge" &&
+                      (() => {
+                        const isSubscribed =
+                          knowledgeSubs[page._id] ?? page.isSubscribed;
+                        return (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isSubscribed) {
+                                navigate(`/trending-page-detail/${page._id}`);
+                              } else {
+                                handleKnowledgePageSubscribe(page);
+                              }
+                            }}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                             ${
                               isSubscribed
                                 ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                             }`}
-                        >
-                          {isSubscribed ? "Subscribed" : "Subscribe"}
-                        </button>
-                      );
-                    })()}
+                          >
+                            {isSubscribed ? "Subscribed" : "Subscribe"}
+                          </button>
+                        );
+                      })()}
                   </div>
                 </div>
               ))
@@ -335,6 +371,35 @@ const SearchItem = () => {
                         </p>
                       </div>
                     </div>
+                    <div className="relative z-50">
+                      <button
+                        onClick={() => {
+                          setSelectedPost(post?._id);
+                          setMoreOpen(!moreOpen);
+                        }}
+                        className="p-2 hover:bg-gray-50 rounded-full transition"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                      </button>
+
+                      {moreOpen && post?._id === selectedPost && (
+                        <div
+                          ref={dropdownRef}
+                          className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50"
+                        >
+                          <button
+                            onClick={() => {
+                              setMoreOpen(false);
+                              setReportmodal(!reportmodal);
+                              console.log("Report clicked");
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          >
+                            Report
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Post Content */}
@@ -345,10 +410,10 @@ const SearchItem = () => {
                     style={
                       post.background
                         ? {
-                          backgroundImage: `url(${post.background})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
+                            backgroundImage: `url(${post.background})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                          }
                         : {}
                     }
                   >
@@ -371,18 +436,21 @@ const SearchItem = () => {
                       className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
                     >
                       {(() => {
-                        const { isLiked, likesCount } = getKnowledgeReaction(post);
+                        const { isLiked, likesCount } =
+                          getKnowledgeReaction(post);
                         return (
                           <>
                             <Heart
-                              className={`w-5 h-5 transition ${isLiked
-                                ? "fill-orange-500 text-orange-500"
-                                : "text-gray-600"
-                                }`}
+                              className={`w-5 h-5 transition ${
+                                isLiked
+                                  ? "fill-orange-500 text-orange-500"
+                                  : "text-gray-600"
+                              }`}
                             />
                             <span
-                              className={`text-sm font-medium ${isLiked ? "text-orange-500" : "text-gray-600"
-                                }`}
+                              className={`text-sm font-medium ${
+                                isLiked ? "text-orange-500" : "text-gray-600"
+                              }`}
                             >
                               {likesCount}
                             </span>
@@ -435,6 +503,23 @@ const SearchItem = () => {
           </div>
         )}
 
+        <ReportModal
+          isOpen={reportmodal}
+          onClose={() => setReportmodal(false)}
+          loading={reportLoading}
+          onSubmit={async (reason) => {
+            await dispatch(
+              sendReport({
+                reason,
+                targetModel: "Post",
+                targetId: selectedPost,
+                isReported: true,
+              }),
+            );
+            setReportmodal(false);
+          }}
+        />
+
         {/* Keywords Tab */}
         {activeTab === "Keywords" && (
           <div className="space-y-8">
@@ -473,7 +558,11 @@ const SearchItem = () => {
                 keywordsPosts: keywords.posts,
                 keywordsPages: keywords.pages,
                 pagesCount: pages.length,
-                pages: pages.map(p => ({ name: p.name, topic: p.topic, keywords: p.keywords }))
+                pages: pages.map((p) => ({
+                  name: p.name,
+                  topic: p.topic,
+                  keywords: p.keywords,
+                })),
               });
 
               // If no keywords but pages exist, show all pages (they were returned by search API)
@@ -483,15 +572,23 @@ const SearchItem = () => {
               if (allKeywords.length === 0 && pages.length > 0) {
                 // No keywords found, but pages exist - show all pages
                 matchingPages = pages;
-                console.log("Showing all pages (no keywords):", matchingPages.length);
+                console.log(
+                  "Showing all pages (no keywords):",
+                  matchingPages.length,
+                );
               } else if (allKeywords.length > 0) {
                 // Filter pages that match any keyword
                 matchingPages = pages.filter((page) => {
                   // Check if page topic matches any keyword
                   if (page.topic) {
-                    const topicMatch = allKeywords.some((keyword) =>
-                      page.topic.toLowerCase().includes(keyword.toLowerCase()) ||
-                      keyword.toLowerCase().includes(page.topic.toLowerCase())
+                    const topicMatch = allKeywords.some(
+                      (keyword) =>
+                        page.topic
+                          .toLowerCase()
+                          .includes(keyword.toLowerCase()) ||
+                        keyword
+                          .toLowerCase()
+                          .includes(page.topic.toLowerCase()),
                     );
                     if (topicMatch) return true;
                   }
@@ -499,10 +596,15 @@ const SearchItem = () => {
                   // Check if page keywords array matches
                   if (page.keywords && page.keywords.length > 0) {
                     const keywordsMatch = page.keywords.some((pageKeyword) =>
-                      allKeywords.some((keyword) =>
-                        pageKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
-                        keyword.toLowerCase().includes(pageKeyword.toLowerCase())
-                      )
+                      allKeywords.some(
+                        (keyword) =>
+                          pageKeyword
+                            .toLowerCase()
+                            .includes(keyword.toLowerCase()) ||
+                          keyword
+                            .toLowerCase()
+                            .includes(pageKeyword.toLowerCase()),
+                      ),
                     );
                     if (keywordsMatch) return true;
                   }
@@ -510,7 +612,7 @@ const SearchItem = () => {
                   // Check if page name matches
                   if (page.name) {
                     const nameMatch = allKeywords.some((keyword) =>
-                      page.name.toLowerCase().includes(keyword.toLowerCase())
+                      page.name.toLowerCase().includes(keyword.toLowerCase()),
                     );
                     if (nameMatch) return true;
                   }
@@ -518,7 +620,7 @@ const SearchItem = () => {
                   // Check if page about matches
                   if (page.about) {
                     const aboutMatch = allKeywords.some((keyword) =>
-                      page.about.toLowerCase().includes(keyword.toLowerCase())
+                      page.about.toLowerCase().includes(keyword.toLowerCase()),
                     );
                     if (aboutMatch) return true;
                   }
@@ -529,13 +631,20 @@ const SearchItem = () => {
 
               console.log("Matching pages count:", matchingPages.length);
 
-              if (matchingPages.length === 0 && keywords.posts.length === 0 && keywords.pages.length === 0 && pages.length === 0) {
+              if (
+                matchingPages.length === 0 &&
+                keywords.posts.length === 0 &&
+                keywords.pages.length === 0 &&
+                pages.length === 0
+              ) {
                 return (
                   <div className="text-gray-500 col-span-3 text-center py-10">
                     <div className=" flex justify-center">
                       <img src={nofound} height={300} width={300} alt="" />
                     </div>
-                    <p className="font-bold pt-4 text-black">No results found</p>
+                    <p className="font-bold pt-4 text-black">
+                      No results found
+                    </p>
                   </div>
                 );
               }
@@ -561,7 +670,9 @@ const SearchItem = () => {
                         {/* Header */}
                         <div className="flex items-center gap-4 mb-4">
                           <img
-                            src={page.image || page.user?.profilePicture || topics}
+                            src={
+                              page.image || page.user?.profilePicture || topics
+                            }
                             alt={page.name}
                             className="w-14 h-14 rounded-full object-cover flex-shrink-0"
                           />
@@ -570,7 +681,11 @@ const SearchItem = () => {
                               <p className="font-semibold text-[14px] text-gray-900 truncate">
                                 {page.name}
                               </p>
-                              <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
+                              <img
+                                src={notes}
+                                alt=""
+                                className="w-4 h-4 flex-shrink-0"
+                              />
                             </div>
                             <p className="text-[12px] text-gray-500 mt-1 truncate">
                               {page.topic}
@@ -595,51 +710,56 @@ const SearchItem = () => {
                           <div className="flex items-center gap-2">
                             <div className="flex -space-x-2">
                               {page.followers &&
-                                page.followers.slice(0, 3).map((img, i) =>
-                                  img ? (
-                                    <img
-                                      key={i}
-                                      src={img}
-                                      alt="follower"
-                                      className="w-6 h-6 rounded-full border-2 border-white object-cover"
-                                    />
-                                  ) : (
-                                    <div
-                                      key={i}
-                                      className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
-                                    />
-                                  ),
-                                )}
+                                page.followers
+                                  .slice(0, 3)
+                                  .map((img, i) =>
+                                    img ? (
+                                      <img
+                                        key={i}
+                                        src={img}
+                                        alt="follower"
+                                        className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                                      />
+                                    ) : (
+                                      <div
+                                        key={i}
+                                        className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
+                                      />
+                                    ),
+                                  )}
                             </div>
                             <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
                               {page.followersCount || 0}+ Follows
                             </p>
                           </div>
                           {/* Subscribe Button - Only for knowledge pages (direct subscribe) */}
-                          {page.contentType === "knowledge" && (() => {
-                            const isSubscribed =
-                              knowledgeSubs[page._id] ?? page.isSubscribed;
-                            return (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (isSubscribed) {
-                                    navigate(`/trending-page-detail/${page._id}`);
-                                  } else {
-                                    handleKnowledgePageSubscribe(page);
-                                  }
-                                }}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
+                          {page.contentType === "knowledge" &&
+                            (() => {
+                              const isSubscribed =
+                                knowledgeSubs[page._id] ?? page.isSubscribed;
+                              return (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isSubscribed) {
+                                      navigate(
+                                        `/trending-page-detail/${page._id}`,
+                                      );
+                                    } else {
+                                      handleKnowledgePageSubscribe(page);
+                                    }
+                                  }}
+                                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                                   ${
                                     isSubscribed
                                       ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                       : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                                   }`}
-                              >
-                                {isSubscribed ? "Subscribed" : "Subscribe"}
-                              </button>
-                            );
-                          })()}
+                                >
+                                  {isSubscribed ? "Subscribed" : "Subscribe"}
+                                </button>
+                              );
+                            })()}
                         </div>
                       </div>
                     ))}
@@ -649,8 +769,6 @@ const SearchItem = () => {
             })()}
           </div>
         )}
-
-
 
         {/* Post Tab */}
         {activeTab === "Post" && (
@@ -707,7 +825,8 @@ const SearchItem = () => {
                               }}
                               className="text-xs text-gray-500 cursor-pointer hover:text-orange-600 transition-colors"
                             >
-                              @{post?.author?.username} · {post?.createdAt ? timeAgo(post.createdAt) : ""}
+                              @{post?.author?.username} ·{" "}
+                              {post?.createdAt ? timeAgo(post.createdAt) : ""}
                             </p>
                           </div>
                         </div>
@@ -794,10 +913,10 @@ const SearchItem = () => {
                 <div
                   key={person._id}
                   onClick={() =>
-                      navigate("/other-profile", {
-                        state: { id: person }, // ✅ correct
-                      })
-                    }
+                    navigate("/other-profile", {
+                      state: { id: person }, // ✅ correct
+                    })
+                  }
                   className="cursor-pointer flex items-center justify-between border p-3 rounded-lg bg-white"
                 >
                   <div className="flex items-center gap-4">
@@ -811,15 +930,10 @@ const SearchItem = () => {
                     />
                     <div>
                       <h3 className="font-semibold">{person.name}</h3>
-
                     </div>
                   </div>
 
-                  <ChevronRight
-                    className="text-orange-500 cursor-pointer"
-                    
-                  />
-
+                  <ChevronRight className="text-orange-500 cursor-pointer" />
                 </div>
               ))
             ) : (
@@ -833,11 +947,9 @@ const SearchItem = () => {
           </div>
         )}
 
-
         {/* For You Tab */}
         {activeTab === "For You" && (
           <div className="space-y-10">
-
             {/* Posts Section */}
             {posts.length > 0 && (
               <div>
@@ -845,7 +957,9 @@ const SearchItem = () => {
                 <div className="space-y-6 max-w-2xl mx-auto">
                   {posts.map((post) => {
                     // Check if post's page is private and user is not subscribed
-                    const postPage = pages.find((p) => p._id === post?.page?._id);
+                    const postPage = pages.find(
+                      (p) => p._id === post?.page?._id,
+                    );
                     const isPrivatePage = post?.page?.pageType === "private";
                     const isSubscribed = postPage?.isSubscribed || false;
                     const shouldShowContent = !isPrivatePage || isSubscribed;
@@ -869,7 +983,10 @@ const SearchItem = () => {
                                   {post?.author?.name}
                                 </h3>
                                 <p className="text-xs text-gray-500">
-                                  @{post?.author?.username} · {post?.createdAt ? timeAgo(post.createdAt) : ""}
+                                  @{post?.author?.username} ·{" "}
+                                  {post?.createdAt
+                                    ? timeAgo(post.createdAt)
+                                    : ""}
                                 </p>
                               </div>
                             </div>
@@ -961,7 +1078,9 @@ const SearchItem = () => {
                       {/* Header */}
                       <div className="flex items-center gap-4 mb-4">
                         <img
-                          src={page.image || page.user?.profilePicture || topics}
+                          src={
+                            page.image || page.user?.profilePicture || topics
+                          }
                           alt={page.name}
                           className="w-14 h-14 rounded-full object-cover flex-shrink-0"
                         />
@@ -970,7 +1089,11 @@ const SearchItem = () => {
                             <p className="font-semibold text-[14px] text-gray-900 truncate">
                               {page.name}
                             </p>
-                            <img src={notes} alt="" className="w-4 h-4 flex-shrink-0" />
+                            <img
+                              src={notes}
+                              alt=""
+                              className="w-4 h-4 flex-shrink-0"
+                            />
                           </div>
                           <p className="text-[12px] text-gray-500 mt-1 truncate">
                             {page.topic}
@@ -995,51 +1118,56 @@ const SearchItem = () => {
                         <div className="flex items-center gap-2">
                           <div className="flex -space-x-2">
                             {page.followers &&
-                              page.followers.slice(0, 3).map((img, i) =>
-                                img ? (
-                                  <img
-                                    key={i}
-                                    src={img}
-                                    alt="follower"
-                                    className="w-6 h-6 rounded-full border-2 border-white object-cover"
-                                  />
-                                ) : (
-                                  <div
-                                    key={i}
-                                    className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
-                                  />
-                                ),
-                              )}
+                              page.followers
+                                .slice(0, 3)
+                                .map((img, i) =>
+                                  img ? (
+                                    <img
+                                      key={i}
+                                      src={img}
+                                      alt="follower"
+                                      className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                                    />
+                                  ) : (
+                                    <div
+                                      key={i}
+                                      className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
+                                    />
+                                  ),
+                                )}
                           </div>
                           <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
                             {page.followersCount || 0}+ Follows
                           </p>
                         </div>
                         {/* Subscribe Button - Only for knowledge pages (direct subscribe) */}
-                        {page.contentType === "knowledge" && (() => {
-                          const isSubscribed =
-                            knowledgeSubs[page._id] ?? page.isSubscribed;
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isSubscribed) {
-                                  navigate(`/trending-page-detail/${page._id}`);
-                                } else {
-                                  handleKnowledgePageSubscribe(page);
-                                }
-                              }}
-                              className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
+                        {page.contentType === "knowledge" &&
+                          (() => {
+                            const isSubscribed =
+                              knowledgeSubs[page._id] ?? page.isSubscribed;
+                            return (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isSubscribed) {
+                                    navigate(
+                                      `/trending-page-detail/${page._id}`,
+                                    );
+                                  } else {
+                                    handleKnowledgePageSubscribe(page);
+                                  }
+                                }}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
                                 ${
                                   isSubscribed
                                     ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                     : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
                                 }`}
-                            >
-                              {isSubscribed ? "Subscribed" : "Subscribe"}
-                            </button>
-                          );
-                        })()}
+                              >
+                                {isSubscribed ? "Subscribed" : "Subscribe"}
+                              </button>
+                            );
+                          })()}
                       </div>
                     </div>
                   ))}
@@ -1050,9 +1178,7 @@ const SearchItem = () => {
             {/* Knowledge Posts Section */}
             {knowledgePosts.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold mb-4">
-                  Knowledge Posts
-                </h2>
+                <h2 className="text-lg font-semibold mb-4">Knowledge Posts</h2>
                 <div className="space-y-6 max-w-2xl mx-auto">
                   {knowledgePosts.map((post, index) => (
                     <div
@@ -1088,10 +1214,10 @@ const SearchItem = () => {
                         style={
                           post.background
                             ? {
-                              backgroundImage: `url(${post.background})`,
-                              backgroundSize: "cover",
-                              backgroundPosition: "center",
-                            }
+                                backgroundImage: `url(${post.background})`,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                              }
                             : {}
                         }
                       >
@@ -1119,16 +1245,18 @@ const SearchItem = () => {
                             return (
                               <>
                                 <Heart
-                                  className={`w-5 h-5 transition ${isLiked
-                                    ? "fill-orange-500 text-orange-500"
-                                    : "text-gray-600"
-                                    }`}
+                                  className={`w-5 h-5 transition ${
+                                    isLiked
+                                      ? "fill-orange-500 text-orange-500"
+                                      : "text-gray-600"
+                                  }`}
                                 />
                                 <span
-                                  className={`text-sm font-medium ${isLiked
-                                    ? "text-orange-500"
-                                    : "text-gray-600"
-                                    }`}
+                                  className={`text-sm font-medium ${
+                                    isLiked
+                                      ? "text-orange-500"
+                                      : "text-gray-600"
+                                  }`}
                                 >
                                   {likesCount}
                                 </span>
@@ -1174,8 +1302,6 @@ const SearchItem = () => {
               </div>
             )}
 
-
-
             {/* People Section */}
             {people.length > 0 && (
               <div>
@@ -1184,12 +1310,13 @@ const SearchItem = () => {
                     <div
                       key={person._id}
                       className="flex items-center justify-between border p-3 rounded-lg bg-white"
-                     onClick={() =>
-                          navigate("/other-profile", {
-                            state: { id: person }, // ✅ correct
-                          })
-                        }>
-                      <div className="flex items-center gap-4 cursor-pointer"  >
+                      onClick={() =>
+                        navigate("/other-profile", {
+                          state: { id: person }, // ✅ correct
+                        })
+                      }
+                    >
+                      <div className="flex items-center gap-4 cursor-pointer">
                         <img
                           src={
                             person.profilePicture ||
@@ -1199,14 +1326,9 @@ const SearchItem = () => {
                         />
                         <div>
                           <h3 className="font-semibold">{person.name}</h3>
-                        
                         </div>
                       </div>
-                      <ChevronRight
-                        className="text-orange-500 cursor-pointer"
-                       
-                      />
-
+                      <ChevronRight className="text-orange-500 cursor-pointer" />
                     </div>
                   ))}
                 </div>
@@ -1218,14 +1340,16 @@ const SearchItem = () => {
               <div>
                 <h2 className="text-lg font-semibold mb-4">Keywords</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {[...keywords.posts, ...keywords.pages].map((keyword, idx) => (
-                    <div
-                      key={idx}
-                      className="border p-3 rounded-lg bg-white text-sm"
-                    >
-                      {keyword}
-                    </div>
-                  ))}
+                  {[...keywords.posts, ...keywords.pages].map(
+                    (keyword, idx) => (
+                      <div
+                        key={idx}
+                        className="border p-3 rounded-lg bg-white text-sm"
+                      >
+                        {keyword}
+                      </div>
+                    ),
+                  )}
                 </div>
               </div>
             )}
@@ -1245,7 +1369,6 @@ const SearchItem = () => {
               )}
           </div>
         )}
-
 
         {openModal && (
           <CollectionModal
