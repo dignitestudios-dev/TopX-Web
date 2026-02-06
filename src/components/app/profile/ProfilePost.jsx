@@ -50,7 +50,7 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import Input from "../../common/Input";
 import { createStory } from "../../../redux/slices/posts.slice";
 import axios from "../../../axios";
-import { nofound } from "../../../assets/export";
+import { expert, nofound } from "../../../assets/export";
 import { startStream } from "../../../redux/slices/livestream.slice";
 import { FaPlus } from "react-icons/fa6";
 
@@ -71,6 +71,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [settingsModal, setSettingsModal] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [postPermission, setPostPermission] = useState("anyone");
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [editPageModal, setEditPageModal] = useState(false);
   const [pageName, setPageName] = useState("");
@@ -166,10 +167,61 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     if (pageDetail) {
       setIsSubscribed(!!pageDetail.isSubscribed);
       setIsPrivate(pageDetail.pageType === "private");
+      // Map API postingType -> local postPermission state
+      if (pageDetail.postingType === "onlyMe") {
+        setPostPermission("onlyMe");
+      } else {
+        setPostPermission("anyone");
+      }
       setPageName(pageDetail.name || "");
       setEditImagePreview(pageDetail.image || null);
     }
   }, [pageDetail]);
+
+  // ---------- Page Settings (privacy & posting type) ----------
+  const updatePageSettings = async (nextIsPrivate, nextPostPermission) => {
+    if (!pageId || !isPageOwner) return;
+
+    const payload = {
+      pageType: nextIsPrivate ? "private" : "public",
+      postingType: nextPostPermission === "onlyMe" ? "onlyMe" : "everyone",
+    };
+
+    try {
+      setSettingsLoading(true);
+      await axios.post(`/pages/settings/${pageId}`, payload);
+
+      // Local state update
+      setIsPrivate(nextIsPrivate);
+      setPostPermission(nextPostPermission);
+
+      // Refresh page detail so rest of UI uses latest values
+      dispatch(getPageDetail(pageId));
+
+      SuccessToast("Settings updated successfully");
+    } catch (error) {
+      console.error("Failed to update page settings", error);
+      const errorMessage =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to update settings";
+      ErrorToast(errorMessage);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handlePrivacyToggle = () => {
+    const nextIsPrivate = !isPrivate;
+    updatePageSettings(nextIsPrivate, postPermission);
+  };
+
+  const handlePostPermissionChange = (value) => {
+    const nextPermission = value === "onlyMe" ? "onlyMe" : "anyone";
+    updatePageSettings(isPrivate, nextPermission);
+  };
 
   // Reset edit form when modal opens
   useEffect(() => {
@@ -702,7 +754,13 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         dispatch(getPageStories({ id: pageId }));
       }
     } catch (error) {
-      ErrorToast(error || "Failed to create story");
+      const message =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to create story";
+      ErrorToast(message);
     }
   };
 
@@ -750,11 +808,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 <div className="relative">
                   {/* Outer glow wrapper when stories exist */}
                   <div
-                    className={`rounded-full ${
-                      PageStories && PageStories.length > 0
-                        ? "p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906] shadow-[0_0_16px_rgba(245,158,11,0.8)]"
-                        : ""
-                    }`}
+                    className={`rounded-full ${PageStories && PageStories.length > 0
+                      ? "p-[4px] bg-gradient-to-r from-[#fd8d1c] to-[#ffd906] shadow-[0_0_16px_rgba(245,158,11,0.8)]"
+                      : ""
+                      }`}
                   >
                     <div
                       onClick={() => {
@@ -763,11 +820,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           handleViewStory(PageStories[0]?._id);
                         }
                       }}
-                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${
-                        PageStories && PageStories.length > 0
-                          ? "bg-white"
-                          : "bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
-                      }`}
+                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${PageStories && PageStories.length > 0
+                        ? "bg-white"
+                        : "bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
+                        }`}
                     >
                       {page?.image ? (
                         <img
@@ -802,12 +858,24 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
                 {/* PAGE NAME + ABOUT */}
                 <div className="mt-12">
-                  <h1 className="text-[18px] font-[500] text-[#000000] mb-2">
-                    {page?.name}
-                  </h1>
+                  <div className="flex gap-4 items-center">
+                    <h1 className="text-[18px] font-[500] text-[#000000] mb-2">
+                      {page?.name}
+                    </h1>
+                    {page.expertLevelStatus == "accepted" && (
+                      <img
+                        src={expert}
+                        className="w-[80px] h-[25px]"
+                      />
+                    )}
+                  </div>
+
                   <p className="text-gray-500 text-sm leading-relaxed flex-1 w-[30em]">
-                    {page?.about.substring(0, maxLength)}...
+                    {page?.about && page?.about.length > maxLength
+                      ? page?.about.substring(0, maxLength) + "..."
+                      : page?.about}
                   </p>
+
                   <div className="flex items-center gap-[70px] relative">
                     <span className="text-gray-600 font-medium text-sm">
                       {/* Add followers count if necessary */}
@@ -850,6 +918,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       Subscribe
                     </button>
                   )}
+
 
                 {/* Live Chat Button - Show when subscribed OR user is page owner */}
                 {(isSubscribed || isPageOwner) &&
@@ -1033,11 +1102,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           <div className="flex gap-2">
             <button
               onClick={() => setActiveTab("post")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
-                activeTab === "post"
-                  ? "text-orange-600"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "post"
+                ? "text-orange-600"
+                : "text-gray-500 hover:text-gray-700"
+                }`}
             >
               <BsFileEarmarkTextFill size={19} />
               <span className="text-[14px] font-[500]">Post</span>
@@ -1050,18 +1118,16 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
             {isPageOwner && (
               <button
                 onClick={() => setActiveTab("postrequest")}
-                className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
-                  activeTab === "postrequest"
-                    ? "text-orange-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
+                className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
+                  ? "text-orange-600"
+                  : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
                 <div
-                  className={`p-1.5 rounded ${
-                    activeTab === "postrequest"
-                      ? "bg-orange-600"
-                      : "bg-gray-400"
-                  }`}
+                  className={`p-1.5 rounded ${activeTab === "postrequest"
+                    ? "bg-orange-600"
+                    : "bg-gray-400"
+                    }`}
                 >
                   <Lightbulb className="text-white" size={16} />
                 </div>
@@ -1289,7 +1355,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       <UploadPostStory
         isOpen={suggestPostModal}
         setIsOpen={setSuggestPostModal}
-        setSelectedType={() => {}}
+        setSelectedType={() => { }}
         title="Suggest Post"
         selectedPages={[pageId]}
       />
@@ -1321,15 +1387,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     Make this page private
                   </h3>
                   <button
-                    onClick={() => setIsPrivate(!isPrivate)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      isPrivate ? "bg-orange-500" : "bg-gray-300"
-                    }`}
+                    onClick={handlePrivacyToggle}
+                    disabled={settingsLoading}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${isPrivate ? "bg-orange-500" : "bg-gray-300"
+                      } ${settingsLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        isPrivate ? "translate-x-6" : "translate-x-1"
-                      }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isPrivate ? "translate-x-6" : "translate-x-1"
+                        }`}
                     />
                   </button>
                 </div>
@@ -1366,8 +1431,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       name="postPermission"
                       value="onlyMe"
                       checked={postPermission === "onlyMe"}
-                      onChange={(e) => setPostPermission(e.target.value)}
+                      onChange={(e) => handlePostPermissionChange(e.target.value)}
                       className="w-4 h-4 accent-orange-500 border-gray-300 focus:ring-orange-500"
+                      disabled={settingsLoading}
                     />
                     <span className="text-sm text-gray-700">Only Me</span>
                   </label>
@@ -1377,13 +1443,21 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       name="postPermission"
                       value="anyone"
                       checked={postPermission === "anyone"}
-                      onChange={(e) => setPostPermission(e.target.value)}
+                      onChange={(e) => handlePostPermissionChange(e.target.value)}
                       className="w-4 h-4 accent-orange-500 border-gray-300 focus:ring-orange-500"
+                      disabled={settingsLoading}
                     />
                     <span className="text-sm text-gray-700">
                       Anyone can post on your page with your approval
                     </span>
                   </label>
+
+                  {settingsLoading && (
+                    <p className="text-xs text-orange-500 flex items-center gap-2 mt-1">
+                      <span className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      Saving settings...
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1503,13 +1577,13 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
           </div>
         </div>
       )}
-
       {/* Expert Status Modal - Landscape Layout */}
       {expertModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full my-8">
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full my-8 max-h-[90vh] overflow-auto">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white rounded-t-2xl z-10">
+            <div className="flex items-center justify-between px-6 py-4 border-b bg-white rounded-t-2xl z-10">
+
               <button
                 onClick={() => setExpertModal(false)}
                 disabled={expertStatusLoading}
@@ -1726,7 +1800,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
       <UploadPostStory
         isOpen={createPostUploadModal}
         setIsOpen={setCreatePostUploadModal}
-        setSelectedType={() => {}}
+        setSelectedType={() => { }}
         title="Create Post"
         selectedPages={[pageId]}
       />
@@ -2000,11 +2074,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                                   color,
                                 }))
                               }
-                              className={`w-10 h-10 rounded-lg border-2 transition-all ${
-                                storyTextOverlay.color === color
-                                  ? "border-orange-500 scale-110"
-                                  : "border-gray-300"
-                              }`}
+                              className={`w-10 h-10 rounded-lg border-2 transition-all ${storyTextOverlay.color === color
+                                ? "border-orange-500 scale-110"
+                                : "border-gray-300"
+                                }`}
                               style={{ backgroundColor: color }}
                             />
                           ))}

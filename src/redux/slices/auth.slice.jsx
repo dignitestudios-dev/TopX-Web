@@ -319,6 +319,17 @@ const authSlice = createSlice({
       state.error = null;
       state.success = null;
     },
+    // Locally update logged-in user object (used by settings screens)
+    updateUserLocally(state, action) {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          ...action.payload,
+        };
+      } else {
+        state.user = action.payload;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -494,5 +505,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { resetAuth } = authSlice.actions;
+export const { resetAuth, updateUserLocally } = authSlice.actions;
 export default authSlice.reducer;

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import { createStory } from "../../redux/slices/posts.slice";
 import domtoimage from "dom-to-image";
+import axios from "../../axios";
 import StorySnippet from "./StorySnippet";
 import { SuccessToast, ErrorToast } from "./Toaster";
 
@@ -33,34 +34,73 @@ const PostStoryModal = ({ onClose, post }) => {
 
     try {
       setIsPosting(true);
-      
-      // Wait for images to load
-      const images = snippetRef.current?.querySelectorAll("img");
-      if (images && images.length > 0) {
-        await Promise.all(
-          Array.from(images).map((img) => {
-            if (img.complete) return Promise.resolve();
-            return new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              if (!img.crossOrigin) {
-                img.crossOrigin = "anonymous";
-                const src = img.src;
-                img.src = "";
-                img.src = src;
-              }
-            });
-          })
-        );
-      }
 
-      // Convert post preview to image
-      const blob = await domtoimage.toBlob(snippetRef.current, {
-        quality: 0.95,
+      // Wait for StorySnippet image to appear & load (max ~3s), but don't hard-fail on errors
+      const waitForImages = async () => {
+        const maxAttempts = 15;
+        let attempts = 0;
+
+        while (attempts < maxAttempts) {
+          const imgs = snippetRef.current?.querySelectorAll("img");
+          if (imgs && imgs.length > 0) {
+            await Promise.all(
+              Array.from(imgs).map((img) => {
+                if (img.complete) return Promise.resolve();
+                return new Promise((resolve) => {
+                  img.onload = () => resolve();
+                  img.onerror = () => {
+                    console.warn("Story snippet image failed to load", img.src);
+                    resolve(); // continue even if this image fails
+                  };
+                });
+              })
+            );
+            break;
+          }
+
+          // No image yet, wait a bit for StorySnippet to finish loading proxy image
+          await new Promise((res) => setTimeout(res, 200));
+          attempts += 1;
+        }
+      };
+
+      await waitForImages();
+
+      // Convert post preview to image (with image included)
+      // Keep size slightly smaller + lower quality so story image loads faster
+      const domToImageOptions = {
+        quality: 0.8,
         bgcolor: "#ffffff",
-        width: 360,
-        height: 640,
-      });
+        width: 340,
+        height: 600,
+      };
+
+      let blob;
+      try {
+        blob = await domtoimage.toBlob(snippetRef.current, domToImageOptions);
+      } catch (domErr) {
+        console.warn("dom-to-image failed, falling back to original image", domErr);
+
+        // Fallback: if original post has an image, use that directly for the story
+        const firstMedia = post?.media?.[0];
+        if (firstMedia && firstMedia.type === "image" && firstMedia.fileUrl) {
+          const originalUrl = firstMedia.fileUrl;
+
+          try {
+            const resp = await axios.get("/uploads/proxy-image", {
+              params: { url: originalUrl },
+              responseType: "blob",
+            });
+            blob = resp.data;
+          } catch (imgFetchErr) {
+            console.error("Fallback image fetch failed", imgFetchErr);
+            throw domErr; // rethrow original dom-to-image error so outer catch handles it
+          }
+        } else {
+          // No image available to fallback to; rethrow
+          throw domErr;
+        }
+      }
 
       if (!blob) throw new Error("Failed to create story image");
 
@@ -76,7 +116,13 @@ const PostStoryModal = ({ onClose, post }) => {
       onClose("");
     } catch (err) {
       console.error("Story creation failed", err);
-      ErrorToast(err || "Failed to post story");
+      const message =
+        (typeof err === "string" && err) ||
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.message ||
+        "Failed to post story";
+      ErrorToast(message);
     } finally {
       setIsPosting(false);
     }
@@ -85,12 +131,26 @@ const PostStoryModal = ({ onClose, post }) => {
   // Format post data for StorySnippet
   const formatPostForSnippet = () => {
     if (!post) return null;
-    
+
+    // Support different post shapes (home feed, page posts, etc.)
+    const text =
+      post.bodyText ||
+      post.text ||
+      "";
+
+    // media can be: post.media (array of objects) OR post.postimage (array of URLs)
+    let images = [];
+    if (Array.isArray(post.media) && post.media.length > 0) {
+      images = post.media.map((m) => m.fileUrl).filter(Boolean);
+    } else if (Array.isArray(post.postimage) && post.postimage.length > 0) {
+      images = post.postimage.filter(Boolean);
+    }
+
     return {
       user: post.author?.name || post.author?.username || "User",
       time: new Date(post.createdAt).toLocaleDateString(),
-      text: post.bodyText || "",
-      postimage: post.media?.map((m) => m.fileUrl) || [],
+      text,
+      postimage: images,
     };
   };
 
