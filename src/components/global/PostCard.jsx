@@ -66,7 +66,7 @@ const PostCard = ({
     isLiked: false,
   },
   liked = {},
-  toggleLike = () => {},
+  toggleLike = () => { },
   activeTab = "feed",
 }) => {
   const [showComments, setShowComments] = useState(false);
@@ -255,16 +255,19 @@ const PostCard = ({
                 ref={popupRef}
                 className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-32 z-50"
               >
-                <button
-                  onClick={() => {
-                    setSelectedPost(post);
-                    setEditModal(true);
-                    setShowpopup(false);
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  Edit
-                </button>
+                {/* Edit sirf tab jab repost nahi hai */}
+                {!post.sharedBy && (
+                  <button
+                    onClick={() => {
+                      setSelectedPost(post);
+                      setEditModal(true);
+                      setShowpopup(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    Edit
+                  </button>
+                )}
 
                 <button
                   onClick={() => {
@@ -280,6 +283,8 @@ const PostCard = ({
             )}
           </button>
         </div>
+
+
 
         {/* Image Section - Show Only First Image */}
         {firstImage && (
@@ -314,6 +319,28 @@ const PostCard = ({
           </div>
         )}
 
+        {/* Repost tag */}
+        {post.sharedBy && (
+          <div className="px-4 pt-2">
+            <div className="text-sm flex gap-4 justify-start items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+              {post.sharedBy?.profilePicture ? (
+                <img
+                  src={post.sharedBy.profilePicture}
+                  className="w-7 h-7 rounded-full object-cover"
+                  alt={post.sharedBy.username}
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-purple-800 text-white flex items-center justify-center text-xs capitalize">
+                  {post.sharedBy?.username?.[0] || "R"}
+                </div>
+              )}
+              <span className="truncate">
+                {post.sharedBy.username} Reposted
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Body */}
         <div className="p-4">
           <p className="text-sm text-gray-700 mb-4">{post.text}</p>
@@ -325,20 +352,18 @@ const PostCard = ({
               <button
                 onClick={handleLikeToggle}
                 disabled={likeLoading}
-                className={`flex items-center gap-2 rounded-full p-1 transition-all ${
-                  likeLoading
+                className={`flex items-center gap-2 rounded-full p-1 transition-all ${likeLoading
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:text-orange-600 bg-orange-400/10"
-                }`}
+                  }`}
               >
                 <Heart
-                  className={`w-5 h-5 transition-all ${
-                    isPostLiked
+                  className={`w-5 h-5 transition-all ${isPostLiked
                       ? "fill-orange-500 text-orange-500"
                       : likeLoading
                         ? "text-gray-400"
                         : "text-orange-500"
-                  }`}
+                    }`}
                 />
                 <span className="text-orange-500">
                   {post.stats?.likes || 0}
@@ -466,8 +491,8 @@ const PostCard = ({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal onClose={setSelectedOption} />

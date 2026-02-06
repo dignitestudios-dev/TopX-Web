@@ -71,6 +71,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [settingsModal, setSettingsModal] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [postPermission, setPostPermission] = useState("anyone");
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [editPageModal, setEditPageModal] = useState(false);
   const [pageName, setPageName] = useState("");
@@ -166,10 +167,61 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     if (pageDetail) {
       setIsSubscribed(!!pageDetail.isSubscribed);
       setIsPrivate(pageDetail.pageType === "private");
+      // Map API postingType -> local postPermission state
+      if (pageDetail.postingType === "onlyMe") {
+        setPostPermission("onlyMe");
+      } else {
+        setPostPermission("anyone");
+      }
       setPageName(pageDetail.name || "");
       setEditImagePreview(pageDetail.image || null);
     }
   }, [pageDetail]);
+
+  // ---------- Page Settings (privacy & posting type) ----------
+  const updatePageSettings = async (nextIsPrivate, nextPostPermission) => {
+    if (!pageId || !isPageOwner) return;
+
+    const payload = {
+      pageType: nextIsPrivate ? "private" : "public",
+      postingType: nextPostPermission === "onlyMe" ? "onlyMe" : "everyone",
+    };
+
+    try {
+      setSettingsLoading(true);
+      await axios.post(`/pages/settings/${pageId}`, payload);
+
+      // Local state update
+      setIsPrivate(nextIsPrivate);
+      setPostPermission(nextPostPermission);
+
+      // Refresh page detail so rest of UI uses latest values
+      dispatch(getPageDetail(pageId));
+
+      SuccessToast("Settings updated successfully");
+    } catch (error) {
+      console.error("Failed to update page settings", error);
+      const errorMessage =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to update settings";
+      ErrorToast(errorMessage);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handlePrivacyToggle = () => {
+    const nextIsPrivate = !isPrivate;
+    updatePageSettings(nextIsPrivate, postPermission);
+  };
+
+  const handlePostPermissionChange = (value) => {
+    const nextPermission = value === "onlyMe" ? "onlyMe" : "anyone";
+    updatePageSettings(isPrivate, nextPermission);
+  };
 
   // Reset edit form when modal opens
   useEffect(() => {
@@ -702,7 +754,13 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         dispatch(getPageStories({ id: pageId }));
       }
     } catch (error) {
-      ErrorToast(error || "Failed to create story");
+      const message =
+        (typeof error === "string" && error) ||
+        error?.response?.data?.message ||
+        error?.data?.message ||
+        error?.message ||
+        "Failed to create story";
+      ErrorToast(message);
     }
   };
 
@@ -1321,10 +1379,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     Make this page private
                   </h3>
                   <button
-                    onClick={() => setIsPrivate(!isPrivate)}
+                    onClick={handlePrivacyToggle}
+                    disabled={settingsLoading}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                       isPrivate ? "bg-orange-500" : "bg-gray-300"
-                    }`}
+                    } ${settingsLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                   >
                     <span
                       className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -1366,8 +1425,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       name="postPermission"
                       value="onlyMe"
                       checked={postPermission === "onlyMe"}
-                      onChange={(e) => setPostPermission(e.target.value)}
+                      onChange={(e) => handlePostPermissionChange(e.target.value)}
                       className="w-4 h-4 accent-orange-500 border-gray-300 focus:ring-orange-500"
+                      disabled={settingsLoading}
                     />
                     <span className="text-sm text-gray-700">Only Me</span>
                   </label>
@@ -1377,13 +1437,21 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       name="postPermission"
                       value="anyone"
                       checked={postPermission === "anyone"}
-                      onChange={(e) => setPostPermission(e.target.value)}
+                      onChange={(e) => handlePostPermissionChange(e.target.value)}
                       className="w-4 h-4 accent-orange-500 border-gray-300 focus:ring-orange-500"
+                      disabled={settingsLoading}
                     />
                     <span className="text-sm text-gray-700">
                       Anyone can post on your page with your approval
                     </span>
                   </label>
+
+                  {settingsLoading && (
+                    <p className="text-xs text-orange-500 flex items-center gap-2 mt-1">
+                      <span className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      Saving settings...
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

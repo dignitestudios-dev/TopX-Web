@@ -62,6 +62,12 @@ export default function Mypost() {
       tag: p.page?.topic || "",
       gradient: "from-orange-400 to-orange-600",
       text: p.bodyText,
+      sharedBy: p.sharedBy
+        ? {
+            username: p.sharedBy.username,
+            profilePicture: p.sharedBy.profilePicture,
+          }
+        : null,
       stats: {
         likes: p.likesCount,
         comments: p.commentsCount,
