@@ -54,17 +54,18 @@ const PagePosts = ({
   const [elevatePostId, setElevatePostId] = useState(null);
   const [elevateDuration, setElevateDuration] = useState("24h"); // "24h", "7d", "1m", "manual"
   const [elevateLoading, setElevateLoading] = useState(false);
-
   const [liked, setLiked] = useState({});
   const [showImageModal, setShowImageModal] = useState(false);
-  const [currentImages, setCurrentImages] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
   const [sharepost, setSharepost] = useState(false);
   const [showpopup, setShowpopup] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
   const [selectedOption, setSelectedOption] = useState("");
+
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [currentImages, setCurrentImages] = useState([]);
+  const [deleteModal, setDeleteModal] = useState(false);
   const [deleteLoadingId, setDeleteLoadingId] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
@@ -386,20 +387,26 @@ const PagePosts = ({
     setEditText(post.bodyText || "");
     setEditFiles([]);
     setEditFilePreviews([]);
+    setExistingMedia(post.media); // array
+
     setEditModalOpen(true);
+  };
+
+  const removeExistingMedia = (id) => {
+    setExistingMedia((prev) => prev.filter((m) => m._id !== id));
   };
 
   const handleEditFilesChange = (e) => {
     const files = Array.from(e.target.files || []);
-    setEditFiles(files);
+    setEditFiles((prev) => [...prev, ...files]); // 👈 merge
 
-    // Create previews for selected files
     const previews = files.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
       type: file.type.startsWith("video/") ? "video" : "image",
     }));
-    setEditFilePreviews(previews);
+
+    setEditFilePreviews((prev) => [...prev, ...previews]);
   };
 
   const handleImageClick = () => {
@@ -420,46 +427,46 @@ const PagePosts = ({
 
   const handleEditSave = async () => {
     if (!editingPost) return;
+
     try {
       setEditSaving(true);
 
-      // If new files are selected, use FormData
-      if (editFiles.length > 0) {
-        const formData = new FormData();
-        formData.append("bodyText", editText || "");
-        editFiles.forEach((file) => {
-          formData.append("media", file);
+      const formData = new FormData();
+
+      formData.append("bodyText", editText || "");
+
+      // New media files
+      editFiles.forEach((file) => {
+        formData.append("media", file);
+      });
+
+      // Existing media
+      // assume existingMedia is an array of objects with "_id" property
+      if (existingMedia.length > 0) {
+        existingMedia.forEach((media, index) => {
+          // send only the _id of the media
+          formData.append(`existingMedia[${index}]`, media._id);
         });
-        await dispatch(
-          editPost({ postId: editingPost._id, formData, isFormData: true }),
-        ).unwrap();
       } else {
-        // If no new files, send JSON with just bodyText
-        const jsonData = { bodyText: editText || "" };
-        await dispatch(
-          editPost({
-            postId: editingPost._id,
-            formData: jsonData,
-            isFormData: false,
-          }),
-        ).unwrap();
+        // if empty, send empty array string
+        formData.append("existingMedia", JSON.stringify([]));
       }
 
-      if (pageId) {
-        await dispatch(
-          getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
-        ).unwrap();
-      }
+      // ✅ Add keywords from editingPost
+      const postKeywords = editingPost.keywords || []; // <- make sure to define
+      postKeywords.forEach((keyword, index) => {
+        formData.append(`keywords[${index}]`, keyword);
+      });
+
+      await dispatch(editPost({ postId: editingPost._id, formData })).unwrap();
+
       setEditModalOpen(false);
       setEditingPost(null);
       setEditFiles([]);
-      // Clean up preview URLs
-      editFilePreviews.forEach((preview) => {
-        URL.revokeObjectURL(preview.preview);
-      });
       setEditFilePreviews([]);
-    } catch (error) {
-      console.error("Failed to edit post:", error);
+      setExistingMedia([]);
+    } catch (err) {
+      console.error(err);
     } finally {
       setEditSaving(false);
     }
@@ -1008,44 +1015,43 @@ const PagePosts = ({
               </div>
 
               {/* Existing media preview - Clickable (only when no new media selected) */}
-              {editFilePreviews.length === 0 &&
-                Array.isArray(editingPost.media) &&
-                editingPost.media.length > 0 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Current Media (Click to replace)
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {editingPost.media.map((m) => (
-                        <div
-                          key={m._id}
-                          onClick={handleImageClick}
-                          className="relative w-full overflow-hidden rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-all group"
+              {existingMedia.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Media
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {existingMedia.map((m) => (
+                      <div
+                        key={m._id}
+                        className="relative w-full overflow-hidden rounded-lg border"
+                      >
+                        {m.type === "image" ? (
+                          <img
+                            src={m.fileUrl}
+                            className="w-full h-32 object-cover"
+                          />
+                        ) : (
+                          <video
+                            src={m.fileUrl}
+                            className="w-full h-32 object-cover"
+                            controls
+                          />
+                        )}
+
+                        {/* ❌ remove button */}
+                        <button
+                          onClick={() => removeExistingMedia(m._id)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                         >
-                          {m.type === "image" ? (
-                            <img
-                              src={m.fileUrl}
-                              alt="Post media"
-                              className="w-full h-32 object-cover"
-                            />
-                          ) : (
-                            <video
-                              src={m.fileUrl}
-                              className="w-full h-32 object-cover"
-                              controls
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <span className="text-white text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                              Click to Replace
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
               {/* Hidden file input */}
               <input

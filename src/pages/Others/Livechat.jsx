@@ -15,6 +15,7 @@ import { SOCKET_EVENTS } from "../../constants/socketEvents";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchLiveChatHistory } from "../../redux/slices/chat.slice";
 import axios from "../../axios";
+import { SuccessToast } from "../../components/global/Toaster";
 
 const GIPHY_API_KEY = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI"; // Replace with your actual key
 
@@ -22,7 +23,7 @@ export default function LiveChat() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { pageId, pageName } = state || {};
+  const { pageId, pageName, pageOwner } = state || {};
 
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
@@ -38,7 +39,7 @@ export default function LiveChat() {
   const [uploading, setUploading] = useState(false);
 
   const { chatDetailMessages, chatDetailLoading } = useSelector(
-    (state) => state.chat
+    (state) => state.chat,
   );
   const { user: currentUser } = useSelector((state) => state.auth);
   const { on, emit, socket } = useSocket();
@@ -96,16 +97,16 @@ export default function LiveChat() {
     const handleJoin = () => {
       socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId }, (response) => {
         const receivedId = response?.data;
+
         if (receivedId && response.success) {
           setChatId(receivedId);
           chatIdRef.current = receivedId;
           dispatch(
-            fetchLiveChatHistory({ chatId: receivedId, page: 1, limit: 50 })
+            fetchLiveChatHistory({ chatId: pageId, page: 1, limit: 50 }),
           );
         }
       });
     };
-
     if (socket.connected) handleJoin();
     else socket.on("connect", handleJoin);
 
@@ -124,7 +125,7 @@ export default function LiveChat() {
           media: msgData.mediaUrls || [],
           time: new Date(msgData.createdAt || Date.now()).toLocaleTimeString(
             "en-US",
-            { hour: "2-digit", minute: "2-digit", hour12: true }
+            { hour: "2-digit", minute: "2-digit", hour12: true },
           ),
           isMe: false,
         },
@@ -169,12 +170,20 @@ export default function LiveChat() {
     sendMediaMessage([], message);
     setMessage("");
   };
+
+  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+    // ❌ Block invalid formats
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      SuccessToast("Only JPG, JPEG, PNG, and WEBP images are allowed");
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
-
+    console.log(file, "filesSss");
     try {
       // 1️⃣ GET PRESIGNED URL (WAIT)
       const presignedRes = await axios.post(
@@ -187,7 +196,7 @@ export default function LiveChat() {
               folder: file.type.startsWith("image/") ? "images" : "videos",
             },
           ],
-        }
+        },
       );
 
       // ✅ CORRECT KEY
@@ -197,16 +206,35 @@ export default function LiveChat() {
       if (!uploadUrl) {
         throw new Error("Upload URL not found");
       }
-
+      const formData = new FormData();
+      if (file.type.startsWith("image/")) {
+        formData.append("image", file);
+      } else {
+        formData.append("video", file);
+      }
       // 2️⃣ UPLOAD FILE TO S3 (WAIT)
-      await axios.put(uploadUrl, file, {
-        headers: {
-          "Content-Type": file.type, // MUST MATCH
+      const uploadRes = await axios.post(
+        "https://api.my-topx.com/uploads/media-urls",
+        formData,
+        {
+          headers: {
+            "Content-Type": file.type,
+          },
         },
-      });
+      );
 
-      console.log("✅ File uploaded successfully");
-      console.log("📦 File URL:", fileUrl);
+      const images = uploadRes.data?.data?.images || [];
+      const videos = uploadRes.data?.data?.videos || [];
+
+      // 2️⃣ Merge images + videos into one array
+      const mediaUrls = [...images, ...videos];
+
+      if (mediaUrls.length === 0) {
+        throw new Error("No media URLs returned from server");
+      }
+
+      // 3️⃣ Send media to chat ✅
+      sendMediaMessage(mediaUrls);
 
       // 👉 You can now send fileUrl to chat / DB / message
     } catch (error) {
@@ -227,7 +255,44 @@ export default function LiveChat() {
       navigate(-1);
     }
   };
+  const handleLeaveChat = () => {
+    if (pageId) {
+      emit(SOCKET_EVENTS.LIVE.LEAVE, { chatId });
+      navigate(-1);
+    }
+  };
 
+  const getColor = (name = "") => {
+    const colors = [
+      "bg-red-400",
+      "bg-blue-400",
+      "bg-green-400",
+      "bg-purple-400",
+      "bg-pink-400",
+      "bg-yellow-400",
+    ];
+    return colors[name.charCodeAt(0) % colors.length];
+  };
+
+  const Avatar = ({ name, src }) => {
+    const firstLetter = name?.charAt(0)?.toUpperCase() || "?";
+
+    return (
+      <div
+        className={`w-10 h-10 rounded-full flex items-center justify-center ${getColor(name)}`}
+      >
+        {src ? (
+          <img src={src} alt={name} className="w-full h-full rounded-full object-cover" />
+        ) : (
+          <span className="text-sm font-semibold text-gray-700">
+            {firstLetter}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  console.log(messages, "messages");
   return (
     <div className="flex h-screen w-screen bg-white overflow-hidden font-sans">
       {/* Sidebar - Same as before */}
@@ -249,12 +314,21 @@ export default function LiveChat() {
         {/* Header */}
         <div className="bg-white border-b px-8 py-4 flex items-center justify-between shadow-sm">
           <span className="font-bold text-lg">{pageName} Chat</span>
-          <button
-            onClick={handleEndChat}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm"
-          >
-            End Session
-          </button>
+          {pageOwner ? (
+            <button
+              onClick={handleLeaveChat}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm"
+            >
+              Leave Chat
+            </button>
+          ) : (
+            <button
+              onClick={handleEndChat}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg font-bold text-sm"
+            >
+              End Session
+            </button>
+          )}
         </div>
 
         {/* Messages Area */}
@@ -266,11 +340,8 @@ export default function LiveChat() {
                 msg.isMe ? "flex-row-reverse" : "flex-row"
               }`}
             >
-              <img
-                src={msg.senderPic || "https://via.placeholder.com/40"}
-                className="w-10 h-10 rounded-full object-cover shadow-sm"
-                alt=""
-              />
+              <Avatar name={msg.senderName} src={msg?.senderPic} />
+
               <div
                 className={`max-w-[70%] flex flex-col ${
                   msg.isMe ? "items-end" : "items-start"
@@ -285,16 +356,24 @@ export default function LiveChat() {
                   }`}
                 >
                   {msg.text && <p className="text-sm">{msg.text}</p>}
-                  {msg.media &&
-                    msg.media.map((url, i) => (
+                  {msg.media.map((url, i) =>
+                    url.match(/\.(mp4|webm|mov)$/) ? (
+                      <video
+                        key={i}
+                        src={url}
+                        controls
+                        className="mt-2 rounded-lg max-w-full max-h-60"
+                      />
+                    ) : (
                       <img
                         key={i}
                         src={url}
-                        className="mt-2 rounded-lg max-w-full h-auto max-h-60 cursor-pointer hover:opacity-90"
+                        className="mt-2 rounded-lg max-w-full max-h-60"
                         alt="media"
-                        onClick={() => window.open(url)}
                       />
-                    ))}
+                    ),
+                  )}
+
                   <p className="text-[8px] mt-1 text-right opacity-70">
                     {msg.time}
                   </p>
@@ -361,6 +440,7 @@ export default function LiveChat() {
               type="file"
               ref={fileInputRef}
               className="hidden"
+              accept="image/jpeg,image/png,image/webp,image/jpg"
               onChange={handleFileChange}
             />
 

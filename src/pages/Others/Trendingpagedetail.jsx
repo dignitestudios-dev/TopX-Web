@@ -1,450 +1,451 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import Profilecard from '../../components/homepage/Profilecard';
-import MySubscription from '../../components/homepage/MySubscription';
-import { useNavigate, useParams } from 'react-router';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchPageById, fetchPagePosts } from '../../redux/slices/trending.slice';
-import { Lock, MessageCircleWarning, MessageSquareText, MoreHorizontal } from 'lucide-react';
-import CollectionModal from '../../components/global/CollectionModal';
-import { addPageToCollections, removePageFromCollections } from '../../redux/slices/collection.slice';
-import { getMyCollections } from '../../redux/slices/collection.slice';
-
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import Profilecard from "../../components/homepage/Profilecard";
+import MySubscription from "../../components/homepage/MySubscription";
+import { useNavigate, useParams } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchPageById,
+  fetchPagePosts,
+} from "../../redux/slices/trending.slice";
+import {
+  Lock,
+  MessageCircleWarning,
+  MessageSquareText,
+  MoreHorizontal,
+} from "lucide-react";
+import CollectionModal from "../../components/global/CollectionModal";
+import {
+  addPageToCollections,
+  removePageFromCollections,
+} from "../../redux/slices/collection.slice";
+import { getMyCollections } from "../../redux/slices/collection.slice";
 
 import {
-    fetchTrendingPages,
-    fetchRecommendedPages,
-} from '../../redux/slices/trending.slice';
-import ReportModal from '../../components/global/ReportModal';
-import { sendReport, resetReportState } from '../../redux/slices/reports.slice';
-import { SuccessToast, ErrorToast } from '../../components/global/Toaster';
-import { FaArrowLeft } from 'react-icons/fa6';
-import PagePostsComponent from '../../components/global/PagePostsComponent';
-import { RiLiveLine } from 'react-icons/ri';
-import { BsThreeDotsVertical } from 'react-icons/bs';
+  fetchTrendingPages,
+  fetchRecommendedPages,
+} from "../../redux/slices/trending.slice";
+import ReportModal from "../../components/global/ReportModal";
+import { sendReport, resetReportState } from "../../redux/slices/reports.slice";
+import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
+import { FaArrowLeft } from "react-icons/fa6";
+import PagePostsComponent from "../../components/global/PagePostsComponent";
+import { RiLiveLine } from "react-icons/ri";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
 const Trendingpagedetail = () => {
-    const dispatch = useDispatch();
-    const { id } = useParams();
-    const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { id } = useParams();
+  const navigate = useNavigate();
 
-    const [isSubscribed, setIsSubscribed] = useState(false);
-    const [openModal, setOpenModal] = useState(false);
-    const [selectedPage, setSelectedPage] = useState(null);
-    const [reportmodal, setReportmodal] = useState(false);
-    const [showDropdown, setShowDropdown] = useState(false);
-    const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
-    const [unsubscribing, setUnsubscribing] = useState(false);
-    const dropdownRef = useRef(null);
-    const optionsDropdownRef = useRef(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
+  const [selectedPage, setSelectedPage] = useState(null);
+  const [reportmodal, setReportmodal] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+  const [unsubscribing, setUnsubscribing] = useState(false);
+  const dropdownRef = useRef(null);
+  const optionsDropdownRef = useRef(null);
 
-    /* ================= FETCH PAGE DETAIL ================= */
-    useEffect(() => {
+  /* ================= FETCH PAGE DETAIL ================= */
+  useEffect(() => {
+    dispatch(fetchPageById(id));
+  }, [dispatch, id]);
+
+  const { pagePosts } = useSelector((state) => state.trending);
+
+  useEffect(() => {
+    dispatch(fetchPagePosts({ pageId: id }));
+  }, [dispatch, id]);
+
+  console.log(pagePosts, "pagePosts");
+
+  const { reportSuccess, reportLoading } = useSelector(
+    (state) => state.reports,
+  );
+
+  const { pageDetail, pageDetailLoading } = useSelector(
+    (state) => state.trending,
+  );
+
+  console.log(pageDetail, "pageDetail");
+
+  // Join stream from Trending page – just navigate, LiveStreampage handles role + join logic
+  const handleJoinStream = useCallback(
+    (pageId) => {
+      console.log("Navigating to live stream from Trendingpagedetail", {
+        pageId,
+      });
+      navigate(`/live-stream/${pageId}`);
+    },
+    [navigate],
+  );
+
+  useEffect(() => {
+    if (reportSuccess) {
+      SuccessToast("Report submitted successfully");
+
+      // reset success so it does not fire again
+      dispatch(resetReportState());
+
+      // optional: close modal
+      setReportmodal(false);
+    }
+  }, [reportSuccess, dispatch]);
+
+  console.log(pageDetail, "pageDetail");
+
+  /* ================= SET SUBSCRIPTION STATE ================= */
+  useEffect(() => {
+    if (pageDetail) {
+      setIsSubscribed(!!pageDetail.isSubscribed);
+    }
+  }, [pageDetail]);
+
+  /* ================= SUBSCRIBE = OPEN MODAL ================= */
+  const handleSubscribeClick = () => {
+    setSelectedPage({ _id: id }); // modal expects page._id
+    setOpenModal(true);
+  };
+
+  /* ================= SAVE TO COLLECTION ================= */
+  const handleSaveToCollection = ({ selectedCollections }) => {
+    dispatch(
+      addPageToCollections({
+        collections: selectedCollections,
+        page: id,
+      }),
+    ).then((res) => {
+      if (!res.error) {
+        setIsSubscribed(true); // 🔓 unlock private page
         dispatch(fetchPageById(id));
-    }, [dispatch, id]);
+        setOpenModal(false);
 
-    const { pagePosts } = useSelector((state) => state.trending)
+        // optional refresh (already in your flow)
+        dispatch(getMyCollections({ page: 1, limit: 100 }));
+        dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
+        dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
+      }
+    });
+  };
 
+  /* ================= UNSUBSCRIBE ================= */
+  const handleUnsubscribe = () => {
+    setUnsubscribing(true);
+    dispatch(
+      removePageFromCollections({
+        collections: pageDetail?.collections || [],
+        page: id,
+      }),
+    ).then((res) => {
+      if (!res.error) {
+        setIsSubscribed(false);
+        dispatch(fetchPageById(id));
+        setShowDropdown(false);
+        dispatch(getMyCollections({ page: 1, limit: 100 }));
+        dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
+        dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
+      }
+      setUnsubscribing(false);
+    });
+  };
 
-    useEffect(() => {
-        dispatch(fetchPagePosts({ pageId: id }))
-    }, [dispatch, id]);
-
-    console.log(pagePosts, "pagePosts")
-
-    const { reportSuccess, reportLoading } = useSelector((state) => state.reports)
-
-    const { pageDetail, pageDetailLoading } = useSelector(
-        (state) => state.trending
-    );
-
-    console.log(pageDetail, "pageDetail")
-
-
-    // Join stream from Trending page – just navigate, LiveStreampage handles role + join logic
-    const handleJoinStream = useCallback(
-        (pageId) => {
-            console.log("Navigating to live stream from Trendingpagedetail", { pageId });
-            navigate(`/live-stream/${pageId}`);
-        },
-        [navigate]
-    );
-
-
-    useEffect(() => {
-        if (reportSuccess) {
-            SuccessToast("Report submitted successfully");
-
-            // reset success so it does not fire again
-            dispatch(resetReportState());
-
-            // optional: close modal
-            setReportmodal(false);
-        }
-    }, [reportSuccess, dispatch]);
-
-    console.log(pageDetail, "pageDetail")
-
-    /* ================= SET SUBSCRIPTION STATE ================= */
-    useEffect(() => {
-        if (pageDetail) {
-            setIsSubscribed(!!pageDetail.isSubscribed);
-        }
-    }, [pageDetail]);
-
-    /* ================= SUBSCRIBE = OPEN MODAL ================= */
-    const handleSubscribeClick = () => {
-        setSelectedPage({ _id: id }); // modal expects page._id
-        setOpenModal(true);
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close subscribe dropdown if clicked outside
+      if (
+        showDropdown &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setShowDropdown(false);
+      }
+      // Close options dropdown if clicked outside
+      if (
+        showOptionsDropdown &&
+        optionsDropdownRef.current &&
+        !optionsDropdownRef.current.contains(event.target)
+      ) {
+        setShowOptionsDropdown(false);
+      }
     };
 
-    /* ================= SAVE TO COLLECTION ================= */
-    const handleSaveToCollection = ({ selectedCollections }) => {
-        dispatch(
-            addPageToCollections({
-                collections: selectedCollections,
-                page: id,
-            })
-        ).then((res) => {
-            if (!res.error) {
-                setIsSubscribed(true); // 🔓 unlock private page
-                dispatch(fetchPageById(id));
-                setOpenModal(false);
-
-                // optional refresh (already in your flow)
-                dispatch(getMyCollections({ page: 1, limit: 100 }));
-                dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
-                dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
-            }
-        });
-    };
-
-    /* ================= UNSUBSCRIBE ================= */
-    const handleUnsubscribe = () => {
-        setUnsubscribing(true);
-        dispatch(
-            removePageFromCollections({
-                collections: pageDetail?.collections || [],
-                page: id,
-            })
-        ).then((res) => {
-            if (!res.error) {
-                setIsSubscribed(false);
-                dispatch(fetchPageById(id));
-                setShowDropdown(false);
-                dispatch(getMyCollections({ page: 1, limit: 100 }));
-                dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
-                dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
-            }
-            setUnsubscribing(false);
-        });
-    };
-
-    // Close dropdowns on outside click
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-                // Close subscribe dropdown if clicked outside
-            if (showDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setShowDropdown(false);
-            }
-            // Close options dropdown if clicked outside
-            if (showOptionsDropdown && optionsDropdownRef.current && !optionsDropdownRef.current.contains(event.target)) {
-                setShowOptionsDropdown(false);
-            }
-        };
-        
-        if (showDropdown || showOptionsDropdown) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [showDropdown, showOptionsDropdown]);
-
-    /* ================= LOADING STATE ================= */
-    if (pageDetailLoading) {
-        return (
-            <div className="flex max-w-7xl mx-auto min-h-screen">
-                <div className="w-full overflow-y-auto p-3 flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-lg text-gray-600 font-semibold">
-                            Loading...
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
+    if (showDropdown || showOptionsDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
-    if (!pageDetail) {
-        return (
-            <div className="flex max-w-7xl mx-auto min-h-screen">
-                <div className="w-1/4 bg-[#F2F2F2] sticky top-20 h-screen overflow-y-auto pt-3">
-                    <Profilecard />
-                    <div className="pt-4">
-                        <MySubscription />
-                    </div>
-                </div>
-                <div className="w-3/4 overflow-y-auto p-3 flex items-center justify-center">
-                    <p className="text-lg text-gray-600">
-                        No page details found
-                    </p>
-                </div>
-            </div>
-        );
-    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showDropdown, showOptionsDropdown]);
 
-    /* ================= PRIVATE PAGE CHECK ================= */
-    const isPrivateAndNotSubscribed =
-        pageDetail.pageType === 'private' && !isSubscribed;
-
-
-
-
-
+  /* ================= LOADING STATE ================= */
+  if (pageDetailLoading) {
     return (
-        <div className="flex max-w-7xl mx-auto min-h-screen">
-            {/* ================= MAIN CONTENT ================= */}
-            <div className="w-full overflow-y-auto p-3">
-                <div
-                    className={`bg-gradient-to-r from-orange-600 to-orange-400 rounded-3xl overflow-hidden shadow-lg ${isPrivateAndNotSubscribed ? 'blur-sm' : ''
-                        }`}
-                >
-                    {/* Header */}
-                    <div className="h-[6em] relative">
-                        <FaArrowLeft
-                            size={24}
-                            onClick={() => navigate(-1)}  // This will go back to the previous page
-                            color='white'
-                            className='absolute left-4 top-4 cursor-pointer'  // Adjust the positioning as needed
-                        />
-                    </div>
-
-
-
-
-                    {/* Profile Content */}
-                    <div className="px-8 pb-6">
-
-                        <div className="flex items-end gap-4 -mt-16 mb-0">
-                            {pageDetail.image ? (
-                                <img
-                                    src={pageDetail.image}
-                                    alt={pageDetail.image}
-                                    className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
-                                />
-                            ) : (
-                                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                                    {pageDetail.name?.charAt(0).toUpperCase()}
-                                </div>
-                            )}
-
-                            {/* Info */}
-                            <div className="flex-1 pb-2">
-                                <h1 className="text-2xl font-bold text-white capitalize">
-                                    {pageDetail.name}
-                                </h1>
-                                <p className="text-gray-300 text-[1em]">
-                                    @{pageDetail.about || 'username'}
-                                </p>
-                                <div>
-                                    <div className="flex -space-x-2 items-center pt-1">
-                                        {pageDetail.followers && pageDetail.followers.slice(0, 3).map((img, i) => (
-                                            img ? (
-                                                <img
-                                                    key={i}
-                                                    src={img}
-                                                    alt="follower"
-                                                    className="w-6 h-6 rounded-full border-2 border-white object-cover"
-                                                />
-                                            ) : (
-                                                <div
-                                                    key={i}
-                                                    className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
-                                                />
-                                            )
-                                        ))}
-                                        <p className="text-xs text-white font-medium pl-4">
-                                            {pageDetail.followersCount}+ Follows
-                                        </p>
-                                    </div>
-
-                                </div>
-                            </div>
-
-                            {/* Options Dropdown (Unsubscribe & Report) */}
-                            <div className="absolute top-[6em] right-[10em]" ref={optionsDropdownRef}>
-                                <button
-                                    onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                                    className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
-                                >
-                                    <BsThreeDotsVertical color='white' size={24} />
-                                </button>
-                                {showOptionsDropdown && (
-                                    <div className="absolute top-full mt-2 right-0 bg-white border rounded-lg shadow-lg z-50 min-w-[160px]">
-                                        {isSubscribed && (
-                                            <button
-                                                onClick={() => {
-                                                    handleUnsubscribe();
-                                                    setShowOptionsDropdown(false);
-                                                }}
-                                                disabled={unsubscribing}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                setReportmodal(true);
-                                                setShowOptionsDropdown(false);
-                                            }}
-                                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                                        >
-                                            Report
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 mb-[0em] items-center">
-                                {/* Subscribe Button - Show when not subscribed */}
-                                {!isSubscribed && (
-                                    <button
-                                        onClick={handleSubscribeClick}
-                                        className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
-                                    >
-                                        Subscribe
-                                    </button>
-                                )}
-
-                                {/* Subscribed State - Show when subscribed */}
-                                {isSubscribed && (
-                                    <button
-                                        disabled
-                                        className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    >
-                                        Subscribed
-                                    </button>
-                                )}
-
-
-
-                                {/* Live Chat Button - Only show when subscribed */}
-                                {isSubscribed && (
-                                    <button
-                                        onClick={() => navigate(`/live-chat`, {
-                                            state: {
-                                                pageId: id,
-                                                pageName: pageDetail?.name
-                                            }
-                                        })}
-                                        className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
-                                    >
-                                        <MessageSquareText size={20} />
-                                        {pageDetail?.liveChat ? "Join A Live Chat" : "Start A Live Chat"}
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="mb-[0em]">
-                                {pageDetail?.isLiveStreaming && (
-                                    <button
-                                        onClick={() => handleJoinStream(pageDetail._id)} // Pass the pageId here
-
-                                        className="p-2 px-4 flex gap-4 rounded-2xl items-center cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
-                                    >
-
-                                        <RiLiveLine size={20} />
-                                        Join Live Stream
-
-                                    </button>
-                                )}
-
-
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ================= PRIVATE PAGE OVERLAY ================= */}
-                {isPrivateAndNotSubscribed && (
-                    <div className="flex items-center justify-center mt-10 relative z-10 h-80">
-                        <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
-                            <div className="mb-4 flex justify-center">
-                                <Lock size={40} />
-                            </div>
-
-                            {/* Heading change based on requestStatus */}
-                            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                                {pageDetail.requestStatus === "pending"
-                                    ? "Request Pending"
-                                    : "This Page is Private"}
-                            </h2>
-
-                            <p className="text-gray-600 mb-6">
-                                {pageDetail.requestStatus === "pending"
-                                    ? "Your request is under review."
-                                    : "You need to subscribe to view this page's content"}
-                            </p>
-
-                            {/* Hide button when request is pending */}
-                            {pageDetail.requestStatus !== "pending" && (
-                                <button
-                                    onClick={handleSubscribeClick}
-                                    className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full font-semibold transition-colors"
-                                >
-                                    Subscribe Now
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                <div
-                    className={`${isPrivateAndNotSubscribed ? 'hidden' : ''
-                        }`}
-                >
-
-                    <PagePostsComponent pageId={id} />
-                </div>
-
-
-
-                {/* ================= COLLECTION MODAL ================= */}
-                {openModal && (
-                    <CollectionModal
-                        isOpen={openModal}
-                        onClose={() => setOpenModal(false)}
-                        page={selectedPage}
-                        onSave={handleSaveToCollection}
-                    />
-                )}
-
-                <ReportModal
-                    isOpen={reportmodal}
-                    onClose={() => setReportmodal(false)}
-                    loading={reportLoading}   // 👈 ADD THIS
-                    onSubmit={(reason) => {
-                        dispatch(
-                            sendReport({
-                                reason,
-                                targetModel: "Page",
-                                targetId: id,
-                                isReported: true,
-                            })
-                        );
-                    }}
-                />
-
-
-
-            </div>
-        </div >
+      <div className="flex max-w-7xl mx-auto min-h-screen">
+        <div className="w-full overflow-y-auto p-3 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-lg text-gray-600 font-semibold">Loading...</p>
+          </div>
+        </div>
+      </div>
     );
+  }
+
+  if (!pageDetail) {
+    return (
+      <div className="flex max-w-7xl mx-auto min-h-screen">
+        <div className="w-1/4 bg-[#F2F2F2] sticky top-20 h-screen overflow-y-auto pt-3">
+          <Profilecard />
+          <div className="pt-4">
+            <MySubscription />
+          </div>
+        </div>
+        <div className="w-3/4 overflow-y-auto p-3 flex items-center justify-center">
+          <p className="text-lg text-gray-600">No page details found</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ================= PRIVATE PAGE CHECK ================= */
+  const isPrivateAndNotSubscribed =
+    pageDetail.pageType === "private" && !isSubscribed;
+
+  return (
+    <div className="flex max-w-7xl mx-auto min-h-screen">
+      {/* ================= MAIN CONTENT ================= */}
+      <div className="w-full overflow-y-auto p-3">
+        <div
+          className={`bg-gradient-to-r from-orange-600 to-orange-400 rounded-3xl overflow-hidden shadow-lg ${
+            isPrivateAndNotSubscribed ? "blur-sm" : ""
+          }`}
+        >
+          {/* Header */}
+          <div className="h-[6em] relative">
+            <FaArrowLeft
+              size={24}
+              onClick={() => navigate(-1)} // This will go back to the previous page
+              color="white"
+              className="absolute left-4 top-4 cursor-pointer" // Adjust the positioning as needed
+            />
+          </div>
+
+          {/* Profile Content */}
+          <div className="px-8 pb-6">
+            <div className="flex items-end gap-4 -mt-16 mb-0">
+              {pageDetail.image ? (
+                <img
+                  src={pageDetail.image}
+                  alt={pageDetail.image}
+                  className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
+                />
+              ) : (
+                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                  {pageDetail.name?.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* Info */}
+              <div className="flex-1 pb-2">
+                <h1 className="text-2xl font-bold text-white capitalize">
+                  {pageDetail.name}
+                </h1>
+                <p className="text-gray-300 text-[1em]">
+                  @{pageDetail.about || "username"}
+                </p>
+                <div>
+                  <div className="flex -space-x-2 items-center pt-1">
+                    {pageDetail.followers &&
+                      pageDetail.followers
+                        .slice(0, 3)
+                        .map((img, i) =>
+                          img ? (
+                            <img
+                              key={i}
+                              src={img}
+                              alt="follower"
+                              className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                            />
+                          ) : (
+                            <div
+                              key={i}
+                              className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
+                            />
+                          ),
+                        )}
+                    <p className="text-xs text-white font-medium pl-4">
+                      {pageDetail.followersCount}+ Follows
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Options Dropdown (Unsubscribe & Report) */}
+              <div
+                className="absolute top-[6em] right-[10em]"
+                ref={optionsDropdownRef}
+              >
+                <button
+                  onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                  className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <BsThreeDotsVertical color="white" size={24} />
+                </button>
+                {showOptionsDropdown && (
+                  <div className="absolute top-full mt-2 right-0 bg-white border rounded-lg shadow-lg z-50 min-w-[160px]">
+                    {isSubscribed && (
+                      <button
+                        onClick={() => {
+                          handleUnsubscribe();
+                          setShowOptionsDropdown(false);
+                        }}
+                        disabled={unsubscribing}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setReportmodal(true);
+                        setShowOptionsDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      Report
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mb-[0em] items-center">
+                {/* Subscribe Button - Show when not subscribed */}
+                {!isSubscribed && (
+                  <button
+                    onClick={handleSubscribeClick}
+                    className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                  >
+                    Subscribe
+                  </button>
+                )}
+
+                {/* Subscribed State - Show when subscribed */}
+                {isSubscribed && (
+                  <button
+                    disabled
+                    className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                  >
+                    Subscribed
+                  </button>
+                )}
+
+                {/* Live Chat Button - Only show when subscribed */}
+                {isSubscribed && (
+                  <button
+                    onClick={() =>
+                      navigate(`/live-chat`, {
+                        state: {
+                          pageId: id,
+                          pageName: pageDetail?.name,
+                          pageOwner: pageDetail?.liveChat,
+                        },
+                      })
+                    }
+                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                  >
+                    <MessageSquareText size={20} />
+                    {pageDetail?.liveChat
+                      ? "Join A Live Chat"
+                      : "Start A Live Chat"}
+                  </button>
+                )}
+              </div>
+
+              <div className="mb-[0em]">
+                {pageDetail?.isLiveStreaming && (
+                  <button
+                    onClick={() => handleJoinStream(pageDetail._id)} // Pass the pageId here
+                    className="p-2 px-4 flex gap-4 rounded-2xl items-center cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                  >
+                    <RiLiveLine size={20} />
+                    Join Live Stream
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ================= PRIVATE PAGE OVERLAY ================= */}
+        {isPrivateAndNotSubscribed && (
+          <div className="flex items-center justify-center mt-10 relative z-10 h-80">
+            <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+              <div className="mb-4 flex justify-center">
+                <Lock size={40} />
+              </div>
+
+              {/* Heading change based on requestStatus */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                {pageDetail.requestStatus === "pending"
+                  ? "Request Pending"
+                  : "This Page is Private"}
+              </h2>
+
+              <p className="text-gray-600 mb-6">
+                {pageDetail.requestStatus === "pending"
+                  ? "Your request is under review."
+                  : "You need to subscribe to view this page's content"}
+              </p>
+
+              {/* Hide button when request is pending */}
+              {pageDetail.requestStatus !== "pending" && (
+                <button
+                  onClick={handleSubscribeClick}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full font-semibold transition-colors"
+                >
+                  Subscribe Now
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className={`${isPrivateAndNotSubscribed ? "hidden" : ""}`}>
+          <PagePostsComponent pageId={id} />
+        </div>
+
+        {/* ================= COLLECTION MODAL ================= */}
+        {openModal && (
+          <CollectionModal
+            isOpen={openModal}
+            onClose={() => setOpenModal(false)}
+            page={selectedPage}
+            onSave={handleSaveToCollection}
+          />
+        )}
+
+        <ReportModal
+          isOpen={reportmodal}
+          onClose={() => setReportmodal(false)}
+          loading={reportLoading} // 👈 ADD THIS
+          onSubmit={(reason) => {
+            dispatch(
+              sendReport({
+                reason,
+                targetModel: "Page",
+                targetId: id,
+                isReported: true,
+              }),
+            );
+          }}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default Trendingpagedetail;

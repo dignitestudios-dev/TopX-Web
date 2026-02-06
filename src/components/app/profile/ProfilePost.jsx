@@ -856,12 +856,20 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                   (!isPrivatePage || isRequestAccepted || isPageOwner) && (
                     <button
                       onClick={() => {
-                        console.log("Button clicked, navigating with:", {
-                          pageId,
-                          pageName: pageDetail?.name,
-                        });
+                        console.log(
+                          "Button clicked, navigating with:",
+                          {
+                            pageId,
+                            pageName: pageDetail?.name,
+                          },
+                          page?.liveChat,
+                        );
                         navigate(`/live-chat`, {
-                          state: { pageId: pageId, pageName: pageDetail?.name },
+                          state: {
+                            pageId: pageId,
+                            pageName: pageDetail?.name,
+                            pageOwner: page?.liveChat,
+                          },
                         });
                       }}
                       className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"

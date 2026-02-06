@@ -225,7 +225,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
     });
   };
   return (
-    <div className="bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
+    <div className="bg-white relative h-[350px] rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -366,7 +366,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
         </div>
       ) : null}
       {post?.page?.pageType == "private" && (
-        <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
+        <div className="flex items-center h-full top-14 absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
               <AlertTriangle className="w-6 h-6 text-orange-500" />
@@ -383,7 +383,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
         </div>
       )}
       {/* Content */}
-      <div className="px-4 py-3">
+      {/* <div className="px-4 py-3">
         {!isUnderReview ? (
           <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
         ) : (
@@ -398,49 +398,50 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Stats - Action Bar */}
-      {!isUnderReview && (
-        <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
-          <button
-            type="button"
-            onClick={handleLikeClick}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <Heart
-              className={`w-5 h-5 transition ${
-                localLikeState.isLiked
-                  ? "fill-orange-500 text-orange-500"
-                  : "text-gray-600"
-              }`}
-            />
-            <span
-              className={`text-sm font-medium ${
-                localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-              }`}
+      {!isUnderReview ||
+        (post?.page?.pageType == "private" && (
+          <div className="px-4 py-3 absolute bottom-0 border-t border-gray-100 flex items-center gap-6">
+            <button
+              type="button"
+              onClick={handleLikeClick}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
-              {Number(localLikeState.likesCount ?? 0)}
-            </span>
-          </button>
+              <Heart
+                className={`w-5 h-5 transition ${
+                  localLikeState.isLiked
+                    ? "fill-orange-500 text-orange-500"
+                    : "text-gray-600"
+                }`}
+              />
+              <span
+                className={`text-sm font-medium ${
+                  localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                }`}
+              >
+                {Number(localLikeState.likesCount ?? 0)}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setCommentsOpen(!commentsOpen)}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">{post.stats.comments}</span>
-          </button>
+            <button
+              onClick={() => setCommentsOpen(!commentsOpen)}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">{post.stats.comments}</span>
+            </button>
 
-          <button
-            onClick={() => setSharepost(true)}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <Share2 className="w-5 h-5" />
-            <span className="text-sm font-medium">{post.stats.shares}</span>
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => setSharepost(true)}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+            >
+              <Share2 className="w-5 h-5" />
+              <span className="text-sm font-medium">{post.stats.shares}</span>
+            </button>
+          </div>
+        ))}
 
       {/* Image Viewer Modal */}
       <PostImageViewerModal
