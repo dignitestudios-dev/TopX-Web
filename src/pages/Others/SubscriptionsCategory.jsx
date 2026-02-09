@@ -34,7 +34,7 @@ export default function SubscriptionsCategory() {
   const { CollectionFeeds } = useSelector((state) => state.subscriptions);
   useEffect(() => {
     if (location.state && location.state.id) {
-      // Fetch data based on the passed ID  
+      // Fetch data based on the passed ID
       dispatch(getCollectionFeed({ id: location.state.id }));
       // You can dispatch an action here to fetch data if needed
     }
@@ -82,6 +82,7 @@ export default function SubscriptionsCategory() {
     (state) => state.subscriptions,
   );
 
+  
   // Fetch collection name from mySubscriptions
   useEffect(() => {
     const fetchCollectionName = async () => {
@@ -170,6 +171,7 @@ export default function SubscriptionsCategory() {
           }
         }),
       );
+
       setPagesWithStories(storiesSet);
     };
 
@@ -187,6 +189,7 @@ export default function SubscriptionsCategory() {
           name: post.page.name,
           image: post.page.image,
           user: post.page.user || post.page.author,
+          pageType: post.page.pageType,
         });
       }
     });
@@ -198,8 +201,6 @@ export default function SubscriptionsCategory() {
     ? CollectionFeeds?.filter((post) => post?.page?._id === selectedPageId) ||
       []
     : CollectionFeeds || [];
-
-  console.log(PageStories, "uniquePages");
 
   // Handle page click - check for stories or navigate
   const handlePageClick = async (pageId) => {
@@ -233,7 +234,7 @@ export default function SubscriptionsCategory() {
     await dispatch(viewOtherStories({ storyId }));
   };
 
-  console.log(CollectionFeeds?.[0], "collection-feeds");
+  console.log(uniquePages, "pages with stories");
   return (
     <div className="flex h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -356,6 +357,7 @@ export default function SubscriptionsCategory() {
                 {/* Individual Pages */}
                 {uniquePages.map((page) => {
                   const hasStories = pagesWithStories.has(page._id);
+                  // if (page.pageType == "private") return null;
                   return (
                     <button
                       key={page._id}

@@ -140,36 +140,19 @@ const RecentActivityPopup = ({ onClose }) => {
                     You {actionText}
                     {page?.name ? ` in "${page.name}"` : ""}.
                   </span>
-                  <span className="text-nowrap">{timeAgo(item?.createdAt)}</span>
+                  <span className="text-nowrap">
+                    {timeAgo(item?.createdAt)}
+                  </span>
                 </div>
 
                 {/* Card */}
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  {/* Actor */}
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src={actor?.profilePicture}
-                      alt={actor?.name}
-                      className="w-9 h-9 rounded-full object-cover bg-gray-200"
-                      onError={(e) =>
-                        (e.target.src =
-                          "https://via.placeholder.com/40?text=User")
-                      }
-                    />
-                    <div>
-                      <p className="text-sm font-semibold">{actor?.name}</p>
-                      <p className="text-xs text-gray-500">
-                        @{actor?.username}
-                      </p>
-                    </div>
-                  </div>
-
                   {/* Post Author Info */}
                   {post?.author && (
                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
                       <img
-                        src={post.author.profilePicture}
-                        alt={post.author.name}
+                        src={page?.image}
+                        alt={page?.name}
                         className="w-10 h-10 rounded-full object-cover bg-gray-200"
                         onError={(e) =>
                           (e.target.src =
@@ -178,19 +161,19 @@ const RecentActivityPopup = ({ onClose }) => {
                       />
                       <div className="flex-1">
                         <p className="text-xs font-medium text-gray-700">
-                          {post.author.name}
+                          {page?.name}
                         </p>
                         {page && (
                           <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
                             {page.image && (
                               <img
-                                src={page.image}
-                                alt={page.name}
+                                src={post?.author?.profilePicture}
+                                alt={post?.author?.name}
                                 className="w-4 h-4 rounded-full object-cover"
                               />
                             )}
                             <p className="text-xs text-gray-500">
-                              {page.name}
+                              {post?.author?.name}
                             </p>
                           </div>
                         )}

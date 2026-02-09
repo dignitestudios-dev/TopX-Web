@@ -19,7 +19,7 @@ export default function Home() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { allfeedposts, postsLoading } = useSelector(
-    (state) => state.postsfeed
+    (state) => state.postsfeed,
   );
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   useEffect(() => {
@@ -48,8 +48,7 @@ export default function Home() {
     });
   };
 
-
-    // Function to convert time to human-readable "X time ago"
+  // Function to convert time to human-readable "X time ago"
   const timeAgo = (timestamp) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now - new Date(timestamp)) / 1000);
@@ -68,7 +67,6 @@ export default function Home() {
     }
   };
 
- 
   // Get localStorage likes for merge
   const storedLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
 
@@ -99,6 +97,7 @@ export default function Home() {
             post.author?.profilePicture ||
             "https://randomuser.me/api/portraits/men/1.jpg",
           postimage: post.media?.map((m) => m.fileUrl) || [],
+          media: post.media || [],
           author: post.author || null,
           page: post.page || null,
           isAllowedByAdmin: post?.isAllowedByAdmin,
@@ -109,7 +108,7 @@ export default function Home() {
       })
     : [];
 
-    console.log(allfeedposts,"allfeedposts")
+  console.log(allfeedposts, "allfeedposts");
 
   return (
     <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -230,7 +229,6 @@ export default function Home() {
           <div className="pl-3 pr-3 text-center">
             <p className="text-gray-500 text-sm pl-1 flex justify-center rounded-3xl">
               <img src={nofound} height={300} width={300} alt="" />
-              
             </p>
             <p className="font-bold pt-4">Nothing in Home Feed.</p>
           </div>
@@ -238,16 +236,15 @@ export default function Home() {
       </div>
 
       {/* Right Sidebar - 1/4 width */}
-          <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
-      <div className="p-0">
-        {/* Trending Pages Section */}
-        <TrendingPagesGlobal/>
+      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
+        <div className="p-0">
+          {/* Trending Pages Section */}
+          <TrendingPagesGlobal />
 
-
-        {/* Suggestions Section */}
-        <SuggestionsPagesGlobal/>
+          {/* Suggestions Section */}
+          <SuggestionsPagesGlobal />
+        </div>
       </div>
-    </div>
     </div>
   );
 }

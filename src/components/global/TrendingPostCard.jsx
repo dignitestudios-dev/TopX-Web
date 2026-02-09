@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  MoreHorizontal,
+  AlertTriangle,
+} from "lucide-react";
 import { likePost } from "../../redux/slices/postfeed.slice";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,6 +16,7 @@ import ShareRepostModal from "./ShareRepostModal";
 import ReportModal from "./ReportModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "./Toaster";
+import PrivatePostModal from "./PrivatePostModal";
 
 export default function TrendingPostCard({ post, liked, toggleLike }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -17,9 +24,10 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
+  const [isPrivatePost, setIsPrivatePost] = useState(false);
   const [sharepost, setSharepost] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
-    (state) => state.reports
+    (state) => state.reports,
   );
 
   const dropdownRef = useRef(null);
@@ -88,7 +96,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
     "Share in Group Chats",
   ];
   return (
-    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
+    <div className="bg-white relative h-auto  pb-10 rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="p-4 flex items-start justify-between border-b border-gray-100">
         <div className="flex items-center gap-3 flex-1">
@@ -162,8 +170,8 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
               post.postimage.length === 1
                 ? "grid-cols-1"
                 : post.postimage.length === 2
-                ? "grid-cols-2"
-                : "grid-cols-2"
+                  ? "grid-cols-2"
+                  : "grid-cols-2"
             }`}
           >
             {post?.postimage.slice(0, 4).map((media, idx) => (
@@ -198,10 +206,26 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           </div>
         )}
 
-        <p className="text-sm text-gray-800 leading-snug mb-3">
-          {post.bodyText}
-        </p>
-
+        <p className="text-sm text-gray-800 leading-snug mb-3">{post.text}</p>
+        {post?.sharedBy ? (
+          <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+            {post.sharedBy?.profilePicture ? (
+              <img
+                src={post.sharedBy.profilePicture}
+                className="w-7 h-7 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                {post.sharedBy?.name.split(" ")[0][0]}
+              </div>
+            )}
+            {/* <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          /> */}
+            {post.sharedBy.name} Reposted
+          </div>
+        ) : null}
         {/* Keywords */}
         {post.keywords && post.keywords.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
@@ -216,7 +240,23 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           </div>
         )}
       </div>
-
+      {post?.page?.pageType == "private" && !post?.page?.isSubscribed && (
+        <div className="flex items-center h-full top-14 absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
+          <div className="text-center px-6">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
+              <AlertTriangle className="w-6 h-6 text-orange-500" />
+            </div>
+            <p
+              onClick={() => {
+                setIsPrivatePost(!isPrivatePost);
+              }}
+              className="text-base cursor-pointer  font-semibold text-orange-500"
+            >
+              Private post
+            </p>
+          </div>
+        </div>
+      )}
       {/* Stats */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
@@ -290,10 +330,16 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
               targetModel: "Post",
               targetId: post.id,
               isReported: true,
-            })
+            }),
           );
         }}
       />
+      {isPrivatePost && (
+        <PrivatePostModal
+          post={post}
+          onClose={() => setIsPrivatePost(!isPrivatePost)}
+        />
+      )}
     </div>
   );
 }

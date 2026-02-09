@@ -2,9 +2,9 @@ import React, { useState, useRef } from "react";
 import { X, Check } from "lucide-react";
 
 const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
-  const [text, setText] = useState(post.bodyText || "");
- console.log(post,"post media")
-  const [existingMedia, setExistingMedia] = useState(post.postImages || []);
+  const [text, setText] = useState(post?.bodyText || "");
+  console.log(post, "post media");
+  const [existingMedia, setExistingMedia] = useState(post?.postImages || []);
   const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
   const [showSuccess, setShowSuccess] = useState(false);

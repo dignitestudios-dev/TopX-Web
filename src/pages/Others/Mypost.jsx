@@ -62,6 +62,7 @@ export default function Mypost() {
       tag: p.page?.topic || "",
       gradient: "from-orange-400 to-orange-600",
       text: p.bodyText,
+      media: p?.media,
       sharedBy: p.sharedBy
         ? {
             username: p.sharedBy.username,
@@ -73,6 +74,7 @@ export default function Mypost() {
         comments: p.commentsCount,
         shares: p.sharesCount,
       },
+      page: p?.page,
       isLiked: p.isLiked,
     };
   };

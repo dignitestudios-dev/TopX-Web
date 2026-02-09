@@ -8,12 +8,10 @@ import {
   Bookmark,
   Layers,
 } from "lucide-react";
-import { nofound, notes, topics } from "../../assets/export";
+import { nofound, notes } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
-import { FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
+
 import CreateSubscriptionModal from "../../components/global/CreateSubscriptionModal";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
@@ -28,7 +26,27 @@ import { Link, useNavigate } from "react-router";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
+import { FaCheckSquare } from "react-icons/fa";
+const AlertPopup = ({ open, title, description, onClose }) => {
+  if (!open) return null;
 
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl flex flex-col items-center p-6 w-[90%] max-w-sm shadow-lg animate-scaleIn">
+        <FaCheckSquare className="w-14 h-14 text-orange-500 mx-auto mb-2" />
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        <p className="text-sm text-gray-600 mt-2 text-center">{description}</p>
+
+        <button
+          onClick={onClose}
+          className="mt-5 w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-800"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
 export default function Subscriptions() {
   const [liked, setLiked] = useState({});
   const [activeTab, setActiveTab] = useState("my");
@@ -36,7 +54,7 @@ export default function Subscriptions() {
   const dispatch = useDispatch();
   const { mySubscriptions } = useSelector((state) => state.subscriptions);
   const { savedCollections, isLoading } = useSelector(
-    (state) => state.collections
+    (state) => state.collections,
   );
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [SelectedCollection, setSelectedCollection] = useState(null);
@@ -55,6 +73,12 @@ export default function Subscriptions() {
     return () => clearTimeout(delay);
   }, [search, dispatch]);
 
+  const [popup, setPopup] = useState({
+    open: false,
+    title: "",
+    description: "",
+  });
+
   // First load
   useEffect(() => {
     dispatch(getMySubsctiptions({ page: 1, limit: 10, search: "" }));
@@ -62,7 +86,6 @@ export default function Subscriptions() {
   }, [dispatch, activeTab]);
 
   const subscriptions = activeTab === "my" ? mySubscriptions : savedCollections;
-
 
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
 
@@ -79,7 +102,7 @@ export default function Subscriptions() {
 
   const [open, setOpen] = useState(false);
 
-  console.log(subscriptions, "subscriptions")
+  console.log(subscriptions, "subscriptions");
 
   const trending = [
     {
@@ -138,9 +161,26 @@ export default function Subscriptions() {
       console.log(err);
     }
   };
-  const savedCollection = async (id) => {
+  const savedCollection = async (id, item) => {
     console.log(id, "idesss");
     await dispatch(updateSavedCollections(id)).unwrap();
+    if (item?.isSavedByMe) {
+      // UNSAVE
+      setPopup({
+        open: true,
+        title: "Subscription Unsaved",
+        description: "This subscription has been removed from your saved list.",
+      });
+    } else {
+      // SAVE
+      setPopup({
+        open: true,
+        title: "Subscription Saved",
+        description:
+          "You can easily access this subscription anytime from your profile.",
+      });
+    }
+    dispatch(fetchMyPages({ page: 1, limit: 10 }));
   };
   console.log(subscriptions, "subscriptions");
   return (
@@ -151,7 +191,6 @@ export default function Subscriptions() {
 
         <Profilecard smallcard={true} />
 
-
         {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
@@ -161,72 +200,72 @@ export default function Subscriptions() {
           <div className="space-y-4">
             {pagesLoading
               ? Array.from({ length: 3 }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
-                >
-                  {/* Header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    {/* Avatar */}
-                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-2">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gray-300" />
 
-                    <div className="flex-1 space-y-1">
-                      <div className="h-3 w-32 bg-gray-300 rounded" />
-                      <div className="h-3 w-20 bg-gray-200 rounded" />
+                      <div className="flex-1 space-y-1">
+                        <div className="h-3 w-32 bg-gray-300 rounded" />
+                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* About */}
-                  <div className="space-y-2">
-                    <div className="h-3 w-full bg-gray-200 rounded" />
-                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
-                  </div>
+                    {/* About */}
+                    <div className="space-y-2">
+                      <div className="h-3 w-full bg-gray-200 rounded" />
+                      <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                    </div>
 
-                  {/* Followers */}
-                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
-                </div>
-              ))
+                    {/* Followers */}
+                    <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                  </div>
+                ))
               : myPages?.slice(0, 3).map((item, idx) => (
-                <div
-                  key={idx}
-                  className="pb-4 border-b border-gray-200 last:border-0"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-10 h-10 flex-shrink-0">
-                      <img
-                        src={item?.image}
-                        className="w-full h-full object-cover rounded-full"
-                        alt=""
-                      />
+                  <div
+                    key={idx}
+                    className="pb-4 border-b border-gray-200 last:border-0"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-10 h-10 flex-shrink-0">
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt=""
+                        />
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        <p
+                          onClick={() =>
+                            navigate(`/profile`, {
+                              state: { id: item._id },
+                            })
+                          }
+                          className="cursor-pointer font-[400] text-[14px]"
+                        >
+                          {item?.name}
+                        </p>
+                        <img src={notes} alt="" />
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 items-center">
-                      <p
-                        onClick={() =>
-                          navigate(`/profile`, {
-                            state: { id: item._id },
-                          })
-                        }
-                        className="cursor-pointer font-[400] text-[14px]"
-                      >
-                        {item?.name}
-                      </p>
-                      <img src={notes} alt="" />
-                    </div>
+                    <p className="text-[14px] text-gray-600 leading-snug">
+                      {item?.about}
+                    </p>
+
+                    <p className="text-[14px] text-gray-700 mt-1">
+                      <span className="text-black font-[600]">
+                        {item?.followersCount}+
+                      </span>{" "}
+                      Follows
+                    </p>
                   </div>
-
-                  <p className="text-[14px] text-gray-600 leading-snug">
-                    {item?.about}
-                  </p>
-
-                  <p className="text-[14px] text-gray-700 mt-1">
-                    <span className="text-black font-[600]">
-                      {item?.followersCount}+
-                    </span>{" "}
-                    Follows
-                  </p>
-                </div>
-              ))}
+                ))}
           </div>
 
           <Link to="/profile">
@@ -259,19 +298,21 @@ export default function Subscriptions() {
 
             <div className="flex bg-white p-1 rounded-full overflow-hidden">
               <button
-                className={`px-4 py-2 rounded-l-full text-sm font-medium ${activeTab === "my"
-                  ? "bg-orange-500 text-white"
-                  : "text-gray-600 hover:bg-gray-200"
-                  }`}
+                className={`px-4 py-2 rounded-l-full text-sm font-medium ${
+                  activeTab === "my"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
                 onClick={() => setActiveTab("my")}
               >
                 My Subscriptions
               </button>
               <button
-                className={`px-4 py-2 text-sm rounded-r-full font-medium ${activeTab === "saved"
-                  ? "bg-orange-500 text-white"
-                  : "text-gray-600 hover:bg-gray-200"
-                  }`}
+                className={`px-4 py-2 text-sm rounded-r-full font-medium ${
+                  activeTab === "saved"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-600 hover:bg-gray-200"
+                }`}
                 onClick={() => setActiveTab("saved")}
               >
                 Saved Subscriptions
@@ -308,8 +349,7 @@ export default function Subscriptions() {
               </div>
               <p className="font-bold pt-4 text-black">
                 {activeTab === "saved" && " No Saved Collections"}
-                  {activeTab === "my" && "You Have No Collections"}
-              
+                {activeTab === "my" && "You Have No Collections"}
               </p>
             </div> // Display this message if there are no subscriptions
           ) : (
@@ -327,7 +367,11 @@ export default function Subscriptions() {
                     }
                     className="text-[14px] font-semibold text-gray-800 flex items-center gap-1"
                   >
-                    <img src={item?.image} className="rounded-full object-cover w-6 h-6" alt="" />
+                    <img
+                      src={item?.image}
+                      className="rounded-full object-cover w-6 h-6"
+                      alt=""
+                    />
                     {item.userData?.name}
                     {activeTab === "saved" && "'s"} {item.name}
                     <span className="text-gray-400 pl-1">
@@ -366,7 +410,7 @@ export default function Subscriptions() {
                   ) : (
                     <Bookmark
                       size={18}
-                      onClick={() => savedCollection(item._id)}
+                      onClick={() => savedCollection(item._id, item)}
                       className="text-orange-500 cursor-pointer"
                       fill="#F97316"
                     />
@@ -382,7 +426,11 @@ export default function Subscriptions() {
                         .map((page, i) => (
                           <img
                             key={page?._id || i}
-                            src={page?.image || page || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"}
+                            src={
+                              page?.image ||
+                              page ||
+                              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"
+                            }
                             alt=""
                             className="w-6 h-6 rounded-full border border-white object-cover"
                           />
@@ -427,7 +475,13 @@ export default function Subscriptions() {
           )}
         </div>
       </div>
-
+      {/* 🔔 ALERT POPUP */}
+      <AlertPopup
+        open={popup.open}
+        title={popup.title}
+        description={popup.description}
+        onClose={() => setPopup({ ...popup, open: false })}
+      />
       {/* Right Sidebar - 1/4 width */}
       <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
         <div className="p-0">

@@ -66,7 +66,7 @@ const PostCard = ({
     isLiked: false,
   },
   liked = {},
-  toggleLike = () => { },
+  toggleLike = () => {},
   activeTab = "feed",
 }) => {
   const [showComments, setShowComments] = useState(false);
@@ -77,13 +77,24 @@ const PostCard = ({
   const [sharepost, setSharepost] = useState(false);
   const [showpopup, setShowpopup] = useState(false);
   const [editModal, setEditModal] = useState(false);
-  const [deleteModal, setDeleteModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState();
   const popupRef = useRef(null);
   const buttonRef = useRef(null);
 
   const [selectedOption, setSelectedOption] = useState("");
-
+  //   Edit Post
+  const [moreOpenPostId, setMoreOpenPostId] = useState(null);
+  const [existingMedia, setExistingMedia] = useState([]);
+  const [currentImages, setCurrentImages] = useState([]);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [editText, setEditText] = useState("");
+  const [editFiles, setEditFiles] = useState([]);
+  const [editFilePreviews, setEditFilePreviews] = useState([]);
+  const [editSaving, setEditSaving] = useState(false);
+  const fileInputRef = useRef(null);
   const options = [
     "Share to your Story",
     "Share with Topic Page",
@@ -200,45 +211,175 @@ const PostCard = ({
     });
   };
 
+  // const handleDeleteModal = async () => {
+  //   await dispatch(deletePost({ postId: selectedPost })).unwrap();
+  //   setDeleteModal(false);
+  //   await dispatch(getMyPosts({}));
+  // };
+
+  // Edit Post FUnctions
+  const handleDeletePost = async (postId) => {
+    if (!postId) return;
+    setDeleteLoadingId(postId);
+    try {
+      await dispatch(deletePost({ postId })).unwrap();
+      await dispatch(getMyPosts({ page: 1, limit: 100 })).unwrap();
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+    } finally {
+      setDeleteLoadingId(null);
+    }
+  };
+
+  const openEditModal = (post) => {
+    setEditingPost(post);
+    setEditText(post.text || "");
+    setEditFiles([]);
+    setEditFilePreviews([]);
+    console.log(post, "medias");
+    setExistingMedia(post.media); // array
+
+    setEditModalOpen(true);
+  };
+
+  const removeExistingMedia = (id) => {
+    setExistingMedia((prev) => prev.filter((m) => m._id !== id));
+  };
+
+  const handleEditFilesChange = (e) => {
+    const files = Array.from(e.target.files || []);
+    setEditFiles((prev) => [...prev, ...files]); // 👈 merge
+
+    const previews = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      type: file.type.startsWith("video/") ? "video" : "image",
+    }));
+
+    setEditFilePreviews((prev) => [...prev, ...previews]);
+  };
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const removeEditFile = (index) => {
+    const newFiles = editFiles.filter((_, i) => i !== index);
+    const newPreviews = editFilePreviews.filter((_, i) => i !== index);
+    setEditFiles(newFiles);
+    setEditFilePreviews(newPreviews);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleEditSave = async () => {
+    if (!editingPost) return;
+
+    try {
+      setEditSaving(true);
+
+      const formData = new FormData();
+
+      formData.append("bodyText", editText || "");
+
+      // New media files
+      editFiles.forEach((file) => {
+        formData.append("media", file);
+      });
+
+      // Existing media
+      // assume existingMedia is an array of objects with "_id" property
+      if (existingMedia.length > 0) {
+        existingMedia.forEach((media, index) => {
+          // send only the _id of the media
+          formData.append(`existingMedia[${index}]`, media._id);
+        });
+      } else {
+        // if empty, send empty array string
+        formData.append("existingMedia", JSON.stringify([]));
+      }
+
+      // ✅ Add keywords from editingPost
+      const postKeywords = editingPost.keywords || []; // <- make sure to define
+      postKeywords.forEach((keyword, index) => {
+        formData.append(`keywords[${index}]`, keyword);
+      });
+
+      await dispatch(editPost({ postId: editingPost.id, formData })).unwrap();
+      await dispatch(getMyPosts({ page: 1, limit: 10 }));
+      setEditModalOpen(false);
+      setEditingPost(null);
+      setEditFiles([]);
+      setEditFilePreviews([]);
+      setExistingMedia([]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const handleDeleteModal = async () => {
     await dispatch(deletePost({ postId: selectedPost })).unwrap();
     setDeleteModal(false);
-    await dispatch(getMyPosts({}));
+    if (pageId) {
+      await dispatch(
+        getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
+      ).unwrap();
+    }
   };
-  console.log(post, "posstsscomint");
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
         {/* Header */}
         <div className="p-4 flex items-start justify-between border-b border-gray-100 relative">
           <div className="flex items-center gap-3 flex-1">
-            {post.avatar ? (
-              <img
-                src={post.avatar}
-                alt="Profile"
-                className="w-10 h-10 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-                {post.user?.charAt(0).toUpperCase()}
+            {post?.page && (
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                {post?.page?.image ? (
+                  <img
+                    src={post?.page?.image}
+                    alt={post?.page?.name}
+                    className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10  object-cover  text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                    {post?.page?.name.split(" ")[0][0]}
+                  </div>
+                )}
+
+                <div className="flex-1">
+                  <p className="text-sm font-bold  text-gray-700">
+                    {post?.page?.name}
+                    {activeTab === "postrequest" && (
+                      <span className="text-xs text-black">
+                        <Pin size={16} />
+                      </span>
+                    )}
+                  </p>
+                  {post && (
+                    <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
+                      {post?.avatar && (
+                        <img
+                          src={post?.avatar}
+                          alt={post?.username}
+                          className="w-4 h-4 rounded-full object-cover"
+                        />
+                      )}
+                      <Link to="/other-profile">
+                        <p className="text-xs text-gray-600">
+                          {post.username} • {post.time}
+                        </p>
+                      </Link>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-
-            <div>
-              <p className="font-bold text-sm flex items-center gap-2">
-                {post.user}
-                {activeTab === "postrequest" && (
-                  <span className="text-xs text-black">
-                    <Pin size={16} />
-                  </span>
-                )}
-              </p>
-              <Link to="/other-profile">
-                <p className="text-xs text-gray-600">
-                  {post.username} • {post.time}
-                </p>
-              </Link>
-            </div>
           </div>
 
           {/* More Options Button */}
@@ -259,9 +400,8 @@ const PostCard = ({
                 {!post.sharedBy && (
                   <button
                     onClick={() => {
-                      setSelectedPost(post);
-                      setEditModal(true);
-                      setShowpopup(false);
+                      setMoreOpenPostId(null);
+                      openEditModal(post);
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -271,9 +411,8 @@ const PostCard = ({
 
                 <button
                   onClick={() => {
-                    setSelectedPost(post?._id);
-                    setDeleteModal(true);
-                    setShowpopup(false);
+                    setMoreOpenPostId(null);
+                    handleDeletePost(post._id);
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
@@ -283,8 +422,6 @@ const PostCard = ({
             )}
           </button>
         </div>
-
-
 
         {/* Image Section - Show Only First Image */}
         {firstImage && (
@@ -352,18 +489,20 @@ const PostCard = ({
               <button
                 onClick={handleLikeToggle}
                 disabled={likeLoading}
-                className={`flex items-center gap-2 rounded-full p-1 transition-all ${likeLoading
+                className={`flex items-center gap-2 rounded-full p-1 transition-all ${
+                  likeLoading
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:text-orange-600 bg-orange-400/10"
-                  }`}
+                }`}
               >
                 <Heart
-                  className={`w-5 h-5 transition-all ${isPostLiked
+                  className={`w-5 h-5 transition-all ${
+                    isPostLiked
                       ? "fill-orange-500 text-orange-500"
                       : likeLoading
                         ? "text-gray-400"
                         : "text-orange-500"
-                    }`}
+                  }`}
                 />
                 <span className="text-orange-500">
                   {post.stats?.likes || 0}
@@ -491,8 +630,8 @@ const PostCard = ({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal onClose={setSelectedOption} />
-        )}
+        <ShareToChatsModal onClose={setSelectedOption} />
+      )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal onClose={setSelectedOption} />
@@ -523,8 +662,171 @@ const PostCard = ({
         <DeletePostModal
           onClose={() => setDeleteModal(false)}
           onConfirm={() => handleDeleteModal()}
-          isLoading={isLoading}
+          isLoading={postsUpdating}
         />
+      )}
+
+      {/* Edit Post Modal */}
+      {editModalOpen && editingPost && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Edit Post</h2>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Text */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Text
+                </label>
+                <textarea
+                  rows={4}
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Write your post text..."
+                />
+              </div>
+
+              {/* Existing media preview - Clickable (only when no new media selected) */}
+              {existingMedia?.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Media
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    {existingMedia?.map((m) => (
+                      <div
+                        key={m._id}
+                        className="relative w-full overflow-hidden rounded-lg border"
+                      >
+                        {m.type === "image" ? (
+                          <img
+                            src={m?.fileUrl}
+                            className="w-full h-32 object-cover"
+                          />
+                        ) : (
+                          <video
+                            src={m?.fileUrl}
+                            className="w-full h-32 object-cover"
+                            controls
+                          />
+                        )}
+
+                        {/* ❌ remove button */}
+                        <button
+                          onClick={() => removeExistingMedia(m._id)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleEditFilesChange}
+                className="hidden"
+              />
+
+              {/* New file previews */}
+              {editFilePreviews.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    New Media (Selected)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {editFilePreviews.map((preview, index) => (
+                      <div
+                        key={index}
+                        className="relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+                      >
+                        {preview.type === "image" ? (
+                          <img
+                            src={preview.preview}
+                            alt="Preview"
+                            className="w-full h-32 object-cover"
+                          />
+                        ) : (
+                          <video
+                            src={preview.preview}
+                            className="w-full h-32 object-cover"
+                            controls
+                          />
+                        )}
+                        <button
+                          onClick={() => removeEditFile(index)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add more media button */}
+              <div>
+                <button
+                  type="button"
+                  onClick={handleImageClick}
+                  className="w-full border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:border-orange-500 hover:bg-orange-50 transition-colors"
+                >
+                  {editFilePreviews.length > 0
+                    ? "+ Add More Media"
+                    : "+ Add Media (Optional)"}
+                </button>
+                <p className="mt-1 text-xs text-gray-500">
+                  {editFilePreviews.length > 0
+                    ? "New media will replace existing media. Click existing images above to replace them."
+                    : "Click existing images above or this button to add/replace media. Leave empty to keep existing media."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  // Clean up preview URLs
+                  editFilePreviews.forEach((preview) => {
+                    URL.revokeObjectURL(preview.preview);
+                  });
+                  setEditModalOpen(false);
+                  setEditingPost(null);
+                  setEditFiles([]);
+                  setEditFilePreviews([]);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={editSaving}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditSave}
+                className="px-4 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={editSaving}
+              >
+                {editSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -66,7 +66,7 @@ export default function Trending() {
       addPageToCollections({
         collections: selectedCollections,
         page: selectedPage._id,
-      })
+      }),
     ).then(() => {
       // Refresh collections
       dispatch(getMyCollections({ page: 1, limit: 100 }));
@@ -76,7 +76,6 @@ export default function Trending() {
       setOpenModal(false);
     });
   };
-
 
   // Infinite scroll for posts
   useEffect(() => {
@@ -90,7 +89,7 @@ export default function Trending() {
           setPostsPage((prev) => prev + 1);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     if (postsObserverTarget.current) {
@@ -133,34 +132,37 @@ export default function Trending() {
 
   const transformedPosts = Array.isArray(trendingPosts)
     ? trendingPosts.map((post) => {
-      const local = storedLikes[post._id]; // merge saved likes
+        const local = storedLikes[post._id]; // merge saved likes
 
-      return {
-        id: post._id,
-        user: post.page?.name || post.author?.name || "Unknown User",
-        username: `@${post.page?.user?.username || post.author?.username || "user"
+        return {
+          id: post._id,
+          user: post.page?.name || post.author?.name || "Unknown User",
+          username: `@${
+            post.page?.user?.username || post.author?.username || "user"
           }`,
-        time: new Date(post.createdAt).toLocaleDateString(),
-        tag: post.page?.topic || "",
-        gradient: "from-pink-500 via-orange-500 to-yellow-500",
-        text: post.bodyText || "No description available",
-        // 🔥 STATS FOR DISPLAY
-        stats: {
-          likes: (local?.likesCount ?? post.likesCount ?? 0).toString(),
-          comments: (post.commentsCount ?? 0).toString(),
-          shares: (post.sharesCount ?? 0).toString(),
-        },
-        // 🔥 NORMALIZED KEYS (UI + optimistic updates)
-        isLiked: local?.isLiked ?? post.isLiked ?? false,
-        likesCount: local?.likesCount ?? post.likesCount ?? 0,
-        avatar:
-          post.page?.user?.profilePicture ||
-          post.author?.profilePicture ||
-          "https://randomuser.me/api/portraits/men/1.jpg",
-        postimage: post.media?.map((m) => m) || [],
-        author: post.author || null,
-      };
-    })
+          time: new Date(post.createdAt).toLocaleDateString(),
+          tag: post.page?.topic || "",
+          gradient: "from-pink-500 via-orange-500 to-yellow-500",
+          text: post.bodyText || "No description available",
+          // 🔥 STATS FOR DISPLAY
+          stats: {
+            likes: (local?.likesCount ?? post.likesCount ?? 0).toString(),
+            comments: (post.commentsCount ?? 0).toString(),
+            shares: (post.sharesCount ?? 0).toString(),
+          },
+          // 🔥 NORMALIZED KEYS (UI + optimistic updates)
+          isLiked: local?.isLiked ?? post.isLiked ?? false,
+          likesCount: local?.likesCount ?? post.likesCount ?? 0,
+          avatar:
+            post.page?.user?.profilePicture ||
+            post.author?.profilePicture ||
+            "https://randomuser.me/api/portraits/men/1.jpg",
+          postimage: post.media?.map((m) => m) || [],
+          author: post.author || null,
+          page: post?.page || null,
+          sharedBy: post?.sharedBy || null,
+        };
+      })
     : [];
 
   return (
@@ -261,7 +263,7 @@ export default function Trending() {
                                     key={i}
                                     className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
                                   />
-                                )
+                                ),
                               )}
                         </div>
                         <p className="text-xs text-gray-600 font-medium">
@@ -270,7 +272,9 @@ export default function Trending() {
                       </div>
                       {item.isSubscribed ? (
                         <button
-                          onClick={() => navigate(`/trending-page-detail/${item._id}`)}
+                          onClick={() =>
+                            navigate(`/trending-page-detail/${item._id}`)
+                          }
                           className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
                         >
                           Subscribed
@@ -395,7 +399,7 @@ export default function Trending() {
                                     key={i}
                                     className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
                                   />
-                                )
+                                ),
                               )}
                         </div>
                         <p className="text-xs text-gray-600 font-medium">
@@ -404,7 +408,9 @@ export default function Trending() {
                       </div>
                       {item.isSubscribed ? (
                         <button
-                          onClick={() => navigate(`/trending-page-detail/${item._id}`)}
+                          onClick={() =>
+                            navigate(`/trending-page-detail/${item._id}`)
+                          }
                           className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-all bg-gray-200 text-gray-700 hover:bg-gray-300"
                         >
                           Subscribed

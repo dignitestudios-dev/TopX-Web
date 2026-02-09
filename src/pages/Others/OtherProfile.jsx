@@ -16,6 +16,28 @@ import {
 } from "../../redux/slices/otherprofile.slice";
 import OtherProfileKnowledgePostCard from "../../components/app/profile/OtherProfileKnowledgePostCard";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
+import { FaCheckSquare } from "react-icons/fa";
+
+const AlertPopup = ({ open, title, description, onClose }) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl flex flex-col items-center p-6 w-[90%] max-w-sm shadow-lg animate-scaleIn">
+        <FaCheckSquare className="w-14 h-14 text-orange-500 mx-auto mb-2" />
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        <p className="text-sm text-gray-600 mt-2 text-center">{description}</p>
+
+        <button
+          onClick={onClose}
+          className="mt-5 w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-800"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function OtherProfile() {
   const [activeTab, setActiveTab] = useState("topics");
@@ -31,6 +53,13 @@ export default function OtherProfile() {
   const { topicPages, userCollections, userKnowledgePost, isLoading } =
     useSelector((state) => state.otherProfile);
   const authorData = location?.state?.id;
+
+  const [popup, setPopup] = useState({
+    open: false,
+    title: "",
+    description: "",
+  });
+
   const handleGetUserProfile = async () => {
     await dispatch(
       getUserTopicPages({
@@ -61,9 +90,24 @@ export default function OtherProfile() {
     handleGetUserProfile();
   }, [location?.state?.id]);
 
-  const toggleBookmark = async (id) => {
-    console.log(id, "idess");
+  const toggleBookmark = async (id, item) => {
     await dispatch(updateSavedCollections(id)).unwrap();
+    if (item?.isSavedByMe) {
+      // UNSAVE
+      setPopup({
+        open: true,
+        title: "Subscription Unsaved",
+        description: "This subscription has been removed from your saved list.",
+      });
+    } else {
+      // SAVE
+      setPopup({
+        open: true,
+        title: "Subscription Saved",
+        description:
+          "You can easily access this subscription anytime from your profile.",
+      });
+    }
     handleGetUserProfile();
   };
 
@@ -223,7 +267,13 @@ export default function OtherProfile() {
           />
         )}
       </div>
-
+      {/* 🔔 ALERT POPUP */}
+      <AlertPopup
+        open={popup.open}
+        title={popup.title}
+        description={popup.description}
+        onClose={() => setPopup({ ...popup, open: false })}
+      />
       {/* Create Post Modal */}
       <CreatePostModal
         isOpen={isCreatePostModalOpen}
