@@ -74,7 +74,7 @@ const NotificationPopup = ({ onClose }) => {
   const handleMarkAsRead = (notificationId) => {
     // Dispatch action to mark the notification as read
     dispatch(markNotificationAsRead(notificationId));
-      dispatch(fetchNotifications({ page: 1, limit: 10 }));
+    dispatch(fetchNotifications({ page: 1, limit: 10 }));
   };
 
   if (notificationsLoading) {
@@ -150,11 +150,19 @@ const NotificationPopup = ({ onClose }) => {
                 onClick={() => handleMarkAsRead(n._id)} // Mark as read on click
               >
                 <div className="flex-shrink-0">
-                  <img
-                    src={n.metaData?.user?.profilePicture || "https://cdn-icons-png.flaticon.com/512/8509/8509651.png"}
-                    alt={n.metaData?.user?.name || "User"}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-orange-100"
-                  />
+
+
+                  {n.metaData?.user?.profilePicture ? (
+                    <img
+                      src={n.metaData?.user?.profilePicture}
+                      alt={n.metaData?.user?.name || "User"}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-orange-100"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                      {n.metaData?.user?.name?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 min-w-0">

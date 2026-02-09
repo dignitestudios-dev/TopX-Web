@@ -11,7 +11,47 @@ const initialState = {
   savedCollections: [],
   savedCollectionsPagination: null,
   removePageLoading: false,
+  collectionNames: [],
+  collectionNamesLoading: false,
 };
+
+// =============================
+// GET COLLECTION NAMES (for unsubscribe modal)
+// =============================
+export const getCollectionNames = createAsyncThunk(
+  "collections/getCollectionNames",
+  async ({ limit = 10 }, thunkAPI) => {
+    try {
+      const token = Cookies.get("access_token");
+      if (!token) return thunkAPI.rejectWithValue("No access token found");
+
+      const res = await axios.get(
+        `/collections/names?limit=${limit}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.data?.success) {
+        return thunkAPI.rejectWithValue(
+          res.data?.message || "Failed to fetch collections"
+        );
+      }
+
+      return {
+        list: res.data.data,
+        pagination: res.data.pagination,
+        message: res.data.message,
+      };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to fetch collections"
+      );
+    }
+  }
+);
 
 // =============================
 // GET MY COLLECTIONS
@@ -451,6 +491,19 @@ const collectionSlice = createSlice({
       })
       .addCase(removePageFromCollections.rejected, (state, action) => {
         state.removePageLoading = false;
+        state.error = action.payload;
+      })
+      // ========== GET COLLECTION NAMES ==========
+      .addCase(getCollectionNames.pending, (state) => {
+        state.collectionNamesLoading = true;
+        state.error = null;
+      })
+      .addCase(getCollectionNames.fulfilled, (state, action) => {
+        state.collectionNamesLoading = false;
+        state.collectionNames = action.payload.list;
+      })
+      .addCase(getCollectionNames.rejected, (state, action) => {
+        state.collectionNamesLoading = false;
         state.error = action.payload;
       });
   },
