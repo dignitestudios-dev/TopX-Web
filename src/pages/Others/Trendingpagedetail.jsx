@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
 } from "lucide-react";
 import CollectionModal from "../../components/global/CollectionModal";
+import UnsubscribeModal from "../../components/global/UnsubscribeModal";
 import {
   addPageToCollections,
   removePageFromCollections,
@@ -39,11 +40,11 @@ const Trendingpagedetail = () => {
 
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [openModal, setOpenModal] = useState(false);
+  const [openUnsubscribeModal, setOpenUnsubscribeModal] = useState(false);
   const [selectedPage, setSelectedPage] = useState(null);
   const [reportmodal, setReportmodal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
-  const [unsubscribing, setUnsubscribing] = useState(false);
   const dropdownRef = useRef(null);
   const optionsDropdownRef = useRef(null);
 
@@ -129,25 +130,21 @@ const Trendingpagedetail = () => {
     });
   };
 
-  /* ================= UNSUBSCRIBE ================= */
-  const handleUnsubscribe = () => {
-    setUnsubscribing(true);
-    dispatch(
-      removePageFromCollections({
-        collections: pageDetail?.collections || [],
-        page: id,
-      }),
-    ).then((res) => {
-      if (!res.error) {
-        setIsSubscribed(false);
-        dispatch(fetchPageById(id));
-        setShowDropdown(false);
-        dispatch(getMyCollections({ page: 1, limit: 100 }));
-        dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
-        dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
-      }
-      setUnsubscribing(false);
-    });
+  /* ================= UNSUBSCRIBE = OPEN MODAL ================= */
+  const handleUnsubscribeClick = () => {
+    setSelectedPage({ _id: id });
+    setOpenUnsubscribeModal(true);
+    setShowOptionsDropdown(false);
+  };
+
+  /* ================= HANDLE UNSUBSCRIBE FROM MODAL ================= */
+  const handleUnsubscribeComplete = () => {
+    setIsSubscribed(false);
+    dispatch(fetchPageById(id));
+    setOpenUnsubscribeModal(false);
+    dispatch(getMyCollections({ page: 1, limit: 100 }));
+    dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
+    dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
   };
 
   // Close dropdowns on outside click
@@ -298,14 +295,10 @@ const Trendingpagedetail = () => {
                   <div className="absolute top-full mt-2 right-0 bg-white border rounded-lg shadow-lg z-50 min-w-[160px]">
                     {isSubscribed && (
                       <button
-                        onClick={() => {
-                          handleUnsubscribe();
-                          setShowOptionsDropdown(false);
-                        }}
-                        disabled={unsubscribing}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleUnsubscribeClick}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
                       >
-                        {unsubscribing ? "Unsubscribing..." : "Unsubscribe"}
+                        Unsubscribe
                       </button>
                     )}
                     <button
@@ -425,6 +418,18 @@ const Trendingpagedetail = () => {
             onClose={() => setOpenModal(false)}
             page={selectedPage}
             onSave={handleSaveToCollection}
+          />
+        )}
+
+        {/* ================= UNSUBSCRIBE MODAL ================= */}
+        {openUnsubscribeModal && (
+          <UnsubscribeModal
+            isOpen={openUnsubscribeModal}
+            onClose={() => {
+              setOpenUnsubscribeModal(false);
+            }}
+            onUnsubscribe={handleUnsubscribeComplete}
+            page={selectedPage}
           />
         )}
 
