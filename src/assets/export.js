@@ -42,6 +42,7 @@ import topxlogout from "./landingpage/topx-logo.png"
 // import nofound from "../assets/nopost.png"
 import PostUnderReview from "../assets/under-review-img.png"
 import nofound from "../assets/notfound.png"
+import expert from "../assets/expert.png"
 
 export {
   PostUnderReview,
@@ -82,4 +83,5 @@ export {
   Mask,
   bg,
   nofound,
+  expert,
 };

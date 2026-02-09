@@ -456,28 +456,6 @@ const PostCard = ({
           </div>
         )}
 
-        {/* Repost tag */}
-        {post.sharedBy && (
-          <div className="px-4 pt-2">
-            <div className="text-sm flex gap-4 justify-start items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
-              {post.sharedBy?.profilePicture ? (
-                <img
-                  src={post.sharedBy.profilePicture}
-                  className="w-7 h-7 rounded-full object-cover"
-                  alt={post.sharedBy.username}
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-purple-800 text-white flex items-center justify-center text-xs capitalize">
-                  {post.sharedBy?.username?.[0] || "R"}
-                </div>
-              )}
-              <span className="truncate">
-                {post.sharedBy.username} Reposted
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Body */}
         <div className="p-4">
           <p className="text-sm text-gray-700 mb-4">{post.text}</p>

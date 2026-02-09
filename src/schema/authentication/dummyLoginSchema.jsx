@@ -51,7 +51,8 @@ export const changeNumberSchema = Yup.object({
 });
 
 export const changeDOBGenderSchema = Yup.object({
-  dateOfBirth: Yup.date()
+  // NOTE: This must match the form field name (`dob`) used in `DOBGender.jsx`
+  dob: Yup.date()
     .required("Please select your date of birth.")
     .max(new Date(), "Future dates are not allowed."),
   gender: Yup.string().required("Please select your gender."),
