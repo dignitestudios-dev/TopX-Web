@@ -1,63 +1,67 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { X, Check } from "lucide-react";
 
 const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
-  const [text, setText] = useState(post.text || "");
-
-  // OLD images (already saved on backend)
-  const [oldImages, setOldImages] = useState(
-    post.media?.map((m) => m._id) || []
-  );
-
-  // NEW images (files)
-  const [newImages, setNewImages] = useState([]);
+  const [text, setText] = useState(post.bodyText || "");
+ console.log(post,"post media")
+  const [existingMedia, setExistingMedia] = useState(post.postImages || []);
+  const [newFiles, setNewFiles] = useState([]);
   const [newPreviews, setNewPreviews] = useState([]);
-
   const [showSuccess, setShowSuccess] = useState(false);
 
-  /* ===============================
-     FILE UPLOAD (ADD, NOT REPLACE)
-     =============================== */
+  const fileInputRef = useRef(null);
+
+  // ===============================
+  // HANDLE FILE UPLOAD
+  // ===============================
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
+    setNewFiles((prev) => [...prev, ...files]);
 
-    setNewImages((prev) => [...prev, ...files]);
-    setNewPreviews((prev) => [
-      ...prev,
-      ...files.map((file) => URL.createObjectURL(file)),
-    ]);
+    const previews = files.map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+      type: file.type.startsWith("video/") ? "video" : "image",
+    }));
+    setNewPreviews((prev) => [...prev, ...previews]);
   };
 
-  /* ===============================
-     REMOVE IMAGES
-     =============================== */
-  const removeOldImage = (index) => {
-    setOldImages((prev) => prev.filter((_, i) => i !== index));
+  // ===============================
+  // REMOVE MEDIA
+  // ===============================
+  const removeExistingMediaItem = (id) => {
+    setExistingMedia((prev) => prev.filter((m) => m._id !== id));
   };
 
-  const removeNewImage = (index) => {
-    setNewImages((prev) => prev.filter((_, i) => i !== index));
+  const removeNewFile = (index) => {
+    setNewFiles((prev) => prev.filter((_, i) => i !== index));
     setNewPreviews((prev) => prev.filter((_, i) => i !== index));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  /* ===============================
-     SAVE HANDLER
-     =============================== */
+  const handleClickAddMedia = () => {
+    fileInputRef.current?.click();
+  };
+
+  // ===============================
+  // SAVE POST
+  // ===============================
   const handleSave = async () => {
     const formData = new FormData();
+    formData.append("bodyText", text || "");
 
-    // text
-    formData.append("bodyText", text);
+    // New uploaded files
+    newFiles.forEach((file) => formData.append("media", file));
 
-    // ✅ NEW FILES ONLY
-    newImages.forEach((file) => {
-      formData.append("media", file);
-    });
+    // Existing media IDs
+    existingMedia.forEach((m, index) =>
+      formData.append(`existingMedia[${index}]`, m._id),
+    );
 
-    // ✅ OLD MEDIA IDS ONLY
-    oldImages.forEach((id, index) => {
-      formData.append(`existingMedia[${index}]`, id);
-    });
+    // Keywords if any
+    (post.keywords || []).forEach((kw, index) =>
+      formData.append(`keywords[${index}]`, kw),
+    );
 
     await onSave(formData);
 
@@ -70,13 +74,18 @@ const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
 
   return (
     <>
-      {/* ================= MODAL ================= */}
-      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div className="bg-white w-[420px] rounded-2xl p-6">
+      {/* MODAL */}
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl w-full max-w-lg p-6">
           {/* Header */}
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-semibold text-lg">Edit Post</h2>
-            <X onClick={onClose} className="cursor-pointer" />
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
           {/* Text */}
@@ -87,87 +96,112 @@ const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
             className="w-full border rounded-lg p-2 mb-4 resize-none h-24"
           />
 
-          {/* Hidden Input */}
+          {/* Existing Media */}
+          {existingMedia.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Current Media
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {existingMedia.map((m) => (
+                  <div
+                    key={m._id}
+                    className="relative w-full overflow-hidden rounded-lg border"
+                  >
+                    {m.type === "image" ? (
+                      <img
+                        src={m.fileUrl}
+                        alt=""
+                        className="w-full h-32 object-cover"
+                      />
+                    ) : (
+                      <video
+                        src={m.fileUrl}
+                        controls
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <button
+                      onClick={() => removeExistingMediaItem(m._id)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Media Previews */}
+          {newPreviews.length > 0 && (
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                New Media (Selected)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {newPreviews.map((preview, index) => (
+                  <div
+                    key={index}
+                    className="relative w-full overflow-hidden rounded-lg border bg-gray-50"
+                  >
+                    {preview.type === "image" ? (
+                      <img
+                        src={preview.preview}
+                        alt=""
+                        className="w-full h-32 object-cover"
+                      />
+                    ) : (
+                      <video
+                        src={preview.preview}
+                        controls
+                        className="w-full h-32 object-cover"
+                      />
+                    )}
+                    <button
+                      onClick={() => removeNewFile(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hidden File Input */}
           <input
+            ref={fileInputRef}
             type="file"
-            id="mediaUpload"
+            accept="image/*,video/*"
             multiple
-            accept="image/*"
             onChange={handleFileChange}
             className="hidden"
           />
 
-          {/* Upload Box */}
-          <label
-            htmlFor="mediaUpload"
-            className="mb-4 flex flex-col items-center justify-center gap-2 cursor-pointer
-              border-2 border-dashed border-orange-500 rounded-xl
-              bg-orange-50 hover:bg-orange-100
-              text-orange-600 transition-all py-6"
+          {/* Add Media Button */}
+          <button
+            onClick={handleClickAddMedia}
+            className="w-full border-2 border-dashed border-gray-300 rounded-lg px-4 py-3 text-sm font-medium text-gray-700 hover:border-orange-500 hover:bg-orange-50 transition-colors mb-4"
           >
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M16 12l-4-4-4 4m4-4v9"
-              />
-            </svg>
-            <p className="text-sm font-medium">
-              Click to upload <span className="font-normal">(PNG, JPG)</span>
-            </p>
-            <p className="text-xs text-orange-400">
-              New images will be added (not replaced)
-            </p>
-          </label>
+            {newPreviews.length > 0
+              ? "+ Add More Media"
+              : "+ Add Media (Optional)"}
+          </button>
 
-          {/* ================= IMAGES ================= */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {/* OLD IMAGES */}
-            {oldImages.map((img, i) => (
-              <div key={`old-${i}`} className="relative">
-                <img
-                  src={img}
-                  className="h-24 w-full rounded-lg object-cover"
-                />
-                <X
-                  onClick={() => removeOldImage(i)}
-                  className="absolute top-1 right-1 bg-black text-white rounded-full p-1 cursor-pointer"
-                />
-              </div>
-            ))}
-
-            {/* NEW IMAGES */}
-            {newPreviews.map((img, i) => (
-              <div key={`new-${i}`} className="relative">
-                <img
-                  src={img}
-                  className="h-24 w-full rounded-lg object-cover border-2 border-orange-500"
-                />
-                <X
-                  onClick={() => removeNewImage(i)}
-                  className="absolute top-1 right-1 bg-orange-500 text-white rounded-full p-1 cursor-pointer"
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* Save */}
+          {/* Save Button */}
           <button
             onClick={handleSave}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium"
+            disabled={isLoading}
+            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? "Saving..." : " Save Changes"}
+            {isLoading ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </div>
 
-      {/* ================= SUCCESS ================= */}
+      {/* Success Overlay */}
       {showSuccess && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl text-center">
