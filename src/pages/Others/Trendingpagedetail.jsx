@@ -132,7 +132,10 @@ const Trendingpagedetail = () => {
 
   /* ================= UNSUBSCRIBE = OPEN MODAL ================= */
   const handleUnsubscribeClick = () => {
-    setSelectedPage({ _id: id });
+    setSelectedPage({ 
+      _id: id,
+      name: pageDetail?.name 
+    });
     setOpenUnsubscribeModal(true);
     setShowOptionsDropdown(false);
   };

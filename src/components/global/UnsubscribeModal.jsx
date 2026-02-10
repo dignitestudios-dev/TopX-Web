@@ -94,10 +94,9 @@ export default function UnsubscribeModal({
                 <h2 className="text-center text-xl font-bold mb-4">
                    Manage Subscriptions
                 </h2>
-                <p className="text-sm text-slate-600 pb-4">Unsubscribe this page from collections. Uncheck collections to unsubscribe.</p>
                 {page?.name && (
-                    <p className="text-slate-500 text-sm text-center mb-2">
-                        Select collections to remove {page.name} from.
+                    <p className="text-slate-500 text-sm text-left mb-2">
+                        Unsubscribe {page.name} from collections. Uncheck collections to unsubscribe.
                     </p>
                 )}
 
