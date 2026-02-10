@@ -292,7 +292,7 @@ export default function LiveChat() {
     );
   };
 
-  console.log(messages, "messages");
+  console.log(pageOwner, "pageOwner");
   return (
     <div className="flex h-screen w-screen bg-white overflow-hidden font-sans">
       {/* Sidebar - Same as before */}
