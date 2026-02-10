@@ -66,6 +66,7 @@ export default function Mypost() {
       sharedBy: p.sharedBy
         ? {
             username: p.sharedBy.username,
+            name: p.sharedBy.name,
             profilePicture: p.sharedBy.profilePicture,
           }
         : null,

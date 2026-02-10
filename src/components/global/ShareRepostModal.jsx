@@ -33,7 +33,7 @@ const ShareRepostModal = ({ onClose, postId }) => {
       repostPostToPages({
         postId: postId, // jo post share ho rahi
         pageIds: selectedPages,
-      })
+      }),
     )
       .unwrap()
       .then(() => {
@@ -93,17 +93,23 @@ const ShareRepostModal = ({ onClose, postId }) => {
               className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2"
             >
               <div className="flex items-center gap-3">
-                <img src={page.image} className="w-10 h-10 rounded-full" />
+                <img
+                  src={page.image}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
                 <span>{page.name}</span>
               </div>
 
               <span
-                className={`w-5 h-5 border-2 rounded-md ${
-                  selectedPages.includes(page._id)
-                    ? "bg-orange-500 border-orange-500"
-                    : "border-gray-300"
-                }`}
-              />
+                className={`w-5 h-5 border-2 rounded-md flex items-center justify-center
+        ${
+          selectedPages.includes(page._id)
+            ? "bg-orange-500 border-orange-500 text-white"
+            : "border-gray-300"
+        }`}
+              >
+                {selectedPages.includes(page._id) && "✓"}
+              </span>
             </div>
           ))}
         </div>

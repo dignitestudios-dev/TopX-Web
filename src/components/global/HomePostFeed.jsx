@@ -621,6 +621,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       <PostImageViewerModal
         post={activeMedia} // ✅ CHANGE: Pass activeMedia directly
         isOpen={imageViewerOpen}
+        author={activeMedia?.author}
         onClose={() => {
           setImageViewerOpen(false);
           setActiveMedia(null);
