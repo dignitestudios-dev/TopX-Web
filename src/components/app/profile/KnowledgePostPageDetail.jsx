@@ -354,20 +354,33 @@ export default function KnowledgePostPageDetail({
                   </button>
 
                   {/* Delete Menu */}
-                  {showDeleteMenu === post._id && (
-                    <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
-                      <button
-                        onClick={() => {
-                          setSelectedPostForShare(post);
-                          setReportmodal(!reportmodal);
-                          console.log("Report clicked");
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                      >
-                        Report
-                      </button>
-                    </div>
-                  )}
+                  {showDeleteMenu === post._id &&
+                    (post?.sharedBy ? (
+                      <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                        <button
+                          onClick={() => {
+                            handleDelete(post?._id);
+                            console.log("Report clicked");
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                        <button
+                          onClick={() => {
+                            setSelectedPostForShare(post);
+                            setReportmodal(!reportmodal);
+                            console.log("Report clicked");
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                        >
+                          Report
+                        </button>
+                      </div>
+                    ))}
                 </div>
               </div>
 
