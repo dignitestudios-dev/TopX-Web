@@ -365,7 +365,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   };
 
   return (
-    <div className="bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border border-gray-100 flex flex-col">
+    <div className="bg-white relative min-h-[150px] rounded-2xl mb-4 shadow-sm border border-gray-100 flex flex-col">
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -511,7 +511,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           </div>
         )}
         <div className="px-3">
-          <p className="text-sm text-gray-700 mb-6">{post?.text}</p>
+          <p className="text-sm text-gray-700 mt-4 mb-6">{post?.text}</p>
         </div>
         {post.sharedBy ? (
           <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
@@ -621,6 +621,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       <PostImageViewerModal
         post={activeMedia} // ✅ CHANGE: Pass activeMedia directly
         isOpen={imageViewerOpen}
+        author={activeMedia?.author}
         onClose={() => {
           setImageViewerOpen(false);
           setActiveMedia(null);

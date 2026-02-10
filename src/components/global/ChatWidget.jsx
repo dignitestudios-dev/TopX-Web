@@ -17,6 +17,7 @@ import {
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router";
 import {
   fetchIndividualChats,
   fetchIndividualChatDetail,
@@ -48,6 +49,7 @@ import { sendReport } from "../../redux/slices/reports.slice";
 
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const socket = useContext(SocketContext);
 
   // Preset backgrounds for knowledge posts
@@ -134,7 +136,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [selectedNewChatUser, setSelectedNewChatUser] = useState(null);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
+  const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [openMemberMenuId, setOpenMemberMenuId] = useState(null);
 
   const giphyApiKey = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI";
 
@@ -690,7 +694,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   useEffect(() => {
     if (
-      (screen === "createGroup" || screen === "newChat") &&
+      (screen === "createGroup" ||
+        screen === "newChat" ||
+        screen === "addMembers") &&
       searchTerm.trim()
     ) {
       dispatch(
@@ -773,30 +779,98 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       user.name?.toLowerCase().includes(searchTerm.toLowerCase()),
     ) || [];
 
-  const MemberRow = ({ user }) => {
-    const isSelected = selectedUsers.some((u) => u._id === user._id);
+  const MemberRow = ({ user: memberUser }) => {
+    if (!memberUser) return null;
+
+    const currentUserId = user?._id || allUserData?._id;
+    const isGroupAdmin =
+      groupInfo?.info?.admin?._id === (user?._id || allUserData?._id);
+    const isAdminRow = groupInfo?.info?.admin?._id === memberUser._id;
+    const canRemove =
+      isGroupAdmin &&
+      !isAdminRow &&
+      memberUser._id &&
+      memberUser._id !== currentUserId;
+
+    const rowId = memberUser._id;
 
     return (
-      <div className="flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer rounded mb-1">
+      <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded mb-1">
         <div className="flex items-center gap-2">
           <img
             src={
-              user.profilePicture ||
+              memberUser.profilePicture ||
               "https://randomuser.me/api/portraits/men/1.jpg"
             }
-            alt={user.name}
+            alt={memberUser.name}
             className="w-8 h-8 rounded-full object-cover"
           />
-          <span className="text-sm text-gray-900">{user.name}</span>
+          <span className="text-sm text-gray-900">{memberUser.name}</span>
         </div>
 
-        {/* <div
-          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-            isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300"
-          }`}
-        >
-          {isSelected && <Check className="w-3 h-3 text-white" />}
-        </div> */}
+        {/* Dropdown sirf normal members ke liye, admin row par nahi */}
+        {!isAdminRow && (
+          <div className="relative">
+            <button
+              onClick={() =>
+                setOpenMemberMenuId((prev) => (prev === rowId ? null : rowId))
+              }
+              className="p-1 rounded-full hover:bg-gray-100 text-gray-500"
+            >
+              <HiDotsVertical className="w-4 h-4" />
+            </button>
+
+            {openMemberMenuId === rowId && (
+              <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                {canRemove && (
+                  <button
+                    onClick={() => {
+                      const groupId =
+                        selectedChat?.groupId || selectedChat?._id;
+                      if (!groupId || !memberUser._id) return;
+
+                      socket?.socket?.emit("group:remove:member", {
+                        groupId,
+                        memberId: memberUser._id,
+                      });
+
+                      dispatch(getGroupInfo(groupId));
+                      setOpenMemberMenuId(null);
+                    }}
+                    className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-red-600"
+                  >
+                    Remove Member
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (!memberUser._id || memberUser._id === currentUserId)
+                      return;
+                    handleStartChat(memberUser);
+                    setOpenMemberMenuId(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-gray-700"
+                >
+                  Message
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!memberUser._id) return;
+                    navigate("/other-profile", {
+                      state: { id: memberUser },
+                    });
+                    setOpenMemberMenuId(null);
+                  }}
+                  className="w-full text-left px-4 py-2 text-xs hover:bg-gray-50 text-gray-700"
+                >
+                  View Profile
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -1088,25 +1162,13 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         </button>
 
                         {/* Delete Group - Only for admin */}
-                        {groupInfo?.admin?._id ===
+                        {(groupInfo?.info?.admin?._id ||
+                          groupInfo?.admin?._id) ===
                           (user?._id || allUserData?._id) && (
                             <button
                               onClick={() => {
-                                const groupId =
-                                  selectedChat.groupId || selectedChat._id;
-                                if (
-                                  window.confirm(
-                                    "Are you sure you want to delete this group? This action cannot be undone.",
-                                  )
-                                ) {
-                                  socket.deleteGroup({ groupId }, (response) => {
-                                    console.log("Group deleted:", response);
-                                    dispatch(removeChat({ chatId: groupId }));
-                                    dispatch(resetChatDetail());
-                                    setShowChatMenu(false);
-                                    setScreen("list");
-                                  });
-                                }
+                                setShowChatMenu(false);
+                                setShowDeleteGroupModal(true);
                               }}
                               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
                             >
@@ -1813,6 +1875,55 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             </div>
           )}
 
+          {/* Delete Group Confirmation Modal */}
+          {showDeleteGroupModal && selectedChat?.isGroup && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999]">
+              <div className="bg-white w-[360px] rounded-2xl shadow-xl p-6 relative">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                  <span className="text-red-600 text-xl font-bold">!</span>
+                </div>
+                <h2 className="text-lg font-semibold text-center mb-2 text-red-600">
+                  Delete Group
+                </h2>
+                <p className="text-sm text-gray-600 text-center mb-6">
+                  Your all chats will be deleted from our data base permanently.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteGroupModal(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-gray-200 transition"
+                  >
+                    Don't Delete
+                  </button>
+                  <button
+                    onClick={() => {
+                      const groupId =
+                        selectedChat.groupId || selectedChat._id;
+                      if (!groupId) {
+                        setShowDeleteGroupModal(false);
+                        return;
+                      }
+
+                      // Backend event: group:delete
+                      socket?.socket?.emit("group:delete", { groupId });
+
+                      // UI cleanup
+                      dispatch(removeChat({ chatId: groupId }));
+                      dispatch(resetChatDetail());
+                      setShowDeleteGroupModal(false);
+                      setScreen("list");
+                      SuccessToast("Group deleted successfully");
+                    }}
+                    className="flex-1 bg-red-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-red-600 transition"
+                  >
+                    Delete Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Report User Modal */}
           <ReportModal
             isOpen={reportModalOpen}
@@ -2062,6 +2173,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     );
   }
   if (screen === "addMembers") {
+    const existingMemberIds = new Set(
+      (groupInfo?.members || []).map(
+        (m) => m.member?._id || m._id,
+      ),
+    );
+    const addableUsers = availableUsers.filter(
+      (u) => !existingMemberIds.has(u._id),
+    );
+
     return (
       <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
@@ -2128,8 +2248,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <p className="text-sm text-gray-500 text-center py-4">
               Loading users...
             </p>
-          ) : availableUsers.length > 0 ? (
-            availableUsers.map((user) => {
+          ) : addableUsers.length > 0 ? (
+            addableUsers.map((user) => {
               const isDisabled = user.isGroupInviteOpen === false;
               const isSelected = selectedUsers.find((u) => u._id === user._id);
 
@@ -2377,7 +2497,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </div>
               )}
 
-              {/* Members List */}
+              {/* Members List (compact) */}
               <div>
                 <div className="flex justify-between">
                   <h4 className="text-sm font-semibold text-gray-900 mb-3">

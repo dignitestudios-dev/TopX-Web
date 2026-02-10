@@ -331,7 +331,6 @@ const PostCard = ({
       ).unwrap();
     }
   };
-
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
@@ -459,7 +458,25 @@ const PostCard = ({
         {/* Body */}
         <div className="p-4">
           <p className="text-sm text-gray-700 mb-4">{post.text}</p>
-
+          {post.sharedBy ? (
+            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+              {post.sharedBy?.profilePicture ? (
+                <img
+                  src={post.sharedBy.profilePicture}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                  {post.sharedBy?.name.split(" ")[0][0]}
+                </div>
+              )}
+              {/* <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          /> */}
+              {post.sharedBy.name} Reposted
+            </div>
+          ) : null}
           {/* Actions */}
           {activeTab !== "postrequest" ? (
             <div className="flex items-center gap-4 text-sm text-orange-500 mb-2 pb-2">

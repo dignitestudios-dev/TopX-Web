@@ -34,6 +34,28 @@ const ActivitySkeleton = () => (
     </div>
   </div>
 );
+const Avatar = ({ page }) => {
+  const [imgError, setImgError] = React.useState(false);
+
+  const firstLetter = page?.name?.charAt(0)?.toUpperCase();
+
+  if (!page?.image || imgError) {
+    return (
+      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold text-gray-700">
+        {firstLetter || "?"}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={page.image}
+      alt={page.name}
+      className="w-10 h-10 rounded-full object-cover bg-gray-200"
+      onError={() => setImgError(true)}
+    />
+  );
+};
 
 const RecentActivityPopup = ({ onClose }) => {
   const dispatch = useDispatch();
@@ -69,7 +91,7 @@ const RecentActivityPopup = ({ onClose }) => {
 
     dispatch(updateActivityStatus({ activityStatus: newStatus }));
   };
-  console.log(isOn, "isOn");
+  console.log(recentActivity, "isOn");
 
   return (
     <div className="absolute right-[10em] top-[6em] w-[22rem] bg-white shadow-xl rounded-xl border scrollbar-hide border-gray-200 z-50">
@@ -132,7 +154,7 @@ const RecentActivityPopup = ({ onClose }) => {
               : kpPresetBg
                 ? `url(${kpPresetBg.imagePath})`
                 : null;
-
+            console.log(post, "knowledgePost");
             return (
               <div key={item?._id || i} className="space-y-2">
                 <div className="text-xs text-gray-500 flex items-center justify-between">
@@ -150,28 +172,30 @@ const RecentActivityPopup = ({ onClose }) => {
                   {/* Post Author Info */}
                   {post?.author && (
                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
-                      <img
-                        src={page?.image}
-                        alt={page?.name}
-                        className="w-10 h-10 rounded-full object-cover bg-gray-200"
-                        onError={(e) =>
-                          (e.target.src =
-                            "https://via.placeholder.com/24?text=User")
-                        }
-                      />
+                      <Avatar page={page} />
+
                       <div className="flex-1">
                         <p className="text-xs font-medium text-gray-700">
                           {page?.name}
                         </p>
                         {page && (
                           <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
-                            {page.image && (
+                            {post?.author?.profilePicture ? (
                               <img
-                                src={post?.author?.profilePicture}
-                                alt={post?.author?.name}
-                                className="w-4 h-4 rounded-full object-cover"
+                                src={post.author.profilePicture}
+                                alt={post.author.name}
+                                className="w-4 h-4 rounded-full object-cover bg-gray-200"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
                               />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-semibold text-gray-700">
+                                {post?.author?.name?.charAt(0)?.toUpperCase() ||
+                                  "?"}
+                              </div>
                             )}
+
                             <p className="text-xs text-gray-500">
                               {post?.author?.name}
                             </p>
@@ -254,6 +278,26 @@ const RecentActivityPopup = ({ onClose }) => {
                       </p>
                     </div>
                   )}
+
+                  {item?.action == "share" ? (
+                    <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+                      {actor?.profilePicture ? (
+                        <img
+                          src={actor?.profilePicture}
+                          className="w-7 h-7 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                          {actor?.name.split(" ")[0][0]}
+                        </div>
+                      )}
+                      {/* <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          /> */}
+                      {actor?.name} Reposted
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

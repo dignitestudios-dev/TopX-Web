@@ -126,74 +126,80 @@ export default function Home() {
             Topic Pages
           </h3>
           <div className="space-y-4">
-            {pagesLoading
-              ? Array.from({ length: 3 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
-                  >
-                    {/* Header */}
-                    <div className="flex items-center gap-2 mb-2">
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-full bg-gray-300" />
-
-                      <div className="flex-1 space-y-1">
-                        <div className="h-3 w-32 bg-gray-300 rounded" />
-                        <div className="h-3 w-20 bg-gray-200 rounded" />
-                      </div>
+            {pagesLoading ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 w-32 bg-gray-300 rounded" />
+                      <div className="h-3 w-20 bg-gray-200 rounded" />
                     </div>
-
-                    {/* About */}
-                    <div className="space-y-2">
-                      <div className="h-3 w-full bg-gray-200 rounded" />
-                      <div className="h-3 w-4/5 bg-gray-200 rounded" />
-                    </div>
-
-                    {/* Followers */}
-                    <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
                   </div>
-                ))
-              : myPages?.slice(0, 3).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="pb-4 border-b border-gray-200 last:border-0"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-10 h-10 flex-shrink-0">
-                        <img
-                          src={item?.image}
-                          className="w-full h-full object-cover rounded-full"
-                          alt=""
-                        />
-                      </div>
 
-                      <div className="flex gap-2 items-center">
-                        <p
-                          onClick={() =>
-                            navigate(`/profile`, {
-                              state: { id: item._id },
-                            })
-                          }
-                          className="cursor-pointer font-[400] text-[14px]"
-                        >
-                          {item?.name}
-                        </p>
-                        <img src={notes} alt="" />
-                      </div>
+                  {/* About */}
+                  <div className="space-y-2">
+                    <div className="h-3 w-full bg-gray-200 rounded" />
+                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                  </div>
+
+                  {/* Followers */}
+                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                </div>
+              ))
+            ) : myPages?.length > 0 ? (
+              myPages.slice(0, 3).map((item, idx) => (
+                <div
+                  key={idx}
+                  className="pb-4 border-b border-gray-200 last:border-0"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-10 h-10 flex-shrink-0">
+                      <img
+                        src={item?.image}
+                        className="w-full h-full object-cover rounded-full"
+                        alt=""
+                      />
                     </div>
 
-                    <p className="text-[14px] text-gray-600 leading-snug">
-                      {item?.about}
-                    </p>
-
-                    <p className="text-[14px] text-gray-700 mt-1">
-                      <span className="text-black font-[600]">
-                        {item?.followersCount}+
-                      </span>{" "}
-                      Follows
-                    </p>
+                    <div className="flex gap-2 items-center">
+                      <p
+                        onClick={() =>
+                          navigate(`/profile`, { state: { id: item._id } })
+                        }
+                        className="cursor-pointer font-[400] text-[14px]"
+                      >
+                        {item?.name}
+                      </p>
+                      <img src={notes} alt="" />
+                    </div>
                   </div>
-                ))}
+
+                  <p className="text-[14px] text-gray-600 leading-snug">
+                    {item?.about}
+                  </p>
+
+                  <p className="text-[14px] text-gray-700 mt-1">
+                    <span className="text-black font-[600]">
+                      {item?.followersCount}+
+                    </span>{" "}
+                    Follows
+                  </p>
+                </div>
+              ))
+            ) : (
+              /* 🔴 NOT FOUND STATE */
+              <div className="text-center py-6 text-gray-500">
+                <p className="text-sm font-medium">No topic pages found</p>
+                <p className="text-xs mt-1">
+                  Try searching or create a new page
+                </p>
+              </div>
+            )}
           </div>
 
           <Link to="/profile">
