@@ -31,7 +31,7 @@ export default function PostImageViewerModal({
     return [];
   }, [post]);
 
-  console.log(author,"postpost")
+  console.log(post,"postpost")
 
   const currentImage = images[currentImageIndex];
 

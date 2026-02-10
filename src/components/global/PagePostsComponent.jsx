@@ -267,12 +267,6 @@ export default function PagePostsComponent({ pageId }) {
 
                     {/* Content */}
                     <div className="p-4">
-                      {post.bodyText && (
-                        <p className="text-gray-800 mb-4 text-base leading-relaxed">
-                          {post.bodyText}
-                        </p>
-                      )}
-
                       {/* Media Section */}
                       {currentMedia && (
                         <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4">
@@ -326,6 +320,12 @@ export default function PagePostsComponent({ pageId }) {
                             </>
                           )}
                         </div>
+                      )}
+
+                        {post.bodyText && (
+                        <p className="text-gray-800 mb-4 text-base leading-relaxed">
+                          {post.bodyText}
+                        </p>
                       )}
                     </div>
 

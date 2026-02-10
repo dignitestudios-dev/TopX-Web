@@ -32,6 +32,7 @@ import { FaArrowLeft } from "react-icons/fa6";
 import PagePostsComponent from "../../components/global/PagePostsComponent";
 import { RiLiveLine } from "react-icons/ri";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import UploadPostStory from "../../components/app/profile/UploadPostStory";
 
 const Trendingpagedetail = () => {
   const dispatch = useDispatch();
@@ -45,6 +46,7 @@ const Trendingpagedetail = () => {
   const [reportmodal, setReportmodal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
+  const [suggestPostModal, setSuggestPostModal] = useState(false);
   const dropdownRef = useRef(null);
   const optionsDropdownRef = useRef(null);
 
@@ -359,6 +361,17 @@ const Trendingpagedetail = () => {
                       : "Start A Live Chat"}
                   </button>
                 )}
+
+                {/* Suggest Post Button - Only show when subscribed */}
+                {isSubscribed && (
+                  <button
+                    onClick={() => setSuggestPostModal(true)}
+                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                  >
+                    <MessageCircleWarning size={20} />
+                    Suggest Post
+                  </button>
+                )}
               </div>
 
               <div className="mb-[0em]">
@@ -450,6 +463,15 @@ const Trendingpagedetail = () => {
               }),
             );
           }}
+        />
+
+        {/* Suggest Post Modal */}
+        <UploadPostStory
+          isOpen={suggestPostModal}
+          setIsOpen={setSuggestPostModal}
+          setSelectedType={() => {}}
+          title="Suggest Post"
+          selectedPages={[id]}
         />
       </div>
     </div>

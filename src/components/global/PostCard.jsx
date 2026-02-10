@@ -149,19 +149,30 @@ const PostCard = ({
   const isPostLiked = liked[post.id] ?? post.isLiked;
   const images =
     post.postImages && post.postImages.length > 0 ? post.postImages : [];
-  const firstImage = images.length > 0 ? images[0] : null;
+  
+  // ✅ Combine video and images: video first, then images
+  const allMedia = [];
+  if (post.videoUrl) {
+    allMedia.push({ type: "video", url: post.videoUrl });
+  }
+  images.forEach((img) => {
+    allMedia.push({ type: "image", url: img });
+  });
+
+  const hasMedia = allMedia.length > 0;
+  const currentMedia = hasMedia ? allMedia[currentImageIndex] : null;
 
   const openImageModal = () => {
     setCurrentImageIndex(0);
     setShowImageModal(true);
   };
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % images.length);
+  const nextMedia = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allMedia.length);
   };
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  const prevMedia = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
   };
 
   const dispatch = useDispatch();
@@ -331,7 +342,6 @@ const PostCard = ({
       ).unwrap();
     }
   };
-
   return (
     <>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
@@ -423,27 +433,60 @@ const PostCard = ({
           </button>
         </div>
 
-        {/* Image Section - Show Only First Image */}
-        {firstImage && (
-          <div className="m-4 cursor-pointer" onClick={openImageModal}>
-            <div className="relative">
-              <img
-                src={firstImage}
-                alt="Post"
-                className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
-              />
-              {images.length > 1 && (
+        {/* Media Section - Video first, then images (carousel) */}
+        {hasMedia && (
+          <div className="m-4 relative">
+            <div className="relative cursor-pointer" onClick={openImageModal}>
+              {/* Current Media Display */}
+              {currentMedia?.type === "video" ? (
+                <video
+                  src={currentMedia.url}
+                  controls
+                  className="w-full h-[27em] object-cover rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <img
+                  src={currentMedia?.url}
+                  alt="Post"
+                  className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
+                />
+              )}
+
+              {/* Media Counter */}
+              {allMedia.length > 1 && (
                 <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
-                  1/{images.length}
+                  {currentImageIndex + 1}/{allMedia.length}
                 </div>
               )}
-            </div>
-          </div>
-        )}
 
-        {post.videoUrl && !firstImage && (
-          <div className="m-4">
-            <video src={post.videoUrl} controls className="w-full rounded-lg" />
+              {/* Navigation Arrows */}
+              {allMedia.length > 1 && (
+                <>
+                  {/* Previous Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      prevMedia();
+                    }}
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all z-10"
+                  >
+                    ◀
+                  </button>
+
+                  {/* Next Button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      nextMedia();
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition-all z-10"
+                  >
+                    ▶
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -459,7 +502,25 @@ const PostCard = ({
         {/* Body */}
         <div className="p-4">
           <p className="text-sm text-gray-700 mb-4">{post.text}</p>
-
+          {post.sharedBy ? (
+            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+              {post.sharedBy?.profilePicture ? (
+                <img
+                  src={post.sharedBy.profilePicture}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                  {post.sharedBy?.name.split(" ")[0][0]}
+                </div>
+              )}
+              {/* <img
+            src={post.sharedBy.profilePicture}
+            className="w-7 h-7 rounded-full object-cover"
+          /> */}
+              {post.sharedBy.name} Reposted
+            </div>
+          ) : null}
           {/* Actions */}
           {activeTab !== "postrequest" ? (
             <div className="flex items-center gap-4 text-sm text-orange-500 mb-2 pb-2">
@@ -524,8 +585,8 @@ const PostCard = ({
         </div>
       </div>
 
-      {/* Image Modal - Show All Images */}
-      {showImageModal && images.length > 0 && (
+      {/* Media Modal - Show Video and Images */}
+      {showImageModal && hasMedia && (
         <div
           className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
           onClick={() => setShowImageModal(false)}
@@ -558,16 +619,25 @@ const PostCard = ({
             className="relative w-full h-full flex items-center justify-center mt-10"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={images[currentImageIndex]}
-              alt="Fullscreen"
-              className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
-            />
+            {/* Current Media Display */}
+            {currentMedia?.type === "video" ? (
+              <video
+                src={currentMedia.url}
+                controls
+                className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
+              />
+            ) : (
+              <img
+                src={currentMedia?.url}
+                alt="Fullscreen"
+                className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
+              />
+            )}
 
             {/* Previous Button */}
-            {images.length > 1 && (
+            {allMedia.length > 1 && (
               <button
-                onClick={prevImage}
+                onClick={prevMedia}
                 className="absolute left-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
               >
                 ◀
@@ -575,20 +645,20 @@ const PostCard = ({
             )}
 
             {/* Next Button */}
-            {images.length > 1 && (
+            {allMedia.length > 1 && (
               <button
-                onClick={nextImage}
+                onClick={nextMedia}
                 className="absolute right-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
               >
                 ▶
               </button>
             )}
 
-            {/* Image Counter */}
-            {images.length > 1 && (
+            {/* Media Counter */}
+            {allMedia.length > 1 && (
               <div className="absolute bottom-8 text-white text-center z-20">
                 <p className="text-lg font-semibold">
-                  {currentImageIndex + 1} / {images.length}
+                  {currentImageIndex + 1} / {allMedia.length}
                 </p>
               </div>
             )}
