@@ -126,6 +126,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }, 2000);
   };
 
+  // Filter pages based on search
+  const filteredPages = recommendationPages?.filter((col) =>
+    col.name.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
   return (
     <>
       {/* Main Create Modal */}
@@ -200,7 +205,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
               </div>
             ) : (
               <>
-                <div>
+                <div className="relative">
                   <Search
                     size={18}
                     className="absolute left-3 top-2.5 text-gray-400"
@@ -228,32 +233,38 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   {!pagesLoading && (
                     <>
                       {recommendationPages && recommendationPages.length > 0 ? (
-                        recommendationPages.map((col) => (
-                          <div
-                            key={col._id}
-                            className="flex justify-between items-center cursor-pointer p-2 border rounded-lg"
-                            onClick={() => toggleSelect(col._id)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={
-                                  col.image ||
-                                  "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
-                                }
-                                className="w-10 h-10 rounded-full"
-                              />
-                              <p>{col.name}</p>
-                            </div>
-
+                        filteredPages.length > 0 ? (
+                          filteredPages.map((col) => (
                             <div
-                              className={`w-5 h-5 rounded border ${
-                                selectedCollections.includes(col._id)
-                                  ? "bg-orange-500"
-                                  : ""
-                              }`}
-                            ></div>
-                          </div>
-                        ))
+                              key={col._id}
+                              className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
+                              onClick={() => toggleSelect(col._id)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={
+                                    col.image ||
+                                    "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
+                                  }
+                                  className="w-10 h-10 rounded-full"
+                                />
+                                <p>{col.name}</p>
+                              </div>
+
+                              <div
+                                className={`w-5 h-5 rounded border ${
+                                  selectedCollections.includes(col._id)
+                                    ? "bg-orange-500"
+                                    : ""
+                                }`}
+                              ></div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-center text-gray-500 py-8">
+                            No items found
+                          </p>
+                        )
                       ) : (
                         <p className="text-center text-gray-500 py-4">
                           No collections here

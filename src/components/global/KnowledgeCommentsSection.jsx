@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Heart, MoreVertical, X, Star } from "lucide-react";
-import { elevateComment } from "../../redux/slices/postfeed.slice";
 import { timeAgo } from "../../lib/helpers";
 import ReportModal from "./ReportModal"; // Report Modal
 import { sendReport } from "../../redux/slices/reports.slice";
@@ -12,7 +11,10 @@ import {
   KnowledgeGetComment,
   KnowledgeUpdateComment,
   likeComment,
+  elevateComment,
+  demoteComment,
 } from "../../redux/slices/knowledgepost.slice";
+import { TiPin } from "react-icons/ti";
 
 export default function KnowledgeCommentsSection({
   postId,
@@ -115,9 +117,19 @@ export default function KnowledgeCommentsSection({
   };
 
   const handleElevateComment = async (commentId) => {
+    // Find current comment to know if it's elevated or not
+    const comment = findCommentById(postComments, commentId);
+    const isCurrentlyElevated = comment?.isElevated;
+
     try {
-      await dispatch(elevateComment(commentId)).unwrap();
-      SuccessToast("Comment elevated successfully");
+      if (isCurrentlyElevated) {
+        await dispatch(demoteComment(commentId)).unwrap();
+        SuccessToast("Comment elevation removed");
+      } else {
+        await dispatch(elevateComment(commentId)).unwrap();
+        SuccessToast("Comment elevated successfully");
+      }
+
       handleGetComments();
     } catch (error) {
       console.error("Failed to elevate comment:", error);
@@ -193,7 +205,7 @@ export default function KnowledgeCommentsSection({
         ? [
             {
               label: comment?.isElevated
-                ? "Undo Elevate Comment"
+                ? "Undo Elevate"
                 : "Elevate Comment",
               action: () => {
                 onElevateComment(comment._id);
@@ -202,47 +214,36 @@ export default function KnowledgeCommentsSection({
           ]
         : []),
 
-      // Show options based on whether it's user's own page or someone else's page
+      // Show options for comments from others
       ...(comment.user._id !== user._id
-        ? isPageOwner
-          ? [
-              // If it's MY page, show these options for comments from others
-              {
-                label: comment?.isElevated
-                  ? "Undo Elevate"
-                  : "Elevate Comment",
-                action: () => {
-                  onElevateComment(comment._id);
-                },
+        ? [
+            {
+              label: comment?.isElevated
+                ? "Undo Elevate Comment"
+                : "Elevate Comment",
+              action: () => {
+                onElevateComment(comment._id);
               },
-              {
-                label: "Report and Delete",
-                action: () => {
-                  onReportComment(comment._id);
-                },
+            },
+            {
+              label: "Report and Delete",
+              action: () => {
+                onReportComment(comment._id);
               },
-              {
-                label: "Delete.",
-                action: () => {
-                  onDeleteComment(comment._id);
-                },
+            },
+            {
+              label: "Delete",
+              action: () => {
+                onDeleteComment(comment._id);
               },
-              {
-                label: "Block",
-                action: () => {
-                  onReportComment(comment._id);
-                },
+            },
+            {
+              label: "Block",
+              action: () => {
+                onReportComment(comment._id);
               },
-            ]
-          : [
-              // If it's someone else's page, only show Report
-              {
-                label: "Report",
-                action: () => {
-                  onReportComment(comment._id);
-                },
-              },
-            ]
+            },
+          ]
         : []),
     ];
 
@@ -300,7 +301,7 @@ export default function KnowledgeCommentsSection({
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
                 {comment.user?.name}
                 {comment.isElevated && (
-                  <Star className="w-4 h-4 text-pink-500 fill-pink-500" />
+                 <TiPin className="w-4 h-4" />
                 )}
                 {comment.isAdmin && (
                   <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
@@ -346,22 +347,17 @@ export default function KnowledgeCommentsSection({
             {isOpen && (
               <div
                 ref={dropdownRef} // Attach ref to the dropdown menu
-                className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+                className="absolute right-0 -mt-[2em] mr-[2em] w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
               >
-                {menuItems.map((item, index) => {
-                  if (!isAuthor && item.label === "Delete") {
-                    return null; // Prevent the delete option from showing for other users
-                  }
-                  return (
-                    <button
-                      key={index}
-                      onClick={item.action}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
+                {menuItems.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={item.action}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             )}
           </div>

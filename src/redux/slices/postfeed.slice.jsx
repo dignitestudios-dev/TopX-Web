@@ -260,7 +260,11 @@ const postFeedSlice = createSlice({
       })
       .addCase(getComment.fulfilled, (state, action) => {
         state.getCommentsLoading = false;
-        state.postComments = action.payload;
+        // API returns an object: { commentCount, comments: [...] }
+        // Store only the comments array for UI rendering
+        state.postComments = Array.isArray(action.payload)
+          ? action.payload
+          : action.payload?.comments || [];
       })
       .addCase(getComment.rejected, (state, action) => {
         state.getCommentsLoading = false;

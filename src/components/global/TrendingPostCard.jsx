@@ -5,8 +5,10 @@ import {
   Share2,
   MoreHorizontal,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { likePost } from "../../redux/slices/postfeed.slice";
+import { likePost } from "../../redux/slices/posts.slice";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
 import SharePostModal from "./SharePostModal";
@@ -17,6 +19,7 @@ import ReportModal from "./ReportModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "./Toaster";
 import PrivatePostModal from "./PrivatePostModal";
+import PostImageViewerModal from "./PostDetailModal";
 
 export default function TrendingPostCard({ post, liked, toggleLike }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -26,6 +29,8 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
   const [selectedOption, setSelectedOption] = useState("");
   const [isPrivatePost, setIsPrivatePost] = useState(false);
   const [sharepost, setSharepost] = useState(false);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
@@ -33,38 +38,140 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
 
+  // Helper to check if media is video
+  const isVideo = (url) => {
+    if (!url) return false;
+    return /\.(mp4|webm|ogg)$/i.test(url) || url.includes("video");
+  };
+
+  // Combine all media (images + videos) from media or postimage array
+  const allMedia = React.useMemo(() => {
+    // Check both post.media (API response) and post.postimage (legacy)
+    const mediaArray = post?.media || post?.postimage || [];
+    if (!Array.isArray(mediaArray) || mediaArray.length === 0) return [];
+    
+    return mediaArray.map((media) => {
+      const fileUrl = media?.fileUrl || media?.url || media;
+      return {
+        url: fileUrl,
+        type: media?.type || (isVideo(fileUrl) ? "video" : "image"),
+      };
+    });
+  }, [post?.media, post?.postimage]);
+
+  const hasMedia = allMedia.length > 0;
+  const currentMedia = hasMedia ? allMedia[currentMediaIndex] : null;
+  const hasMultipleMedia = allMedia.length > 1;
+
   const timeAgo = (createdAt) => {
+    if (!createdAt) return "";
     const now = new Date();
     const then = new Date(createdAt);
-    const seconds = Math.floor((now - then) / 1000);
+    const diffMs = now - then;
+    const seconds = Math.floor(diffMs / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days}d ago`;
+    if (days > 7) {
+      return then.toLocaleDateString("en-US", {
+        day: "numeric",
+        month: "short",
+      });
+    }
+    if (days === 1) return "Yesterday";
+    if (days > 1) return `${days}d ago`;
     if (hours > 0) return `${hours}h ago`;
     if (minutes > 0) return `${minutes}m ago`;
     return "just now";
   };
 
-  const handleLikeClick = (postId, currentLikeStatus, currentLikesCount) => {
-    const newLikeStatus = !currentLikeStatus;
+  const { likeLoading } = useSelector((state) => state.posts);
 
-    // Calculate increment based on toggle
-    const newLikesCount = newLikeStatus
-      ? (currentLikesCount ?? 0) + 1
-      : Math.max((currentLikesCount ?? 0) - 1, 0);
+  // Get initial like state from post or localStorage (for optimistic updates)
+  const getInitialLikeState = () => {
+    const postId = post._id || post.id;
+    if (!postId) return { isLiked: false, likesCount: 0 };
 
-    // Optimistic update in localStorage
+    // Check localStorage first (for optimistic updates)
+    const localLikes = JSON.parse(localStorage.getItem("postLikes") || "{}");
+    const cachedLike = localLikes[postId];
+
+    if (cachedLike) {
+      return {
+        isLiked: cachedLike.isLiked || false,
+        likesCount: cachedLike.likesCount || 0,
+      };
+    }
+
+    // Use post data
+    return {
+      isLiked: post.isLiked || false,
+      likesCount: post.likesCount || 0,
+    };
+  };
+
+  const [localLikeState, setLocalLikeState] = useState(getInitialLikeState());
+
+  // Update local state when post changes
+  useEffect(() => {
+    const newState = getInitialLikeState();
+    setLocalLikeState(newState);
+  }, [post._id, post.id, post.isLiked, post.likesCount]);
+
+  // ✅ Proper like toggle handler with optimistic updates (same as HomePostFeed.jsx)
+  const handleLikeToggle = async () => {
+    if (likeLoading) return; // Prevent multiple clicks while loading
+
+    const postId = post._id || post.id;
+    if (!postId) {
+      console.error("Post ID not found", { post });
+      return;
+    }
+
+    const currentIsLiked = localLikeState.isLiked;
+    const currentLikesCount = localLikeState.likesCount || 0;
+    const newIsLiked = !currentIsLiked;
+    const newLikesCount = newIsLiked
+      ? currentLikesCount + 1
+      : Math.max(currentLikesCount - 1, 0);
+
+    // ✅ Optimistic update - update UI immediately
+    setLocalLikeState({
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    });
+
+    // Call parent toggleLike callback if provided
+    if (toggleLike && typeof toggleLike === "function") {
+      toggleLike(postId, newIsLiked, newLikesCount);
+    }
+
+    // Save to localStorage for persistence
     const likes = JSON.parse(localStorage.getItem("postLikes") || "{}");
-    likes[postId] = { isLiked: newLikeStatus, likesCount: newLikesCount };
+    likes[postId] = {
+      isLiked: newIsLiked,
+      likesCount: newLikesCount,
+    };
     localStorage.setItem("postLikes", JSON.stringify(likes));
 
-    // Update UI immediately
-    toggleLike(postId, newLikeStatus, newLikesCount);
-
     // Call API
-    dispatch(likePost({ postId, likeToggle: newLikeStatus }));
+    try {
+      await dispatch(
+        likePost({
+          id: postId,
+          likeToggle: newIsLiked,
+          isPost: true,
+        }),
+      ).unwrap();
+    } catch (error) {
+      console.error("Failed to like post:", error);
+      // Revert optimistic update on error
+      setLocalLikeState({
+        isLiked: currentIsLiked,
+        likesCount: currentLikesCount,
+      });
+    }
   };
 
   // Close dropdown on outside click
@@ -113,7 +220,8 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
               {post.author?.name}
             </p>
             <p className="text-xs text-gray-500">
-              @{post.author?.username} • {timeAgo(post.createdAt)}
+              @{post.author?.username} •{" "}
+              {timeAgo(post.createdAt || post.updatedAt || post.author?.createdAt)}
             </p>
           </div>
         </div>
@@ -163,44 +271,83 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
       {/* Post Content */}
       <div className="p-4">
-        {/* Media Gallery */}
-        {post?.postimage && post?.postimage.length > 0 && (
-          <div
-            className={`grid gap-2 mb-3 ${
-              post.postimage.length === 1
-                ? "grid-cols-1"
-                : post.postimage.length === 2
-                  ? "grid-cols-2"
-                  : "grid-cols-2"
-            }`}
-          >
-            {post?.postimage.slice(0, 4).map((media, idx) => (
-              <div
-                key={media._id || idx}
-                className={`rounded-lg overflow-hidden bg-gray-200 ${
-                  post?.postimage.length === 1 ? "h-72" : "h-48"
-                }`}
-              >
-                {media.type === "image" ? (
-                  <img
-                    src={media.fileUrl}
-                    alt="post media"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+        {/* Media Carousel */}
+        {hasMedia && (
+          <div className="relative mb-3 rounded-lg overflow-hidden bg-gray-200">
+            {/* Current Media */}
+            <div
+              className="relative cursor-pointer"
+              onClick={() => setImageViewerOpen(true)}
+            >
+              {currentMedia?.type === "video" || isVideo(currentMedia?.url) ? (
+                <video
+                  src={currentMedia.url}
+                  className="w-full h-72 object-cover"
+                  controls
+                  onClick={(e) => e.stopPropagation()}
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={currentMedia.url}
+                  alt="post media"
+                  className="w-full h-72 object-cover"
+                />
+              )}
+
+              {/* Navigation Arrows */}
+              {hasMultipleMedia && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentMediaIndex((prev) =>
+                        prev === 0 ? allMedia.length - 1 : prev - 1
+                      );
+                    }}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentMediaIndex((prev) =>
+                        prev === allMedia.length - 1 ? 0 : prev + 1
+                      );
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 hover:bg-opacity-70 text-white p-2 rounded-full transition"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+
+              {/* Media Counter */}
+              {hasMultipleMedia && (
+                <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-semibold">
+                  {currentMediaIndex + 1} / {allMedia.length}
+                </div>
+              )}
+            </div>
+
+            {/* Dots Indicator */}
+            {hasMultipleMedia && (
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {allMedia.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentMediaIndex(idx);
+                    }}
+                    className={`transition-all ${
+                      idx === currentMediaIndex
+                        ? "bg-white w-6 h-1.5"
+                        : "bg-white bg-opacity-50 w-1.5 h-1.5"
+                    } rounded-full`}
                   />
-                ) : (
-                  <video
-                    src={media.fileUrl}
-                    className="w-full h-full object-cover"
-                    controls
-                  />
-                )}
-              </div>
-            ))}
-            {post.postimage.length > 4 && (
-              <div className="rounded-lg bg-gray-300 h-48 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">
-                  +{post.postimage.length - 4}
-                </span>
+                ))}
               </div>
             )}
           </div>
@@ -259,23 +406,33 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
       )}
       {/* Stats */}
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
+        {/* ✅ LIKE BUTTON - WITH OPTIMISTIC UPDATES (same as HomePostFeed.jsx) */}
         <button
-          onClick={() =>
-            handleLikeClick(post.id, post.isLiked, post.likesCount)
-          }
-          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+          onClick={handleLikeToggle}
+          disabled={likeLoading}
+          className={`flex items-center gap-1.5 transition ${
+            likeLoading
+              ? "opacity-50 cursor-not-allowed"
+              : "hover:text-orange-500"
+          } ${
+            localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+          }`}
         >
           <Heart
             className={`w-5 h-5 transition ${
-              post.isLiked ? "fill-orange-500 text-orange-500" : "text-gray-600"
+              localLikeState.isLiked
+                ? "fill-orange-500 text-orange-500"
+                : likeLoading
+                  ? "text-gray-400"
+                  : "text-gray-600"
             }`}
           />
           <span
             className={`text-sm font-medium ${
-              post.isLiked ? "text-orange-500" : "text-gray-600"
+              localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
             }`}
           >
-            {Number(post.likesCount ?? 0)}
+            {Number(localLikeState.likesCount ?? 0)}
           </span>
         </button>
 
@@ -284,7 +441,9 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{post.stats.comments}</span>
+          <span className="text-sm font-medium">
+            {post.commentsCount ?? post.stats?.comments ?? 0}
+          </span>
         </button>
 
         <button
@@ -292,7 +451,9 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <Share2 className="w-5 h-5" />
-          <span className="text-sm font-medium">{post.stats.shares}</span>
+          <span className="text-sm font-medium">
+            {post.sharesCount ?? post.stats?.shares ?? 0}
+          </span>
         </button>
       </div>
       {commentsOpen && <CommentsSection postId={post.id} />}
@@ -313,7 +474,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
       )}
 
       {selectedOption === "Share to your Story" && (
-        <PostStoryModal onClose={setSelectedOption} />
+        <PostStoryModal post={post} onClose={setSelectedOption} />
       )}
       {selectedOption === "Share with Topic Page" && (
         <ShareRepostModal postId={post.id} onClose={setSelectedOption} />
@@ -338,6 +499,19 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
         <PrivatePostModal
           post={post}
           onClose={() => setIsPrivatePost(!isPrivatePost)}
+        />
+      )}
+
+      {/* Image Viewer Modal */}
+      {imageViewerOpen && (
+        <PostImageViewerModal
+          post={post}
+          author={post.author}
+          isOpen={imageViewerOpen}
+          onClose={() => {
+            setImageViewerOpen(false);
+            setCurrentMediaIndex(0);
+          }}
         />
       )}
     </div>

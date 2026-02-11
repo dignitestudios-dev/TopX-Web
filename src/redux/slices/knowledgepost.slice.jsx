@@ -312,10 +312,10 @@ export const KnowledgeUpdateComment = createAsyncThunk(
 );
 
 export const KnowledgeDeleteComment = createAsyncThunk(
-  "comments/post/delete/id",
-  async (data, thunkAPI) => {
+  "comments/knowledge/delete",
+  async (commentId, thunkAPI) => {
     try {
-      const res = await axios.delete(`/comments/knowledge/${data}`);
+      const res = await axios.delete(`/comments/knowledge/${commentId}`);
 
       return res.data.data;
     } catch (error) {
@@ -325,30 +325,34 @@ export const KnowledgeDeleteComment = createAsyncThunk(
     }
   },
 );
+
+// Elevate knowledge comment
 export const elevateComment = createAsyncThunk(
-  "comments/post/elevate/id",
-  async (data, thunkAPI) => {
+  "comments/knowledge/elevate",
+  async (commentId, thunkAPI) => {
     try {
-      const res = await axios.post(`/comments/post/${data}/elevate`);
+      const res = await axios.post(`/comments/knowledge/${commentId}/elevate`);
 
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment",
+        error.response?.data?.message || "Failed to elevate comment",
       );
     }
   },
 );
+
+// Demote (unelevate) knowledge comment
 export const demoteComment = createAsyncThunk(
-  "comments/post/id/demoteComment",
-  async (data, thunkAPI) => {
+  "comments/knowledge/demote",
+  async (commentId, thunkAPI) => {
     try {
-      const res = await axios.post(`/comments/post/${data}/demote`);
+      const res = await axios.post(`/comments/knowledge/${commentId}/demote`);
 
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to delete comment",
+        error.response?.data?.message || "Failed to demote comment",
       );
     }
   },

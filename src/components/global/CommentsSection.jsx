@@ -23,11 +23,14 @@ export default function CommentsSection({
   isPageOwner = false,
   pageId = null,
   postDetail,
+  isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed,
   );
+
+  console.log(postComments,"postComments")
   // Get post from Redux state to extract pageId and page owner
   const { posts, pagepost, allfeedposts } = useSelector(
     (state) => state.posts || {},
@@ -347,12 +350,13 @@ export default function CommentsSection({
               ]
             : []),
 
+          // Show 4 options for other users' comments ONLY on /my-posts route
           ...(comment.user._id !== user._id
-            ? isPageOwner
+            ? isMyPostsPage
               ? [
                   {
                     label: comment.isElevated
-                      ? "Undo Elevate"
+                      ? "Undo Elevate Comment"
                       : "Elevate Comment",
                     action: () => {
                       onElevateComment(
@@ -390,16 +394,58 @@ export default function CommentsSection({
                     },
                   },
                 ]
-              : [
-                  ...(!comment.reportedByCurrentUser
-                    ? [
-                        {
-                          label: "Report",
-                          action: () => onReportComment(comment._id),
-                        },
-                      ]
-                    : []),
-                ]
+              : isPageOwner
+                ? [
+                    {
+                      label: comment.isElevated
+                        ? "Undo Elevate"
+                        : "Elevate Comment",
+                      action: () => {
+                        onElevateComment(
+                          comment._id,
+                          comment.isElevated ? "demote" : "elevate",
+                        );
+                      },
+                    },
+
+                    ...(!comment.reportedByCurrentUser
+                      ? [
+                          {
+                            label: "Report and Delete",
+                            action: () => onReportComment(comment._id),
+                          },
+                        ]
+                      : []),
+
+                    {
+                      label: "Delete",
+                      action: () => onDeleteComment(comment._id),
+                    },
+
+                    {
+                      label: "Block",
+                      action: () => {
+                        const commentPageId =
+                          comment?.post?.page?._id ||
+                          comment?.post?.pageId ||
+                          comment?.page?._id ||
+                          comment?.pageId ||
+                          null;
+
+                        onBlockUser(comment._id, comment.user._id, commentPageId);
+                      },
+                    },
+                  ]
+                : [
+                    ...(!comment.reportedByCurrentUser
+                      ? [
+                          {
+                            label: "Report",
+                            action: () => onReportComment(comment._id),
+                          },
+                        ]
+                      : []),
+                  ]
             : []),
         ];
 
@@ -512,20 +558,15 @@ export default function CommentsSection({
                   ref={dropdownRef} // Attach ref to the dropdown menu
                   className="absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-40"
                 >
-                  {menuItems.map((item, index) => {
-                    if (!isAuthor && item.label === "Delete") {
-                      return null; // Prevent the delete option from showing for other users
-                    }
-                    return (
-                      <button
-                        key={index}
-                        onClick={item.action}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                      >
-                        {item.label}
-                      </button>
-                    );
-                  })}
+                  {menuItems.map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={item.action}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -607,7 +648,7 @@ export default function CommentsSection({
             }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addComment()}
+            onKeyPress={(e) => e.key === "Enter" && addOrUpdateComment()}
             className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm border border-gray-300 focus:outline-none focus:border-orange-500"
           />
           <button

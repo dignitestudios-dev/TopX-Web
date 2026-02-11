@@ -25,6 +25,9 @@ const initialState = {
   toggleMuteLoading: false,
   createGroupLoading: false,
   addMemberLoading: false,
+  // Group leave flags
+  isRemoved: false,
+  selfRemoved: false,
 };
 
 export const fetchIndividualChats = createAsyncThunk(
@@ -383,6 +386,8 @@ const chatSlice = createSlice({
       state.chatDetailPagination = null;
       state.chatDetailError = null;
       state.currentChatId = null;
+      state.isRemoved = false;
+      state.selfRemoved = false;
     },
 
     setCurrentChatId(state, action) {
@@ -633,6 +638,8 @@ const chatSlice = createSlice({
         state.chatDetailMessages = action.payload.messages || [];
         state.chatDetailPagination = action.payload.pagination;
         state.currentChatId = action.meta.arg.groupId;
+        state.isRemoved = action.payload.isRemoved || false;
+        state.selfRemoved = action.payload.selfRemoved || false;
       })
       .addCase(fetchGroupChatHistory.rejected, (state, action) => {
         state.chatDetailLoading = false;

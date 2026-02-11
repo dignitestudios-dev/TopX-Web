@@ -15,11 +15,13 @@ import SkeletonPost from "../../components/global/SkeletonPost";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
+import { useNavigate } from "react-router";
 
 export default function Mypost() {
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
+  const navigate = useNavigate();
 
   const dispatch = useDispatch();
   const { postsLoading, posts } = useSelector((state) => state.posts);
@@ -145,16 +147,14 @@ export default function Mypost() {
                       </div>
 
                       <div className="flex gap-2 items-center">
-                        <p
-                          onClick={() =>
-                            navigate(`/profile`, {
-                              state: { id: item._id },
-                            })
-                          }
-                          className="cursor-pointer font-[400] text-[14px]"
-                        >
-                          {item?.name}
-                        </p>
+                                             <p
+                        onClick={() =>
+                          navigate(`/profile`, { state: { id: item._id } })
+                        }
+                        className="cursor-pointer font-[400] text-[14px]"
+                      >
+                        {item?.name}
+                      </p>
                         <img src={notes} alt="" />
                       </div>
                     </div>
