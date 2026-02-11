@@ -1,5 +1,5 @@
-import { useEffect, useState, useContext } from "react";
-import { Heart, Share2, X, Send, Trash2, Eye } from "lucide-react";
+import { useEffect, useState, useContext, useMemo } from "react";
+import { Heart, Share2, X, Send, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { timeAgo } from "../../../lib/helpers";
 import { LikeOtherStories } from "../../../redux/slices/Subscription.slice";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,6 +8,7 @@ import ShareToChatsModal from "../../global/ShareToChatsModal";
 import { deleteStory } from "../../../redux/slices/posts.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import StoryViewersModal from "./StoryViewersModal";
+import StoryPostDetailModal from "./StoryPostDetailModal";
 
 export default function ActiveStoryModal({
   activeStory, // ARRAY of stories
@@ -23,6 +24,8 @@ export default function ActiveStoryModal({
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [viewersModalOpen, setViewersModalOpen] = useState(false);
+  const [postMediaIndex, setPostMediaIndex] = useState(0);
+  const [postDetailModalOpen, setPostDetailModalOpen] = useState(false);
   const dispatch = useDispatch();
   const { comment } = useContext(SocketContext);
   const { user } = useSelector((state) => state.auth);
@@ -30,6 +33,25 @@ export default function ActiveStoryModal({
   
   // Check if current user is the story owner
   const isStoryOwner = user?._id === currentStory?.page?.user?._id || user?._id === currentStory?.page?.user;
+
+  // Extract post data from current story
+  const post = currentStory?.post;
+  const postMedia = useMemo(() => {
+    if (!post?.media || !Array.isArray(post.media)) return [];
+    return post.media.map((m) => ({
+      url: m.fileUrl,
+      type: m.type || (m.fileUrl?.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
+    }));
+  }, [post?.media]);
+
+  const hasPostMedia = postMedia.length > 0;
+  const currentPostMedia = hasPostMedia ? postMedia[postMediaIndex] : null;
+  const hasMultiplePostMedia = postMedia.length > 1;
+
+  // Reset post media index when story changes
+  useEffect(() => {
+    setPostMediaIndex(0);
+  }, [currentIndex]);
 
   // Load liked stories from localStorage and merge with activeStory
   useEffect(() => {
@@ -242,29 +264,150 @@ export default function ActiveStoryModal({
         </div>
       </div>
 
-      {/* Story Media */}
-      <div className="w-full h-full flex items-center justify-center">
-        {currentStory?.story?.media?.type === "image" ? (
-          <img
-            src={currentStory?.story?.media?.fileUrl}
-            alt="story"
-            className="w-full h-full object-contain"
-          />
-        ) : currentStory?.story?.media?.type === "video" ? (
-          <video
-            className="w-full h-full object-contain"
-            src={currentStory?.story?.media?.fileUrl}
-            autoPlay
-            muted
-          />
-        ) : null}
+      {/* Story / Post content */}
+      <div className="w-full h-full flex items-center justify-center px-4">
+        <div 
+          className={`w-full max-w-[620px] bg-black/60 rounded-3xl overflow-hidden border border-white/10 shadow-2xl ${post ? 'cursor-pointer hover:bg-black/70 transition-colors z-35' : ''}`}
+          onClick={(e) => {
+            if (post) {
+              e.stopPropagation();
+              setPostDetailModalOpen(true);
+            }
+          }}
+          onMouseDown={(e) => {
+            if (post) {
+              e.stopPropagation();
+            }
+          }}
+          onTouchStart={(e) => {
+            if (post) {
+              e.stopPropagation();
+            }
+          }}
+        >
+          {/* Post author / meta (from post) */}
+          {post && (
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+              <img
+                src={post.author?.profilePicture}
+                alt={post.author?.name}
+                className="w-9 h-9 rounded-full object-cover border border-white/40"
+              />
+              <div className="min-w-0">
+                <p className="text-white text-sm font-semibold truncate">
+                  {post.author?.name}
+                </p>
+                <p className="text-xs text-gray-300 truncate">
+                  @{post.author?.username} •{" "}
+                  {timeAgo(post.createdAt || currentStory?.createdAt)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Media area – prefer post.media, fallback to story.media */}
+          <div className="relative bg-black flex items-center justify-center max-h-[620px]">
+            {hasPostMedia ? (
+              <>
+                {currentPostMedia?.type === "video" ? (
+                  <video
+                    src={currentPostMedia.url}
+                    className="w-full max-h-[620px] object-contain bg-black"
+                    autoPlay
+                    muted
+                    controls
+                  />
+                ) : (
+                  <img
+                    src={currentPostMedia.url}
+                    alt="story post"
+                    className="w-full max-h-[500px] object-contain bg-black"
+                  />
+                )}
+
+                {hasMultiplePostMedia && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPostMediaIndex((prev) =>
+                          prev === 0 ? postMedia.length - 1 : prev - 1,
+                        );
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPostMediaIndex((prev) =>
+                          prev === postMedia.length - 1 ? 0 : prev + 1,
+                        );
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 rounded-full"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+
+                    {/* Dots */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {postMedia.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPostMediaIndex(idx);
+                          }}
+                          className={`h-1.5 rounded-full transition-all ${
+                            idx === postMediaIndex
+                              ? "w-5 bg-white"
+                              : "w-1.5 bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            ) : currentStory?.story?.media?.type === "image" ? (
+              <img
+                src={currentStory?.story?.media?.fileUrl}
+                alt="story"
+                className="w-full max-h-[620px] object-contain bg-black"
+              />
+            ) : currentStory?.story?.media?.type === "video" ? (
+              <video
+                className="w-full max-h-[620px] object-contain bg-black"
+                src={currentStory?.story?.media?.fileUrl}
+                autoPlay
+                muted
+                controls
+              />
+            ) : null}
+          </div>
+
+          {/* Post text/body */}
+          {post?.bodyText && (
+            <div className="px-4 pt-3 pb-4">
+              <p className="text-sm text-gray-100 whitespace-pre-line">
+                {post.bodyText}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Tap Areas */}
-      <div className="absolute inset-0 flex z-30">
-        <div className="w-1/2" onClick={prevStory} />
-        <div className="w-1/2" onClick={nextStory} />
-      </div>
+      {/* Tap Areas - Disabled when post exists */}
+      {!post && (
+        <div className="absolute inset-0 flex z-30">
+          <div className="w-1/2" onClick={prevStory} />
+          <div className="w-1/2" onClick={nextStory} />
+        </div>
+      )}
 
       {/* Bottom Actions */}
       <div className="absolute bottom-0 left-0 right-0 z-40 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-6 pb-6 px-4">
@@ -365,6 +508,17 @@ export default function ActiveStoryModal({
         <div className="absolute inset-0 flex items-center justify-center text-white/80 text-lg">
           ⏸ Paused
         </div>
+      )}
+
+      {/* Post Detail Modal - Opens when clicking on post in story */}
+      {post && (
+        <StoryPostDetailModal
+          post={post}
+          isOpen={postDetailModalOpen}
+          onClose={() => {
+            setPostDetailModalOpen(false);
+          }}
+        />
       )}
     </div>
   );

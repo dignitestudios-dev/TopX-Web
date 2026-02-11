@@ -357,7 +357,7 @@ const Trendingpagedetail = () => {
                   >
                     <MessageSquareText size={20} />
                     {pageDetail?.liveChat
-                      ? "Join A Live Chat"
+                      ? "Start A Live Chat"
                       : "Start A Live Chat"}
                   </button>
                 )}

@@ -255,6 +255,9 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
               touched={touched.dateOfBirth}
               error={errors.dateOfBirth}
               size="md"
+              // ✅ Ye add karo:
+              onKeyDown={(e) => e.stopPropagation()}
+              inputMode="numeric"
             />
 
             {/* Gender */}

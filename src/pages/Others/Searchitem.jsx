@@ -813,7 +813,7 @@ const SearchItem = () => {
                               }}
                               className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
                             >
-                              {post?.author?.name}
+                              {post?.author?.name}'s {post?.page?.name}
                             </h3>
                             <p
                               onClick={() => {
@@ -891,6 +891,7 @@ const SearchItem = () => {
                     commentCount={post?.commentsCount}
                     shareCount={post?.sharesCount}
                     toggleLike={toggleLike}
+                    page={post?.page}
                   />
                 );
               })
@@ -1087,7 +1088,7 @@ const SearchItem = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex gap-2 items-center">
                             <p className="font-semibold text-[14px] text-gray-900 truncate">
-                              {page.name}
+                              {page.name}sssss
                             </p>
                             <img
                               src={notes}

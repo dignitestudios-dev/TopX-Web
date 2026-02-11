@@ -95,7 +95,7 @@ export default function DOBGender() {
           <Input
             label="Date of Birth"
             type="date"
-            placeholder="Enter your date of birth"
+            placeholder="YYYY-MM-DD"
             variant="default"
             size="md"
             id="dob"
@@ -105,6 +105,9 @@ export default function DOBGender() {
             value={values.dob}
             error={errors.dob}
             touched={touched.dob}
+            // ✅ Ye add karo:
+            onKeyDown={(e) => e.stopPropagation()}
+            inputMode="numeric"
           />
           <Input
             label="Gender"
@@ -128,7 +131,7 @@ export default function DOBGender() {
           {/* Custom gender input when "Other" is selected */}
           {values.gender === "other" && (
             <Input
-              
+
               type="text"
               placeholder="Specify here"
               variant="default"
