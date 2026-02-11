@@ -43,6 +43,7 @@ import topxlogout from "./landingpage/topx-logo.png"
 import PostUnderReview from "../assets/under-review-img.png"
 import nofound from "../assets/notfound.png"
 import expert from "../assets/expert.png"
+import postrequesticon from "../assets/notification.svg"
 
 export {
   PostUnderReview,
@@ -82,6 +83,7 @@ export {
   topxlogout,
   Mask,
   bg,
+  postrequesticon,
   nofound,
   expert,
 };

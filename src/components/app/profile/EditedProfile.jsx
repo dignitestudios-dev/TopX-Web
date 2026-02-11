@@ -338,8 +338,16 @@ export default function EditedProfile() {
         <label>My Bio</label>
         <textarea
           value={bio}
-          onChange={(e) => setBio(e.target.value)}
+          onChange={(e) => {
+            const input = e.target.value;
+            if (input.length > 399) {
+              ErrorToast("My Bio can be maximum 400 characters.");
+            }
+            const value = input.slice(0, 400);
+            setBio(value);
+          }}
           placeholder="Text goes here"
+          maxLength={400}
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
         />
       </div>

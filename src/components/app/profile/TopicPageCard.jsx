@@ -4,10 +4,25 @@ import { auth } from "../../../assets/export";
 
 
 
-const TopicPageCard = ({ img, title, description, tags, Follows, className, onClick, pagetype }) => {
+const TopicPageCard = ({
+  img,
+  title,
+  description,
+  tags,
+  Follows,
+  className,
+  onClick,
+  pagetype,
+  ownerName,
+}) => {
   const baseClasses =
     `  rounded-[12px] border border-[0.8px] flex flex-col pt-5 pb-5 pl-3 pr-3 space-y-2  ${className}`;
 
+  const ownerDisplayName = ownerName || "";
+  const formattedTitle =
+    ownerDisplayName && title
+      ? `${ownerDisplayName}'s ${title}`
+      : title || ownerDisplayName;
 
   // Create an array of users based on the number of followers
   const userImages = [
@@ -25,7 +40,9 @@ const TopicPageCard = ({ img, title, description, tags, Follows, className, onCl
       <div className="w-full flex items-center gap-2 overflow-hidden ">
         <img src={img} alt={img} className="w-[40px] h-[40px] rounded-full" />
         <div className="flex justify-between items-center gap-3">
-          <h2 className="text-[16px] font-medium text-[##000000] cursor-pointer">{title}</h2>
+          <h2 className="text-[14px] font-medium text-[##000000] cursor-pointer">
+            {formattedTitle}
+          </h2>
           <TbFileText className="w-[16px] h-[16px] " />
         </div>
       </div>

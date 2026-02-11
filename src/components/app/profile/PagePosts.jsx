@@ -495,6 +495,16 @@ const PagePosts = ({
           </div>
         ) : (
           filteredPosts.map((post) => {
+            // Page + author avatar setup
+            const pageDisplayName =
+              post.page?.name || post.author?.name || "";
+            const nameParts = pageDisplayName.split(" ");
+            const pageInitials =
+              (nameParts[0]?.[0] || "").toUpperCase() +
+              (nameParts[1]?.[0] || "").toUpperCase();
+            const authorInitial =
+              post?.author?.name?.[0]?.toUpperCase() || pageInitials[0] || "";
+
             return (
               <div
                 key={post._id}
@@ -503,17 +513,33 @@ const PagePosts = ({
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3">
-                    {post.author.profilePicture ? (
-                      <img
-                        src={post.author.profilePicture}
-                        alt={post.author.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10  object-cover text-[16px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                        {post?.author?.name.split(" ")[0][0]}
-                      </div>
-                    )}
+                    <div className="relative">
+                      {/* Page avatar - show page image if available, otherwise initials */}
+                      {post.page?.image ? (
+                        <img
+                          src={post.page.image}
+                          alt={post.page.name || "Page"}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize text-sm font-semibold">
+                          {pageInitials || authorInitial}
+                        </div>
+                      )}
+
+                      {/* Author avatar - small circle at corner */}
+                      {post.author.profilePicture ? (
+                        <img
+                          src={post.author.profilePicture}
+                          alt={post.author.name}
+                          className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover border border-white"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 absolute -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                          {authorInitial}
+                        </div>
+                      )}
+                    </div>
                     <div>
                       <div className="flex items-center gap-1">
                         <p className="font-bold text-sm">{post.author.name}</p>
@@ -569,9 +595,21 @@ const PagePosts = ({
                           </button>
                         )}
 
-                        {/* If this is my post: show Edit / Delete, hide Report */}
-                        {post.author?._id === user?._id ? (
+                        {/* If this is a shared post: show only Delete (no Edit) */}
+                        {post?.sharedBy ? (
+                          <button
+                            onClick={() => {
+                              setSelectedPost(post?._id);
+                              setDeleteModal(true);
+                              setShowpopup(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        ) : post.author?._id === user?._id ? (
                           <>
+                            {/* My post (not shared): show Edit + Delete */}
                             <button
                               className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
                               onClick={() => {
@@ -594,17 +632,6 @@ const PagePosts = ({
                                 : "Delete Post"}
                             </button>
                           </>
-                        ) : post?.sharedBy ? (
-                          <button
-                            onClick={() => {
-                              setSelectedPost(post?._id);
-                              setDeleteModal(true);
-                              setShowpopup(false);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                          >
-                            Delete
-                          </button>
                         ) : (
                           <button
                             onClick={() => {
@@ -858,8 +885,8 @@ const PagePosts = ({
                     </div>
                   )}
                 </div>
-                {/* 🔒 Under Review Overlay */}
-                {post?.isReported && (
+                {/* 🔒 Under Review Overlay (hide only for non-owners) */}
+                {post?.isReported && !isPageOwner && (
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center 
                                 bg-black/40 backdrop-blur-md rounded-2xl"
