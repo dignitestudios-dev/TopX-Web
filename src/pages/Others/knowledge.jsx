@@ -258,7 +258,7 @@ export default function Knowledge() {
 
                 {/* Repost badge */}
                 {post.sharedBy ? (
-                  <div className="text-sm flex gap-4 ml-4 mb-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+                  <div className="text-sm flex gap-4 ml-4 mb-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
                     {post.sharedBy?.profilePicture ? (
                       <img
                         src={post.sharedBy.profilePicture}
