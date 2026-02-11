@@ -524,7 +524,10 @@ export default function KnowledgePostPageDetail({
           <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
             <p className="text-gray-500 font-semibold">No posts yet</p>
             <p className="text-gray-400 text-sm mt-1">
-              Be the first to create a post!
+              Be the first to create a post!       
+
+
+              
             </p>
           </div>
         )}
