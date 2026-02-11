@@ -52,7 +52,7 @@ export const getCollectionFeed = createAsyncThunk(
 );
 export const getPageStories = createAsyncThunk(
   "/stories/page/id",
-  async ({ id, page = 1, limit = 10, search = "" }, thunkAPI) => {
+  async ({ id, page = 1, limit = 100, search = "" }, thunkAPI) => {
     try {
       const res = await axios.get(
         `/stories/page/${id}?page=${page}&limit=${limit}&search=${search}`

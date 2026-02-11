@@ -159,8 +159,16 @@ const RecentActivityPopup = ({ onClose }) => {
               <div key={item?._id || i} className="space-y-2">
                 <div className="text-xs text-gray-500 flex items-center justify-between">
                   <span>
-                    You {actionText}
-                    {page?.name ? ` in "${page.name}"` : ""}.
+                    {item?.action === "comment" ? (
+                      "You have commented on this post."
+                    ) : item?.action === "share" ? (
+                      "You have shared this post."
+                    ) : (
+                      <>
+                        You {actionText}
+                        {page?.name ? ` in "${page.name}"` : ""}.
+                      </>
+                    )}
                   </span>
                   <span className="text-nowrap">
                     {timeAgo(item?.createdAt)}
@@ -218,14 +226,14 @@ const RecentActivityPopup = ({ onClose }) => {
                           }}
                         >
                           <div className="absolute inset-0 bg-black/5 rounded-lg"></div>
-                          {kp.textOnImage && (
-                            <p className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg">
-                              {kp.textOnImage}
+                          {(kp.textOnImage || kp.text) && (
+                            <p className="text-center relative z-10 text-black font-medium leading-relaxed drop-shadow-lg">
+                              {kp.textOnImage || kp.text}
                             </p>
                           )}
                         </div>
                       )}
-                      {kp.text && !kp.textOnImage && (
+                      {kp.text && !kpBackgroundImage && (
                         <p className="text-sm text-gray-700 mb-2">{kp.text}</p>
                       )}
                     </div>

@@ -17,11 +17,13 @@ export default function PostImageViewerModal({
     if (!post) return [];
 
     if (Array.isArray(post)) {
-      return post.map((item) => item?.fileUrl).filter(Boolean);
+      return post.map((item) => item?.fileUrl || item?.url || item).filter(Boolean);
     }
 
-    if (Array.isArray(post?.postimage)) {
-      return post.postimage.filter(Boolean);
+    // Check both post.media (API response) and post.postimage (legacy)
+    const mediaArray = post?.media || post?.postimage || [];
+    if (Array.isArray(mediaArray) && mediaArray.length > 0) {
+      return mediaArray.map((item) => item?.fileUrl || item?.url || item).filter(Boolean);
     }
 
     if (post?.fileUrl) {

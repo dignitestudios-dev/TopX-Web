@@ -140,11 +140,17 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     page?.pageType === "private" || page?.pageType === "pr  ivate";
   const isRequestPending = page?.requestStatus === "pending";
   const isRequestAccepted = page?.requestStatus === "accepted";
-  const isPageOwner = user?._id === page?.user?._id || user?._id === page?.user;
+  // Check if user is page owner - handle both object and string ID cases
+  const isPageOwner =
+    user?._id === page?.user?._id ||
+    user?._id === page?.user ||
+    user?._id === page?.user?._id?.toString() ||
+    user?._id?.toString() === page?.user;
 
-  // Show content if: not private, OR subscribed, OR request accepted, OR is page owner
+  // ✅ Page owner should ALWAYS see content, regardless of privacy/subscription
+  // Show content if: is page owner OR (not private OR subscribed OR request accepted)
   const shouldShowContent =
-    !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
+    isPageOwner || !isPrivatePage || isSubscribed || isRequestAccepted;
 
   // Check if should show private page overlay: private page, not subscribed, not page owner
   const shouldShowPrivateOverlay =

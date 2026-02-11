@@ -13,6 +13,7 @@ import {
   Send,
   ArrowLeft,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -75,6 +76,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     groupInfoLoading,
     updateGroupLoading,
     toggleMuteLoading,
+    isRemoved,
+    selfRemoved,
   } = useSelector((state) => state.chat);
   const { user, allUserData } = useSelector((state) => state.auth);
   const { isLoading: blockLoading } = useSelector(
@@ -137,6 +140,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
   const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
+  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [openMemberMenuId, setOpenMemberMenuId] = useState(null);
 
@@ -188,12 +192,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   }, [open, activeTab, page, limit, dispatch]);
 
   const handleLeaveGroup = () => {
-    const groupId = selectedChat.groupId || selectedChat._id;
+    setShowLeaveGroupModal(true);
+  };
 
-    socket.leaveGroup({ groupId }, () => {
+  const confirmLeaveGroup = () => {
+    const groupId = selectedChat.groupId || selectedChat._id;
+    if (!groupId) {
+      setShowLeaveGroupModal(false);
+      return;
+    }
+
+    socket.leaveGroup({ groupId }, (response) => {
+      console.log("Left group:", response);
       dispatch(removeChat({ chatId: groupId }));
       dispatch(resetChatDetail());
+      setShowLeaveGroupModal(false);
+      setShowChatMenu(false);
       setScreen("list");
+      SuccessToast("You have left the group");
     });
   };
 
@@ -1179,21 +1195,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {/* Leave Group */}
                         <button
                           onClick={() => {
-                            const groupId =
-                              selectedChat.groupId || selectedChat._id;
-                            if (
-                              window.confirm(
-                                "Are you sure you want to leave this group?",
-                              )
-                            ) {
-                              socket.leaveGroup({ groupId }, (response) => {
-                                console.log("Left group:", response);
-                                dispatch(removeChat({ chatId: groupId }));
-                                dispatch(resetChatDetail());
-                                setShowChatMenu(false);
-                                setScreen("list");
-                              });
-                            }
+                            setShowChatMenu(false);
+                            setShowLeaveGroupModal(true);
                           }}
                           className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
                         >
@@ -1612,7 +1615,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
 
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-            {!selectedChat?.isGroup && isBlocked ? (
+            {/* Group Leave Check - Hide input if user left the group */}
+            {selectedChat?.isGroup && (isRemoved === true || selfRemoved === true) ? (
+              <div className="text-center text-sm text-gray-500 py-3">
+                You left this group
+              </div>
+            ) : !selectedChat?.isGroup && isBlocked ? (
               isBlocked === receiverId ? (
                 // 🟥 Receiver blocked YOU
                 <div className="text-center text-sm text-gray-500 py-3">
@@ -1626,7 +1634,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               ) : null
             ) : (
               <>
-                {/* ✅ Input & media visible when NOT blocked */}
+                {/* ✅ Input & media visible when NOT blocked and NOT left group */}
                 {mediaPreview.length > 0 && (
                   <div className="mb-2">
                     <div className="grid grid-cols-4 gap-2">
@@ -1918,6 +1926,38 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     className="flex-1 bg-red-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-red-600 transition"
                   >
                     Delete Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Leave Group Confirmation Modal */}
+          {showLeaveGroupModal && selectedChat?.isGroup && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999]">
+              <div className="bg-white w-[360px] rounded-2xl shadow-xl p-6 relative">
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-center mb-2 text-gray-900">
+                  Leave Group
+                </h2>
+                <p className="text-sm text-gray-600 text-center mb-6">
+                  Are you sure you want to leave group?
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLeaveGroupModal(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-gray-200 transition"
+                  >
+                    Don't Leave
+                  </button>
+                  <button
+                    onClick={confirmLeaveGroup}
+                    className="flex-1 bg-red-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-red-600 transition"
+                  >
+                    Leave Now
                   </button>
                 </div>
               </div>

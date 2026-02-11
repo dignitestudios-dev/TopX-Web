@@ -60,7 +60,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
-  const isUnderReview = Boolean(post?.isReported);
+  const isUnderReview = post?.isReported === true;
 
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
@@ -402,155 +402,153 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             </p>
           </div>
         </div>
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setMoreOpen(!moreOpen)}
-            className="p-2 hover:bg-gray-50 rounded-full transition"
-          >
-            <MoreHorizontal className="w-4 h-4 text-gray-500" />
-          </button>
+        {/* Hide more options button when private post is locked */}
+        {!(
+          post?.page?.pageType === "private" && !post?.page?.isSubscribed
+        ) && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className="p-2 hover:bg-gray-50 rounded-full transition"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-500" />
+            </button>
 
-          {moreOpen && (
-            <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
-              {post.author._id === authUser?._id && !post.sharedBy ? (
-                <>
+            {moreOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+                {post.author._id === authUser?._id && !post.sharedBy ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMoreOpenPostId(null);
+                        openEditModal(post);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMoreOpenPostId(null);
+                        handleDeletePost(post._id);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : (
                   <button
                     onClick={() => {
-                      setMoreOpenPostId(null);
-                      openEditModal(post);
+                      setMoreOpen(false);
+                      setReportmodal(!reportmodal);
+                      console.log("Report clicked");
                     }}
                     className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                   >
-                    Edit
+                    Report
                   </button>
-                  <button
-                    onClick={() => {
-                      setMoreOpenPostId(null);
-                      handleDeletePost(post._id);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  >
-                    Delete
-                  </button>
-                </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Post body + actions wrapper (so header stays visible) */}
+      <div className="relative">
+        {/* Post Images - Thumbnail + text + shared info */}
+        <div className="flex-1">
+          {hasImages && (
+            <div
+              className={`w-full bg-white overflow-hidden p-4 relative transition 
+      ${!isUnderReview ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed"}
+    `}
+              onClick={() => {
+                if (!isUnderReview) {
+                  setActiveMedia(post); // ✅ Pass entire post object, not just URL
+                  setImageViewerOpen(true);
+                }
+              }}
+            >
+              {/* Image */}
+              {firstMediaIsVideo ? (
+                <video
+                  src={firstMedia}
+                  className={`w-full rounded-2xl max-h-96 object-cover
+    ${isUnderReview ? "blur-sm" : ""}`}
+                  muted
+                  controls
+                  playsInline
+                  onClick={(e) => e.stopPropagation()}
+                />
               ) : (
-                <button
-                  onClick={() => {
-                    setMoreOpen(false);
-                    setReportmodal(!reportmodal);
-                    console.log("Report clicked");
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                <img
+                  src={firstMedia}
+                  alt="post"
+                  className={`w-full max-h-[420px] object-cover rounded-2xl
+    ${isUnderReview ? "blur-sm" : ""}`}
+                />
+              )}
+
+              {/* Image count badge */}
+              {post.postimage.length > 1 && !isUnderReview && (
+                <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
+                  +{post.postimage.length}
+                </div>
+              )}
+
+              {/* 🔒 Under Review Overlay */}
+              {isUnderReview && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center 
+                bg-black/40 backdrop-blur-md rounded-2xl"
                 >
-                  Report
-                </button>
+                  <img
+                    src={PostUnderReview}
+                    className="w-[150px]"
+                    alt="postUnderreview"
+                  />
+                  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-orange-100">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Post is under review</span>
+                  </div>
+                </div>
               )}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Post Images - Thumbnail */}
-      <div className="flex-1">
-        {hasImages && (
-          <div
-            className={`w-full bg-white overflow-hidden p-4 relative transition 
-      ${!isUnderReview ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed"}
-    `}
-            onClick={() => {
-              if (!isUnderReview) {
-                setActiveMedia(post); // ✅ CHANGE: Pass entire post object, not just URL
-                setImageViewerOpen(true);
-              }
-            }}
-          >
-            {/* Image */}
-            {firstMediaIsVideo ? (
-              <video
-                src={firstMedia}
-                className={`w-full rounded-2xl max-h-96 object-cover
-    ${isUnderReview ? "blur-sm" : ""}`}
-                muted
-                controls
-                playsInline
-                onClick={(e) => e.stopPropagation()}
-              />
+          <div className="px-3">
+            {!isUnderReview ? (
+              <p className="text-sm text-gray-700 mt-4 mb-6">{post?.text}</p>
             ) : (
-              <img
-                src={firstMedia}
-                alt="post"
-                className={`w-full max-h-[420px] object-cover rounded-2xl
-    ${isUnderReview ? "blur-sm" : ""}`}
-              />
-            )}
-
-            {/* Image count badge */}
-            {post.postimage.length > 1 && !isUnderReview && (
-              <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-                +{post.postimage.length}
-              </div>
-            )}
-
-            {/* 🔒 Under Review Overlay */}
-            {isUnderReview && (
-              <div
-                className="absolute inset-0 flex flex-col items-center justify-center 
-                bg-black/40 backdrop-blur-md rounded-2xl"
-              >
-                <img
-                  src={PostUnderReview}
-                  className="w-[150px]"
-                  alt="postUnderreview"
-                />
-                <div className="mt-3 flex items-center gap-2 text-sm font-medium text-orange-100">
-                  <AlertTriangle className="w-4 h-4" />
-                  <span>Post is under review</span>
+              <div className="items-center gap-2 text-sm text-orange-600 py-6">
+                <div className="flex justify-center">
+                  <IoWarning size={70} />
+                </div>
+                <div className="flex justify-center mt-3">
+                  <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">
+                    Post Under Review
+                  </p>
                 </div>
               </div>
             )}
           </div>
-        )}
-        <div className="px-3">
-          <p className="text-sm text-gray-700 mt-4 mb-6">{post?.text}</p>
-        </div>
-        {post.sharedBy ? (
-          <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
-            {post.sharedBy?.profilePicture ? (
-              <img
-                src={post.sharedBy.profilePicture}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                {post.sharedBy?.name.split(" ")[0][0]}
-              </div>
-            )}
-            {/* <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          /> */}
-            {post.sharedBy.name} Reposted
-          </div>
-        ) : null}
-
-        {post?.page?.pageType == "private" && !post?.page?.isSubscribed && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm z-20">
-            <div className="text-center px-6">
-              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
-                <AlertTriangle className="w-6 h-6 text-orange-500" />
-              </div>
-              <p
-                onClick={() => {
-                  setIsPrivatePost(!isPrivatePost);
-                }}
-                className="text-base cursor-pointer  font-semibold text-orange-500"
-              >
-                Private post
-              </p>
+          {post.sharedBy ? (
+            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+              {post.sharedBy?.profilePicture ? (
+                <img
+                  src={post.sharedBy.profilePicture}
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                  {post.sharedBy?.name.split(" ")[0][0]}
+                </div>
+              )}
+              {post.sharedBy.name} Reposted
             </div>
-          </div>
-        )}
-      </div>
+          ) : null}
+        </div>
       {/* Content */}
       {/* <div className="px-4 py-3">
         {!isUnderReview ? (
@@ -569,47 +567,69 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
         )}
       </div> */}
 
-      {/* Stats - Action Bar */}
-      {!isUnderReview && (
-        <div className="px-4 py-3 w-full bg-white border-t border-gray-100 flex items-center gap-6">
-          <button
-            type="button"
-            onClick={handleLikeClick}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <Heart
-              className={`w-5 h-5 transition ${
-                localLikeState.isLiked
-                  ? "fill-orange-500 text-orange-500"
-                  : "text-gray-600"
-              }`}
-            />
-            <span
-              className={`text-sm font-medium ${
-                localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-              }`}
+        {/* Stats - Action Bar */}
+        {!isUnderReview && (
+          <div className="px-4 py-3 w-full bg-white border-t border-gray-100 flex items-center gap-6">
+            <button
+              type="button"
+              onClick={handleLikeClick}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
-              {Number(localLikeState.likesCount ?? 0)}
-            </span>
-          </button>
+              <Heart
+                className={`w-5 h-5 transition ${
+                  localLikeState.isLiked
+                    ? "fill-orange-500 text-orange-500"
+                    : "text-gray-600"
+                }`}
+              />
+              <span
+                className={`text-sm font-medium ${
+                  localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                }`}
+              >
+                {Number(localLikeState.likesCount ?? 0)}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setCommentsOpen(!commentsOpen)}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <MessageCircle className="w-5 h-5" />
-            <span className="text-sm font-medium">{post.stats.comments}</span>
-          </button>
+            <button
+              onClick={() => setCommentsOpen(!commentsOpen)}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="text-sm font-medium">
+                {post.stats.comments}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setSharepost(true)}
-            className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
-          >
-            <Share2 className="w-5 h-5" />
-            <span className="text-sm font-medium">{post.stats.shares}</span>
-          </button>
-        </div>
-      )}
+            <button
+              onClick={() => setSharepost(true)}
+              className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+            >
+              <Share2 className="w-5 h-5" />
+              <span className="text-sm font-medium">{post.stats.shares}</span>
+            </button>
+          </div>
+        )}
+
+        {/* Private post overlay - only over body + actions, not header */}
+        {post?.page?.pageType == "private" && !post?.page?.isSubscribed && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm z-20">
+            <div className="text-center px-6">
+              <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6 text-orange-500" />
+              </div>
+              <p
+                onClick={() => {
+                  setIsPrivatePost(!isPrivatePost);
+                }}
+                className="text-base cursor-pointer  font-semibold text-orange-500"
+              >
+                Private post
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
       {deleteModal && (
         <DeletePostModal
           onClose={() => setDeleteModal(false)}
@@ -643,17 +663,17 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal
-          onClose={setSelectedOption}
-          post={{
-            _id: post.id,
-            page: post.page,
-            media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
-            bodyText: post.text,
-            author: post.author,
-          }}
-        />
-      )}
+          <ShareToChatsModal
+            onClose={setSelectedOption}
+            post={{
+              _id: post.id,
+              page: post.page,
+              media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
+              bodyText: post.text,
+              author: post.author,
+            }}
+          />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />

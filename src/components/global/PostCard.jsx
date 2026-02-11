@@ -581,7 +581,9 @@ const PostCard = ({
           )}
 
           {/* Comments Section */}
-          {showComments && <CommentsSection postId={post._id} />}
+          {showComments && (
+            <CommentsSection postId={post._id} isMyPostsPage={true} />
+          )}
         </div>
       </div>
 

@@ -112,12 +112,14 @@ export const fetchPagePosts = createAsyncThunk(
 ================================*/
 export const fetchTrendingPosts = createAsyncThunk(
     "trending/fetchTrendingPosts",
-    async ({ page = 1, limit = 10 }, thunkAPI) => {
+    // 🔥 Fetch all trending posts in a single page
+    async (_args, thunkAPI) => {
         try {
-            const res = await axios.get(`/trends/posts?page=${page}&limit=${limit}`);
+            // Set a very high limit so backend returns all items on page 1
+            const res = await axios.get(`/trends/posts?page=1&limit=100000`);
 
             return {
-                data: res.data?.data,          // trending posts array
+                data: res.data?.data,          // trending posts array (all)
                 pagination: res.data?.pagination,
             };
 

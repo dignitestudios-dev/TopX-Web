@@ -464,7 +464,7 @@ export default function CollectionFeedPostCard({
       )}
 
       {/* Content */}
-      {(text || fullPost?.bodyText) && (
+      {!isUnderReview && (text || fullPost?.bodyText) && (
         <div className="px-4 py-3">
           <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
             {text || fullPost?.bodyText}
@@ -490,7 +490,7 @@ export default function CollectionFeedPostCard({
           {fullPost?.sharedBy?.name} Reposted
         </div>
       ) : null}
-      {fullPost?.page?.pageType == "private" && (
+      {fullPost?.page?.pageType == "privates" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
