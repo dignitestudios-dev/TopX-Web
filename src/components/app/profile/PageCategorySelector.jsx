@@ -17,19 +17,21 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
   }, [dispatch]);
 
   // FILTER SEARCH
-  const filteredPages = knowledgePages?.filter((item) =>
-    item.name.toLowerCase().includes(searchText.toLowerCase()),
-  );
+  const filteredPages =
+    knowledgePages?.filter((item) =>
+      item.name.toLowerCase().includes(searchText.toLowerCase()),
+    ) || [];
 
-  // MULTI SELECT WITH LIMIT 2
+  // MULTI SELECT WITH LIMIT 1
+  const MAX_SUBTOPICS = 1;
   const toggleSubTopic = (topic) => {
     if (selectedSubTopics.includes(topic)) {
       setSelectedSubTopics(selectedSubTopics.filter((t) => t !== topic));
       return;
     }
 
-    if (selectedSubTopics.length >= 1) {
-      ErrorToast("You can select maximum 1 sub-topics!");
+    if (selectedSubTopics.length >= MAX_SUBTOPICS) {
+      ErrorToast(`You can select maximum ${MAX_SUBTOPICS} sub-topic!`);
       return;
     }
 
@@ -80,17 +82,20 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
             No pages available now
           </p>
         ) : (
-          filteredPages.map((page) => (
-            <div key={page._id} className="space-y-2">
+                filteredPages.map((page) => {
+                  const isSelected = selectedPageId === page._id;
+                  return (
+                    <div key={page._id} className="space-y-2">
               {/* ROW — Page */}
-              <div
-                className="flex justify-between items-center cursor-pointer"
-                onClick={() => {
-                  setSelectedPageId(page._id);
-                  setSelectedSubTopics([]);
-                }}
-              >
-                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="flex w-full justify-between items-center cursor-pointer text-left"
+                    onClick={() => {
+                      setSelectedPageId(page._id);
+                      setSelectedSubTopics([]);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
                   {/* IMAGE */}
                   <img
                     src={
@@ -113,21 +118,31 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                 </div>
 
                 {/* RADIO BUTTON */}
-                <div
-                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedPageId === page._id
-                      ? "border-orange-500"
-                      : "border-gray-400"
-                  }`}
-                >
-                  {selectedPageId === page._id && (
-                    <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
-                  )}
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    name="knowledgePageSelector"
+                    checked={isSelected}
+                    onChange={() => {
+                      setSelectedPageId(page._id);
+                      setSelectedSubTopics([]);
+                    }}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
+                      isSelected ? "border-orange-500" : "border-gray-400"
+                    }`}
+                  >
+                    {isSelected && (
+                      <span className="h-2.5 w-2.5 bg-orange-500 rounded-full" />
+                    )}
+                  </span>
                 </div>
-              </div>
+              </button>
 
               {/* SUB TOPICS */}
-              {selectedPageId === page._id && page.subTopic?.length > 0 && (
+              {isSelected && page.subTopic?.length > 0 && (
                 <div className="flex gap-2 flex-wrap pl-1 mt-1">
                   {page.subTopic.map((topic, idx) => (
                     <span
@@ -144,8 +159,9 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                   ))}
                 </div>
               )}
-            </div>
-          ))
+                    </div>
+                  );
+                })
         )}
       </div>
 

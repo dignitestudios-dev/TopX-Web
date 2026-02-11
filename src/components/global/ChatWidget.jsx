@@ -13,6 +13,7 @@ import {
   Send,
   ArrowLeft,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -67,6 +68,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     groupChatsLoading,
     chatDetailMessages,
     chatDetailLoading,
+    chatDetailPagination,
     searchUsers: searchUsersList,
     searchUsersLoading,
     createGroupLoading,
@@ -75,6 +77,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     groupInfoLoading,
     updateGroupLoading,
     toggleMuteLoading,
+    isRemoved,
+    selfRemoved,
   } = useSelector((state) => state.chat);
   const { user, allUserData } = useSelector((state) => state.auth);
   const { isLoading: blockLoading } = useSelector(
@@ -114,6 +118,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [userSearchPage, setUserSearchPage] = useState(1);
   const [onlineUsers, setOnlineUsers] = useState({});
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isLoadingOlderRef = useRef(false);
+  const preserveScrollRef = useRef(null); // { scrollTop, scrollHeight }
   const fileInputRef = useRef(null);
   // Group info screen states
   const [editGroupName, setEditGroupName] = useState("");
@@ -137,6 +144,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
   const [showDeleteGroupModal, setShowDeleteGroupModal] = useState(false);
+  const [showLeaveGroupModal, setShowLeaveGroupModal] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [openMemberMenuId, setOpenMemberMenuId] = useState(null);
 
@@ -188,12 +196,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   }, [open, activeTab, page, limit, dispatch]);
 
   const handleLeaveGroup = () => {
-    const groupId = selectedChat.groupId || selectedChat._id;
+    setShowLeaveGroupModal(true);
+  };
 
-    socket.leaveGroup({ groupId }, () => {
+  const confirmLeaveGroup = () => {
+    const groupId = selectedChat.groupId || selectedChat._id;
+    if (!groupId) {
+      setShowLeaveGroupModal(false);
+      return;
+    }
+
+    socket.leaveGroup({ groupId }, (response) => {
+      console.log("Left group:", response);
       dispatch(removeChat({ chatId: groupId }));
       dispatch(resetChatDetail());
+      setShowLeaveGroupModal(false);
+      setShowChatMenu(false);
       setScreen("list");
+      SuccessToast("You have left the group");
     });
   };
 
@@ -327,10 +347,39 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   // Scroll to bottom when messages change
   useLayoutEffect(() => {
+    // If we just prepended older messages, preserve scroll position instead of jumping to bottom
+    if (isLoadingOlderRef.current && messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const prev = preserveScrollRef.current;
+      if (prev) {
+        const newScrollHeight = container.scrollHeight;
+        const delta = newScrollHeight - prev.scrollHeight;
+        container.scrollTop = prev.scrollTop + delta;
+      }
+      isLoadingOlderRef.current = false;
+      preserveScrollRef.current = null;
+      return;
+    }
+
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatDetailMessages]);
+
+  const getNextPage = (pagination) => {
+    if (!pagination) return null;
+    if (pagination.hasNextPage === true && typeof pagination.nextPage === "number")
+      return pagination.nextPage;
+    if (pagination.hasNextPage === true && typeof pagination.currentPage === "number")
+      return pagination.currentPage + 1;
+    if (
+      typeof pagination.currentPage === "number" &&
+      typeof pagination.totalPages === "number" &&
+      pagination.currentPage < pagination.totalPages
+    )
+      return pagination.currentPage + 1;
+    return null;
+  };
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -402,7 +451,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         fetchGroupChatHistory({
           groupId: groupId || chat._id,
           page: 1,
-          limit: 5,
+          limit: 50,
         }),
       );
       dispatch(
@@ -445,6 +494,44 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           dispatch(markChatAsRead({ chatId: chat._id }));
         },
       );
+    }
+  };
+
+  const handleMessagesScroll = async (e) => {
+    const container = e.currentTarget;
+    if (!selectedChat) return;
+    if (chatDetailLoading) return;
+
+    // Only load older when user scrolls to top
+    if (container.scrollTop > 0) return;
+
+    const nextPage = getNextPage(chatDetailPagination);
+    if (!nextPage) return;
+
+    const groupId =
+      selectedChat.groupId ||
+      selectedChat.group ||
+      (selectedChat.isGroup ? selectedChat._id : null);
+
+    // Preserve scroll position before prepend
+    isLoadingOlderRef.current = true;
+    preserveScrollRef.current = {
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
+    };
+
+    if (selectedChat.isGroup || groupId) {
+      await dispatch(
+        fetchGroupChatHistory({
+          groupId: groupId || selectedChat._id,
+          page: nextPage,
+          limit: 50,
+        }),
+      );
+    } else {
+      // Individual chat "load older" can be added later if needed
+      isLoadingOlderRef.current = false;
+      preserveScrollRef.current = null;
     }
   };
   const isBlocked = selectedChat?.isBlocked;
@@ -969,11 +1056,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         alt={chat.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />
-                      {chat.unread > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                          {chat.unread}
-                        </div>
-                      )}
+                    
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm text-gray-900">
@@ -997,6 +1080,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </div>
                   <div className="flex flex-col items-end gap-1">
                     <p className="text-xs text-gray-400">{chat.date}</p>
+                      {chat.unread > 0 && (
+                        <div className=" w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
+                          {chat.unread}
+                        </div>
+                      )}
                     {activeTab === "Request" && (
                       <div className="flex gap-1">
                         <button
@@ -1179,21 +1267,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {/* Leave Group */}
                         <button
                           onClick={() => {
-                            const groupId =
-                              selectedChat.groupId || selectedChat._id;
-                            if (
-                              window.confirm(
-                                "Are you sure you want to leave this group?",
-                              )
-                            ) {
-                              socket.leaveGroup({ groupId }, (response) => {
-                                console.log("Left group:", response);
-                                dispatch(removeChat({ chatId: groupId }));
-                                dispatch(resetChatDetail());
-                                setShowChatMenu(false);
-                                setScreen("list");
-                              });
-                            }
+                            setShowChatMenu(false);
+                            setShowLeaveGroupModal(true);
                           }}
                           className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
                         >
@@ -1268,7 +1343,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3"
+          >
             {chatDetailLoading ? (
               <p className="text-center text-gray-400 text-sm mt-10">
                 Loading messages...
@@ -1612,7 +1691,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
 
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-            {!selectedChat?.isGroup && isBlocked ? (
+            {/* Group Leave Check - Hide input if user left the group */}
+            {selectedChat?.isGroup && (isRemoved === true || selfRemoved === true) ? (
+              <div className="text-center text-sm text-gray-500 py-3">
+                You left this group
+              </div>
+            ) : !selectedChat?.isGroup && isBlocked ? (
               isBlocked === receiverId ? (
                 // 🟥 Receiver blocked YOU
                 <div className="text-center text-sm text-gray-500 py-3">
@@ -1626,7 +1710,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               ) : null
             ) : (
               <>
-                {/* ✅ Input & media visible when NOT blocked */}
+                {/* ✅ Input & media visible when NOT blocked and NOT left group */}
                 {mediaPreview.length > 0 && (
                   <div className="mb-2">
                     <div className="grid grid-cols-4 gap-2">
@@ -1918,6 +2002,38 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     className="flex-1 bg-red-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-red-600 transition"
                   >
                     Delete Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Leave Group Confirmation Modal */}
+          {showLeaveGroupModal && selectedChat?.isGroup && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999]">
+              <div className="bg-white w-[360px] rounded-2xl shadow-xl p-6 relative">
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-3">
+                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-center mb-2 text-gray-900">
+                  Leave Group
+                </h2>
+                <p className="text-sm text-gray-600 text-center mb-6">
+                  Are you sure you want to leave group?
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowLeaveGroupModal(false)}
+                    className="flex-1 bg-gray-100 text-gray-700 border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-gray-200 transition"
+                  >
+                    Don't Leave
+                  </button>
+                  <button
+                    onClick={confirmLeaveGroup}
+                    className="flex-1 bg-red-500 text-white border-none rounded-lg py-3 text-sm font-semibold cursor-pointer hover:bg-red-600 transition"
+                  >
+                    Leave Now
                   </button>
                 </div>
               </div>

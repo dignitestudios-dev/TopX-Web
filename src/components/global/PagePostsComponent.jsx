@@ -21,6 +21,10 @@ import PostStoryModal from "./PostStoryModal";
 import ShareRepostModal from "./ShareRepostModal";
 import ShareToPagesModal from "./ShareToPagesModal";
 import CommentFilterModal from "../app/profile/CommentFilterModal";
+import { VscSettings } from "react-icons/vsc";
+import { PiDotsThreeOutlineFill } from "react-icons/pi";
+
+
 
 export default function PagePostsComponent({ pageId }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -197,18 +201,10 @@ export default function PagePostsComponent({ pageId }) {
           <div className="mb-4 flex justify-end">
             <button
               onClick={() => setFilterModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors"
+              className=""
             >
-              <Filter size={18} className="text-gray-600" />
-              <span className="text-sm font-medium text-gray-700">
-                {commentFilter === "all"
-                  ? "All Comments"
-                  : commentFilter === "no"
-                  ? "No Comments"
-                  : commentFilter === "elevated"
-                  ? "Elevated and Liked"
-                  : "User Liked"}
-              </span>
+              <VscSettings size={18} className="text-gray-600" />
+
             </button>
           </div>
 
@@ -255,14 +251,11 @@ export default function PagePostsComponent({ pageId }) {
                           className="p-2 hover:bg-gray-100 rounded-full transition"
                           aria-label="Report post"
                         >
-                          <MessageCircleWarning color="black" size={20} />
+                          <PiDotsThreeOutlineFill color="black" size={20} />
+
                         </button>
                       </div>
-                      {post.page?.name && (
-                        <p className="text-xs text-gray-500 mt-2">
-                          On {post.page.name}
-                        </p>
-                      )}
+                     
                     </div>
 
                     {/* Content */}
