@@ -29,6 +29,26 @@ export default function ChangeEmail() {
   const [step, setStep] = useState("old"); // old | new
   const [newEmail, setNewEmail] = useState("");
 
+  const handleResend = async () => {
+    try {
+      if (step === "old") {
+        const email = user?.email;
+        if (!email) return;
+        await dispatch(sendOtpToOldEmail({ email })).unwrap();
+        SuccessToast("OTP sent to your current email");
+        return true;
+      } else {
+        if (!newEmail) return;
+        await dispatch(sendOtpToNewEmail({ email: newEmail })).unwrap();
+        SuccessToast("OTP sent to your new email");
+        return true;
+      }
+    } catch (e) {
+      ErrorToast(e?.message || "Failed to resend OTP");
+      return false;
+    }
+  };
+
   // 🔴 Error Toast
   useEffect(() => {
     if (error) {
@@ -151,7 +171,9 @@ export default function ChangeEmail() {
         isOpen={openModal}
         onClose={() => setOpenModal(false)}
         onVerify={handleVerify}
-        loading={isLoading}
+        email={step === "old" ? user?.email : newEmail}
+        onResend={handleResend}
+        isVerifying={isLoading}
       />
 
       <SuccessModal

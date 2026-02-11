@@ -51,6 +51,10 @@ const SearchItem = () => {
   const [moreOpen, setMoreOpen] = useState(false);
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [privatePostModal, setPrivatePostModal] = useState({
+    isOpen: false,
+    page: null,
+  });
   const toggleLike = (postId) => {
     setLiked((prev) => ({
       ...prev,
@@ -139,6 +143,35 @@ const SearchItem = () => {
     setSelectedPage(page);
     setOpenModal(true);
   };
+
+  const openPrivatePostModal = (page) => {
+    setPrivatePostModal({
+      isOpen: true,
+      page: page || null,
+    });
+  };
+
+  const closePrivatePostModal = () => {
+    setPrivatePostModal({
+      isOpen: false,
+      page: null,
+    });
+  };
+
+  const handlePrivatePostGoToPage = () => {
+    const page = privatePostModal.page;
+    if (!page?._id) {
+      closePrivatePostModal();
+      return;
+    }
+
+    if (page.contentType === "knowledge") {
+      navigate(`/knowledge-page-detail/${page._id}`);
+    } else {
+      navigate(`/trending-page-detail/${page._id}`);
+    }
+    closePrivatePostModal();
+  };
   const handleUnsubscribe = (page) => {
     setUnsubscribingPageId(page._id); // mark specific page as loading
 
@@ -210,11 +243,10 @@ const SearchItem = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-full ${
-              activeTab === tab
-                ? "bg-orange-500 text-white"
-                : "bg-white text-gray-700"
-            }`}
+            className={`px-4 py-2 rounded-full ${activeTab === tab
+              ? "bg-orange-500 text-white"
+              : "bg-white text-gray-700"
+              }`}
           >
             {tab}
           </button>
@@ -318,11 +350,10 @@ const SearchItem = () => {
                               }
                             }}
                             className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                            ${
-                              isSubscribed
+                            ${isSubscribed
                                 ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
-                            }`}
+                              }`}
                           >
                             {isSubscribed ? "Subscribed" : "Subscribe"}
                           </button>
@@ -365,6 +396,9 @@ const SearchItem = () => {
                       <div>
                         <p className="font-semibold text-sm text-gray-800">
                           {post.author?.name}
+                          {post.author?.name ? ` '  s ${post.page.name}` : ""}
+
+
                         </p>
                         <p className="text-xs text-gray-500">
                           @{post.author?.username} • {timeAgo(post.createdAt)}
@@ -410,10 +444,10 @@ const SearchItem = () => {
                     style={
                       post.background
                         ? {
-                            backgroundImage: `url(${post.background})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }
+                          backgroundImage: `url(${post.background})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
                         : {}
                     }
                   >
@@ -425,6 +459,19 @@ const SearchItem = () => {
                     <p className="text-white text-lg font-semibold text-center leading-snug">
                       {post.text}
                     </p>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm p-3 w-[20em] bg-slate-300 m-6 rounded-[100px]">
+                    <img
+                      src={
+                        post.author?.profilePicture ||
+                        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"
+                      }
+                      alt={post.author?.name || "User"}
+                      className="w-6 h-6 rounded-full object-cover"
+                    />
+                    <div >
+                    {post?.sharedBy?.username && `${post.sharedBy.username} Reposted`}
+                    </div>
                   </div>
 
                   {/* Stats */}
@@ -441,16 +488,14 @@ const SearchItem = () => {
                         return (
                           <>
                             <Heart
-                              className={`w-5 h-5 transition ${
-                                isLiked
-                                  ? "fill-orange-500 text-orange-500"
-                                  : "text-gray-600"
-                              }`}
+                              className={`w-5 h-5 transition ${isLiked
+                                ? "fill-orange-500 text-orange-500"
+                                : "text-gray-600"
+                                }`}
                             />
                             <span
-                              className={`text-sm font-medium ${
-                                isLiked ? "text-orange-500" : "text-gray-600"
-                              }`}
+                              className={`text-sm font-medium ${isLiked ? "text-orange-500" : "text-gray-600"
+                                }`}
                             >
                               {likesCount}
                             </span>
@@ -750,11 +795,10 @@ const SearchItem = () => {
                                     }
                                   }}
                                   className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                                  ${
-                                    isSubscribed
+                                  ${isSubscribed
                                       ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                       : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
-                                  }`}
+                                    }`}
                                 >
                                   {isSubscribed ? "Subscribed" : "Subscribe"}
                                 </button>
@@ -813,7 +857,7 @@ const SearchItem = () => {
                               }}
                               className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
                             >
-                              {post?.author?.name}
+                              {post?.author?.name}'s {post?.page?.name}
                             </h3>
                             <p
                               onClick={() => {
@@ -865,7 +909,10 @@ const SearchItem = () => {
                         </div>
 
                         {/* Private Post Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+                        <div
+                          onClick={() => openPrivatePostModal(post?.page)}
+                          className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm cursor-pointer"
+                        >
                           <div className="text-center px-6">
                             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
                               <AlertTriangle className="w-6 h-6 text-orange-500" />
@@ -891,6 +938,7 @@ const SearchItem = () => {
                     commentCount={post?.commentsCount}
                     shareCount={post?.sharesCount}
                     toggleLike={toggleLike}
+                    page={post?.page}
                   />
                 );
               })
@@ -1025,7 +1073,10 @@ const SearchItem = () => {
                             </div>
 
                             {/* Private Post Overlay */}
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm">
+                            <div
+                              onClick={() => openPrivatePostModal(post?.page)}
+                              className="absolute inset-0 flex items-center justify-center bg-white/90 backdrop-blur-sm cursor-pointer"
+                            >
                               <div className="text-center px-6">
                                 <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
                                   <AlertTriangle className="w-6 h-6 text-orange-500" />
@@ -1087,7 +1138,7 @@ const SearchItem = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex gap-2 items-center">
                             <p className="font-semibold text-[14px] text-gray-900 truncate">
-                              {page.name}
+                              {page.name}sssss
                             </p>
                             <img
                               src={notes}
@@ -1158,11 +1209,10 @@ const SearchItem = () => {
                                   }
                                 }}
                                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-all whitespace-nowrap
-                                ${
-                                  isSubscribed
+                                ${isSubscribed
                                     ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                     : "bg-gradient-to-r from-[#E56F41] to-[#DE4B12] hover:from-[#d95d2f] hover:to-[#c6410a] text-white"
-                                }`}
+                                  }`}
                               >
                                 {isSubscribed ? "Subscribed" : "Subscribe"}
                               </button>
@@ -1197,11 +1247,13 @@ const SearchItem = () => {
                           />
                           <div>
                             <p className="font-semibold text-sm text-gray-800">
+                              {post.page?.name ? ` • ${post.page.name}` : ""}
                               {post.author?.name}
                             </p>
                             <p className="text-xs text-gray-500">
-                              @{post.author?.username} •{" "}
-                              {timeAgo(post.createdAt)}
+                              @{post.author?.username}
+                              {post.createdAt ? ` • ${timeAgo(post.createdAt)}` : ""}
+                              {post.page?.name ? ` • ${post.page.name}` : ""}
                             </p>
                           </div>
                         </div>
@@ -1214,10 +1266,10 @@ const SearchItem = () => {
                         style={
                           post.background
                             ? {
-                                backgroundImage: `url(${post.background})`,
-                                backgroundSize: "cover",
-                                backgroundPosition: "center",
-                              }
+                              backgroundImage: `url(${post.background})`,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                            }
                             : {}
                         }
                       >
@@ -1245,18 +1297,16 @@ const SearchItem = () => {
                             return (
                               <>
                                 <Heart
-                                  className={`w-5 h-5 transition ${
-                                    isLiked
-                                      ? "fill-orange-500 text-orange-500"
-                                      : "text-gray-600"
-                                  }`}
+                                  className={`w-5 h-5 transition ${isLiked
+                                    ? "fill-orange-500 text-orange-500"
+                                    : "text-gray-600"
+                                    }`}
                                 />
                                 <span
-                                  className={`text-sm font-medium ${
-                                    isLiked
-                                      ? "text-orange-500"
-                                      : "text-gray-600"
-                                  }`}
+                                  className={`text-sm font-medium ${isLiked
+                                    ? "text-orange-500"
+                                    : "text-gray-600"
+                                    }`}
                                 >
                                   {likesCount}
                                 </span>
@@ -1397,6 +1447,39 @@ const SearchItem = () => {
               author: kpSharePost.author,
             }}
           />
+        )}
+
+        {privatePostModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-[23em] rounded-2xl bg-white p-6 shadow-xl text-center">
+              {/* Alert Icon */}
+              <div className="flex justify-center mb-3">
+                <AlertTriangle className="text-[#F0B51E]" size={50} />
+              </div>
+
+              {/* Title & Text */}
+              <h3 className="text-xl font-semibold text-gray-900">Private Post</h3>
+              <p className="mt-3 text-sm text-gray-600">
+                This post is only for followers. You need to follow this page to view the post.
+              </p>
+
+              {/* Buttons */}
+              <div className="mt-6 flex justify-center gap-3">
+                <button
+                  onClick={closePrivatePostModal}
+                  className="rounded-lg border border-gray-300 px-10 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePrivatePostGoToPage}
+                  className="rounded-lg bg-[#F0B51E] px-10 py-3 text-sm font-medium text-white hover:from-[#d95d2f] hover:to-[#c6410a]"
+                >
+                  Go to Page
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -29,6 +29,7 @@ export default function Profile() {
   }, [location.state]);
   const dispatch = useDispatch();
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  const { user } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 100 }));
@@ -143,6 +144,7 @@ export default function Profile() {
                               tags={page.keywords}
                               Follows={page.followersCount}
                               className="bg-white"
+                              ownerName={user?.name || user?.username}
                             />
                           ))
                         ) : (

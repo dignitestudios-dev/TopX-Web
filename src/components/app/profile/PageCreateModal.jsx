@@ -87,46 +87,89 @@ export default function PageCreateModal({ setIsOpen, isOpen, setSelectedType }) 
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCreatePage = () => {
-    if (!validateForm()) {
-      return;
-    }
+  // const handleCreatePage = () => {
+  //   if (!validateForm()) {
+  //     return;
+  //   }
 
-    const fd = new FormData();
+  //   const fd = new FormData();
+  //   fd.append("image", uploadedImage);
+  //   fd.append("name", formData.name);
+  //   fd.append("topic", formData.topic);
+  //   fd.append("about", formData.about);
+  //   fd.append("pageType", formData.pageType);
+
+  //   formData.keywords.forEach((item) => {
+  //     fd.append("keywords[]", `#${item}`); 
+  //   });
+
+
+  //   dispatch(createPage(fd))
+  //     .unwrap()
+  //     .then(() => {
+  //       SuccessToast('Page created successfully!');
+  //       // Refresh pages list in real-time
+  //       dispatch(fetchMyPages({ page: 1, limit: 100 }));
+  //       setSelectedType("Page done");
+  //       setIsOpen(false);
+  //       setFormData({
+  //         name: '',
+  //         about: '',
+  //         topic: '',
+  //         keywords: [],
+  //         pageType: 'public'
+  //       });
+  //       setUploadedImage(null);
+  //       setPreviewImage(null);
+  //     })
+  //     .catch((err) => {
+  //       ErrorToast('Error creating page: ' + (err?.message || 'Something went wrong'));
+  //       console.log(err);
+  //     });
+  // };
+
+const handleCreatePage = () => {
+  if (!validateForm()) {
+    return;
+  }
+
+  const fd = new FormData();
+
+  if (uploadedImage) {
     fd.append("image", uploadedImage);
-    fd.append("name", formData.name);
-    fd.append("topic", formData.topic);
-    fd.append("about", formData.about);
-    fd.append("pageType", formData.pageType);
+  }
 
-    formData.keywords.forEach((item) => {
-      fd.append("keywords[]", `#${item}`); 
-    });
+  fd.append("name", formData.name);
+  fd.append("topic", formData.topic);
+  fd.append("about", formData.about);
+  fd.append("pageType", formData.pageType);
 
+  formData.keywords.forEach((item) => {
+    fd.append("keywords[]", `#${item}`);
+  });
 
-    dispatch(createPage(fd))
-      .unwrap()
-      .then(() => {
-        SuccessToast('Page created successfully!');
-        // Refresh pages list in real-time
-        dispatch(fetchMyPages({ page: 1, limit: 100 }));
-        setSelectedType("Page done");
-        setIsOpen(false);
-        setFormData({
-          name: '',
-          about: '',
-          topic: '',
-          keywords: [],
-          pageType: 'public'
-        });
-        setUploadedImage(null);
-        setPreviewImage(null);
-      })
-      .catch((err) => {
-        ErrorToast('Error creating page: ' + (err?.message || 'Something went wrong'));
-        console.log(err);
+  dispatch(createPage(fd))
+    .unwrap()
+    .then(() => {
+      SuccessToast('Page created successfully!');
+      dispatch(fetchMyPages({ page: 1, limit: 100 }));
+      setSelectedType("Page done");
+      setIsOpen(false);
+      setFormData({
+        name: '',
+        about: '',
+        topic: '',
+        keywords: [],
+        pageType: 'public'
       });
-  };
+      setUploadedImage(null);
+      setPreviewImage(null);
+    })
+    .catch((err) => {
+      ErrorToast('Error creating page: ' + (err?.message || 'Something went wrong'));
+      console.log(err);
+    });
+};
 
   const dispatch = useDispatch();
   const { alltopics, isLoading } = useSelector((state) => state.topics);

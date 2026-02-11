@@ -25,6 +25,9 @@ const initialState = {
   toggleMuteLoading: false,
   createGroupLoading: false,
   addMemberLoading: false,
+  // Group leave flags
+  isRemoved: false,
+  selfRemoved: false,
 };
 
 export const fetchIndividualChats = createAsyncThunk(
@@ -383,6 +386,8 @@ const chatSlice = createSlice({
       state.chatDetailPagination = null;
       state.chatDetailError = null;
       state.currentChatId = null;
+      state.isRemoved = false;
+      state.selfRemoved = false;
     },
 
     setCurrentChatId(state, action) {
@@ -630,9 +635,24 @@ const chatSlice = createSlice({
       })
       .addCase(fetchGroupChatHistory.fulfilled, (state, action) => {
         state.chatDetailLoading = false;
-        state.chatDetailMessages = action.payload.messages || [];
+        // Keep UI chronological (oldest -> newest). API commonly returns newest-first.
+        // When fetching page > 1, prepend older messages instead of replacing.
+        const page = action.meta?.arg?.page || 1;
+        const incoming = Array.isArray(action.payload.messages)
+          ? [...action.payload.messages].reverse()
+          : [];
+
+        if (page > 1 && state.chatDetailMessages.length > 0) {
+          const existingIds = new Set(state.chatDetailMessages.map((m) => m?._id));
+          const older = incoming.filter((m) => m?._id && !existingIds.has(m._id));
+          state.chatDetailMessages = [...older, ...state.chatDetailMessages];
+        } else {
+          state.chatDetailMessages = incoming;
+        }
         state.chatDetailPagination = action.payload.pagination;
         state.currentChatId = action.meta.arg.groupId;
+        state.isRemoved = action.payload.isRemoved || false;
+        state.selfRemoved = action.payload.selfRemoved || false;
       })
       .addCase(fetchGroupChatHistory.rejected, (state, action) => {
         state.chatDetailLoading = false;
@@ -643,7 +663,20 @@ const chatSlice = createSlice({
       })
       .addCase(fetchLiveChatHistory.fulfilled, (state, action) => {
         state.chatDetailLoading = false;
-        state.chatDetailMessages = action.payload.messages || [];
+        // Keep UI chronological (oldest -> newest). API commonly returns newest-first.
+        // When fetching page > 1, prepend older messages instead of replacing.
+        const page = action.meta?.arg?.page || 1;
+        const incoming = Array.isArray(action.payload.messages)
+          ? [...action.payload.messages].reverse()
+          : [];
+
+        if (page > 1 && state.chatDetailMessages.length > 0) {
+          const existingIds = new Set(state.chatDetailMessages.map((m) => m?._id));
+          const older = incoming.filter((m) => m?._id && !existingIds.has(m._id));
+          state.chatDetailMessages = [...older, ...state.chatDetailMessages];
+        } else {
+          state.chatDetailMessages = incoming;
+        }
         state.chatDetailPagination = action.payload.pagination;
         state.currentChatId = action.meta.arg.chatId;
       })

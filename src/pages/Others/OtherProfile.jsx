@@ -238,6 +238,7 @@ export default function OtherProfile() {
                             Follows={_.followersCount}
                             className="bg-white"
                             pagetype={_?.pageType}
+                            ownerName={authorData?.name || authorData?.username}
                           />
                         ))}
                       </div>

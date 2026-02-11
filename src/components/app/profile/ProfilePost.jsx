@@ -25,6 +25,8 @@ import { BsFileEarmarkTextFill } from "react-icons/bs";
 import PagePosts from "./PagePosts";
 import CommentFilterModal from "./CommentFilterModal";
 import UploadPostStory from "./UploadPostStory";
+import { PiNotificationThin } from "react-icons/pi";
+
 
 import {
   getPageStories,
@@ -50,9 +52,10 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import Input from "../../common/Input";
 import { createStory } from "../../../redux/slices/posts.slice";
 import axios from "../../../axios";
-import { expert, nofound } from "../../../assets/export";
+import { expert, nofound, postrequesticon } from "../../../assets/export";
 import { startStream } from "../../../redux/slices/livestream.slice";
 import { FaPlus } from "react-icons/fa6";
+import { TbNotification } from "react-icons/tb";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [activeTab, setActiveTab] = useState("post");
@@ -140,17 +143,36 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     page?.pageType === "private" || page?.pageType === "pr  ivate";
   const isRequestPending = page?.requestStatus === "pending";
   const isRequestAccepted = page?.requestStatus === "accepted";
-  const isPageOwner = user?._id === page?.user?._id || user?._id === page?.user;
+  // Check if user is page owner - handle both object and string ID cases
+  const isPageOwner =
+    user?._id === page?.user?._id ||
+    user?._id === page?.user ||
+    user?._id === page?.user?._id?.toString() ||
+    user?._id?.toString() === page?.user;
 
-  // Show content if: not private, OR subscribed, OR request accepted, OR is page owner
+  // ✅ Page owner should ALWAYS see content, regardless of privacy/subscription
+  // Show content if: is page owner OR (not private OR subscribed OR request accepted)
   const shouldShowContent =
-    !isPrivatePage || isSubscribed || isRequestAccepted || isPageOwner;
+    isPageOwner || !isPrivatePage || isSubscribed || isRequestAccepted;
 
   // Check if should show private page overlay: private page, not subscribed, not page owner
   const shouldShowPrivateOverlay =
     isPrivatePage && !isSubscribed && !isPageOwner;
 
   console.log(page, "page");
+
+  // Build heading like "Dignite Studios's test page"
+  const pageOwnerName =
+    page?.user?.name ||
+    page?.user?.username ||
+    page?.userName ||
+    page?.username ||
+    "";
+
+  const topicPageTitle =
+    pageOwnerName && page?.name
+      ? `${pageOwnerName}'s ${page.name}`
+      : page?.name || pageOwnerName;
 
   // Fetch page details and stories on mount
   useEffect(() => {
@@ -859,8 +881,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 {/* PAGE NAME + ABOUT */}
                 <div className="mt-12">
                   <div className="flex gap-4 items-center">
-                    <h1 className="text-[18px] font-[500] text-[#000000] mb-2">
-                      {page?.name}
+                    <h1 className="text-[18px] font-[500] text-[#000000] ">
+                      {topicPageTitle}
                     </h1>
                     {page.expertLevelStatus == "accepted" && (
                       <img
@@ -870,7 +892,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     )}
                   </div>
 
-                  <p className="text-gray-500 text-sm leading-relaxed flex-1 w-[30em]">
+                  <p className="text-gray-500 text-[13px] leading-relaxed flex-1 w-[26em] mt-[6px]">
                     {page?.about && page?.about.length > maxLength
                       ? page?.about.substring(0, maxLength) + "..."
                       : page?.about}
@@ -944,7 +966,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                       className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
                     >
                       {page?.liveChat
-                        ? "Join A Live Chat"
+                        ? "Start A Live Chat"
                         : "Start A Live Chat"}
                     </button>
                   )}
@@ -1114,24 +1136,26 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
               )}
             </button>
 
-            {/* Post Request Tab - Only show for page owner */}
             {isPageOwner && (
               <button
                 onClick={() => setActiveTab("postrequest")}
                 className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
-                  ? "text-orange-600"
-                  : "text-gray-500 hover:text-gray-700"
+                    ? "text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
                   }`}
               >
-                <div
-                  className={`p-1.5 rounded ${activeTab === "postrequest"
-                    ? "bg-orange-600"
-                    : "bg-gray-400"
-                    }`}
-                >
-                  <Lightbulb className="text-white" size={16} />
+                <div className="p-1.5 rounded">
+                  <TbNotification
+                    size={30}
+                    className={`${activeTab === "postrequest"
+                        ? "text-orange-600"
+                        : "text-gray-500"
+                      } transition-colors`}
+                  />
                 </div>
-                <span className="text-[13px] font-[500]">Post Request</span>
+
+                <span className="text-[13px] font-[500] -ml-[10px]">Post Request</span>
+
                 {activeTab === "postrequest" && (
                   <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
                 )}

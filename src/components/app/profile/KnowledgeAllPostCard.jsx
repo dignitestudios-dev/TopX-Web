@@ -56,7 +56,7 @@ export default function KnowledgeAllPostCard({ item }) {
             key={i}
             className="text-[11px] font-[500] text-[#5A5A5A]"
           >
-            #{tag}
+            {tag}
           </span>
         ))}
       </div>

@@ -256,7 +256,7 @@ const Trendingpagedetail = () => {
                   {pageDetail.name}
                 </h1>
                 <p className="text-gray-300 text-[1em]">
-                  @{pageDetail.about || "username"}
+                  #{pageDetail.about || "username"}
                 </p>
                 <div>
                   <div className="flex -space-x-2 items-center pt-1">
@@ -279,7 +279,7 @@ const Trendingpagedetail = () => {
                           ),
                         )}
                     <p className="text-xs text-white font-medium pl-4">
-                      {pageDetail.followersCount}+ Follows
+                      {pageDetail.followersCount}+ People Follows
                     </p>
                   </div>
                 </div>
@@ -357,7 +357,7 @@ const Trendingpagedetail = () => {
                   >
                     <MessageSquareText size={20} />
                     {pageDetail?.liveChat
-                      ? "Join A Live Chat"
+                      ? "Start A Live Chat"
                       : "Start A Live Chat"}
                   </button>
                 )}
