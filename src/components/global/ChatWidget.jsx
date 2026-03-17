@@ -47,12 +47,14 @@ import { ErrorToast, SuccessToast } from "./Toaster";
 import { blockUser } from "../../redux/slices/profileSetting.slice";
 import ReportModal from "./ReportModal";
 import { sendReport } from "../../redux/slices/reports.slice";
+import AcceptMessageModal from "./AcceptMessageModal";
 
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const socket = useContext(SocketContext);
-
+  const [isAcceptMsg, setIsAcceptMsg] = useState(false);
+  const [requestChat, setRequestChat] = useState(null);
   // Preset backgrounds for knowledge posts
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
@@ -148,8 +150,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   const fetchGifs = async (query = "") => {
     try {
-      const url = `https://api.giphy.com/v1/gifs/${query ? "search" : "trending"
-        }?api_key=${giphyApiKey}&q=${query}&limit=20`;
+      const url = `https://api.giphy.com/v1/gifs/${
+        query ? "search" : "trending"
+      }?api_key=${giphyApiKey}&q=${query}&limit=20`;
       const res = await fetch(url);
       const data = await res.json();
       setGifs(data.data || []);
@@ -370,6 +373,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     // Refresh both lists
     dispatch(fetchIndividualChats({ page, limit, type: "inactive" }));
     dispatch(fetchIndividualChats({ page, limit, type: "active" }));
+    setScreen("list");
   };
 
   // Handle reject request
@@ -378,6 +382,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     await dispatch(rejectChatRequest(chatId));
     // Refresh the requests list
     dispatch(fetchIndividualChats({ page, limit, type: "inactive" }));
+    setScreen("list");
   };
 
   const chatPopupRef = useRef(null);
@@ -486,6 +491,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     return {
       id: chat._id,
       name: chat.receiverInfo?.name || chat.name || "Unknown",
+      hasInitiated: chat?.hasInitiated,
+      isActive: chat?.isActive,
       msg: chat.lastMessage?.content || "No messages",
       date: formatDate(chat.lastMessage?.createdAt || chat.createdAt),
       avatar:
@@ -509,6 +516,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     return {
       id: groupChat._id,
       name: groupChat.name || "Unknown Group",
+      hasInitiated: groupChat?.hasInitiated,
+      isActive: groupChat?.isActive,
       msg: groupChat.lastMessage?.content || "No messages",
       date: formatDate(groupChat.lastMessage?.createdAt || groupChat.createdAt),
       avatar:
@@ -594,17 +603,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     const payload = isGroup
       ? {
-        groupId: selectedChat.groupId || selectedChat._id,
-        type,
-        content,
-        mediaUrls,
-      }
+          groupId: selectedChat.groupId || selectedChat._id,
+          type,
+          content,
+          mediaUrls,
+        }
       : {
-        chatId: selectedChat._id,
-        type,
-        content,
-        mediaUrls,
-      };
+          chatId: selectedChat._id,
+          type,
+          content,
+          mediaUrls,
+        };
 
     if (isGroup) {
       socket.sendGroupMessage(payload, (response) => {
@@ -664,7 +673,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     if (!selectedChat?._id) return;
 
     socket.socket.emit("individual:chat:delete", {
-      chatId: selectedChat._id
+      chatId: selectedChat._id,
     });
 
     // ✅ ONLY clear messages from UI
@@ -910,17 +919,19 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <span className="text-gray-800 font-medium text-sm">Message</span>
           </div>
           <ChevronUp
-            className={`w-5 h-5 text-orange-500 transition-transform ${open ? "rotate-180" : ""
-              }`}
+            className={`w-5 h-5 text-orange-500 transition-transform ${
+              open ? "rotate-180" : ""
+            }`}
           />
         </button>
 
         <div
           ref={chatPopupRef}
-          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
-            ? "opacity-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 translate-y-5 pointer-events-none"
-            } z-40`}
+          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${
+            open
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 translate-y-5 pointer-events-none"
+          } z-40`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
@@ -951,10 +962,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 ${activeTab === tab
-                  ? "text-orange-500 border-b-2 border-orange-500"
-                  : "text-gray-500"
-                  }`}
+                className={`flex-1 py-2 ${
+                  activeTab === tab
+                    ? "text-orange-500 border-b-2 border-orange-500"
+                    : "text-gray-500"
+                }`}
               >
                 {tab}
               </button>
@@ -963,7 +975,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
           <div className="h-[50vh] overflow-y-auto">
             {chatsLoading ||
-              (activeTab === "Group Chat" && groupChatsLoading) ? (
+            (activeTab === "Group Chat" && groupChatsLoading) ? (
               <p className="text-sm text-gray-500 text-center py-6 flex justify-center items-center">
                 <img
                   src="https://assets-v2.lottiefiles.com/a/90a4c0f2-1152-11ee-bda3-830a7a1975f2/iBALXy6uaH.gif"
@@ -975,7 +987,14 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               chatsData[activeTab].map((chat) => (
                 <div
                   key={chat.id}
-                  onClick={() => handleChatClick(chat)}
+                  onClick={() => {
+                    if (activeTab === "Request") {
+                      setIsAcceptMsg(true);
+                      setRequestChat(chat);
+                    } else {
+                      handleChatClick(chat);
+                    }
+                  }}
                   className="flex items-center justify-between px-5 py-5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                 >
                   <div className="flex items-center gap-3 flex-1">
@@ -985,22 +1004,18 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         alt={chat.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />
-                      {chat.unread > 0 && (
-                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
-                          {chat.unread}
-                        </div>
-                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-sm text-gray-900">
                         {chat.name}
                       </p>
                       <p
-                        className={`text-xs text-gray-500 truncate ${chat.unread > 0 ? "font-semibold" : ""
-                          }`}
+                        className={`text-xs text-gray-500 truncate ${
+                          chat.unread > 0 ? "font-semibold" : ""
+                        }`}
                       >
                         {chat.lastMessage?.mediaUrls &&
-                          chat.lastMessage.mediaUrls.length > 0 ? (
+                        chat.lastMessage.mediaUrls.length > 0 ? (
                           <span className="flex items-center gap-1">
                             <FaCamera className="w-3 h-3" />
                             Media
@@ -1012,7 +1027,14 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <p className="text-xs text-gray-400">{chat.date}</p>
+                    <div className="relative">
+                      <p className="text-xs text-gray-400">{chat.date}</p>
+                      {chat.unread > 0 && (
+                        <div className="absolute top-5 right-1 w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
+                          {chat.unread}
+                        </div>
+                      )}
+                    </div>
                     {activeTab === "Request" && (
                       <div className="flex gap-1">
                         <button
@@ -1051,6 +1073,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             </button>
           )}
         </div>
+
+        {isAcceptMsg && (
+          <AcceptMessageModal
+            onPreview={() => handleChatClick(requestChat)}
+            onDelete={(e) => handleRejectRequest(e, requestChat._id)}
+            onAccept={(e) => handleAcceptRequest(e, requestChat._id)}
+            onClose={() => setIsAcceptMsg(false)}
+          />
+        )}
       </>
     );
   }
@@ -1062,7 +1093,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       <>
         <div
           ref={chatPopupRef}
-          className="fixed bottom-6 right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]"
+          className="fixed bottom-20 right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center w-full justify-between gap-3">
@@ -1074,10 +1105,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     if (selectedChat?.isGroup) {
                       socket.leaveGroupRoom(
                         { groupId: selectedChat.groupId || selectedChat._id },
-                        () => { },
+                        () => {},
                       );
                     } else {
-                      socket.leaveChats({ chatId: selectedChat._id }, () => { });
+                      socket.leaveChats({ chatId: selectedChat._id }, () => {});
                     }
                     setShowMediaOptions(false);
                     dispatch(resetChatDetail());
@@ -1089,19 +1120,26 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </button>
 
                 {/* Avatar */}
-                <img
-                  src={
-                    selectedChat?.avatar ||
-                    selectedChat?.receiverInfo?.profilePicture ||
-                    selectedChat?.image
-                  }
-                  alt={
-                    selectedChat?.name ||
-                    selectedChat?.receiverInfo?.name ||
-                    "Chat"
-                  }
-                  className="w-10 h-10 rounded-full object-cover"
-                />
+                {selectedChat?.avatar ? (
+                  <img
+                    src={
+                      selectedChat?.avatar ||
+                      selectedChat?.receiverInfo?.avatar ||
+                      selectedChat?.image
+                    }
+                    alt={
+                      selectedChat?.name ||
+                      selectedChat?.receiverInfo?.name ||
+                      "Chat"
+                    }
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold">
+                    {selectedChat?.name ||
+                      selectedChat?.receiverInfo?.name.charAt(0)?.toUpperCase()}
+                  </div>
+                )}
 
                 {/* Name + Status */}
                 <div className="flex flex-col leading-tight">
@@ -1109,7 +1147,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-500"
                     onClick={() => {
                       if (selectedChat?.isGroup) {
-                        const groupId = selectedChat.groupId || selectedChat._id;
+                        const groupId =
+                          selectedChat.groupId || selectedChat._id;
                         dispatch(getGroupInfo(groupId));
                         setScreen("groupInfo");
                       }
@@ -1181,16 +1220,16 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {(groupInfo?.info?.admin?._id ||
                           groupInfo?.admin?._id) ===
                           (user?._id || allUserData?._id) && (
-                            <button
-                              onClick={() => {
-                                setShowChatMenu(false);
-                                setShowDeleteGroupModal(true);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
-                            >
-                              Delete Group
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              setShowChatMenu(false);
+                              setShowDeleteGroupModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                          >
+                            Delete Group
+                          </button>
+                        )}
 
                         {/* Leave Group */}
                         <button
@@ -1284,8 +1323,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 return (
                   <div
                     key={msg._id}
-                    className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
-                      }`}
+                    className={`flex ${
+                      isCurrentUser ? "justify-end" : "justify-start"
+                    }`}
                   >
                     {!isCurrentUser && (
                       <img
@@ -1298,10 +1338,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       />
                     )}
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
-                        ? "bg-orange-500 text-white rounded-br-none"
-                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
-                        }`}
+                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
+                        isCurrentUser
+                          ? "bg-orange-500 text-white rounded-br-none"
+                          : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                      }`}
                     >
                       {msg.type === "shared" && msg.shared ? (
                         // Knowledge post - show styled card
@@ -1421,79 +1462,79 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                             </div>
                           </div>
                         ) : // Regular post with media
-                          !msg.shared.media ? (
-                            <p className="text-sm">
-                              {msg.sender?.name || "Someone"} shared a text post
-                            </p>
-                          ) : (
-                            // If media exists, show full details
-                            <div className="space-y-2">
-                              {/* Page/Topic Info */}
-                              {msg.shared.name && (
-                                <div className="flex items-center gap-2 mb-2">
-                                  {msg.shared.pageImage && (
-                                    <img
-                                      src={msg.shared.pageImage}
-                                      alt="Page"
-                                      className="w-6 h-6 rounded-full object-cover"
-                                    />
-                                  )}
-                                  <p className="text-xs font-semibold opacity-90">
-                                    {msg.shared.name}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Shared Post Type Label */}
-                              <p className="text-xs opacity-80 mb-2">
-                                Shared a post
-                              </p>
-
-                              {/* Post Media (Video or Image) */}
-                              {msg.shared.media && (
-                                <div className="rounded-lg overflow-hidden">
-                                  {msg.shared.media.includes(".mp4") ||
-                                    msg.shared.media.includes(".mov") ||
-                                    msg.shared.media.includes("video") ? (
-                                    <video
-                                      src={msg.shared.media}
-                                      controls
-                                      className="w-full max-h-64 object-contain rounded-lg"
-                                    >
-                                      Your browser does not support the video tag.
-                                    </video>
-                                  ) : (
-                                    <img
-                                      src={msg.shared.media}
-                                      alt="Shared post"
-                                      className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
-                                      onClick={() => {
-                                        setSelectedMessageImages([
-                                          msg.shared.media,
-                                        ]);
-                                        setCurrentImageIndex(0);
-                                        setShowMessageImageModal(true);
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Text on Image */}
-                              {msg.shared.textOnImage && (
-                                <p className="text-sm mt-2">
-                                  {msg.shared.textOnImage}
-                                </p>
-                              )}
-
-                              {/* Additional Content */}
-                              {msg.content &&
-                                msg.content !== "Shared a knowledge post" &&
-                                msg.content !== "Shared a post" && (
-                                  <p className="text-sm mt-2">{msg.content}</p>
+                        !msg.shared.media ? (
+                          <p className="text-sm">
+                            {msg.sender?.name || "Someone"} shared a text post
+                          </p>
+                        ) : (
+                          // If media exists, show full details
+                          <div className="space-y-2">
+                            {/* Page/Topic Info */}
+                            {msg.shared.name && (
+                              <div className="flex items-center gap-2 mb-2">
+                                {msg.shared.pageImage && (
+                                  <img
+                                    src={msg.shared.pageImage}
+                                    alt="Page"
+                                    className="w-6 h-6 rounded-full object-cover"
+                                  />
                                 )}
-                            </div>
-                          )
+                                <p className="text-xs font-semibold opacity-90">
+                                  {msg.shared.name}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Shared Post Type Label */}
+                            <p className="text-xs opacity-80 mb-2">
+                              Shared a post
+                            </p>
+
+                            {/* Post Media (Video or Image) */}
+                            {msg.shared.media && (
+                              <div className="rounded-lg overflow-hidden">
+                                {msg.shared.media.includes(".mp4") ||
+                                msg.shared.media.includes(".mov") ||
+                                msg.shared.media.includes("video") ? (
+                                  <video
+                                    src={msg.shared.media}
+                                    controls
+                                    className="w-full max-h-64 object-contain rounded-lg"
+                                  >
+                                    Your browser does not support the video tag.
+                                  </video>
+                                ) : (
+                                  <img
+                                    src={msg.shared.media}
+                                    alt="Shared post"
+                                    className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
+                                    onClick={() => {
+                                      setSelectedMessageImages([
+                                        msg.shared.media,
+                                      ]);
+                                      setCurrentImageIndex(0);
+                                      setShowMessageImageModal(true);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            )}
+
+                            {/* Text on Image */}
+                            {msg.shared.textOnImage && (
+                              <p className="text-sm mt-2">
+                                {msg.shared.textOnImage}
+                              </p>
+                            )}
+
+                            {/* Additional Content */}
+                            {msg.content &&
+                              msg.content !== "Shared a knowledge post" &&
+                              msg.content !== "Shared a post" && (
+                                <p className="text-sm mt-2">{msg.content}</p>
+                              )}
+                          </div>
+                        )
                       ) : (
                         <p>{msg.content}</p>
                       )}
@@ -1543,7 +1584,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                         key={idx}
                                         className="relative cursor-pointer"
                                         onClick={() => {
-                                          setSelectedMessageImages(msg.mediaUrls);
+                                          setSelectedMessageImages(
+                                            msg.mediaUrls,
+                                          );
                                           setCurrentImageIndex(0);
                                           setShowMessageImageModal(true);
                                         }}
@@ -1568,7 +1611,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                         alt={`Media ${idx + 1}`}
                                         className="w-full h-20 object-cover rounded cursor-pointer"
                                         onClick={() => {
-                                          setSelectedMessageImages(msg.mediaUrls);
+                                          setSelectedMessageImages(
+                                            msg.mediaUrls,
+                                          );
                                           setCurrentImageIndex(idx);
                                           setShowMessageImageModal(true);
                                         }}
@@ -1581,8 +1626,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           }
                         })()}
                       <p
-                        className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
-                          }`}
+                        className={`text-[10px] mt-1 ${
+                          isCurrentUser ? "text-orange-100" : "text-gray-400"
+                        }`}
                       >
                         {new Date(msg.createdAt).toLocaleTimeString("en-US", {
                           hour: "2-digit",
@@ -1612,85 +1658,143 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <div ref={messagesEndRef} />
           </div>
 
+         <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
+  {/* 🟡 1. Group left */}
+  {selectedChat?.isGroup && (isRemoved || selfRemoved) && (
+    <div className="text-center text-sm text-gray-500 py-3">
+      You left this group
+    </div>
+  )}
 
+  {/* 🟡 2. Blocked / blocking */}
+  {!selectedChat?.isGroup && isBlocked && (
+    <>
+      {isBlocked === receiverId && (
+        <div className="text-center text-sm text-gray-500 py-3">
+          You can't send messages - this user has blocked you
+        </div>
+      )}
+      {isBlocked === myUserId && (
+        <div className="text-center text-sm text-gray-500 py-3 px-4">
+          You've blocked this user. Unblock them to start chatting again
+        </div>
+      )}
+    </>
+  )}
 
-          <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-            {/* Group Leave Check - Hide input if user left the group */}
-            {selectedChat?.isGroup && (isRemoved === true || selfRemoved === true) ? (
-              <div className="text-center text-sm text-gray-500 py-3">
-                You left this group
+  {/* 🟡 3. Message Request */}
+  {!selectedChat?.isGroup &&
+    !isBlocked &&
+    activeTab === "Request" &&
+    !selectedChat?.isActive && (
+      <div className="flex items-center justify-center z-50">
+        <div className="bg-white w-[350px] rounded-2xl text-center">
+          <div className="flex justify-center mb-1">
+            <div className="bg-orange-100 p-3 rounded-full">
+              <AlertTriangle className="text-orange-500 w-4 h-4" />
+            </div>
+          </div>
+
+          <h2 className="text-[16px] font-[600] text-gray-900 leading-snug">
+            Accept Message Request From {selectedChat?.name || "User"}?
+          </h2>
+
+          <p className="text-[12px] text-gray-500 mt-2 mb-3 leading-relaxed">
+            Accept message request so you can start chat with{" "}
+            {selectedChat?.name || "this user"}. You can still preview the message without notifying them.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={handleBlockUser}
+              className="flex-1 bg-white w-[101px] h-[32px] text-gray-800 font-[400] text-[14px] rounded-xl border border-gray-200 hover:bg-gray-50"
+            >
+              Block
+            </button>
+
+            <button
+              onClick={(e) => handleRejectRequest(e, selectedChat._id)}
+              className="flex-1 w-[101px] h-[32px] bg-red-500 hover:bg-red-600 text-white font-[400] text-[14px] rounded-xl"
+            >
+              Delete
+            </button>
+
+            <button
+              onClick={(e) => handleAcceptRequest(e, selectedChat._id)}
+              className="flex-1 w-[101px] h-[32px] bg-orange-500 hover:bg-orange-600 text-white font-[400] text-[14px] rounded-xl"
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+  {/* 🟡 4. Normal Chat Input / Media Preview */}
+  {!(
+    (selectedChat?.isGroup && (isRemoved || selfRemoved)) ||
+    (!selectedChat?.isGroup && isBlocked) ||
+    (!selectedChat?.isGroup && activeTab === "Request" && !selectedChat?.isActive)
+  ) && (
+    <>
+      {/* Media Preview */}
+      {mediaPreview.length > 0 && (
+        <div className="mb-2">
+          <div className="grid grid-cols-4 gap-2">
+            {mediaPreview.slice(0, 4).map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt={`Preview ${i + 1}`}
+                className="w-16 h-16 object-cover rounded"
+              />
+            ))}
+            {mediaPreview.length > 4 && (
+              <div
+                className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
+                onClick={() => setShowImageModal(true)}
+              >
+                <span className="text-sm font-semibold">
+                  +{mediaPreview.length - 4}
+                </span>
               </div>
-            ) : !selectedChat?.isGroup && isBlocked ? (
-              isBlocked === receiverId ? (
-                // 🟥 Receiver blocked YOU
-                <div className="text-center text-sm text-gray-500 py-3">
-                  You can't send messages - this user has blocked you
-                </div>
-              ) : isBlocked === myUserId ? (
-                // 🟥 YOU blocked receiver
-                <div className="text-center text-sm text-gray-500 py-3 px-4">
-                  You've blocked this user. Unblock them to start chatting again
-                </div>
-              ) : null
-            ) : (
-              <>
-                {/* ✅ Input & media visible when NOT blocked and NOT left group */}
-                {mediaPreview.length > 0 && (
-                  <div className="mb-2">
-                    <div className="grid grid-cols-4 gap-2">
-                      {mediaPreview.slice(0, 4).map((url, i) => (
-                        <img
-                          key={i}
-                          src={url}
-                          alt={`Preview ${i + 1}`}
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                      ))}
-                      {mediaPreview.length > 4 && (
-                        <div
-                          className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
-                          onClick={() => setShowImageModal(true)}
-                        >
-                          <span className="text-sm font-semibold">
-                            +{mediaPreview.length - 4}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Message"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                    className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
-                    disabled={mediaPreview.length > 0}
-                  />
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowMediaOptions((prev) => !prev);
-                    }}
-                    className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    onClick={handleSendMessage}
-                    className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Message"
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+          className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+          disabled={mediaPreview.length > 0}
+        />
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMediaOptions((prev) => !prev);
+          }}
+          className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+
+        <button
+          onClick={handleSendMessage}
+          className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </>
+  )}
+</div>
 
           {showMediaOptions && (
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">
@@ -1714,6 +1818,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   }}
                   className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
                 >
+                  <input type="file" className="hidden" ref={fileInputRef} />
                   <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
                     <FaCamera />
                   </div>
@@ -1906,8 +2011,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </button>
                   <button
                     onClick={() => {
-                      const groupId =
-                        selectedChat.groupId || selectedChat._id;
+                      const groupId = selectedChat.groupId || selectedChat._id;
                       if (!groupId) {
                         setShowDeleteGroupModal(false);
                         return;
@@ -2064,10 +2168,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${
+                    isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -2088,10 +2193,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                      }`}
+                    }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2214,9 +2320,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   }
   if (screen === "addMembers") {
     const existingMemberIds = new Set(
-      (groupInfo?.members || []).map(
-        (m) => m.member?._id || m._id,
-      ),
+      (groupInfo?.members || []).map((m) => m.member?._id || m._id),
     );
     const addableUsers = availableUsers.filter(
       (u) => !existingMemberIds.has(u._id),
@@ -2297,10 +2401,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${
+                    isDisabled
                       ? "opacity-50 cursor-not-allowed"
                       : "hover:bg-gray-50 cursor-pointer"
-                    }`}
+                  }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -2321,10 +2426,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      isSelected
                         ? "bg-orange-500 border-orange-500"
                         : "border-gray-300"
-                      }`}
+                    }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2489,12 +2595,14 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     {isMuted ? "Unmute Notifications" : "Mute Notifications"}
                   </span>
                   <div
-                    className={`w-10 h-6 rounded-full ${isMuted ? "bg-orange-500" : "bg-gray-300"
-                      } transition-colors`}
+                    className={`w-10 h-6 rounded-full ${
+                      isMuted ? "bg-orange-500" : "bg-gray-300"
+                    } transition-colors`}
                   >
                     <div
-                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${isMuted ? "translate-x-4" : "translate-x-0"
-                        }`}
+                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
+                        isMuted ? "translate-x-4" : "translate-x-0"
+                      }`}
                     />
                   </div>
                 </button>
@@ -2772,10 +2880,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 {/* Checkbox */}
                 <div
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-      ${selectedNewChatUser?._id === u._id
-                      ? "bg-orange-500 border-orange-500"
-                      : "border-gray-300"
-                    }`}
+      ${
+        selectedNewChatUser?._id === u._id
+          ? "bg-orange-500 border-orange-500"
+          : "border-gray-300"
+      }`}
                 >
                   {selectedNewChatUser?._id === u._id && (
                     <Check className="w-3 h-3 text-white" />

@@ -303,6 +303,7 @@ const profileSettingSlice = createSlice({
       .addCase(changePassword.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = action.payload.success;
+        state.error = "";
       })
       .addCase(changePassword.rejected, (state, action) => {
         state.isLoading = false;
