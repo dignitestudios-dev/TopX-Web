@@ -13,7 +13,7 @@ import {
   Send,
   ArrowLeft,
   Check,
-  AlertTriangle,
+  AlertTriangle
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -198,7 +198,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     setShowLeaveGroupModal(true);
   };
 
-  const confirmLeaveGroup = () => {
+   const confirmLeaveGroup = () => {
     const groupId = selectedChat.groupId || selectedChat._id;
     if (!groupId) {
       setShowLeaveGroupModal(false);
@@ -215,6 +215,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       SuccessToast("You have left the group");
     });
   };
+
 
   const handleStartChat = (user) => {
     socket.requestIndividualChat({ receiverId: user._id }, async (res) => {
@@ -1658,110 +1659,48 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <div ref={messagesEndRef} />
           </div>
 
-         <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-  {/* 🟡 1. Group left */}
-  {selectedChat?.isGroup && (isRemoved || selfRemoved) && (
-    <div className="text-center text-sm text-gray-500 py-3">
-      You left this group
-    </div>
-  )}
 
-  {/* 🟡 2. Blocked / blocking */}
-  {!selectedChat?.isGroup && isBlocked && (
-    <>
-      {isBlocked === receiverId && (
-        <div className="text-center text-sm text-gray-500 py-3">
-          You can't send messages - this user has blocked you
-        </div>
-      )}
-      {isBlocked === myUserId && (
-        <div className="text-center text-sm text-gray-500 py-3 px-4">
-          You've blocked this user. Unblock them to start chatting again
-        </div>
-      )}
-    </>
-  )}
 
-  {/* 🟡 3. Message Request */}
-  {!selectedChat?.isGroup &&
-    !isBlocked &&
-    activeTab === "Request" &&
-    !selectedChat?.isActive && (
-      <div className="flex items-center justify-center z-50">
-        <div className="bg-white w-[350px] rounded-2xl text-center">
-          <div className="flex justify-center mb-1">
-            <div className="bg-orange-100 p-3 rounded-full">
-              <AlertTriangle className="text-orange-500 w-4 h-4" />
-            </div>
-          </div>
-
-          <h2 className="text-[16px] font-[600] text-gray-900 leading-snug">
-            Accept Message Request From {selectedChat?.name || "User"}?
-          </h2>
-
-          <p className="text-[12px] text-gray-500 mt-2 mb-3 leading-relaxed">
-            Accept message request so you can start chat with{" "}
-            {selectedChat?.name || "this user"}. You can still preview the message without notifying them.
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleBlockUser}
-              className="flex-1 bg-white w-[101px] h-[32px] text-gray-800 font-[400] text-[14px] rounded-xl border border-gray-200 hover:bg-gray-50"
-            >
-              Block
-            </button>
-
-            <button
-              onClick={(e) => handleRejectRequest(e, selectedChat._id)}
-              className="flex-1 w-[101px] h-[32px] bg-red-500 hover:bg-red-600 text-white font-[400] text-[14px] rounded-xl"
-            >
-              Delete
-            </button>
-
-            <button
-              onClick={(e) => handleAcceptRequest(e, selectedChat._id)}
-              className="flex-1 w-[101px] h-[32px] bg-orange-500 hover:bg-orange-600 text-white font-[400] text-[14px] rounded-xl"
-            >
-              Accept
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
-
-  {/* 🟡 4. Normal Chat Input / Media Preview */}
-  {!(
-    (selectedChat?.isGroup && (isRemoved || selfRemoved)) ||
-    (!selectedChat?.isGroup && isBlocked) ||
-    (!selectedChat?.isGroup && activeTab === "Request" && !selectedChat?.isActive)
-  ) && (
-    <>
-      {/* Media Preview */}
-      {mediaPreview.length > 0 && (
-        <div className="mb-2">
-          <div className="grid grid-cols-4 gap-2">
-            {mediaPreview.slice(0, 4).map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt={`Preview ${i + 1}`}
-                className="w-16 h-16 object-cover rounded"
-              />
-            ))}
-            {mediaPreview.length > 4 && (
-              <div
-                className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
-                onClick={() => setShowImageModal(true)}
-              >
-                <span className="text-sm font-semibold">
-                  +{mediaPreview.length - 4}
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+          <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
+            {!selectedChat?.isGroup && isBlocked ? (
+              isBlocked === receiverId ? (
+                // 🟥 Receiver blocked YOU
+                <div className="text-center text-sm text-gray-500 py-3">
+                  You can't send messages - this user has blocked you
+                </div>
+              ) : isBlocked === myUserId ? (
+                // 🟥 YOU blocked receiver
+                <div className="text-center text-sm text-gray-500 py-3 px-4">
+                  You've blocked this user. Unblock them to start chatting again
+                </div>
+              ) : null
+            ) : (
+              <>
+                {/* ✅ Input & media visible when NOT blocked */}
+                {mediaPreview.length > 0 && (
+                  <div className="mb-2">
+                    <div className="grid grid-cols-4 gap-2">
+                      {mediaPreview.slice(0, 4).map((url, i) => (
+                        <img
+                          key={i}
+                          src={url}
+                          alt={`Preview ${i + 1}`}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                      ))}
+                      {mediaPreview.length > 4 && (
+                        <div
+                          className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
+                          onClick={() => setShowImageModal(true)}
+                        >
+                          <span className="text-sm font-semibold">
+                            +{mediaPreview.length - 4}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
       {/* Input */}
       <div className="flex items-center gap-2">

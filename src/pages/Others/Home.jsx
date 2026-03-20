@@ -22,6 +22,7 @@ export default function Home() {
     (state) => state.postsfeed,
   );
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  const { user } = useSelector((state) => state.auth);
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
@@ -173,7 +174,9 @@ export default function Home() {
                         }
                         className="cursor-pointer font-[400] text-[14px]"
                       >
-                        {item?.name}
+                        {user?.name || user?.username
+                          ? `${user?.name || user?.username}'s ${item?.name}`
+                          : item?.name}
                       </p>
                       <img src={notes} alt="" />
                     </div>

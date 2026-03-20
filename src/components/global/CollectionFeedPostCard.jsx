@@ -33,6 +33,7 @@ export default function CollectionFeedPostCard({
   isPostId,
   fullPost,
   text,
+  page,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -392,7 +393,7 @@ export default function CollectionFeedPostCard({
               onClick={handleAuthorClick}
               className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
             >
-              {fullPost?.page?.name}
+              {author?.name}'s {fullPost?.page?.name}
             </h3>
             <p
               onClick={handleAuthorClick}

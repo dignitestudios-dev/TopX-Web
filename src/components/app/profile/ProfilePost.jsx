@@ -161,6 +161,19 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   console.log(page, "page");
 
+  // Build heading like "Dignite Studios's test page"
+  const pageOwnerName =
+    page?.user?.name ||
+    page?.user?.username ||
+    page?.userName ||
+    page?.username ||
+    "";
+
+  const topicPageTitle =
+    pageOwnerName && page?.name
+      ? `${pageOwnerName}'s ${page.name}`
+      : page?.name || pageOwnerName;
+
   // Fetch page details and stories on mount
   useEffect(() => {
     if (pageId) {
@@ -798,7 +811,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   return (
     <div className="relative">
       <div>
-        <div className="bg-white rounded-[15px] overflow-hidden">
+        <div className="bg-white rounded-[15px] ">
           {/* HEADER */}
           <div className="h-28 bg-gradient-to-l from-[#DE4B12] to-[#E56F41] p-2">
             <div
@@ -868,8 +881,8 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 {/* PAGE NAME + ABOUT */}
                 <div className="mt-12">
                   <div className="flex gap-4 items-center">
-                    <h1 className="text-[18px] font-[500] text-[#000000] mb-2">
-                      {page?.name}
+                    <h1 className="text-[18px] font-[500] text-[#000000] ">
+                      {topicPageTitle}
                     </h1>
                     {page.expertLevelStatus == "accepted" && (
                       <img
@@ -879,7 +892,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                     )}
                   </div>
 
-                  <p className="text-gray-500 text-sm leading-relaxed flex-1 w-[30em]">
+                  <p className="text-gray-500 text-[13px] leading-relaxed flex-1 w-[26em] mt-[6px]">
                     {page?.about && page?.about.length > maxLength
                       ? page?.about.substring(0, maxLength) + "..."
                       : page?.about}
@@ -950,10 +963,10 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                           },
                         });
                       }}
-                      className="border-[1px] p-2 px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
+                      className="border-[1px] p-2 text-nowrap px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
                     >
                       {page?.liveChat
-                        ? "Join A Live Chat"
+                        ? "Start A Live Chat"
                         : "Start A Live Chat"}
                     </button>
                   )}
