@@ -70,6 +70,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     groupChatsLoading,
     chatDetailMessages,
     chatDetailLoading,
+    chatDetailPagination,
     searchUsers: searchUsersList,
     searchUsersLoading,
     createGroupLoading,
@@ -119,6 +120,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [userSearchPage, setUserSearchPage] = useState(1);
   const [onlineUsers, setOnlineUsers] = useState({});
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+  const isLoadingOlderRef = useRef(false);
+  const preserveScrollRef = useRef(null); // { scrollTop, scrollHeight }
   const fileInputRef = useRef(null);
   // Group info screen states
   const [editGroupName, setEditGroupName] = useState("");
@@ -347,10 +351,39 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   // Scroll to bottom when messages change
   useLayoutEffect(() => {
+    // If we just prepended older messages, preserve scroll position instead of jumping to bottom
+    if (isLoadingOlderRef.current && messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const prev = preserveScrollRef.current;
+      if (prev) {
+        const newScrollHeight = container.scrollHeight;
+        const delta = newScrollHeight - prev.scrollHeight;
+        container.scrollTop = prev.scrollTop + delta;
+      }
+      isLoadingOlderRef.current = false;
+      preserveScrollRef.current = null;
+      return;
+    }
+
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [chatDetailMessages]);
+
+  const getNextPage = (pagination) => {
+    if (!pagination) return null;
+    if (pagination.hasNextPage === true && typeof pagination.nextPage === "number")
+      return pagination.nextPage;
+    if (pagination.hasNextPage === true && typeof pagination.currentPage === "number")
+      return pagination.currentPage + 1;
+    if (
+      typeof pagination.currentPage === "number" &&
+      typeof pagination.totalPages === "number" &&
+      pagination.currentPage < pagination.totalPages
+    )
+      return pagination.currentPage + 1;
+    return null;
+  };
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -424,7 +457,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         fetchGroupChatHistory({
           groupId: groupId || chat._id,
           page: 1,
-          limit: 5,
+          limit: 50,
         }),
       );
       dispatch(
@@ -467,6 +500,44 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           dispatch(markChatAsRead({ chatId: chat._id }));
         },
       );
+    }
+  };
+
+  const handleMessagesScroll = async (e) => {
+    const container = e.currentTarget;
+    if (!selectedChat) return;
+    if (chatDetailLoading) return;
+
+    // Only load older when user scrolls to top
+    if (container.scrollTop > 0) return;
+
+    const nextPage = getNextPage(chatDetailPagination);
+    if (!nextPage) return;
+
+    const groupId =
+      selectedChat.groupId ||
+      selectedChat.group ||
+      (selectedChat.isGroup ? selectedChat._id : null);
+
+    // Preserve scroll position before prepend
+    isLoadingOlderRef.current = true;
+    preserveScrollRef.current = {
+      scrollTop: container.scrollTop,
+      scrollHeight: container.scrollHeight,
+    };
+
+    if (selectedChat.isGroup || groupId) {
+      await dispatch(
+        fetchGroupChatHistory({
+          groupId: groupId || selectedChat._id,
+          page: nextPage,
+          limit: 50,
+        }),
+      );
+    } else {
+      // Individual chat "load older" can be added later if needed
+      isLoadingOlderRef.current = false;
+      preserveScrollRef.current = null;
     }
   };
   const isBlocked = selectedChat?.isBlocked;
@@ -1311,7 +1382,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleMessagesScroll}
+            className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-3"
+          >
             {chatDetailLoading ? (
               <p className="text-center text-gray-400 text-sm mt-10">
                 Loading messages...
@@ -1662,7 +1737,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
 
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
-            {!selectedChat?.isGroup && isBlocked ? (
+            {/* Group Leave Check - Hide input if user left the group */}
+            {selectedChat?.isGroup && (isRemoved === true || selfRemoved === true) ? (
+              <div className="text-center text-sm text-gray-500 py-3">
+                You left this group
+              </div>
+            ) : !selectedChat?.isGroup && isBlocked ? (
               isBlocked === receiverId ? (
                 // 🟥 Receiver blocked YOU
                 <div className="text-center text-sm text-gray-500 py-3">
@@ -1676,7 +1756,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               ) : null
             ) : (
               <>
-                {/* ✅ Input & media visible when NOT blocked */}
+                {/* ✅ Input & media visible when NOT blocked and NOT left group */}
                 {mediaPreview.length > 0 && (
                   <div className="mb-2">
                     <div className="grid grid-cols-4 gap-2">
