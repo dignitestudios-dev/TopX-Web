@@ -31,14 +31,17 @@ import {
 import { TiPin } from "react-icons/ti";
 import { nofound, PostUnderReview } from "../../../assets/export";
 import DeletePostModal from "../../global/DeletePostModal";
+import { NavLink, useNavigate } from "react-router";
 
 const PagePosts = ({
   pageId,
   commentFilter = "all",
   isPageOwner = false,
   elevatedPosts = [],
+  setIsProfilePostOpen,
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const {
     pagepost,
     pagepostLoading,
@@ -496,8 +499,7 @@ const PagePosts = ({
         ) : (
           filteredPosts.map((post) => {
             // Page + author avatar setup
-            const pageDisplayName =
-              post.page?.name || post.author?.name || "";
+            const pageDisplayName = post.page?.name || post.author?.name || "";
             const nameParts = pageDisplayName.split(" ");
             const pageInitials =
               (nameParts[0]?.[0] || "").toUpperCase() +
@@ -508,7 +510,7 @@ const PagePosts = ({
             return (
               <div
                 key={post._id}
-                className="bg-white relative pb-12 rounded-lg shadow-sm overflow-hidden"
+                className="bg-white relative pb-6 rounded-lg shadow-sm overflow-hidden"
               >
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between border-b border-gray-100">
@@ -535,7 +537,7 @@ const PagePosts = ({
                           className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover border border-white"
                         />
                       ) : (
-                        <div className="w-5 h-5 absolute -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                        <div className="w-5 h-5 absolute cursor-pointer -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
                           {authorInitial}
                         </div>
                       )}
@@ -546,9 +548,12 @@ const PagePosts = ({
                         {post.isElevated && <TiPin />}
                       </div>
 
-                      <p className="text-xs text-gray-600">
+                      <button
+                        onClick={() => setIsProfilePostOpen(false)}
+                        className="text-xs cursor-pointer text-gray-600"
+                      >
                         {post.author.username} • {formatDate(post.createdAt)}
-                      </p>
+                      </button>
                     </div>
                   </div>
                   <div className="relative">
@@ -802,7 +807,7 @@ const PagePosts = ({
                 )}
 
                 {post.sharedBy ? (
-                  <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+                  <div className="text-sm text-nowrap flex gap-4 ml-2 mt-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[18em]">
                     <img
                       src={post.sharedBy.profilePicture}
                       className="w-7 h-7 rounded-full object-cover"
@@ -821,11 +826,11 @@ const PagePosts = ({
                               )} */}
 
                 {/* Body Text */}
-                <div className="p-4">
+                <div className="p-4 ">
                   <p className="text-sm text-gray-700 mb-4">{post.bodyText}</p>
 
                   {/* Stats & Actions */}
-                  <div className="flex items-center gap-4 text-sm text-orange-500 mb-2 pb-2">
+                  <div className="flex  border-t py-2 border-gray-200 items-center gap-4 text-sm text-orange-500 ">
                     {(() => {
                       const likeData = getPostLikeData(post);
                       return (

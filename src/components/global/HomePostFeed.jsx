@@ -365,15 +365,18 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   };
 
   return (
-    <div className="bg-white relative min-h-[150px] rounded-2xl mb-4 shadow-sm border border-gray-100 flex flex-col">
+    <div className="bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border border-gray-100 flex flex-col">
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize">
               {/* {post?.user?.split(" ")[0][0] + post?.user?.split(" ")[1][0]} */}
-              {post?.user?.split(" ").map(w => w[0]).slice(0,2).join("")}
-             
+              {post?.user
+                ?.split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")}
             </div>
             {post.author.profilePicture ? (
               <img
@@ -384,7 +387,11 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             ) : (
               <div className="w-5 h-5 absolute -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
                 {/* {post?.user?.split(" ")[0][0] + post?.user?.split(" ")[1][0]} */}
-                {post?.user?.split(" ").map(w => w[0]).slice(0,2).join("")}
+                {post?.user
+                  ?.split(" ")
+                  .map((w) => w[0])
+                  .slice(0, 2)
+                  .join("")}
               </div>
             )}
           </div>
@@ -406,63 +413,61 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
           </div>
         </div>
         {/* Hide more options button when private post is locked */}
-        {!(
-          post?.page?.pageType === "private" && !post?.page?.isSubscribed
-        ) && (
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setMoreOpen(!moreOpen)}
-                className="p-2 hover:bg-gray-50 rounded-full transition"
-              >
-                <MoreHorizontal className="w-4 h-4 text-gray-500" />
-              </button>
+        {!(post?.page?.pageType === "private" && !post?.page?.isSubscribed) && (
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setMoreOpen(!moreOpen)}
+              className="p-2 hover:bg-gray-50 rounded-full transition"
+            >
+              <MoreHorizontal className="w-4 h-4 text-gray-500" />
+            </button>
 
-              {moreOpen && (
-                <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
-                  {post.author._id === authUser?._id && !post.sharedBy ? (
-                    <>
-                      <button
-                        onClick={() => {
-                          setMoreOpenPostId(null);
-                          openEditModal(post);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          setMoreOpenPostId(null);
-                          handleDeletePost(post._id);
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                      >
-                        Delete
-                      </button>
-                    </>
-                  ) : (
+            {moreOpen && (
+              <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+                {post.author._id === authUser?._id && !post.sharedBy ? (
+                  <>
                     <button
                       onClick={() => {
-                        setMoreOpen(false);
-                        setReportmodal(!reportmodal);
-                        console.log("Report clicked");
+                        setMoreOpenPostId(null);
+                        openEditModal(post);
                       }}
                       className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                     >
-                      Report
+                      Edit
                     </button>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+                    <button
+                      onClick={() => {
+                        setMoreOpenPostId(null);
+                        handleDeletePost(post._id);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setReportmodal(!reportmodal);
+                      console.log("Report clicked");
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Post body + actions wrapper (so header stays visible) */}
       <div className="relative">
         {/* Post Images - Thumbnail + text + shared info */}
         <div className="flex-1">
-          {hasImages && (
+          {hasImages ? (
             <div
               className={`w-full bg-white overflow-hidden p-4 relative transition 
       ${!isUnderReview ? "cursor-pointer hover:opacity-90" : "cursor-not-allowed"}
@@ -513,9 +518,28 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
                     alt="postUnderreview"
                   />
                   <div className="mt-3 flex items-center gap-2 text-sm font-medium text-orange-100">
+                    {/* <AlertTriangle className="w-4 h-4" /> */}
+                    {/* <span>Post is under review</span> */}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="relative" >
+              {isUnderReview && (
+                <div
+                  className="absolute  inset-0  h-[175px] flex flex-col items-center justify-center 
+                bg-black/40 backdrop-blur-md rounded-2xl"
+                >
+                  <img
+                    src={PostUnderReview}
+                    className="w-[150px]"
+                    alt="postUnderreview"
+                  />
+                  {/* <div className="mt-3  flex items-center gap-2 text-sm font-medium text-orange-100">
                     <AlertTriangle className="w-4 h-4" />
                     <span>Post is under review</span>
-                  </div>
+                  </div> */}
                 </div>
               )}
             </div>
@@ -525,14 +549,14 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               <p className="text-sm text-gray-700 mt-4 mb-6">{post?.text}</p>
             ) : (
               <div className="items-center gap-2 text-sm text-orange-600 py-6">
-                <div className="flex justify-center">
+                {/* <div className="flex justify-center">
                   <IoWarning size={70} />
                 </div>
                 <div className="flex justify-center mt-3">
                   <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">
                     Post Under Review
                   </p>
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -552,24 +576,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             </div>
           ) : null}
         </div>
-        {/* Content */}
-        {/* <div className="px-4 py-3">
-        {!isUnderReview ? (
-          <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>
-        ) : (
-          <div className="items-center gap-2 text-sm text-orange-600 p-10">
-            <div className="flex justify-center">
-              <IoWarning size={70} />
-            </div>
-            <div className="flex justify-center mt-3">
-              <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">
-                Post Under Review
-              </p>
-            </div>
-          </div>
-        )}
-      </div> */}
-
         {/* Stats - Action Bar */}
         {!isUnderReview && (
           <div className="px-4 py-3 w-full bg-white border-t border-gray-100 flex items-center gap-6">
@@ -579,14 +585,16 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <Heart
-                className={`w-5 h-5 transition ${localLikeState.isLiked
+                className={`w-5 h-5 transition ${
+                  localLikeState.isLiked
                     ? "fill-orange-500 text-orange-500"
                     : "text-gray-600"
-                  }`}
+                }`}
               />
               <span
-                className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-                  }`}
+                className={`text-sm font-medium ${
+                  localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                }`}
               >
                 {Number(localLikeState.likesCount ?? 0)}
               </span>
@@ -597,9 +605,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">
-                {post.stats.comments}
-              </span>
+              <span className="text-sm font-medium">{post.stats.comments}</span>
             </button>
 
             <button
@@ -664,17 +670,17 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-          <ShareToChatsModal
-            onClose={setSelectedOption}
-            post={{
-              _id: post.id,
-              page: post.page,
-              media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
-              bodyText: post.text,
-              author: post.author,
-            }}
-          />
-        )}
+        <ShareToChatsModal
+          onClose={setSelectedOption}
+          post={{
+            _id: post.id,
+            page: post.page,
+            media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
+            bodyText: post.text,
+            author: post.author,
+          }}
+        />
+      )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
@@ -696,6 +702,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               isReported: true,
             }),
           );
+           dispatch(fetchpostfeed({ page: 1, limit: 10 }));
         }}
       />
       {isPrivatePost && (

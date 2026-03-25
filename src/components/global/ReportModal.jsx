@@ -1,5 +1,10 @@
 import { IoClose } from "react-icons/io5";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { fetchKnowledgeFeed } from "../../redux/slices/knowledgepost.slice";
+import { fetchpostfeed } from "../../redux/slices/postfeed.slice";
+import { getMyPosts } from "../../redux/slices/posts.slice";
+import { fetchTrendingPosts } from "../../redux/slices/trending.slice";
 
 const reasons = [
   "Unprofessional Behavior",
@@ -12,14 +17,22 @@ const reasons = [
 
 const ReportModal = ({ isOpen, onClose, onSubmit, loading }) => {
   const [selectedReason, setSelectedReason] = useState("");
-
+  const dispatch = useDispatch();
   if (!isOpen) return null;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!selectedReason || loading) return;
-    onSubmit(selectedReason);
-  };
 
+    try {
+      await onSubmit(selectedReason);
+      await dispatch(getMyPosts());
+      await dispatch(fetchTrendingPosts());
+      await dispatch(fetchpostfeed());
+      await dispatch(fetchKnowledgeFeed());
+    } catch (err) {
+      console.error("Report failed", err);
+    }
+  };
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
       <div className="bg-white w-[90%] max-w-md rounded-2xl p-6 relative shadow-xl">

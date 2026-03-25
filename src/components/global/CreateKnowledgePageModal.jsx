@@ -7,6 +7,7 @@ import {
   fetchMyKnowledgePages,
   resetKnowledge,
 } from "../../redux/slices/knowledgepost.slice";
+import CustomSelect from "./CustomeSelect";
 
 export default function CreateKnowledgePageModal({ onClose }) {
   // FORM DATA
@@ -34,7 +35,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
   const dispatch = useDispatch();
   const { alltopics, isLoading } = useSelector((state) => state.topics);
   const { loading: loadingCreate, success } = useSelector(
-    (state) => state.knowledgepost
+    (state) => state.knowledgepost,
   );
 
   useEffect(() => {
@@ -42,13 +43,12 @@ export default function CreateKnowledgePageModal({ onClose }) {
   }, [dispatch]);
 
   // Auto close on success
-useEffect(() => {
-  if (success === true) {
-    dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
-    onClose();
-  }
-}, [success]);
-
+  useEffect(() => {
+    if (success === true) {
+      dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
+      onClose();
+    }
+  }, [success]);
 
   // INPUT HANDLER
   const handleInputChange = (field, value) => {
@@ -105,7 +105,7 @@ useEffect(() => {
     if (keywords.length === 0)
       newErrors.keywords = "At least 1 keyword required";
 
-    if (!imageFile) newErrors.image = "Image is required";
+    // if (!imageFile) newErrors.image = "Image is required";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -122,7 +122,9 @@ useEffect(() => {
     fd.append("topic", formData.topic);
     fd.append("pageType", formData.pageType);
     fd.append("contentType", "knowledge");
-    fd.append("image", imageFile);
+    if (imageFile) {
+      fd.append("image", imageFile);
+    }
 
     keywords.forEach((kw, i) => fd.append(`keywords[${i}]`, `#${kw}`));
     subCategories.forEach((sub, i) => fd.append(`subTopic[${i}]`, sub));
@@ -133,7 +135,6 @@ useEffect(() => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-3">
       <div className="bg-white w-full max-w-xl rounded-2xl p-6 relative shadow-lg overflow-y-auto max-h-[90vh]">
-
         {/* Close */}
         <button
           disabled={loadingCreate}
@@ -152,7 +153,9 @@ useEffect(() => {
           <label className="relative cursor-pointer">
             <div
               className={`w-24 h-24 border-2 rounded-full flex items-center justify-center bg-orange-50 ${
-                errors.image ? "border-red-500" : "border-orange-400 border-dashed"
+                errors.image
+                  ? "border-red-500"
+                  : "border-orange-400 border-dashed"
               }`}
             >
               {previewImage ? (
@@ -193,12 +196,16 @@ useEffect(() => {
                 errors.name ? "border-red-500" : "border-gray-300"
               }`}
             />
-            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-500 text-sm">{errors.name}</p>
+            )}
           </div>
 
           {/* ABOUT */}
           <div>
-            <label className="text-sm font-semibold text-black">About Knowledge Page</label>
+            <label className="text-sm font-semibold text-black">
+              About Knowledge Page
+            </label>
             <textarea
               disabled={loadingCreate}
               value={formData.about}
@@ -208,11 +215,13 @@ useEffect(() => {
                 errors.about ? "border-red-500" : "border-gray-300"
               }`}
             />
-            {errors.about && <p className="text-red-500 text-sm">{errors.about}</p>}
+            {errors.about && (
+              <p className="text-red-500 text-sm">{errors.about}</p>
+            )}
           </div>
 
           {/* TOPIC */}
-          <div>
+          {/* <div>
             <label className="text-sm font-semibold text-black">
               Topic / Category
             </label>
@@ -240,9 +249,18 @@ useEffect(() => {
             </select>
 
             {errors.topic && <p className="text-red-500 text-sm">{errors.topic}</p>}
-          </div>
-
-           {/* KEYWORDS */}
+          </div> */}
+          <CustomSelect
+            options={alltopics?.map((item) => ({
+              value: item.name,
+              label: item.name,
+            }))}
+            value={formData.topic}
+            onChange={(val) => handleInputChange("topic", val)}
+            disabled={loadingCreate || isLoading}
+            error={errors.topic}
+          />
+          {/* KEYWORDS */}
           <div>
             <label className="text-sm font-semibold text-black">Keywords</label>
 
@@ -325,21 +343,21 @@ useEffect(() => {
               <p className="text-red-500 text-sm">{errors.subCategories}</p>
             )}
           </div>
-
-         
         </div>
 
         {/* SUBMIT BUTTON */}
         <button
           disabled={loadingCreate}
           className={`w-full bg-orange-600 text-white font-semibold rounded-xl py-3 mt-6 transition ${
-            loadingCreate ? "opacity-60 cursor-not-allowed" : "hover:bg-orange-700"
+            loadingCreate
+              ? "opacity-60 cursor-not-allowed"
+              : "hover:bg-orange-700"
           }`}
           onClick={handleCreatePage}
         >
           {loadingCreate ? "Creating..." : "Create Knowledge Page"}
         </button>
-      </div>  
+      </div>
     </div>
   );
 }

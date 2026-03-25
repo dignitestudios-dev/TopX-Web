@@ -355,21 +355,21 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
         <p className="text-sm text-gray-800 leading-snug mb-3">{post.text}</p>
         {post?.sharedBy ? (
-          <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+          <div className="text-sm text-nowrap  flex gap-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
             {post.sharedBy?.profilePicture ? (
               <img
                 src={post.sharedBy.profilePicture}
-                className="w-7 h-7 rounded-full object-cover"
+                className="w-8 h-8 rounded-full"
               />
             ) : (
-              <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+              <div className="w-8 h-8 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
                 {post.sharedBy?.name.split(" ")[0][0]}
               </div>
             )}
             {/* <img
             src={post.sharedBy.profilePicture}
             className="w-7 h-7 rounded-full object-cover"
-          /> */}
+          /> */}    
             {post.sharedBy.name} Reposted
           </div>
         ) : null}

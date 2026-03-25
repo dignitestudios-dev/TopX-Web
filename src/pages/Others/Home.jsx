@@ -109,7 +109,7 @@ export default function Home() {
       })
     : [];
 
-  console.log(allfeedposts, "allfeedposts");
+  console.log(transformedPosts, "allfeedposts");
 
   return (
     <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -225,7 +225,7 @@ export default function Home() {
           </div>
         ) : transformedPosts.length > 0 ? (
           // Show actual posts when loaded
-          transformedPosts.map((post) => (
+          transformedPosts.filter(e=>e?.page?.pageType!="private").map((post) => (
             <HomePostFeed
               key={post.id}
               post={post} // ✅ normalized keys: post.isLiked + post.likesCount

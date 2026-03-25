@@ -274,13 +274,13 @@ const Header = () => {
 
           {isDropdownOpen && (
             <div className="absolute right-0 mt-3 w-[10em] bg-white border border-gray-200 rounded-lg shadow-lg">
-              <Link to="/profile">
-                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
+              <Link to="/profile" >
+                <button onClick={()=>setIsDropdownOpen(false)} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                   Profile
                 </button>
               </Link>
               <Link to="/my-posts">
-                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
+                <button onClick={()=>setIsDropdownOpen(false)} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                   My Posts
                 </button>
               </Link>
@@ -291,7 +291,7 @@ const Header = () => {
                Recent Post Engagments
               </button>
               <Link to="/setting">
-                <button className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
+                <button onClick={()=>setIsDropdownOpen(false)} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">
                   Settings
                 </button>
               </Link>

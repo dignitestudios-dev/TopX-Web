@@ -25,6 +25,7 @@ import FloatingChatButton from "../../components/global/ChatWidget";
 import CreateKnowledgePostModal from "../../components/global/CreateKnowledgePostModal";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  deleteKnowledgePost,
   fetchKnowledgeFeed,
   likePost,
 } from "../../redux/slices/knowledgepost.slice";
@@ -35,6 +36,7 @@ import ShareToChatsModal from "../../components/global/ShareToChatsModal";
 import ReportModal from "../../components/global/ReportModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "../../components/global/Toaster";
+import DeletePostModal from "../../components/global/DeletePostModal";
 
 export default function Knowledge() {
   const [liked, setLiked] = useState({});
@@ -52,6 +54,7 @@ export default function Knowledge() {
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
+  const { user } = useSelector((state) => state.auth);
   const dropdownRef = useRef(null);
   useEffect(() => {
     dispatch(fetchKnowledgeFeed({ page: page, limit: 10 }));
@@ -166,6 +169,17 @@ export default function Knowledge() {
     }
   }, [reportSuccess, dispatch]);
 
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const handleDelete = async () => {
+    setIsLoading(true);
+    await dispatch(deleteKnowledgePost(selectedPost));
+    setIsLoading(false);
+
+    setDeleteModal(false);
+  };
+
   return (
     <div className="flex  min-h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -229,15 +243,29 @@ export default function Knowledge() {
 
                     {moreOpenId === post._id && (
                       <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
-                        <button
-                          onClick={() => {
-                            setMoreOpenId(null);
-                            setReportmodal(true);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                        >
-                          Report
-                        </button>
+                        {user?._id == post?.author?._id ? (
+                          <button
+                            onClick={() => {
+                              setSelectedPost(post?._id);
+                              setMoreOpenId(false);
+                              setDeleteModal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          >
+                            Delete
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setSelectedPost(post?._id);
+                              setMoreOpenId(false);
+                              setReportmodal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          >
+                            Report
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -401,6 +429,13 @@ export default function Knowledge() {
         </div>
       </div>
 
+      {deleteModal && (
+        <DeletePostModal
+          onClose={() => setDeleteModal(false)}
+          onConfirm={handleDelete}
+          isLoading={isLoading}
+        />
+      )}
       {/* Right Sidebar - 1/4 width */}
       <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto  border-gray-200">
         <div className="p-0">

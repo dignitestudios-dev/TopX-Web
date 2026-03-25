@@ -25,7 +25,7 @@ import {
   likePost as likeKnowledgePost,
   toggleKnowledgePageSubscription,
 } from "../../redux/slices/knowledgepost.slice";
-import { nofound, notes, topics } from "../../assets/export";
+import { KnowledeIcon, nofound, notes, topics } from "../../assets/export";
 import { SuccessToast } from "../../components/global/Toaster";
 import ReportModal from "../../components/global/ReportModal";
 import { sendReport } from "../../redux/slices/reports.slice";
@@ -195,6 +195,7 @@ const SearchItem = () => {
       }));
     }
   };
+  console.log(pages, "pages---->");
   return (
     <div className="container max-w-6xl mx-auto p-5">
       {/* Tabs */}
@@ -251,11 +252,19 @@ const SearchItem = () => {
                         <p className="font-semibold text-[14px] text-gray-900 truncate">
                           {page.name}
                         </p>
-                        <img
-                          src={notes}
-                          alt=""
-                          className="w-4 h-4 flex-shrink-0"
-                        />
+                        {page?.contentType == "knowledge" ? (
+                          <img
+                            src={KnowledeIcon}
+                            alt=""
+                            className="w-8 h-8 flex-shrink-0"
+                          />
+                        ) : (
+                          <img
+                            src={notes}
+                            alt=""
+                            className="w-4 h-4 flex-shrink-0"
+                          />
+                        )}
                       </div>
                       <p className="text-[12px] text-gray-500 mt-1 truncate">
                         {page.topic}

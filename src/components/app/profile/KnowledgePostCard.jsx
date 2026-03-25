@@ -24,7 +24,7 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
   const [selectedPage, setSelectedPage] = useState(null);
 
   const { knowledgePages, loading } = useSelector(
-    (state) => state.knowledgepost
+    (state) => state.knowledgepost,
   );
 
   useEffect(() => {
@@ -105,7 +105,9 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
             <div className=" flex justify-center">
               <img src={nofound} height={300} width={300} alt="" />
             </div>
-            <p className="font-bold pt-4 text-black">No Knowledge Posts Found</p>
+            <p className="font-bold pt-4 text-black">
+              No Knowledge Posts Found
+            </p>
           </div>
         )}
 
@@ -130,24 +132,25 @@ export default function KnowledgePostCard({ userKnowledgePost }) {
               {/* OPTIONS */}
               <div className="space-y-4">
                 {/* Create Knowledge Post */}
-                <div
-                  className="flex items-center justify-between bg-[#f7f7f7] rounded-xl p-4 cursor-pointer hover:bg-[#efefef] transition"
-                  onClick={() => {
-                    setSelectoption(false);
-                    setOpenCreateKnowledgePostModal(true);
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                      <Plus className="text-orange-500" size={20} />
+                {knowledgePages?.length > 0 && (
+                  <div
+                    className="flex items-center justify-between bg-[#f7f7f7] rounded-xl p-4 cursor-pointer hover:bg-[#efefef] transition"
+                    onClick={() => {
+                      setSelectoption(false);
+                      setOpenCreateKnowledgePostModal(true);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                        <Plus className="text-orange-500" size={20} />
+                      </div>
+                      <p className="text-[15px] font-semibold text-black">
+                        Create Knowledge Post
+                      </p>
                     </div>
-                    <p className="text-[15px] font-semibold text-black">
-                      Create Knowledge Post
-                    </p>
+                    <ChevronRight className="text-orange-500" />
                   </div>
-                  <ChevronRight className="text-orange-500" />
-                </div>
-
+                )}
                 {/* Create Page */}
                 <div
                   className="flex items-center justify-between bg-[#f7f7f7] rounded-xl p-4 cursor-pointer hover:bg-[#efefef] transition"

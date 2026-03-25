@@ -40,7 +40,6 @@ export default function KnowledgePostPageDetail({
   const [selectedOption, setSelectedOption] = useState("");
   const [reportmodal, setReportmodal] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
-
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
     { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
@@ -355,7 +354,7 @@ export default function KnowledgePostPageDetail({
 
                   {/* Delete Menu */}
                   {showDeleteMenu === post._id &&
-                    (post?.sharedBy ? (
+                    (user?._id == post?.author?._id ? (
                       <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
                         <button
                           onClick={() => {
@@ -443,7 +442,7 @@ export default function KnowledgePostPageDetail({
                 </div>
               </div>
               {post.sharedBy ? (
-                <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
+                <div className="text-sm  flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[14em]">
                   <img
                     src={post.sharedBy.profilePicture}
                     className="w-7 h-7 rounded-full object-cover"
@@ -557,7 +556,7 @@ export default function KnowledgePostPageDetail({
               isReported: true,
             }),
           );
-          setReportmodal(false);
+          // setReportmodal(false);
         }}
       />
     </div>

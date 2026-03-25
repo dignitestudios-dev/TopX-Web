@@ -44,8 +44,10 @@ import PostUnderReview from "../assets/under-review-img.png"
 import nofound from "../assets/notfound.png"
 import expert from "../assets/expert.png"
 import postrequesticon from "../assets/notification.svg"
+import KnowledeIcon from "../assets/knowledge-icon.png"
 
 export {
+  KnowledeIcon,
   PostUnderReview,
   user,
   dummyprofile,

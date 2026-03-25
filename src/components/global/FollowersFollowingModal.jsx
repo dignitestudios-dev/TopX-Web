@@ -94,24 +94,23 @@ export default function FollowersFollowingModal({
                     key={user._id}
                     className="flex items-center justify-between p-3 rounded-xl hover:bg-orange-50 transition-all"
                   >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={
-                          user.profilePicture ||
-                          "https://via.placeholder.com/40"
-                        }
-                        alt={user.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          @{user.username}
-                        </p>
-                      </div>
-                    </div>
+               <div className="flex items-center gap-3">
+  {user.profilePicture ? (
+    <img
+      src={user.profilePicture}
+      alt={user.name}
+      className="w-10 h-10 rounded-full object-cover"
+    />
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-semibold">
+      {user.name.charAt(0).toUpperCase()}
+    </div>
+  )}
+  <div>
+    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+    <p className="text-xs text-gray-500">@{user.username}</p>
+  </div>
+</div>
 
                     <Button
                       onClick={() => {

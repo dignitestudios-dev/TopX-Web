@@ -369,7 +369,7 @@ export default function CommentsSection({
                   ...(!comment.reportedByCurrentUser
                     ? [
                         {
-                          label: "Report and Delete",
+                          label: "Report",
                           action: () => onReportComment(comment._id),
                         },
                       ]
@@ -381,7 +381,7 @@ export default function CommentsSection({
                   },
 
                   {
-                    label: "Block",
+                    label: "Block And Delete",
                     action: () => {
                       const commentPageId =
                         comment?.post?.page?._id ||
@@ -411,7 +411,7 @@ export default function CommentsSection({
                     ...(!comment.reportedByCurrentUser
                       ? [
                           {
-                            label: "Report and Delete",
+                            label: "Report",
                             action: () => onReportComment(comment._id),
                           },
                         ]
@@ -423,7 +423,7 @@ export default function CommentsSection({
                     },
 
                     {
-                      label: "Block",
+                      label: "Block and Delete",
                       action: () => {
                         const commentPageId =
                           comment?.post?.page?._id ||

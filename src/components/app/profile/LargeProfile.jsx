@@ -50,7 +50,7 @@ export default function LargeProfile({
               />
             ) : (
               <div className="w-[135px] h-[135px] text-[25px] font-thik bg-green-500 text-white flex justify-center items-center rounded-full object-cover capitalize">
-                {userRecord?.name.split(" ")[0][0]}
+                {userRecord?.name?.split(" ")[0][0]}
               </div>
             )}
 

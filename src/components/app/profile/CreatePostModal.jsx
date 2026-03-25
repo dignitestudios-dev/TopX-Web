@@ -12,7 +12,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
   const [title, setTitle] = useState(null);
   const options = [
     { label: "Create Post", icon: Plus },
-    { label: "Create Story", icon: Plus },
+    // { label: "Create Story", icon: Plus },
     { label: "Create New Page", icon: Plus },
     { label: "Start Live Streaming (Go Live)", icon: Plus },
   ];

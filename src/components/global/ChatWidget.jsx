@@ -13,7 +13,7 @@ import {
   Send,
   ArrowLeft,
   Check,
-  AlertTriangle
+  AlertTriangle,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -202,7 +202,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     setShowLeaveGroupModal(true);
   };
 
-   const confirmLeaveGroup = () => {
+  const confirmLeaveGroup = () => {
     const groupId = selectedChat.groupId || selectedChat._id;
     if (!groupId) {
       setShowLeaveGroupModal(false);
@@ -219,7 +219,6 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       SuccessToast("You have left the group");
     });
   };
-
 
   const handleStartChat = (user) => {
     socket.requestIndividualChat({ receiverId: user._id }, async (res) => {
@@ -372,9 +371,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   const getNextPage = (pagination) => {
     if (!pagination) return null;
-    if (pagination.hasNextPage === true && typeof pagination.nextPage === "number")
+    if (
+      pagination.hasNextPage === true &&
+      typeof pagination.nextPage === "number"
+    )
       return pagination.nextPage;
-    if (pagination.hasNextPage === true && typeof pagination.currentPage === "number")
+    if (
+      pagination.hasNextPage === true &&
+      typeof pagination.currentPage === "number"
+    )
       return pagination.currentPage + 1;
     if (
       typeof pagination.currentPage === "number" &&
@@ -1157,7 +1162,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       </>
     );
   }
-
+  console.log(chatDetailMessages, "get messages");
   // Chat Screen
   if (screen === "chat") {
     console.log(selectedChat, "selectedChat");
@@ -1537,11 +1542,6 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                               )}
                             </div>
                           </div>
-                        ) : // Regular post with media
-                        !msg.shared.media ? (
-                          <p className="text-sm">
-                            {msg.sender?.name || "Someone"} shared a text post
-                          </p>
                         ) : (
                           // If media exists, show full details
                           <div className="space-y-2">
@@ -1612,8 +1612,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           </div>
                         )
                       ) : (
-                        <p>{msg.content}</p>
+                        <>
+                        <p className="text-sm mb-2">
+                              {msg.sender?.name || "Someone"} shared a text post
+                            </p>
+                        <p>
+                          {msg.content}</p>
+                        </>
                       )}
+                      
+                     
+                       
                       {msg.mediaUrls &&
                         msg.mediaUrls.length > 0 &&
                         (() => {
@@ -1734,11 +1743,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             <div ref={messagesEndRef} />
           </div>
 
-
-
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
             {/* Group Leave Check - Hide input if user left the group */}
-            {selectedChat?.isGroup && (isRemoved === true || selfRemoved === true) ? (
+            {selectedChat?.isGroup &&
+            (isRemoved === true || selfRemoved === true) ? (
               <div className="text-center text-sm text-gray-500 py-3">
                 You left this group
               </div>
@@ -1782,38 +1790,38 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </div>
                 )}
 
-      {/* Input */}
-      <div className="flex items-center gap-2">
-        <input
-          type="text"
-          placeholder="Message"
-          value={messageText}
-          onChange={(e) => setMessageText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-          className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
-          disabled={mediaPreview.length > 0}
-        />
+                {/* Input */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Message"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                    className="flex-1 bg-gray-100 rounded-full px-3 py-2 text-sm focus:outline-none"
+                    disabled={mediaPreview.length > 0}
+                  />
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMediaOptions((prev) => !prev);
-          }}
-          className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMediaOptions((prev) => !prev);
+                    }}
+                    className="w-8 h-8 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-300"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
 
-        <button
-          onClick={handleSendMessage}
-          className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
-        >
-          <Send className="w-4 h-4" />
-        </button>
-      </div>
-    </>
-  )}
-</div>
+                  <button
+                    onClick={handleSendMessage}
+                    className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
 
           {showMediaOptions && (
             <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-50">

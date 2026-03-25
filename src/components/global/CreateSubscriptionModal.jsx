@@ -32,9 +32,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   }, [dispatch]);
   const { isLoading, error } = useSelector((state) => state.collections);
   const { isLoading: addPageToCollectionLoading } = useSelector(
-    (state) => state.subscriptions
+    (state) => state.subscriptions,
   );
-  const { recommendationPages, pagesLoading } = useSelector((state) => state.pages);
+  const { recommendationPages, pagesLoading } = useSelector(
+    (state) => state.pages,
+  );
 
   // FINAL SAVE
   const handleFinalSave = async () => {
@@ -43,7 +45,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
         createPageToCollections({
           pages: selectedCollections, // page IDs array
           collectionId: selectedCollectionId, // ✅ COLLECTION ID
-        })
+        }),
       ).unwrap();
       setShowSuccess(true);
       dispatch(getMySubsctiptions({ page: 1, limit: 10 }));
@@ -127,9 +129,10 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   };
 
   // Filter pages based on search
-  const filteredPages = recommendationPages?.filter((col) =>
-    col.name.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const filteredPages =
+    recommendationPages?.filter((col) =>
+      col.name?.toLowerCase().includes(search.toLowerCase()),
+    ) || [];
 
   return (
     <>
@@ -138,9 +141,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
         <div className="bg-white w-[400px] py-4 rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-5 py-3">
-            <h2 className="text-[17px] font-semibold">
-              Create New Collection
-            </h2>
+            <h2 className="text-[17px] font-semibold">Create New Collection</h2>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700"
@@ -220,60 +221,44 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                 </div>
                 {/* ================= EXISTING COLLECTIONS ================= */}
                 <div className="space-y-4 max-h-[300px] overflow-y-auto mt-4 pr-2">
-                  {/* Loading Skeleton */}
                   {pagesLoading &&
                     [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
-                  {/* Error */}
-                  {!pagesLoading && error && (
-                    <p className="text-center text-red-500">{error}</p>
+                  {!pagesLoading && filteredPages.length === 0 && (
+                    <p className="text-center text-gray-500 py-8">
+                      No items found
+                    </p>
                   )}
 
-                  {/* Data */}
-                  {!pagesLoading && (
-                    <>
-                      {recommendationPages && recommendationPages.length > 0 ? (
-                        filteredPages.length > 0 ? (
-                          filteredPages.map((col) => (
-                            <div
-                              key={col._id}
-                              className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
-                              onClick={() => toggleSelect(col._id)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={
-                                    col.image ||
-                                    "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
-                                  }
-                                  className="w-10 h-10 rounded-full"
-                                />
-                                <p>{col.name}</p>
-                              </div>
+                  {!pagesLoading &&
+                    filteredPages.length > 0 &&
+                    filteredPages.map((col) => (
+                      <div
+                        key={col._id}
+                        className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
+                        onClick={() => toggleSelect(col._id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={
+                              col.image ||
+                              "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
+                            }
+                            className="w-10 h-10 rounded-full"
+                          />
+                          <p>{col.name}</p>
+                        </div>
 
-                              <div
-                                className={`w-5 h-5 rounded border ${
-                                  selectedCollections.includes(col._id)
-                                    ? "bg-orange-500"
-                                    : ""
-                                }`}
-                              ></div>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-center text-gray-500 py-8">
-                            No items found
-                          </p>
-                        )
-                      ) : (
-                        <p className="text-center text-gray-500 py-4">
-                          No collections here
-                        </p>
-                      )}
-                    </>
-                  )}
+                        <div
+                          className={`w-5 h-5 rounded border ${
+                            selectedCollections.includes(col._id)
+                              ? "bg-orange-500"
+                              : ""
+                          }`}
+                        ></div>
+                      </div>
+                    ))}
                 </div>
-
                 <Button
                   variant="orange"
                   size="full"

@@ -23,6 +23,29 @@ import { Link, useNavigate } from "react-router";
 import ActiveStoryModal from "../../components/app/profile/ActiveStoryModal";
 import axios from "../../axios";
 import { IoChevronBackSharp } from "react-icons/io5";
+import { updateSavedCollections } from "../../redux/slices/collection.slice";
+import { FaCheckSquare } from "react-icons/fa";
+
+const AlertPopup = ({ open, title, description, onClose }) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl flex flex-col items-center p-6 w-[90%] max-w-sm shadow-lg animate-scaleIn">
+        <FaCheckSquare className="w-14 h-14 text-orange-500 mx-auto mb-2" />
+        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+        <p className="text-sm text-gray-600 mt-2 text-center">{description}</p>
+
+        <button
+          onClick={onClose}
+          className="mt-5 w-full bg-orange-400 text-white py-2 rounded-lg hover:bg-orange-800"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default function SubscriptionsCategory() {
   const [liked, setLiked] = useState({});
@@ -31,6 +54,11 @@ export default function SubscriptionsCategory() {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [popup, setPopup] = useState({
+    open: false,
+    title: "",
+    description: "",
+  });
   const { CollectionFeeds } = useSelector((state) => state.subscriptions);
   useEffect(() => {
     if (location.state && location.state.id) {
@@ -83,8 +111,6 @@ export default function SubscriptionsCategory() {
   );
   const { user } = useSelector((state) => state.auth);
 
-
-  
   // Fetch collection name from mySubscriptions
   useEffect(() => {
     const fetchCollectionName = async () => {
@@ -236,7 +262,14 @@ export default function SubscriptionsCategory() {
     await dispatch(viewOtherStories({ storyId }));
   };
 
-  console.log(uniquePages, "pages with stories");
+
+
+  const visiblePosts = filteredPosts?.filter((post) => {
+    if (post?.page?.pageType == "private" && !post?.page?.isSubscribed) {
+      return false; // hide
+    }
+    return true; // show
+  });
   return (
     <div className="flex h-screen max-w-7xl mx-auto">
       {/* Left Sidebar - 1/4 width */}
@@ -245,7 +278,7 @@ export default function SubscriptionsCategory() {
 
         <Profilecard smallcard={true} />
 
-       {/* Topic Pages */}
+        {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
             <TbNotes className="w-5 h-5 text-orange-500" />
@@ -414,10 +447,9 @@ export default function SubscriptionsCategory() {
             </div>
           )}
         </div>
-
         <div className="mt-6">
-          {filteredPosts && filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => (
+          {visiblePosts && visiblePosts.length > 0 ? (
+            visiblePosts.map((post) => (
               <CollectionFeedPostCard
                 key={post._id}
                 isPostId={post?._id}
@@ -429,9 +461,11 @@ export default function SubscriptionsCategory() {
                 shareCount={post?.sharesCount}
                 toggleLike={toggleLike}
                 text={post?.bodyText}
+                page={post?.page}
               />
             ))
           ) : (
+            // Step 3: No posts available
             <div className="flex flex-col items-center justify-center py-10">
               <img
                 src={nofound}
@@ -461,6 +495,14 @@ export default function SubscriptionsCategory() {
           <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>
       </div>
+
+      {/* 🔔 ALERT POPUP */}
+      <AlertPopup
+        open={popup.open}
+        title={popup.title}
+        description={popup.description}
+        onClose={() => setPopup({ ...popup, open: false })}
+      />
 
       {/* Story Modal */}
       <ActiveStoryModal

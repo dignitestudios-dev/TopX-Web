@@ -354,6 +354,7 @@ export default function CollectionFeedPostCard({
       ).unwrap();
     }
   };
+
   console.log(fullPost, "sharedRepost");
   return (
     <div className="bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
@@ -473,7 +474,7 @@ export default function CollectionFeedPostCard({
         </div>
       )}
       {fullPost?.sharedBy ? (
-        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-[7px] w-[16em]">
+        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-[7px] w-[18em]">
           {fullPost?.profilePicture ? (
             <img
               src={fullPost.sharedBy.profilePicture}
@@ -491,7 +492,8 @@ export default function CollectionFeedPostCard({
           {fullPost?.sharedBy?.name} Reposted
         </div>
       ) : null}
-      {fullPost?.page?.pageType == "privates" && (
+
+      {fullPost?.page?.pageType == "private" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
@@ -791,6 +793,8 @@ export default function CollectionFeedPostCard({
           </div>
         </div>
       )}
+
+      {/* end post */}
     </div>
   );
 }

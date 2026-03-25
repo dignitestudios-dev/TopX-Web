@@ -56,6 +56,7 @@ import { expert, nofound, postrequesticon } from "../../../assets/export";
 import { startStream } from "../../../redux/slices/livestream.slice";
 import { FaPlus } from "react-icons/fa6";
 import { TbNotification } from "react-icons/tb";
+import toast from "react-hot-toast";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
   const [activeTab, setActiveTab] = useState("post");
@@ -406,6 +407,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         setIsSubscribed(true);
         dispatch(getPageDetail(pageId));
         setOpenModal(false);
+        toast.success("Page subscribed to collections successfully")
         dispatch(getMyCollections({ page: 1, limit: 100 }));
       }
     });
@@ -423,6 +425,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
         setIsSubscribed(false);
         dispatch(getPageDetail(pageId));
         dispatch(getMyCollections({ page: 1, limit: 100 }));
+         toast.success("Page unsubscribed successfully")
         setShowDropdown(false);
       }
     });
@@ -1185,6 +1188,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
             }
           >
             <PagePosts
+            setIsProfilePostOpen={setIsProfilePostOpen}
               pageId={pageId}
               commentFilter={commentFilter}
               isPageOwner={isPageOwner}
