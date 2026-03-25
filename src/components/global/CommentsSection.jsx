@@ -24,11 +24,14 @@ export default function CommentsSection({
   pageId = null,
   postDetail,
   isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
+  isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed,
   );
+
+  console.log(postComments,"postComments")
 
   console.log(postComments,"postComments")
   // Get post from Redux state to extract pageId and page owner
@@ -369,7 +372,7 @@ export default function CommentsSection({
                   ...(!comment.reportedByCurrentUser
                     ? [
                         {
-                          label: "Report",
+                          label: "Report and Delete",
                           action: () => onReportComment(comment._id),
                         },
                       ]
@@ -379,6 +382,48 @@ export default function CommentsSection({
                     label: "Delete",
                     action: () => onDeleteComment(comment._id),
                   },
+
+                  {
+                    label: "Block",
+                    action: () => {
+                      const commentPageId =
+                        comment?.post?.page?._id ||
+                        comment?.post?.pageId ||
+                        comment?.page?._id ||
+                        comment?.pageId ||
+                        null;
+
+                      onBlockUser(comment._id, comment.user._id, commentPageId);
+                    },
+                  },
+                ]
+              : isPageOwner
+                ? [
+                    {
+                      label: comment.isElevated
+                        ? "Undo Elevate"
+                        : "Elevate Comment",
+                      action: () => {
+                        onElevateComment(
+                          comment._id,
+                          comment.isElevated ? "demote" : "elevate",
+                        );
+                      },
+                    },
+
+                  ...(!comment.reportedByCurrentUser
+                    ? [
+                        {
+                          label: "Report",
+                          action: () => onReportComment(comment._id),
+                        },
+                      ]
+                    : []),
+
+                    {
+                      label: "Delete",
+                      action: () => onDeleteComment(comment._id),
+                    },
 
                   {
                     label: "Block And Delete",

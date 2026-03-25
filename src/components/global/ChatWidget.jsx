@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   Check,
   AlertTriangle,
+  AlertTriangle,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";

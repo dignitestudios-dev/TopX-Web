@@ -129,6 +129,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   };
 
   // Filter pages based on search
+  const filteredPages = recommendationPages?.filter((col) =>
+    col.name.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  // Filter pages based on search
   const filteredPages =
     recommendationPages?.filter((col) =>
       col.name?.toLowerCase().includes(search.toLowerCase()),
@@ -224,40 +229,54 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   {pagesLoading &&
                     [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
-                  {!pagesLoading && filteredPages.length === 0 && (
-                    <p className="text-center text-gray-500 py-8">
-                      No items found
-                    </p>
+                  {/* Error */}
+                  {!pagesLoading && error && (
+                    <p className="text-center text-red-500">{error}</p>
                   )}
 
-                  {!pagesLoading &&
-                    filteredPages.length > 0 &&
-                    filteredPages.map((col) => (
-                      <div
-                        key={col._id}
-                        className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
-                        onClick={() => toggleSelect(col._id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              col.image ||
-                              "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
-                            }
-                            className="w-10 h-10 rounded-full"
-                          />
-                          <p>{col.name}</p>
-                        </div>
+                  {/* Data */}
+                  {!pagesLoading && (
+                    <>
+                      {recommendationPages && recommendationPages.length > 0 ? (
+                        filteredPages.length > 0 ? (
+                          filteredPages.map((col) => (
+                            <div
+                              key={col._id}
+                              className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
+                              onClick={() => toggleSelect(col._id)}
+                            >
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={
+                                    col.image ||
+                                    "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
+                                  }
+                                  className="w-10 h-10 rounded-full"
+                                />
+                                <p>{col.name}</p>
+                              </div>
 
-                        <div
-                          className={`w-5 h-5 rounded border ${
-                            selectedCollections.includes(col._id)
-                              ? "bg-orange-500"
-                              : ""
-                          }`}
-                        ></div>
-                      </div>
-                    ))}
+                              <div
+                                className={`w-5 h-5 rounded border ${
+                                  selectedCollections.includes(col._id)
+                                    ? "bg-orange-500"
+                                    : ""
+                                }`}
+                              ></div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-center text-gray-500 py-8">
+                            No items found
+                          </p>
+                        )
+                      ) : (
+                        <p className="text-center text-gray-500 py-4">
+                          No collections here
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
                 <Button
                   variant="orange"
