@@ -20,8 +20,11 @@ import {
   deleteComment,
   deletePost,
   editPost,
+  elevatePost,
+  demotePost,
 } from "../../redux/slices/posts.slice";
 import { FaRegTrashCan } from "react-icons/fa6";
+import { TiPin } from "react-icons/ti";
 import { SuccessToast } from "./Toaster";
 import SharePostModal from "./SharePostModal";
 import ShareToChatsModal from "./ShareToChatsModal";
@@ -94,6 +97,12 @@ const PostCard = ({
   const [editFiles, setEditFiles] = useState([]);
   const [editFilePreviews, setEditFilePreviews] = useState([]);
   const [editSaving, setEditSaving] = useState(false);
+  // Elevate Post
+  const [elevateLoadingId, setElevateLoadingId] = useState(null); // used for undo/unelevate loading
+  const [isElevateModalOpen, setIsElevateModalOpen] = useState(false);
+  const [elevatePostId, setElevatePostId] = useState(null);
+  const [elevateDuration, setElevateDuration] = useState("24h");
+  const [elevateLoading, setElevateLoading] = useState(false);
   const fileInputRef = useRef(null);
   const options = [
     "Share to your Story",
@@ -107,6 +116,61 @@ const PostCard = ({
   );
 
   console.log(comments, "comments");
+
+  const formatPostTime = (timeValue) => {
+    if (!timeValue) return "";
+    if (timeValue instanceof Date) {
+      return formatDate(timeValue);
+    }
+
+    if (typeof timeValue !== "string") return String(timeValue);
+
+    // If backend sends relative time like "5 mins ago", keep it as is.
+    const lower = timeValue.toLowerCase();
+    if (lower.includes("ago")) return timeValue;
+
+    // Try parsing as ISO first.
+    const iso = new Date(timeValue);
+    if (!Number.isNaN(iso.getTime())) {
+      return formatDate(iso);
+    }
+
+    // Fallback: parse "DD/MM/YYYY, HH:mm:ss" produced by toLocaleString.
+    const normalized = timeValue.replace(",", " ").trim();
+    const m = normalized.match(
+      /^(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/
+    );
+    if (!m) return timeValue;
+
+    const day = Number(m[1]);
+    const month = Number(m[2]);
+    const yearRaw = Number(m[3]);
+    const hour = m[4] ? Number(m[4]) : 0;
+    const minute = m[5] ? Number(m[5]) : 0;
+    const second = m[6] ? Number(m[6]) : 0;
+    const year = yearRaw < 100 ? 2000 + yearRaw : yearRaw;
+
+    const dt = new Date(year, month - 1, day, hour, minute, second);
+    if (Number.isNaN(dt.getTime())) return timeValue;
+
+    return formatDate(dt);
+  };
+
+  const formatDate = (d) => {
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    // Recent (last 7 days) => show weekday (Tuesday)
+    if (diffDays >= 0 && diffDays < 7) {
+      return d.toLocaleDateString(undefined, { weekday: "long" });
+    }
+
+    // Older => show DD/MM (10/03)
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}/${mm}`;
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -242,6 +306,50 @@ const PostCard = ({
     }
   };
 
+  const handleElevateToggle = async (targetPost = post) => {
+    const postId = targetPost?._id || targetPost?.id;
+    if (!postId) return;
+
+    // If already elevated => undo instantly
+    if (targetPost?.isElevated) {
+      setElevateLoadingId(postId);
+      try {
+        await dispatch(demotePost(postId)).unwrap();
+        SuccessToast("Post demoted successfully");
+        await dispatch(getMyPosts({ page: 1, limit: 10 })).unwrap();
+      } catch (error) {
+        console.error("Failed to unelevate post:", error);
+      } finally {
+        setElevateLoadingId(null);
+      }
+      return;
+    }
+
+    // Otherwise => open popup to choose duration
+    setElevatePostId(postId);
+    setElevateDuration("24h");
+    setIsElevateModalOpen(true);
+  };
+
+  const handleElevateSave = async () => {
+    if (!elevatePostId) return;
+
+    try {
+      setElevateLoading(true);
+      await dispatch(
+        elevatePost({ postId: elevatePostId, duration: elevateDuration }),
+      ).unwrap();
+
+      await dispatch(getMyPosts({ page: 1, limit: 10 })).unwrap();
+      setIsElevateModalOpen(false);
+      setElevatePostId(null);
+    } catch (error) {
+      console.error("Failed to elevate post:", error);
+    } finally {
+      setElevateLoading(false);
+    }
+  };
+
   const openEditModal = (post) => {
     setEditingPost(post);
     setEditText(post.text || "");
@@ -349,7 +457,7 @@ const PostCard = ({
         <div className="p-4 flex items-start justify-between border-b border-gray-100 relative">
           <div className="flex items-center gap-3 flex-1">
             {post?.page && (
-              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+              <div className="flex items-center gap-2 mb-2 pb-2">
                 {post?.page?.image ? (
                   <img
                     src={post?.page?.image}
@@ -363,11 +471,17 @@ const PostCard = ({
                 )}
 
                 <div className="flex-1">
-                  <p className="text-sm font-bold  text-gray-700">
+                  <p className="text-sm font-bold flex items-center text-gray-700">
+                    {post?.author?.name ? `${post.author.name}'s ` : ""}
                     {post?.page?.name}
                     {activeTab === "postrequest" && (
                       <span className="text-xs text-black">
                         <Pin size={16} />
+                      </span>
+                    )}
+                    {post?.isElevated && (
+                      <span className="text-xs text-black inline-flex items-center ml-1">
+                        <TiPin size={20} />
                       </span>
                     )}
                   </p>
@@ -382,7 +496,7 @@ const PostCard = ({
                       )}
                       <Link to="/other-profile">
                         <p className="text-xs text-gray-600">
-                          {post.username} • {post.time}
+                          {post.username} • {formatPostTime(post.time)}
                         </p>
                       </Link>
                     </div>
@@ -404,7 +518,7 @@ const PostCard = ({
             {showpopup && (
               <div
                 ref={popupRef}
-                className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-32 z-50"
+                className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-[10em] z-50"
               >
                 {/* Edit sirf tab jab repost nahi hai */}
                 {!post.sharedBy && (
@@ -418,6 +532,17 @@ const PostCard = ({
                     Edit
                   </button>
                 )}
+
+                <button
+                  onClick={() => {
+                    setMoreOpenPostId(null);
+                    handleElevateToggle(post);
+                  }}
+                  disabled={elevateLoadingId === post?._id}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {post?.isElevated ? "Unelevate Post" : "Elevate Post"}
+                </button>
 
                 <button
                   onClick={() => {
@@ -503,7 +628,7 @@ const PostCard = ({
         <div className="p-4">
           <p className="text-sm text-gray-700 mb-4">{post.text}</p>
           {post.sharedBy ? (
-            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[18em]">
               {post.sharedBy?.profilePicture ? (
                 <img
                   src={post.sharedBy.profilePicture}
@@ -608,9 +733,12 @@ const PostCard = ({
                 className="w-12 h-12 rounded-full object-cover border-2 border-white"
               />
               <div>
-                <p className="font-bold text-base">{post.user}</p>
+                <p className="font-bold text-base">
+                  {post?.author?.name ? `${post.author.name}'s ` : ""}
+                  {post?.page?.name || post.user}
+                </p>
                 <p className="text-xs text-gray-300">
-                  {post.username} • {post.time}
+                  {post.username} • {formatPostTime(post.time)}
                 </p>
               </div>
             </div>
@@ -714,6 +842,133 @@ const PostCard = ({
           onConfirm={() => handleDeleteModal()}
           isLoading={postsUpdating}
         />
+      )}
+
+      {/* Elevate Post Modal */}
+      {isElevateModalOpen && (
+        <div className="fixed inset-0 bg-black/20 bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-[27em]">
+            {/* Modal Header with Close Button */}
+            <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-center">
+                Elevated Post
+              </h3>
+              <button
+                onClick={() => {
+                  setIsElevateModalOpen(false);
+                  setElevatePostId(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <p className="text-sm text-gray-600 mt-3">
+              Highlight important posts for greater visibility. Choose how
+              long they stay elevated:
+            </p>
+
+            {/* Radio Buttons */}
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="elevated-post"
+                  value="24h"
+                  id="day"
+                  className="appearance-none hidden"
+                  checked={elevateDuration === "24h"}
+                  onChange={() => setElevateDuration("24h")}
+                />
+                <span
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
+                    elevateDuration === "24h" ? "bg-orange-500" : ""
+                  }`}
+                  onClick={() => setElevateDuration("24h")}
+                />
+                <label htmlFor="day" className="text-sm">
+                  Day (Visible for 24 hours)
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="elevated-post"
+                  value="7d"
+                  id="week"
+                  className="appearance-none hidden"
+                  checked={elevateDuration === "7d"}
+                  onChange={() => setElevateDuration("7d")}
+                />
+                <span
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
+                    elevateDuration === "7d" ? "bg-orange-500" : ""
+                  }`}
+                  onClick={() => setElevateDuration("7d")}
+                />
+                <label htmlFor="week" className="text-sm">
+                  Week (Visible for 7 days)
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="elevated-post"
+                  value="1m"
+                  id="month"
+                  className="appearance-none hidden"
+                  checked={elevateDuration === "1m"}
+                  onChange={() => setElevateDuration("1m")}
+                />
+                <span
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
+                    elevateDuration === "1m" ? "bg-orange-500" : ""
+                  }`}
+                  onClick={() => setElevateDuration("1m")}
+                />
+                <label htmlFor="month" className="text-sm">
+                  Month (Visible for 30 days)
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  name="elevated-post"
+                  value="manual"
+                  id="until-change"
+                  className="appearance-none hidden"
+                  checked={elevateDuration === "manual"}
+                  onChange={() => setElevateDuration("manual")}
+                />
+                <span
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
+                    elevateDuration === "manual" ? "bg-orange-500" : ""
+                  }`}
+                  onClick={() => setElevateDuration("manual")}
+                />
+                <label htmlFor="until-change" className="text-sm">
+                  Until I Change It (Stay elevated until manually updated)
+                </label>
+              </div>
+            </div>
+
+            {/* Modal Footer with Buttons */}
+            <div className="mt-6 flex justify-between">
+              <button
+                className="bg-orange-500 text-white w-full py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleElevateSave}
+                disabled={elevateLoading}
+              >
+                {elevateLoading ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Edit Post Modal */}

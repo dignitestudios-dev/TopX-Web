@@ -91,7 +91,7 @@ const RecentActivityPopup = ({ onClose }) => {
 
     dispatch(updateActivityStatus({ activityStatus: newStatus }));
   };
-  console.log(recentActivity, "isOn");
+  console.log(recentActivity, "recentActivity");
 
   return (
     <div className="absolute right-[10em] top-[6em] w-[22rem] bg-white shadow-xl rounded-xl border scrollbar-hide border-gray-200 z-50">
@@ -184,7 +184,10 @@ const RecentActivityPopup = ({ onClose }) => {
 
                       <div className="flex-1">
                         <p className="text-xs font-medium text-gray-700">
+
+                          {post?.author?.name && `${post.author.name}'s`} &nbsp;
                           {page?.name}
+
                         </p>
                         {page && (
                           <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
@@ -205,7 +208,8 @@ const RecentActivityPopup = ({ onClose }) => {
                             )}
 
                             <p className="text-xs text-gray-500">
-                              {post?.author?.name}
+                              @{post?.author?.username} ·{" "}
+                              {timeAgo(post?.createdAt)}
                             </p>
                           </div>
                         )}
