@@ -38,18 +38,31 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
 
+  const getInitials = (value) => {
+    const str = typeof value === "string" ? value.trim() : "";
+    if (!str) return "?";
+    return str
+      .split(" ")
+      .filter(Boolean)
+      .map((w) => w[0]?.toUpperCase())
+      .slice(0, 2)
+      .join("");
+  };
+
   // Helper to check if media is video
   const isVideo = (url) => {
     if (!url) return false;
     return /\.(mp4|webm|ogg)$/i.test(url) || url.includes("video");
   };
 
+  console.log(post, "Trendingpost")
+
   // Combine all media (images + videos) from media or postimage array
   const allMedia = React.useMemo(() => {
     // Check both post.media (API response) and post.postimage (legacy)
     const mediaArray = post?.media || post?.postimage || [];
     if (!Array.isArray(mediaArray) || mediaArray.length === 0) return [];
-    
+
     return mediaArray.map((media) => {
       const fileUrl = media?.fileUrl || media?.url || media;
       return {
@@ -207,17 +220,41 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
       {/* Header */}
       <div className="p-4 flex items-start justify-between border-b border-gray-100">
         <div className="flex items-center gap-3 flex-1">
-          <img
-            src={
-              post.author?.profilePicture ||
-              "https://rapidapi.com/hub/_next/image?url=https%3A%2F%2Frapidapi-prod-apis.s3.amazonaws.com%2Fbdcd6ceb-1d10-4c3b-b878-4fc8d2e2059f.png&w=3840&q=75"
-            }
-            alt={post.author?.name}
-            className="w-10 h-10 rounded-full object-cover"
-          />
+          <div className="relative">
+            {post?.page?.image ? (
+              <img
+                src={post.page.image}
+                alt={post?.page?.name || post?.author?.name || "Page"}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-amber-800 text-white flex items-center justify-center text-xs font-semibold">
+                {getInitials(
+                  post?.page?.name || post?.page?.user?.name || post?.page?.topic,
+                )}
+              </div>
+            )}
+
+            {post?.author?.profilePicture ? (
+              <img
+                src={post.author.profilePicture}
+                alt={post?.author?.name || post?.author?.username || "Author"}
+                className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            ) : (
+              <div className="w-5 h-5 absolute -right-1 -bottom-0 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                {getInitials(
+                  post?.author?.name || post?.author?.username || post?.author,
+                )}
+              </div>
+            )}
+          </div>
           <div className="flex-1">
             <p className="font-semibold text-sm text-gray-800">
-              {post.author?.name}
+              {post.author?.name ? `${post.author.name}'s` : ""} {post.page?.name}
             </p>
             <p className="text-xs text-gray-500">
               @{post.author?.username} •{" "}
@@ -341,11 +378,10 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
                       e.stopPropagation();
                       setCurrentMediaIndex(idx);
                     }}
-                    className={`transition-all ${
-                      idx === currentMediaIndex
+                    className={`transition-all ${idx === currentMediaIndex
                         ? "bg-white w-6 h-1.5"
                         : "bg-white bg-opacity-50 w-1.5 h-1.5"
-                    } rounded-full`}
+                      } rounded-full`}
                   />
                 ))}
               </div>
@@ -355,7 +391,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
         <p className="text-sm text-gray-800 leading-snug mb-3">{post.text}</p>
         {post?.sharedBy ? (
-          <div className="text-sm text-nowrap  flex gap-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
+          <div className="text-sm text-nowrap  flex gap-2 justify-start items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
             {post.sharedBy?.profilePicture ? (
               <img
                 src={post.sharedBy.profilePicture}
@@ -369,7 +405,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
             {/* <img
             src={post.sharedBy.profilePicture}
             className="w-7 h-7 rounded-full object-cover"
-          /> */}    
+          /> */}
             {post.sharedBy.name} Reposted
           </div>
         ) : null}
@@ -387,7 +423,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           </div>
         )}
       </div>
-      {post?.page?.pageType == "private" && !post?.page?.isSubscribed && (
+      {post?.page?.pageType == "privates" && !post?.page?.isSubscribed && (
         <div className="flex items-center h-full top-14 absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
@@ -410,27 +446,23 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
         <button
           onClick={handleLikeToggle}
           disabled={likeLoading}
-          className={`flex items-center gap-1.5 transition ${
-            likeLoading
+          className={`flex items-center gap-1.5 transition ${likeLoading
               ? "opacity-50 cursor-not-allowed"
               : "hover:text-orange-500"
-          } ${
-            localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-          }`}
+            } ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+            }`}
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              localLikeState.isLiked
+            className={`w-5 h-5 transition ${localLikeState.isLiked
                 ? "fill-orange-500 text-orange-500"
                 : likeLoading
                   ? "text-gray-400"
                   : "text-gray-600"
-            }`}
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {Number(localLikeState.likesCount ?? 0)}
           </span>
@@ -470,8 +502,8 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />

@@ -10,7 +10,12 @@ import {
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
-import { deletePost, likePost } from "../../redux/slices/posts.slice";
+import {
+  deletePost,
+  likePost,
+  editPost,
+  getPostsByPageId,
+} from "../../redux/slices/posts.slice";
 import { timeAgo } from "../../lib/helpers";
 import SharePostModal from "./SharePostModal";
 import ShareToChatsModal from "./ShareToChatsModal";
@@ -22,6 +27,7 @@ import { useNavigate } from "react-router";
 import PrivatePostModal from "./PrivatePostModal";
 import { IoWarning } from "react-icons/io5";
 import DeletePostModal from "./DeletePostModal";
+import { getCollectionFeed } from "../../redux/slices/Subscription.slice";
 
 export default function CollectionFeedPostCard({
   post,
@@ -34,6 +40,7 @@ export default function CollectionFeedPostCard({
   fullPost,
   text,
   page,
+  collectionId,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -43,6 +50,7 @@ export default function CollectionFeedPostCard({
   const { user, allUserData } = useSelector((state) => state.auth);
   const { isLoading: postsUpdating } = useSelector((state) => state.posts);
   const currentUserId = user?._id || allUserData?._id;
+  const pageId = page?._id || fullPost?.page?._id || fullPost?.pageId;
   const [isPrivatePost, setIsPrivatePost] = useState(false);
   const isUnderReview = Boolean(fullPost?.isReported);
 
@@ -309,25 +317,41 @@ export default function CollectionFeedPostCard({
       const formData = new FormData();
       formData.append("bodyText", editText || "");
 
-      // new files
-      if (editFiles.length > 0) {
-        editFiles.forEach((file) => {
-          formData.append("media", file);
+      // New media files (if user selected any)
+      editFiles.forEach((file) => {
+        formData.append("media", file);
+      });
+
+      // Existing media that should remain after edit
+      if (existingMedia.length > 0) {
+        existingMedia.forEach((media, index) => {
+          formData.append(`existingMedia[${index}]`, media._id);
         });
       } else {
-        formData.append("media", "");
+        // Backend expects an empty array when no existing media is kept
+        formData.append("existingMedia", JSON.stringify([]));
       }
 
-      // existing media (remaining only)
-      existingMedia.forEach((m) => {
-        formData.append("existingMedia[]", JSON.stringify(m));
+      // Keywords (if present on the post)
+      const postKeywords = editingPost?.keywords || [];
+      postKeywords.forEach((keyword, index) => {
+        formData.append(`keywords[${index}]`, keyword);
       });
 
       await dispatch(
-        editPost({ postId: editingPost._id, formData, isFormData: true }),
+        editPost({
+          postId: editingPost._id || editingPost.id,
+          formData,
+          isFormData: true,
+        }),
       ).unwrap();
 
-      if (pageId) {
+      // Refresh UI after edit
+      if (collectionId) {
+        await dispatch(
+          getCollectionFeed({ id: collectionId, page: 1, limit: 10 }),
+        ).unwrap();
+      } else if (pageId) {
         await dispatch(
           getPostsByPageId({ pageId, page: 1, limit: 100 }),
         ).unwrap();

@@ -54,6 +54,7 @@ export default function SubscriptionsCategory() {
   const location = useLocation();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const collectionId = location.state?.id;
   const [popup, setPopup] = useState({
     open: false,
     title: "",
@@ -61,19 +62,18 @@ export default function SubscriptionsCategory() {
   });
   const { CollectionFeeds } = useSelector((state) => state.subscriptions);
   useEffect(() => {
-    if (location.state && location.state.id) {
+    if (collectionId) {
       // Fetch data based on the passed ID
-      dispatch(getCollectionFeed({ id: location.state.id }));
+      dispatch(getCollectionFeed({ id: collectionId }));
       // You can dispatch an action here to fetch data if needed
     }
-  }, [location.state]);
+  }, [collectionId]);
 
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
   }, [dispatch]);
 
-  console.log(CollectionFeeds, "CollectionFeeds");
   const mySubscriptions = [
     { title: "My Basketball", pages: "50+" },
     { title: "My Fitness", pages: "50+" },
@@ -111,6 +111,8 @@ export default function SubscriptionsCategory() {
   );
   const { user } = useSelector((state) => state.auth);
 
+
+  
   // Fetch collection name from mySubscriptions
   useEffect(() => {
     const fetchCollectionName = async () => {
@@ -278,7 +280,7 @@ export default function SubscriptionsCategory() {
 
         <Profilecard smallcard={true} />
 
-        {/* Topic Pages */}
+       {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
             <TbNotes className="w-5 h-5 text-orange-500" />
@@ -462,6 +464,7 @@ export default function SubscriptionsCategory() {
                 toggleLike={toggleLike}
                 text={post?.bodyText}
                 page={post?.page}
+                collectionId={collectionId}
               />
             ))
           ) : (

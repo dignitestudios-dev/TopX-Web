@@ -371,12 +371,15 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize">
-              {/* {post?.user?.split(" ")[0][0] + post?.user?.split(" ")[1][0]} */}
-              {post?.user
-                ?.split(" ")
-                .map((w) => w[0])
-                .slice(0, 2)
-                .join("")}
+              {post?.page?.image ? (
+                <img
+                  src={post.page.image}
+                  alt={post.user}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                post?.user?.split(" ").map(w => w[0]).slice(0, 2).join("")
+              )}
             </div>
             {post.author.profilePicture ? (
               <img
@@ -401,8 +404,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
               onClick={post.page ? handlePageClick : handleAuthorClick}
             >
-              {post.page?.name || post.user}
-            </h3>
+              {post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}            </h3>
             {/* Author username */}
             <p
               onClick={handleAuthorClick}
@@ -585,16 +587,14 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <Heart
-                className={`w-5 h-5 transition ${
-                  localLikeState.isLiked
+                className={`w-5 h-5 transition ${localLikeState.isLiked
                     ? "fill-orange-500 text-orange-500"
                     : "text-gray-600"
-                }`}
+                  }`}
               />
               <span
-                className={`text-sm font-medium ${
-                  localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-                }`}
+                className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                  }`}
               >
                 {Number(localLikeState.likesCount ?? 0)}
               </span>
@@ -670,17 +670,17 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal
-          onClose={setSelectedOption}
-          post={{
-            _id: post.id,
-            page: post.page,
-            media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
-            bodyText: post.text,
-            author: post.author,
-          }}
-        />
-      )}
+          <ShareToChatsModal
+            onClose={setSelectedOption}
+            post={{
+              _id: post.id,
+              page: post.page,
+              media: post.postimage?.map((url) => ({ fileUrl: url })) || [],
+              bodyText: post.text,
+              author: post.author,
+            }}
+          />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
@@ -702,7 +702,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               isReported: true,
             }),
           );
-           dispatch(fetchpostfeed({ page: 1, limit: 10 }));
+          dispatch(fetchpostfeed({ page: 1, limit: 10 }));
         }}
       />
       {isPrivatePost && (

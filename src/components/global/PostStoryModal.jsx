@@ -127,7 +127,7 @@ const PostStoryModal = ({ onClose, post }) => {
       <div className="bg-white w-full max-w-[460px] rounded-3xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-3 bg-gradient-to-r from-orange-50 to-white">
-          <h2 className="text-[15px] font-semibold text-gray-900">
+          <h2 className="text-[17px] font-semibold text-gray-900">
             {step === 1 ? "Select Page You Want to Share This Post on Story." : "Share to your Story"}
           </h2>
           <button

@@ -260,10 +260,10 @@ const PagePosts = ({
     return (
       <div className="max-w-2xl mx-auto p-4 bg-gray-50 min-h-screen">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <p className="text-red-800 font-medium mb-2">
-            ❌ Error Loading Posts
-          </p>
-          <p className="text-red-600 text-sm">{pageposterror}</p>
+          <div className=" flex justify-center">
+              <img src={nofound} height={300} width={300} alt="" />
+            </div>
+          <p className="text-red-600 text-sm pt-10">{pageposterror}</p>
         </div>
       </div>
     );

@@ -19,13 +19,33 @@ export default function UploadPostStory({
 }) {
   const dispatch = useDispatch();
   const { postsLoading } = useSelector((state) => state.posts);
-  console.log(title, "selectedTYpe");
   const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
   const MAX_IMAGES = 6;
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
+
+    // ✅ Image ho toh sirf JPG/PNG, video sab allowed
+    const invalidFiles = files.filter((f) => {
+      if (f.type.startsWith("video/")) return false;
+      return f.type !== "image/jpeg" && f.type !== "image/png";
+    });
+
+    if (invalidFiles.length > 0) {
+      ErrorToast("Only JPG, PNG images and videos are allowed!");
+      return;
+    }
+
+    // ✅ Image 5MB se zyada nahi honi chahiye
+    const oversizedImages = files.filter(
+      (f) => f.type.startsWith("image/") && f.size > 5 * 1024 * 1024
+    );
+
+    if (oversizedImages.length > 0) {
+      ErrorToast("Image size must be less than 5MB!");
+      return;
+    }
 
     const remainingSlots = MAX_IMAGES - images.length;
     if (remainingSlots <= 0) {
@@ -55,19 +75,11 @@ export default function UploadPostStory({
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  // ======================
-  // VALIDATION + API SEND
-  // ======================
   const handlePostNow = () => {
     if (!bodyText.trim()) {
       ErrorToast("Body text is required!");
       return;
     }
-
-    // if (images.length === 0) {
-    //   ErrorToast("Please upload at least one photo or video!");
-    //   return;
-    // }
 
     if (!selectedPages || selectedPages.length === 0) {
       ErrorToast("No page selected!");
@@ -77,12 +89,11 @@ export default function UploadPostStory({
     const pageId = selectedPages[0];
 
     const fd = new FormData();
-    selectedPages.forEach((selectedPages) => {
-      fd.append("pages[]", selectedPages);
+    selectedPages.forEach((page) => {
+      fd.append("pages[]", page);
     });
     fd.append("bodyText", bodyText);
 
-    // media
     images.forEach((img) => {
       fd.append("media", img.fileObject);
     });
@@ -90,25 +101,21 @@ export default function UploadPostStory({
     dispatch(title == "Create Story" ? createStory(fd) : createPost(fd))
       .unwrap()
       .then(async () => {
-        // Refresh page posts so new post shows in real-time
         if (pageId) {
           try {
             await dispatch(
               getPostsByPageId({ pageId, page: 1, limit: 100 })
             ).unwrap();
           } catch (err) {
-            // Silent fail for refresh, main post already created
             console.error("Failed to refresh posts after create:", err);
           }
         }
 
         SuccessToast(title + " Successfully!");
 
-        // reset
         setBodyText("");
         setImages([]);
 
-        // Inform parent flows (if any) and close modal
         if (setSelectedType) {
           setSelectedType("Done");
         }
@@ -147,7 +154,6 @@ export default function UploadPostStory({
                   <label className="block text-sm font-semibold text-gray-900 mb-2">
                     Body Text
                   </label>
-
                   <textarea
                     value={bodyText}
                     onChange={(e) => setBodyText(e.target.value)}
@@ -197,7 +203,7 @@ export default function UploadPostStory({
                     {images.length < MAX_IMAGES && (
                       <Input
                         type="file"
-                        accept="image/*,video/*"
+                        accept="image/jpeg,image/png,video/*"
                         multiple
                         onChange={handleImageUpload}
                         fileClassName="w-[120px] h-[120px] rounded-xl"
