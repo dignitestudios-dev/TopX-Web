@@ -394,6 +394,33 @@ const postsSlice = createSlice({
       .addCase(editPost.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = true;
+
+        // Try to extract the updated post from different possible API shapes.
+        const updatedPost =
+          action.payload?.data?.data ||
+          action.payload?.data ||
+          action.payload?.Post ||
+          action.payload;
+
+        const updatedId =
+          updatedPost?._id || updatedPost?.id || action.meta?.arg?.postId;
+
+        if (!updatedId) return;
+
+        const matchesId = (p) =>
+          p?._id === updatedId || p?.id === updatedId;
+
+        if (Array.isArray(state.posts)) {
+          state.posts = state.posts.map((p) =>
+            matchesId(p) ? updatedPost : p,
+          );
+        }
+
+        if (Array.isArray(state.pagepost)) {
+          state.pagepost = state.pagepost.map((p) =>
+            matchesId(p) ? updatedPost : p,
+          );
+        }
       })
 
       .addCase(editPost.rejected, (state, action) => {

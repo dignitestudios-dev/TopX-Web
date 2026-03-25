@@ -24,6 +24,23 @@ export default function VerificationModal({
   const timer = setResendTimer ? resendTimer : localTimer;
   const setTimer = setResendTimer || setLocalTimer;
 
+  // Countdown for local timer only.
+  // If parent provides setResendTimer, parent should manage countdown.
+  useEffect(() => {
+    if (setResendTimer) return;
+    if (localTimer <= 0) return;
+
+    const intervalId = setInterval(() => {
+      setLocalTimer((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [localTimer, setResendTimer]);
+
+  const focusIndex = (i) => {
+    inputsRef.current[i]?.focus();
+  };
+
   useEffect(() => {
     if (!isOpen) setValues(Array.from({ length }, () => ""));
   }, [isOpen, length]);
@@ -82,6 +99,20 @@ export default function VerificationModal({
     }
   };
 
+  const handleResendClick = async () => {
+    if (!onResend) return;
+
+    const ok = await onResend();
+    if (ok === false) return;
+
+    // Clear inputs so user can re-enter OTP
+    setValues(Array.from({ length }, () => ""));
+    // Reset timer (local or via parent)
+    setTimer(30);
+    // Focus first input
+    setTimeout(() => focusIndex(0), 0);
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -125,7 +156,7 @@ export default function VerificationModal({
           <span className="text-[#111]">Didn't receive code? </span>
           <button
             type="button"
-            onClick={onResend}
+            onClick={handleResendClick}
             disabled={timer > 0}
             className={`font-semibold ${timer > 0 ? "text-gray-400 cursor-not-allowed" : "text-[#F85E00] hover:underline"}`}
           >

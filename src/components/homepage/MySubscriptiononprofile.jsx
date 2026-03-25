@@ -72,7 +72,12 @@ const MySubscriptiononprofile = ({ userCollections, toggleBookmark }) => {
           userCollections?.map((item) => (
             <div
               key={item._id || item.id}
-              className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
+              className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0 cursor-pointer"
+              onClick={() =>
+                      navigate("/subscriptions-category", {
+                        state: { id: item._id || item.id },
+                      })
+                    }
             >
               <div className="flex items-start gap-3">
                 <div>
