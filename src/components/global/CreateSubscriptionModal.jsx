@@ -128,10 +128,6 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }, 2000);
   };
 
-  // Filter pages based on search
-  const filteredPages = recommendationPages?.filter((col) =>
-    col.name.toLowerCase().includes(search.toLowerCase())
-  ) || [];
 
   // Filter pages based on search
   const filteredPages =
