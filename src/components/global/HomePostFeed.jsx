@@ -404,7 +404,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
               onClick={post.page ? handlePageClick : handleAuthorClick}
             >
-{post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}            </h3>
+              {post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}            </h3>
             {/* Author username */}
             <p
               onClick={handleAuthorClick}
@@ -587,16 +587,14 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <Heart
-                className={`w-5 h-5 transition ${
-                  localLikeState.isLiked
+                className={`w-5 h-5 transition ${localLikeState.isLiked
                     ? "fill-orange-500 text-orange-500"
                     : "text-gray-600"
-                }`}
+                  }`}
               />
               <span
-                className={`text-sm font-medium ${
-                  localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-                }`}
+                className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+                  }`}
               >
                 {Number(localLikeState.likesCount ?? 0)}
               </span>
@@ -704,7 +702,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
               isReported: true,
             }),
           );
-           dispatch(fetchpostfeed({ page: 1, limit: 10 }));
+          dispatch(fetchpostfeed({ page: 1, limit: 10 }));
         }}
       />
       {isPrivatePost && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ChevronRight, Link, TrendingUp } from "lucide-react";
 import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
@@ -24,20 +24,56 @@ export default function Mypost() {
   const navigate = useNavigate();
 
   const dispatch = useDispatch();
-  const { postsLoading, posts } = useSelector((state) => state.posts);
+  const { postsLoading, posts, pagination } = useSelector(
+    (state) => state.posts,
+  );
 
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   const { user } = useSelector((state) => state.auth);
 
+  const [allPosts, setAllPosts] = useState([]);
+  const feedRef = useRef(null);
+
   useEffect(() => {
-    dispatch(fetchMyPages({ page: 1, limit: 10 }));
+    dispatch(fetchMyPages({ page: 1, limit: 100 }));
   }, [dispatch]);
   // API call
   useEffect(() => {
     dispatch(getMyPosts({ page, limit }));
   }, [dispatch, page]);
 
-  console.log(posts, "posts");
+  console.log(posts, "allposts");
+
+  // Append pages so user sees "all posts"
+  useEffect(() => {
+    if (!Array.isArray(posts)) return;
+
+    setAllPosts((prev) => {
+      if (page === 1) return posts;
+
+      const existingIds = new Set(prev.map((p) => p?._id));
+      const next = posts.filter((p) => p?._id && !existingIds.has(p._id));
+      return [...prev, ...next];
+    });
+  }, [posts, page]);
+
+  const handleFeedScroll = () => {
+    const el = feedRef.current;
+    if (!el) return;
+    if (postsLoading) return;
+    const canLoadMore =
+      pagination?.hasNextPage === true ||
+      (typeof pagination?.currentPage === "number" &&
+        typeof pagination?.totalPages === "number" &&
+        pagination.currentPage < pagination.totalPages);
+
+    if (!canLoadMore) return;
+
+    // Load next page when close to bottom
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+      setPage((p) => p + 1);
+    }
+  };
 
   // API -> UI mapping
   const mapApiPostToUiPost = (p) => {
@@ -59,6 +95,15 @@ export default function Mypost() {
       id: p._id, // Also keep id for backward compatibility
       user: p.page?.name || p.author?.name || "",
       username: p.author?.username ? `@${p.author.username}` : "",
+      isElevated: Boolean(p.isElevated),
+      elevationType: p.elevationType || null,
+      author: p.author
+        ? {
+            name: p.author.name,
+            username: p.author.username,
+            profilePicture: p.author.profilePicture,
+          }
+        : null,
       avatar: p.author?.profilePicture,
       time: new Date(p.createdAt).toLocaleString(),
       postImages,
@@ -195,7 +240,11 @@ export default function Mypost() {
       </div>
 
       {/* Middle Feed */}
-      <div className="w-1/2 overflow-y-auto px-3 py-4 scrollbar-hide">
+      <div
+        ref={feedRef}
+        onScroll={handleFeedScroll}
+        className="w-1/2 overflow-y-auto px-3 py-4 scrollbar-hide"
+      >
         <h1 className="text-2xl font-semibold pb-0 pl-1">
           Your Personal Post Archive
         </h1>
@@ -205,7 +254,7 @@ export default function Mypost() {
           Stay organized and keep track of your contributions!
         </p>
 
-        {postsLoading && (!posts || posts.length === 0) ? (
+        {postsLoading && allPosts.length === 0 ? (
           <>
             <SkeletonPost />
             <SkeletonPost />
@@ -213,8 +262,8 @@ export default function Mypost() {
           </>
         ) : (
           <>
-            {Array.isArray(posts) && posts.length > 0 ? (
-              posts.map((p) => {
+            {Array.isArray(allPosts) && allPosts.length > 0 ? (
+              allPosts.map((p) => {
                 const mappedPost = mapApiPostToUiPost(p);
                 return (
                   <div key={mappedPost._id} className="mb-4">
