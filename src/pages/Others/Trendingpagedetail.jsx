@@ -33,6 +33,7 @@ import PagePostsComponent from "../../components/global/PagePostsComponent";
 import { RiLiveLine } from "react-icons/ri";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import UploadPostStory from "../../components/app/profile/UploadPostStory";
+import { getPageDetail } from "../../redux/slices/pages.slice";
 
 const Trendingpagedetail = () => {
   const dispatch = useDispatch();
@@ -344,14 +345,17 @@ const Trendingpagedetail = () => {
                 {/* Live Chat Button - Only show when subscribed */}
                 {isSubscribed && (
                   <button
-                    onClick={() =>
+                    onClick={async() =>{
+                        await dispatch(getPageDetail(id)); 
                       navigate(`/live-chat`, {
                         state: {
                           pageId: id,
                           pageName: pageDetail?.name,
                           pageOwner: pageDetail?.liveChat,
+                          page:pageDetail
                         },
                       })
+                    }
                     }
                     className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
                   >

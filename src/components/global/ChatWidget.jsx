@@ -14,7 +14,6 @@ import {
   ArrowLeft,
   Check,
   AlertTriangle,
-  AlertTriangle,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -1401,7 +1400,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               chatDetailMessages.map((msg, i) => {
                 const currentUserId = user?._id || allUserData?._id;
                 const isCurrentUser = msg.sender?._id === currentUserId;
-
+                console.log(msg,"sharedType")
                 return (
                   <div
                     key={msg._id}
@@ -1426,201 +1425,176 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
                       }`}
                     >
-                      {msg.type === "shared" && msg.shared ? (
-                        // Knowledge post - show styled card
-                        msg.shared.sharedType === "knowledge" ? (
-                          <div className="space-y-2">
-                            {/* Page/Topic Info */}
-                            {msg.shared.name && (
-                              <div className="flex items-center gap-2 mb-2">
-                                {msg.shared.pageImage && (
-                                  <img
-                                    src={msg.shared.pageImage}
-                                    alt="Page"
-                                    className="w-6 h-6 rounded-full object-cover"
-                                  />
-                                )}
-                                <p className="text-xs font-semibold opacity-90">
-                                  {msg.shared.name}
-                                </p>
-                              </div>
-                            )}
+                    {msg.type === "shared" && msg.shared ? (
+  msg.shared.sharedType === "knowledge" ? (
+    // KNOWLEDGE UI (same as yours)
+    <div className="space-y-2">
+      {msg.shared.name && (
+        <div className="flex items-center gap-2 mb-2">
+          {msg.shared.pageImage && (
+            <img
+              src={msg.shared.pageImage}
+              alt="Page"
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          )}
+          <p className="text-xs font-semibold opacity-90">
+            {msg.shared.name}
+          </p>
+        </div>
+      )}
+      <p className="text-xs opacity-80 mb-2">Shared a knowledge post</p>
 
-                            {/* Shared Post Type Label */}
-                            <p className="text-xs opacity-80 mb-2">
-                              Shared a knowledge post
-                            </p>
+      <div
+        className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
+        style={{
+          background:
+            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        }}
+      >
+        <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
 
-                            {/* Knowledge Post Card */}
-                            <div
-                              className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
-                              style={
-                                // Check if imageStyle is a JSON string or simple string
-                                (() => {
-                                  let backgroundCode = null;
-                                  let styleData = null;
+        {msg.shared.textOnImage && (
+          <p className="text-center relative z-10 text-white font-medium">
+            {msg.shared.textOnImage}
+          </p>
+        )}
+      </div>
+    </div>
+  ) : msg.shared.sharedType === "story" ? (
+    // STORY UI
+    <div className="space-y-2">
+      {msg.shared.name && (
+        <div className="flex items-center gap-2 mb-2">
+          {msg.shared.pageImage && (
+            <img
+              src={msg.shared.pageImage}
+              alt="Page"
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          )}
+          <p className="text-xs font-semibold opacity-90">
+            {msg.shared.name}
+          </p>
+        </div>
+      )}
 
-                                  if (msg.shared.imageStyle) {
-                                    try {
-                                      // Try to parse as JSON
-                                      styleData = JSON.parse(
-                                        msg.shared.imageStyle,
-                                      );
-                                      backgroundCode =
-                                        styleData.backgroundCode ||
-                                        msg.shared.imageLocalPath;
-                                    } catch (e) {
-                                      // If not JSON, use as string
-                                      backgroundCode =
-                                        msg.shared.imageStyle ||
-                                        msg.shared.imageLocalPath;
-                                    }
-                                  } else {
-                                    backgroundCode = msg.shared.imageLocalPath;
-                                  }
+      <p className="text-xs opacity-80 mb-2">Shared a story</p>
 
-                                  // Find background from presetBackgrounds
-                                  const bgPreset = presetBackgrounds.find(
-                                    (bg) => bg.name === backgroundCode,
-                                  );
+      <div
+        className="relative rounded-lg overflow-hidden cursor-pointer"
+        onClick={() => {
+          // open story viewer
+          openStoryViewer(msg.shared.contextId);
+        }}
+      >
+        <img
+          src={msg.shared.media}
+          alt="Story"
+          className="w-full h-40 object-cover"
+        />
 
-                                  if (bgPreset) {
-                                    return {
-                                      backgroundImage: `url(${bgPreset.imagePath})`,
-                                      backgroundSize: "cover",
-                                      backgroundPosition: "center",
-                                    };
-                                  }
+        {/* Story badge */}
+        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded">
+          STORY
+        </div>
+      </div>
+    </div>
+  ) : msg.shared.sharedType === "live" ? (
+    // LIVE UI
+    <div className="space-y-2">
+      {msg.shared.name && (
+        <div className="flex items-center gap-2 mb-2">
+          {msg.shared.pageImage && (
+            <img
+              src={msg.shared.pageImage}
+              alt="Page"
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          )}
+          <p className="text-xs font-semibold opacity-90">
+            {msg.shared.name}
+          </p>
+        </div>
+      )}
 
-                                  // Default gradient if no background found
-                                  return {
-                                    background:
-                                      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                                  };
-                                })()
-                              }
-                            >
-                              {/* Overlay for better text readability */}
-                              <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
+      <p className="text-xs opacity-80 mb-2">Shared a live</p>
 
-                              {/* Text Content */}
-                              {msg.shared.textOnImage && (
-                                <p
-                                  className="text-center relative z-10 text-white font-medium leading-relaxed drop-shadow-lg"
-                                  style={(() => {
-                                    let styleData = null;
-                                    if (msg.shared.imageStyle) {
-                                      try {
-                                        styleData = JSON.parse(
-                                          msg.shared.imageStyle,
-                                        );
-                                      } catch (e) {
-                                        styleData = null;
-                                      }
-                                    }
+      <div
+        className="relative rounded-lg overflow-hidden cursor-pointer"
+        onClick={() => {
+          // open live screen
+          openLive(msg.shared.contextId);
+        }}
+      >
+        <img
+          src={msg.shared.media}
+          alt="Live"
+          className="w-full h-40 object-cover"
+        />
 
-                                    return {
-                                      fontSize: styleData?.fontSize
-                                        ? `${styleData.fontSize}px`
-                                        : "18px",
-                                      color: styleData?.color || "#ffffff",
-                                      fontWeight: styleData?.isBold
-                                        ? "700"
-                                        : "500",
-                                      fontStyle: styleData?.isItalic
-                                        ? "italic"
-                                        : "normal",
-                                      textDecoration: styleData?.isUnderline
-                                        ? "underline"
-                                        : "none",
-                                      textAlign:
-                                        styleData?.textAlignment || "center",
-                                    };
-                                  })()}
-                                >
-                                  {msg.shared.textOnImage}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          // If media exists, show full details
-                          <div className="space-y-2">
-                            {/* Page/Topic Info */}
-                            {msg.shared.name && (
-                              <div className="flex items-center gap-2 mb-2">
-                                {msg.shared.pageImage && (
-                                  <img
-                                    src={msg.shared.pageImage}
-                                    alt="Page"
-                                    className="w-6 h-6 rounded-full object-cover"
-                                  />
-                                )}
-                                <p className="text-xs font-semibold opacity-90">
-                                  {msg.shared.name}
-                                </p>
-                              </div>
-                            )}
+        {/* LIVE badge */}
+        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded animate-pulse">
+          LIVE
+        </div>
+      </div>
+    </div>
+  ) : (
+    // NORMAL POST UI
+    <div className="space-y-2">
+      {msg.shared.name && (
+        <div className="flex items-center gap-2 mb-2">
+          {msg.shared.pageImage && (
+            <img
+              src={msg.shared.pageImage}
+              alt="Page"
+              className="w-6 h-6 rounded-full object-cover"
+            />
+          )}
+          <p className="text-xs font-semibold opacity-90">
+            {msg.shared.name}
+          </p>
+        </div>
+      )}
 
-                            {/* Shared Post Type Label */}
-                            <p className="text-xs opacity-80 mb-2">
-                              Shared a post
-                            </p>
+      <p className="text-xs opacity-80 mb-2">Shared a post</p>
 
-                            {/* Post Media (Video or Image) */}
-                            {msg.shared.media && (
-                              <div className="rounded-lg overflow-hidden">
-                                {msg.shared.media.includes(".mp4") ||
-                                msg.shared.media.includes(".mov") ||
-                                msg.shared.media.includes("video") ? (
-                                  <video
-                                    src={msg.shared.media}
-                                    controls
-                                    className="w-full max-h-64 object-contain rounded-lg"
-                                  >
-                                    Your browser does not support the video tag.
-                                  </video>
-                                ) : (
-                                  <img
-                                    src={msg.shared.media}
-                                    alt="Shared post"
-                                    className="w-full max-h-64 object-contain rounded-lg cursor-pointer hover:opacity-90"
-                                    onClick={() => {
-                                      setSelectedMessageImages([
-                                        msg.shared.media,
-                                      ]);
-                                      setCurrentImageIndex(0);
-                                      setShowMessageImageModal(true);
-                                    }}
-                                  />
-                                )}
-                              </div>
-                            )}
+      {msg.shared.media && (
+        <div className="rounded-lg overflow-hidden">
+          {msg.shared.media.includes(".mp4") ? (
+            <video
+              src={msg.shared.media}
+              controls
+              className="w-full max-h-64 object-contain rounded-lg"
+            />
+          ) : (
+            <img
+              src={msg.shared.media}
+              alt="Shared post"
+              className="w-full max-h-64 object-contain rounded-lg"
+            />
+          )}
+        </div>
+      )}
 
-                            {/* Text on Image */}
-                            {msg.shared.textOnImage && (
-                              <p className="text-sm mt-2">
-                                {msg.shared.textOnImage}
-                              </p>
-                            )}
+      {msg.shared.textOnImage && (
+        <p className="text-sm mt-2">{msg.shared.textOnImage}</p>
+      )}
 
-                            {/* Additional Content */}
-                            {msg.content &&
-                              msg.content !== "Shared a knowledge post" &&
-                              msg.content !== "Shared a post" && (
-                                <p className="text-sm mt-2">{msg.content}</p>
-                              )}
-                          </div>
-                        )
-                      ) : (
-                        <>
-                        <p className="text-sm mb-2">
-                              {msg.sender?.name || "Someone"} shared a text post
-                            </p>
-                        <p>
-                          {msg.content}</p>
-                        </>
-                      )}
+      {msg.content &&
+        msg.content !== "Shared a post" && (
+          <p className="text-sm mt-2">{msg.content}</p>
+        )}
+    </div>
+  )
+) : (
+  <>
+    <p className="text-sm mb-2">
+      {msg.sender?.name || "Someone"} shared a text post
+    </p>
+    <p>{msg.content}</p>
+  </>
+)}
                       
                      
                        

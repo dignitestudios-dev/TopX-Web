@@ -18,7 +18,7 @@ export const startStream = createAsyncThunk(
   async (pageId, thunkAPI) => {
     try {
       // Make API call to start the stream
-      const res = await axios.get(`/stream/${pageId}/start`);
+      const res = await axios.post(`/stream/${pageId}/start`);
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(

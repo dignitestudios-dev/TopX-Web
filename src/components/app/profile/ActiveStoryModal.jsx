@@ -30,19 +30,30 @@ export default function ActiveStoryModal({
   const { comment } = useContext(SocketContext);
   const { user } = useSelector((state) => state.auth);
   const currentStory = stories?.[currentIndex];
-  
+  console.log(stories,"stories")
   // Check if current user is the story owner
   const isStoryOwner = user?._id === currentStory?.page?.user?._id || user?._id === currentStory?.page?.user;
 
   // Extract post data from current story
   const post = currentStory?.post;
+
+  // Use post.media if available, otherwise fallback to post.originalPost.media
   const postMedia = useMemo(() => {
-    if (!post?.media || !Array.isArray(post.media)) return [];
-    return post.media.map((m) => ({
+    const mediaSource =
+      (Array.isArray(post?.media) && post.media.length > 0)
+        ? post.media
+        : (Array.isArray(post?.originalPost?.media) && post.originalPost.media.length > 0)
+          ? post.originalPost.media
+          : [];
+
+    return mediaSource.map((m) => ({
       url: m.fileUrl,
       type: m.type || (m.fileUrl?.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
     }));
-  }, [post?.media]);
+  }, [post?.media, post?.originalPost?.media]);
+
+  // Use post.bodyText if available, otherwise fallback to post.originalPost.bodyText
+  const postBodyText = post?.bodyText || post?.originalPost?.bodyText || null;
 
   const hasPostMedia = postMedia.length > 0;
   const currentPostMedia = hasPostMedia ? postMedia[postMediaIndex] : null;
@@ -154,15 +165,26 @@ export default function ActiveStoryModal({
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          nextStory();
-          return 0;
+          return 100;
         }
         return prev + 1;
       });
     }, 50);
 
     return () => clearInterval(interval);
-  }, [currentIndex, isPaused]);
+  }, [currentIndex, isPaused, currentStory]);
+
+  // Separate effect to handle story advance when progress hits 100
+  useEffect(() => {
+    if (progress >= 100) {
+      if (currentIndex < stories.length - 1) {
+        setCurrentIndex((prev) => prev + 1);
+        setProgress(0);
+      } else {
+        closeStory();
+      }
+    }
+  }, [progress]);
 
   /* ---------------- NAVIGATION ---------------- */
   const nextStory = () => {
@@ -204,12 +226,11 @@ export default function ActiveStoryModal({
     setProgress(0);
     setIsPaused(false);
   };
-
+  console.log(currentStory,"currentStory")
   if (!currentStory) return null;
-
   return (
     <div
-      className="fixed inset-0 bg-black z-50 flex items-center justify-center overflow-hidden"
+      className="fixed inset-0 bg-white z-50 flex items-center justify-center overflow-hidden"
       onMouseDown={handleHoldStart}
       onMouseUp={handleHoldEnd}
       onTouchStart={handleHoldStart}
@@ -225,21 +246,28 @@ export default function ActiveStoryModal({
 
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 pt-6 px-4 pb-6 bg-gradient-to-b from-black/60 to-transparent">
-        <div className="flex items-center gap-3 mb-4">
-          <img
-            src={currentStory?.page.image}
-            className="w-10 h-10 rounded-full border-2 border-white"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-bold truncate">
-              {currentStory?.page.name}
-            </p>
-            <p className="text-gray-300 text-xs truncate">
-              {currentStory?.page.user.username} •{" "}
-              {timeAgo(currentStory?.createdAt)}
-            </p>
-          </div>
-        </div>
+       <div className="flex items-center gap-3 mb-4">
+  {currentStory?.page?.image ? (
+    <img
+      src={currentStory.page.image}
+      className="w-10 h-10 rounded-full border-2 border-white object-cover"
+    />
+  ) : (
+    <div className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-bold border-2 border-white">
+      {currentStory?.page?.name?.charAt(0)?.toUpperCase() || "P"}
+    </div>
+  )}
+
+  <div className="flex-1 min-w-0">
+    <p className="text-white text-sm font-bold truncate">
+      {currentStory?.page?.user?.username + " " + currentStory?.page?.name}
+    </p>
+    <p className="text-gray-300 text-xs truncate">
+      {currentStory?.page?.user?.username} •{" "}
+      {timeAgo(currentStory?.createdAt)}
+    </p>
+  </div>
+</div>
 
         {/* Progress Bars */}
         <div className="flex gap-1">
@@ -272,6 +300,7 @@ export default function ActiveStoryModal({
             if (post) {
               e.stopPropagation();
               setPostDetailModalOpen(true);
+              setIsPaused(true)
             }
           }}
           onMouseDown={(e) => {
@@ -287,32 +316,38 @@ export default function ActiveStoryModal({
         >
           {/* Post author / meta (from post) */}
           {post && (
-            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-              <img
-                src={post.author?.profilePicture}
-                alt={post.author?.name}
-                className="w-9 h-9 rounded-full object-cover border border-white/40"
-              />
-              <div className="min-w-0">
-                <p className="text-white text-sm font-semibold truncate">
-                  {post.author?.name}
-                </p>
-                <p className="text-xs text-gray-300 truncate">
-                  @{post.author?.username} •{" "}
-                  {timeAgo(post.createdAt || currentStory?.createdAt)}
-                </p>
-              </div>
-            </div>
+           <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+  {post.author?.profilePicture ? (
+    <img
+      src={post.author.profilePicture}
+      alt={post.author?.name}
+      className="w-9 h-9 rounded-full object-cover border border-white/40"
+    />
+  ) : (
+    <div className="w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center font-semibold border border-white/40">
+      {post.author?.name?.charAt(0)?.toUpperCase() || "U"}
+    </div>
+  )}
+
+  <div className="min-w-0">
+    <p className="text-white text-sm font-semibold truncate">
+      {post.author?.name}
+    </p>
+    <p className="text-xs text-gray-300 truncate">
+      @{post.author?.username} • {timeAgo(post?.createdAt)}
+    </p>
+  </div>
+</div>
           )}
 
-          {/* Media area – prefer post.media, fallback to story.media */}
+          {/* Media area – prefer post.media, fallback to post.originalPost.media, then story.media */}
           <div className="relative bg-black flex items-center justify-center max-h-[620px]">
             {hasPostMedia ? (
               <>
                 {currentPostMedia?.type === "video" ? (
                   <video
                     src={currentPostMedia.url}
-                    className="w-full max-h-[620px] object-contain bg-black"
+                    className="w-full max-h-[420px] object-contain bg-black"
                     autoPlay
                     muted
                     controls
@@ -321,7 +356,7 @@ export default function ActiveStoryModal({
                   <img
                     src={currentPostMedia.url}
                     alt="story post"
-                    className="w-full max-h-[500px] object-contain bg-black"
+                    className="w-full max-h-[300px] object-contain bg-black"
                   />
                 )}
 
@@ -390,11 +425,11 @@ export default function ActiveStoryModal({
             ) : null}
           </div>
 
-          {/* Post text/body */}
-          {post?.bodyText && (
+          {/* Post text/body - fallback to originalPost.bodyText */}
+          {postBodyText && (
             <div className="px-4 pt-3 pb-4">
               <p className="text-sm text-gray-100 whitespace-pre-line">
-                {post.bodyText}
+                {postBodyText}
               </p>
             </div>
           )}
@@ -491,6 +526,7 @@ export default function ActiveStoryModal({
         <ShareToChatsModal
           onClose={() => setShareModalOpen(false)}
           story={currentStory}
+          post={post}
         />
       )}
 
@@ -517,6 +553,7 @@ export default function ActiveStoryModal({
           isOpen={postDetailModalOpen}
           onClose={() => {
             setPostDetailModalOpen(false);
+              setIsPaused(false)
           }}
         />
       )}

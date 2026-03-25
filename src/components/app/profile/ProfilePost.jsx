@@ -27,8 +27,6 @@ import CommentFilterModal from "./CommentFilterModal";
 import UploadPostStory from "./UploadPostStory";
 import { PiNotificationThin } from "react-icons/pi";
 
-import { PiNotificationThin } from "react-icons/pi";
-
 
 import {
   getPageStories,
@@ -60,7 +58,7 @@ import { FaPlus } from "react-icons/fa6";
 import { TbNotification } from "react-icons/tb";
 import toast from "react-hot-toast";
 
-export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
+export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }) {
   const [activeTab, setActiveTab] = useState("post");
   const [activeStory, setActiveStory] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -91,6 +89,13 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
     identityBack: null,
     expertiseDoc: null,
   });
+
+useEffect(()=>{
+   if (postRequest) {
+     setActiveTab("postrequest")
+   }
+},[postRequest])
+
   const [expertDocPreview, setExpertDocPreview] = useState(null);
   const [identityFrontPreview, setIdentityFrontPreview] = useState(null);
   const [identityBackPreview, setIdentityBackPreview] = useState(null);
@@ -811,7 +816,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
 
   const maxLength = 100;
 
-  console.log(pageDetail, "pageDetail");
+  console.log(pageDetail,page ,"pageDetail");
 
   return (
     <div className="relative">
@@ -951,20 +956,14 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId }) {
                 {(isSubscribed || isPageOwner) &&
                   (!isPrivatePage || isRequestAccepted || isPageOwner) && (
                     <button
-                      onClick={() => {
-                        console.log(
-                          "Button clicked, navigating with:",
-                          {
-                            pageId,
-                            pageName: pageDetail?.name,
-                          },
-                          page?.liveChat,
-                        );
+                      onClick={async() => {
+                         await dispatch(getPageDetail(pageId));                        
                         navigate(`/live-chat`, {
                           state: {
                             pageId: pageId,
                             pageName: pageDetail?.name,
                             pageOwner: page?.liveChat,
+                            page:pageDetail
                           },
                         });
                       }}

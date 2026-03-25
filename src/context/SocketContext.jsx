@@ -2,13 +2,14 @@ import React, { createContext, useEffect, useState, useMemo } from "react";
 import createSocket from "../socket";
 import Cookies from "js-cookie";
 import { SOCKET_EVENTS } from "../constants/socketEvents";
+import { useNavigate } from "react-router";
 
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children, url }) => {
   const [client, setClient] = useState(null);
   const [token, setToken] = useState(Cookies.get("access_token"));
-
+  const navigate = useNavigate("");
   // Check token changes periodically
   useEffect(() => {
     const interval = setInterval(() => {
@@ -56,6 +57,7 @@ export const SocketProvider = ({ children, url }) => {
 
     socket.on(SOCKET_EVENTS.LIVE.USER_JOINED, (data) => {
       console.log("User joined live chat:", data);
+
       // Handle user joined: update participant list, etc.
     });
 
@@ -71,6 +73,7 @@ export const SocketProvider = ({ children, url }) => {
 
     socket.on(SOCKET_EVENTS.LIVE.ENDED, (data) => {
       console.log("Live chat ended:", data);
+      navigate(-1);
       // Handle live ended: close chat, show message, etc.
     });
 
@@ -196,7 +199,7 @@ export const SocketProvider = ({ children, url }) => {
         client?.emit(SOCKET_EVENTS.GROUP.SHARE_CONTENT, payload, callback);
       },
     }),
-    [client]
+    [client],
   );
 
   return (

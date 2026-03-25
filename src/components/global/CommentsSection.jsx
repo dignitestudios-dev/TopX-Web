@@ -24,7 +24,6 @@ export default function CommentsSection({
   pageId = null,
   postDetail,
   isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
-  isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(

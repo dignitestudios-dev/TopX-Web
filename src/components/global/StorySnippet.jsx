@@ -49,7 +49,7 @@ const StorySnippet = React.forwardRef(({ post }, ref) => {
   return (
     <div
       ref={ref}
-      className="w-[360px] h-[640px] bg-black flex items-center justify-center"
+      className="w-[360px] h-[640px] bg-white flex items-center justify-center"
       style={{
         fontFamily:
           "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",

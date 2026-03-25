@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchLiveChatHistory } from "../../redux/slices/chat.slice";
 import axios from "../../axios";
 import { SuccessToast } from "../../components/global/Toaster";
+import { getPageDetail } from "../../redux/slices/pages.slice";
 
 const GIPHY_API_KEY = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI"; // Replace with your actual key
 
@@ -23,7 +24,7 @@ export default function LiveChat() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { pageId, pageName, pageOwner } = state || {};
+  const { pageId, pageName, pageOwner,page } = state || {};
 
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
@@ -95,15 +96,16 @@ export default function LiveChat() {
     if (!socket || !pageId) return;
 
     const handleJoin = () => {
-      socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId }, (response) => {
+      socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId }, async(response) => {
         const receivedId = response?.data;
 
         if (receivedId && response.success) {
           setChatId(receivedId);
           chatIdRef.current = receivedId;
-          dispatch(
+         await dispatch(
             fetchLiveChatHistory({ chatId: pageId, page: 1, limit: 50 }),
           );
+         
         }
       });
     };
@@ -171,8 +173,16 @@ export default function LiveChat() {
     setMessage("");
   };
 
-  const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/webm",
+  "video/ogg",
+  "video/quicktime" // for .mov (iPhone videos)
+];
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -292,7 +302,6 @@ export default function LiveChat() {
     );
   };
 
-  console.log(pageOwner, "pageOwner");
   return (
     <div className="flex h-screen w-screen bg-white overflow-hidden font-sans">
       {/* Sidebar - Same as before */}
@@ -302,7 +311,7 @@ export default function LiveChat() {
         </div>
         <div className="flex-1 p-4">
           <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
-            <p className="font-bold text-gray-100">{pageName || "Live Room"}</p>
+            <p className="font-bold text-gray-100"> {page?.user?.name + " " + pageName || "Live Room"}</p>
             <p className="text-[10px] text-green-400 uppercase font-bold">
               Connected
             </p>
@@ -313,7 +322,7 @@ export default function LiveChat() {
       <div className="flex-1 flex flex-col bg-gray-50 relative">
         {/* Header */}
         <div className="bg-white border-b px-8 py-4 flex items-center justify-between shadow-sm">
-          <span className="font-bold text-lg">{pageName} Chat</span>
+          <span className="font-bold text-lg"> {page?.user?.name + " " + pageName} Chat</span>
           {pageOwner ? (
             <button
               onClick={handleLeaveChat}
@@ -440,7 +449,7 @@ export default function LiveChat() {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept="image/jpeg,image/png,image/webp,image/jpg"
+            accept="image/jpeg,image/png,image/webp,image/jpg,video/mp4,video/webm,video/ogg"
               onChange={handleFileChange}
             />
 

@@ -167,6 +167,7 @@ export default function Profile() {
           </div>
         ) : (
           <ProfilePost
+          postRequest={location?.state?.req&&true}
             setIsProfilePostOpen={setIsProfilePostOpen}
             pageId={selectedPageId} // <-- DETAIL PAGE RECEIVES ID
           />

@@ -23,22 +23,47 @@ const PostStoryModal = ({ onClose, post }) => {
   const allMedia = useMemo(() => {
     if (!post) return [];
 
+    // Case 1: post.media (new structure)
     if (Array.isArray(post.media) && post.media.length > 0) {
       return post.media
         .filter((m) => m?.fileUrl)
         .map((m) => ({
           url: m.fileUrl,
-          type: m.type || (m.fileUrl.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
+          type:
+            m.type ||
+            (typeof m.fileUrl === "string" &&
+            m.fileUrl.match(/\.(mp4|webm|ogg)$/i)
+              ? "video"
+              : "image"),
         }));
     }
 
+    // Case 2: post.postimage (old structure)
     if (Array.isArray(post.postimage) && post.postimage.length > 0) {
       return post.postimage
         .filter(Boolean)
-        .map((url) => ({
-          url,
-          type: url.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image",
-        }));
+        .map((item) => {
+          // If string
+          if (typeof item === "string") {
+            return {
+              url: item,
+              type: item.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image",
+            };
+          }
+
+          // If object
+          if (typeof item === "object") {
+            return {
+              url: item.fileUrl || item.url,
+              type:
+                item.type ||
+                (item.fileUrl?.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
+            };
+          }
+
+          return null;
+        })
+        .filter(Boolean);
     }
 
     return [];
@@ -49,9 +74,10 @@ const PostStoryModal = ({ onClose, post }) => {
   const currentMedia = hasMedia ? allMedia[currentMediaIndex] : null;
 
   // Filter pages based on search
-  const filteredPages = myPages?.filter((page) =>
-    page.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredPages =
+    myPages?.filter((page) =>
+      page.name?.toLowerCase().includes(searchQuery.toLowerCase()),
+    ) || [];
 
   const handlePostStory = async () => {
     if (!selectedPage) {
@@ -77,10 +103,7 @@ const PostStoryModal = ({ onClose, post }) => {
       const postId = post._id || post.id;
       if (postId) formData.append("postId", postId);
 
-      const text =
-        post.bodyText ||
-        post.text ||
-        "";
+      const text = post.bodyText || post.text || "";
 
       formData.append("text", text);
 
@@ -128,7 +151,9 @@ const PostStoryModal = ({ onClose, post }) => {
         {/* Header */}
         <div className="flex items-center justify-between border-b px-5 py-3 bg-gradient-to-r from-orange-50 to-white">
           <h2 className="text-[17px] font-semibold text-gray-900">
-            {step === 1 ? "Select Page You Want to Share This Post on Story." : "Share to your Story"}
+            {step === 1
+              ? "Select Page You Want to Share This Post on Story."
+              : "Share to your Story"}
           </h2>
           <button
             onClick={() => onClose("")}
@@ -146,11 +171,18 @@ const PostStoryModal = ({ onClose, post }) => {
                 <p className="text-xs text-gray-600 mb-2">Post Preview:</p>
                 <div className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm">
                   <div className="flex items-center gap-2 mb-2">
-                    <img
-                      src={post.author?.profilePicture}
-                      alt={post.author?.name}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
+                    {post.author?.profilePicture ? (
+                      <img
+                        src={post.author.profilePicture}
+                        alt={post.author?.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-semibold">
+                        {post.author?.name?.charAt(0)?.toUpperCase() || "U"}
+                      </div>
+                    )}
+
                     <div>
                       <p className="text-sm font-semibold">
                         {post.author?.name}
@@ -266,21 +298,28 @@ const PostStoryModal = ({ onClose, post }) => {
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50/60">
               {post && (
                 <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <img
-                      src={post.author?.profilePicture}
-                      alt={post.author?.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="text-sm font-semibold">
-                        {post.author?.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        @{post.author?.username}
-                      </p>
-                    </div>
-                  </div>
+                  <div className="flex items-center gap-2 mb-2">
+  {post.author?.profilePicture ? (
+    <img
+      src={post.author.profilePicture}
+      alt={post.author?.name}
+      className="w-8 h-8 rounded-full object-cover"
+    />
+  ) : (
+    <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-semibold">
+      {post.author?.name?.charAt(0)?.toUpperCase() || "U"}
+    </div>
+  )}
+
+  <div>
+    <p className="text-sm font-semibold">
+      {post.author?.name}
+    </p>
+    <p className="text-xs text-gray-500">
+      @{post.author?.username}
+    </p>
+  </div>
+</div>
 
                   {(post.bodyText || post.text) && (
                     <p className="text-sm text-gray-800 mb-4 whitespace-pre-line">

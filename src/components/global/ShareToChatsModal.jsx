@@ -18,10 +18,10 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
   const socket = useContext(SocketContext);
   const { chats, groupChats, chatsLoading, groupChatsLoading } = useSelector((state) => state.chat);
   const { followersFollowing } = useSelector((state) => state.auth);
-  
+   console.log(post,"postStory")
   // Check if this is a knowledge post
   const isKnowledgePost = post?.contentType === "knowledge" || post?.type === "knowledge";
-
+ 
   // Fetch chats on mount
   useEffect(() => {
     dispatch(fetchIndividualChats({ page: 1, limit: 100, type: "active" }));
@@ -111,22 +111,33 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
         return;
       }
 
+      const getSharedMedia = () => {
+  // 1. originalPost media
+  if (post?.originalPost?.media?.length > 0) {
+    return post.originalPost.media[0]?.fileUrl;
+  }
+
+  // 2. post.media array
+  if (Array.isArray(post?.media) && post.media.length > 0) {
+    return post.media[0]?.fileUrl || post.media[0];
+  }
+
+  // 3. post.media string
+  if (typeof post?.media === "string") {
+    return post.media;
+  }
+
+  return null;
+};
+
       const payload = {
         sendTo,
         sharedType: "story",
         page: story?.page?._id,
         pageImage: story?.page?.image,
-        media: story?.story?.media?.fileUrl,
-        name: story?.page?.name,
-        targetId: story?._id,
-        textOnImage:
-          story?.story?.textOnImage ||
-          story?.story?.backgroundCode ||
-          null,
-        imageStyle: story?.story?.imageStyle || null,
-        imageLocalPath: story?.story?.imageLocalPath || null,
+        media:getSharedMedia(),
+        name: story?.page?.name,       
       };
-
       socket.shareContent(payload, (response) => {
         if (response?.success) {
           SuccessToast("Story shared successfully");
@@ -210,7 +221,6 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
           return;
         }
       }
-
       // Share post to individual chats
       const individualChatIds = selectedChats.filter((chatId) => !isGroupChat(chatId));
       const groupChatIds = selectedChats.filter((chatId) => isGroupChat(chatId));

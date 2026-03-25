@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { X, Clock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markNotificationAsRead, notificationfollowrequest, notificationpostrequest } from "../../redux/slices/notifications.slice";
+import { useNavigate } from "react-router";
 
 const NotificationPopup = ({ onClose }) => {
   const dispatch = useDispatch();
   const [acceptingId, setAcceptingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
-
+  const navigate=useNavigate("");
   const { notifications, unreadCount, notificationsLoading, error } = useSelector(
     (state) => state.notifications
   );
@@ -147,7 +148,13 @@ const NotificationPopup = ({ onClose }) => {
                 key={n._id}
                 className={`flex items-start gap-3 px-6 py-4 border-b border-gray-100 hover:bg-gradient-to-r hover:from-orange-50 hover:to-transparent transition cursor-pointer ${!n.isRead ? "bg-orange-50/30" : ""
                   }`}
-                onClick={() => handleMarkAsRead(n._id)} // Mark as read on click
+                onClick={() => {
+                  handleMarkAsRead(n._id)
+                  if (requestType=="postRequest") {
+                     console.log(n?.metaData?.page,"notiricationRecord")
+                     navigate("/profile",{state:{id:n?.metaData?.page,req:"post"}})
+                  }
+                }} // Mark as read on click
               >
                 <div className="flex-shrink-0">
 
@@ -173,7 +180,7 @@ const NotificationPopup = ({ onClose }) => {
                         <span className="text-gray-600"> {n.description}</span>
                       </p>
 
-                      {isRequestType && (
+                      {requestType=="followRequest" && (
                         <div className="flex gap-2 mt-3">
                           <button
                             onClick={() => handleAccept(n, requestType)}
@@ -200,7 +207,7 @@ const NotificationPopup = ({ onClose }) => {
                                 Rejecting
                               </span>
                             ) : (
-                              "Reject"
+                              "Decline"
                             )}
                           </button>
                         </div>
