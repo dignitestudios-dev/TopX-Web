@@ -133,11 +133,14 @@ const notificationsSlice = createSlice({
             .addCase(markNotificationAsRead.fulfilled, (state, action) => {
                 // Update the state to mark the notification as read
                 state.notifications = state.notifications.map((notification) =>
-                    notification.id === action.payload.notificationId
-                        ? { ...notification, read: true } // Assuming there's a "read" field in notification
+                    notification._id === action.payload.notificationId
+                        ? { ...notification, isRead: true }
                         : notification
                 );
-                state.unreadCount -= 1; // Decrease unread count
+                state.unreadCount = Math.max(
+                    (state.unreadCount || 0) - 1,
+                    0,
+                );
             })
             .addCase(markNotificationAsRead.rejected, (state, action) => {
                 // Handle error if needed

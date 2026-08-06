@@ -3,15 +3,17 @@ import { X, Clock } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markNotificationAsRead, notificationfollowrequest, notificationpostrequest } from "../../redux/slices/notifications.slice";
 import { useNavigate } from "react-router";
+import axios from "../../axios";
 
 const NotificationPopup = ({ onClose }) => {
   const dispatch = useDispatch();
   const [acceptingId, setAcceptingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
-  const navigate=useNavigate("");
+  const navigate = useNavigate();
   const { notifications, unreadCount, notificationsLoading, error } = useSelector(
     (state) => state.notifications
   );
+  const { user } = useSelector((state) => state.auth);
 
   // Fetch notifications when the component mounts
   useEffect(() => {
@@ -78,6 +80,92 @@ const NotificationPopup = ({ onClose }) => {
     dispatch(fetchNotifications({ page: 1, limit: 10 }));
   };
 
+  const handleNotificationRedirect = async (notification) => {
+    const meta = notification?.metaData || {};
+    const type = meta?.type;
+    const subType = meta?.subType;
+
+    // Live stream / live chat redirects
+    if (type === "liveAndInteractiveNotification") {
+      if (subType === "LiveStreamStarted") {
+        const channelName =
+          meta?.stream?.channelName ||
+          meta?.pageInfo?.pageId ||
+          meta?.page;
+
+        if (channelName) {
+          navigate(`/live-stream/${channelName}`);
+        }
+        return;
+      }
+
+      if (subType === "LiveChatStarted") {
+        const pageId = meta?.pageInfo?.pageId || meta?.page;
+        const pageName = meta?.pageInfo?.name || "";
+
+        // Livechat uses `pageOwner` boolean to decide "End" vs "Leave".
+        const pageOwner =
+          user?._id && meta?.user?._id
+            ? String(user._id) === String(meta.user._id)
+            : false;
+
+        // Livechat header uses `page?.user?.name`, so pass minimal shape.
+        const page = { user: { name: meta?.user?.name || "" } };
+
+        if (pageId) {
+          navigate("/live-chat", {
+            state: { pageId, pageName, pageOwner, page },
+          });
+        }
+        return;
+      }
+    }
+
+    // Follow request accepted => go to that page detail
+    if (type === "contentAndTopicNotification") {
+      if (subType === "FollowRequestAccepted") {
+        const pageId = meta?.page;
+        if (pageId) navigate(`/trending-page-detail/${pageId}`);
+        return;
+      }
+    }
+
+    // Engagement notifications => take user to their posts page (best-effort).
+    if (type === "engagementNotification") {
+      // If backend provides page id, go directly to page detail.
+      if (meta?.page) navigate(`/trending-page-detail/${meta.page}`);
+      if (meta?.post) {
+        try {
+          // Best-effort: fetch post to get its page id, then redirect to page detail.
+          const res = await axios.get(`/posts/${meta.post}`);
+          const fetchedPost =
+            res?.data?.data?.Post ||
+            res?.data?.data ||
+            res?.data?.Post ||
+            res?.data;
+
+          const pageId =
+            fetchedPost?.page?._id ||
+            fetchedPost?.pageId ||
+            fetchedPost?.page;
+
+          if (pageId) {
+            navigate(`/trending-page-detail/${pageId}`);
+            return;
+          }
+        } catch (e) {
+          // Fall back below
+        }
+      }
+
+      navigate("/my-posts");
+      return;
+    }
+
+    // Fallback: if we have a page id, go to page detail; otherwise do nothing.
+    if (meta?.page) navigate(`/trending-page-detail/${meta.page}`);
+  };
+
   if (notificationsLoading) {
     return (
       <div className="absolute right-0 mt-3 w-[400px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50">
@@ -140,20 +228,29 @@ const NotificationPopup = ({ onClose }) => {
           notifications.map((n) => {
             const hasFollowRequest = n.metaData?.followRequest;
             const hasPostRequest = n.metaData?.postRequest;
-            const isRequestType = hasFollowRequest || hasPostRequest;
-            const requestType = hasFollowRequest ? "followRequest" : "postRequest";
+            const isRequestType = Boolean(hasFollowRequest || hasPostRequest);
+            const requestType = hasFollowRequest
+              ? "followRequest"
+              : hasPostRequest
+                ? "postRequest"
+                : null;
 
             return (
               <div
                 key={n._id}
                 className={`flex items-start gap-3 px-6 py-4 border-b border-gray-100 hover:bg-gradient-to-r hover:from-orange-50 hover:to-transparent transition cursor-pointer ${!n.isRead ? "bg-orange-50/30" : ""
                   }`}
-                onClick={() => {
-                  handleMarkAsRead(n._id)
-                  if (requestType=="postRequest") {
-                     console.log(n?.metaData?.page,"notiricationRecord")
-                     navigate("/profile",{state:{id:n?.metaData?.page,req:"post"}})
+                onClick={async () => {
+                  handleMarkAsRead(n._id);
+                  if (isRequestType && requestType === "postRequest") {
+                    // Post requests tab for the selected page
+                    navigate("/profile", {
+                      state: { id: n?.metaData?.page, req: "post" },
+                    });
+                  } else {
+                    await handleNotificationRedirect(n);
                   }
+                  onClose?.();
                 }} // Mark as read on click
               >
                 <div className="flex-shrink-0">
@@ -183,7 +280,10 @@ const NotificationPopup = ({ onClose }) => {
                       {requestType=="followRequest" && (
                         <div className="flex gap-2 mt-3">
                           <button
-                            onClick={() => handleAccept(n, requestType)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAccept(n, requestType);
+                            }}
                             disabled={acceptingId === n._id}
                             className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg bg-[#F6822F] text-white hover:bg-[#e67318] disabled:bg-[#F6822F] disabled:opacity-60 disabled:cursor-not-allowed transition active:scale-95"
                           >
@@ -197,7 +297,10 @@ const NotificationPopup = ({ onClose }) => {
                             )}
                           </button>
                           <button
-                            onClick={() => handleReject(n, requestType)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReject(n, requestType);
+                            }}
                             disabled={rejectingId === n._id}
                             className="flex-1 text-xs font-semibold px-3 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed transition active:scale-95"
                           >
