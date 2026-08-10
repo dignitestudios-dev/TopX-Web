@@ -13,6 +13,8 @@ const initialState = {
   removePageLoading: false,
   collectionNames: [],
   collectionNamesLoading: false,
+  currentCollectionFilter: null,
+  collectionFilterLoading: false,
 };
 
 // =============================
@@ -505,9 +507,72 @@ const collectionSlice = createSlice({
       .addCase(getCollectionNames.rejected, (state, action) => {
         state.collectionNamesLoading = false;
         state.error = action.payload;
+      })
+      // ========== SET COLLECTION COMMENT FILTER ==========
+      .addCase(setCollectionCommentFilter.pending, (state) => {
+        state.collectionFilterLoading = true;
+      })
+      .addCase(setCollectionCommentFilter.fulfilled, (state, action) => {
+        state.collectionFilterLoading = false;
+        if (action.payload?.data) {
+          state.currentCollectionFilter = action.payload.data;
+        }
+      })
+      .addCase(setCollectionCommentFilter.rejected, (state) => {
+        state.collectionFilterLoading = false;
+      })
+      // ========== GET COLLECTION COMMENT FILTER ==========
+      .addCase(getCollectionCommentFilter.pending, (state) => {
+        state.collectionFilterLoading = true;
+      })
+      .addCase(getCollectionCommentFilter.fulfilled, (state, action) => {
+        state.collectionFilterLoading = false;
+        state.currentCollectionFilter = action.payload || null;
+      })
+      .addCase(getCollectionCommentFilter.rejected, (state) => {
+        state.collectionFilterLoading = false;
       });
   },
 });
+
+// =============================
+// SET COLLECTION COMMENT FILTER
+// =============================
+export const setCollectionCommentFilter = createAsyncThunk(
+  "collections/setCollectionCommentFilter",
+  async ({ collectionId, filterType }, thunkAPI) => {
+    try {
+      const res = await axios.post("/posts/feed/collection/filter", {
+        collection: collectionId,
+        filterType,
+      });
+      return res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to set collection filter"
+      );
+    }
+  }
+);
+
+// =============================
+// GET COLLECTION COMMENT FILTER
+// =============================
+export const getCollectionCommentFilter = createAsyncThunk(
+  "collections/getCollectionCommentFilter",
+  async (collectionId, thunkAPI) => {
+    try {
+      const res = await axios.get(
+        `/posts/feed/collection/filter/${collectionId}`
+      );
+      return res.data?.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to get collection filter"
+      );
+    }
+  }
+);
 
 export const { resetCollections } = collectionSlice.actions;
 export default collectionSlice.reducer;

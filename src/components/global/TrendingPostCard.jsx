@@ -7,7 +7,9 @@ import {
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
+  Repeat,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 import { likePost } from "../../redux/slices/posts.slice";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
@@ -20,9 +22,30 @@ import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "./Toaster";
 import PrivatePostModal from "./PrivatePostModal";
 import PostImageViewerModal from "./PostDetailModal";
+import { getLinkPreview } from "../../lib/helpers";
+import LinkPreviewCard from "./LinkPreviewCard";
 
-export default function TrendingPostCard({ post, liked, toggleLike }) {
+export default function TrendingPostCard({
+  post,
+  liked,
+  toggleLike,
+  activeCommentPostId,
+  setActiveCommentPostId,
+}) {
   const [commentsOpen, setCommentsOpen] = useState(false);
+
+  const isCommentsOpen = typeof setActiveCommentPostId === "function"
+    ? activeCommentPostId === (post?.id || post?._id)
+    : commentsOpen;
+
+  const handleToggleComments = () => {
+    const pId = post?.id || post?._id;
+    if (typeof setActiveCommentPostId === "function") {
+      setActiveCommentPostId(isCommentsOpen ? null : pId);
+    } else {
+      setCommentsOpen(!commentsOpen);
+    }
+  };
   // Repost
   const [moreOpen, setMoreOpen] = useState(false);
   const [reportmodal, setReportmodal] = useState(false);
@@ -37,6 +60,8 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
 
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
+
+  const linkData = getLinkPreview(post?.bodyText || post?.text);
 
   const getInitials = (value) => {
     const str = typeof value === "string" ? value.trim() : "";
@@ -215,8 +240,36 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
     "Share in Individuals Chats",
     "Share in Group Chats",
   ];
+  const navigate = useNavigate();
+
   return (
     <div className="bg-white relative h-auto  pb-10 rounded-2xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-md transition-shadow">
+      {/* Repost Navigation Banner */}
+      {(post?.originalPost || post?.sharedBy || post?.isRepost) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            const origPageId = post?.originalPost?.page?._id || post?.originalPost?.page || post?.page?._id;
+            if (origPageId) {
+              navigate(`/trending-page-detail/${origPageId}`, {
+                state: { postId: post?.originalPost?._id || post?.originalPost || post?._id }
+              });
+            }
+          }}
+          className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between cursor-pointer hover:bg-orange-100 transition-colors"
+        >
+          <div className="flex items-center gap-2 text-xs font-semibold text-orange-700">
+            <Repeat className="w-3.5 h-3.5 text-orange-600" />
+            <span>
+              Reposted from {post?.originalPost?.author?.name || post?.originalPost?.page?.name || post?.sharedBy?.username || "Original Post"}
+            </span>
+          </div>
+          <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1">
+            Go to original post →
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-4 flex items-start justify-between border-b border-gray-100">
         <div className="flex items-center gap-3 flex-1">
@@ -389,7 +442,16 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           </div>
         )}
 
-        <p className="text-sm text-gray-800 leading-snug mb-3">{post.text}</p>
+        {!hasMedia && linkData && <LinkPreviewCard linkData={linkData} />}
+
+        {(() => {
+          const rawText = post?.text || post?.bodyText || "";
+          const cleanText = linkData
+            ? rawText.replace(linkData.url, "").trim()
+            : rawText;
+          if (!cleanText) return null;
+          return <p className="text-sm text-gray-800 leading-snug mb-3">{cleanText}</p>;
+        })()}
         {post?.sharedBy ? (
           <div className="text-sm text-nowrap  flex gap-2 justify-start items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
             {post.sharedBy?.profilePicture ? (
@@ -469,7 +531,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
         </button>
 
         <button
-          onClick={() => setCommentsOpen(!commentsOpen)}
+          onClick={handleToggleComments}
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
         >
           <MessageCircle className="w-5 h-5" />
@@ -488,7 +550,7 @@ export default function TrendingPostCard({ post, liked, toggleLike }) {
           </span>
         </button>
       </div>
-      {commentsOpen && <CommentsSection postId={post.id} />}
+      {isCommentsOpen && <CommentsSection postId={post.id || post._id} />}
 
       {/* Share Post Modal */}
       {sharepost && (

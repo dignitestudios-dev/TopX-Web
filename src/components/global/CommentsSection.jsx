@@ -24,6 +24,8 @@ export default function CommentsSection({
   pageId = null,
   postDetail,
   isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
+  collectionId = null,
+  applyFilter = false,
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
@@ -71,12 +73,16 @@ export default function CommentsSection({
   const dispatch = useDispatch();
 
   const handleGetComments = async () => {
-    await dispatch(getComment(postId));
+    if (collectionId && applyFilter) {
+      await dispatch(getComment({ postId, collectionId, applyFilter: true }));
+    } else {
+      await dispatch(getComment(postId));
+    }
   };
 
   useEffect(() => {
     handleGetComments();
-  }, [postId]);
+  }, [postId, collectionId, applyFilter]);
 
   const addOrUpdateComment = async () => {
     if (!newComment.trim()) return;

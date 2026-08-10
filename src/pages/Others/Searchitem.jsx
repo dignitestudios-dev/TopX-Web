@@ -5,6 +5,7 @@ import {
   Share2,
   AlertTriangle,
   MoreHorizontal,
+  FileText,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import PostCard from "../../components/global/PostCard";
@@ -342,6 +343,12 @@ const SearchItem = () => {
                       <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
                         {page.followersCount || 0}+ Follows
                       </p>
+                    </div>
+
+                    {/* Post Count on Topic Pages */}
+                    <div className="flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100/80">
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>{page.postsCount ?? page.posts?.length ?? 0} Posts</span>
                     </div>
                     {/* Subscribe Button - Only for knowledge pages (direct subscribe) */}
                     {page.contentType === "knowledge" &&
@@ -785,6 +792,12 @@ const SearchItem = () => {
                             <p className="text-xs text-gray-600 font-medium whitespace-nowrap">
                               {page.followersCount || 0}+ Follows
                             </p>
+                          </div>
+
+                          {/* Post Count on Topic Pages */}
+                          <div className="flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100/80">
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{page.postsCount ?? page.posts?.length ?? 0} Posts</span>
                           </div>
                           {/* Subscribe Button - Only for knowledge pages (direct subscribe) */}
                           {page.contentType === "knowledge" &&

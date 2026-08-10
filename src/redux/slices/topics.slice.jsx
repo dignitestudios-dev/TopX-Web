@@ -5,20 +5,25 @@ const initialState = {
   isLoading: false,
   error: null,
   success: null,
-  alltopics: [],   // yahan save hoga data
+  alltopics: [],   // Stores interests/categories array
 };
 
-// ================= GET TOPICS =================
+// ================= GET TOPICS / INTERESTS =================
 export const gettopics = createAsyncThunk(
   "topics/gettopics",
   async (_, thunkAPI) => {
     try {
-      const res = await axios.get("/users/interests");
+      const res = await axios.get("/interests");
       return res.data?.data; 
     } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to load topics"
-      );
+      try {
+        const res2 = await axios.get("/users/interests");
+        return res2.data?.data;
+      } catch (err) {
+        return thunkAPI.rejectWithValue(
+          error.response?.data?.message || "Failed to load topics"
+        );
+      }
     }
   }
 );
@@ -41,7 +46,7 @@ const topicsSlice = createSlice({
       })
       .addCase(gettopics.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.alltopics = action.payload; // store array correctly
+        state.alltopics = action.payload || [];
         state.success = true;
       })
       .addCase(gettopics.rejected, (state, action) => {

@@ -31,6 +31,7 @@ export default function Trending() {
   const [liked, setLiked] = useState({});
   const [open, setOpen] = useState(false);
   const [postsPage, setPostsPage] = useState(1);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const dispatch = useDispatch();
   const postsObserverTarget = useRef(null);
   const [openModal, setOpenModal] = useState(false);
@@ -482,6 +483,8 @@ export default function Trending() {
                       post={post}
                       liked={liked}
                       toggleLike={toggleLike}
+                      activeCommentPostId={activeCommentPostId}
+                      setActiveCommentPostId={setActiveCommentPostId}
                     />
                   ))
                 ) : (

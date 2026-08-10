@@ -322,7 +322,14 @@ const ALLOWED_TYPES = [
       <div className="flex-1 flex flex-col bg-gray-50 relative">
         {/* Header */}
         <div className="bg-white border-b px-8 py-4 flex items-center justify-between shadow-sm">
-          <span className="font-bold text-lg"> {page?.user?.name + " " + pageName} Chat</span>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-lg">
+              {page?.user?.name ? `${page.user.name} ` : ""}{pageName || "Live Room"} Chat
+            </span>
+            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-200">
+              👥 {page?.followersCount || page?.followers?.length || 1} Participants
+            </span>
+          </div>
           {pageOwner ? (
             <button
               onClick={handleLeaveChat}

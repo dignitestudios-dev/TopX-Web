@@ -158,14 +158,23 @@ export const demoteComment = createAsyncThunk(
 
 export const getComment = createAsyncThunk(
   "posts/commentsGet",
-  async (postId, thunkAPI) => {
+  async (params, thunkAPI) => {
     try {
-      const res = await axios.get(`/comments/post/${postId}`);
+      const postId = typeof params === "object" ? params.postId : params;
+      const collectionId = typeof params === "object" ? params.collectionId : null;
+      const applyFilter = typeof params === "object" ? params.applyFilter : false;
+
+      let url = `/comments/post/${postId}`;
+      if (collectionId && applyFilter) {
+        url += `?collectionId=${collectionId}&applyFilter=true`;
+      }
+
+      const res = await axios.get(url);
 
       return res.data.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post",
+        error.response?.data?.message || "Failed to fetch comments",
       );
     }
   },

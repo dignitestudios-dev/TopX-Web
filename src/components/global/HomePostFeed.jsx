@@ -27,13 +27,32 @@ import ShareRepostModal from "./ShareRepostModal";
 import { IoWarning } from "react-icons/io5";
 import PrivatePostModal from "./PrivatePostModal";
 import DeletePostModal from "./DeletePostModal";
-import { fetchpostfeed } from "../../redux/slices/postfeed.slice";
+import { getLinkPreview } from "../../lib/helpers";
+import LinkPreviewCard from "./LinkPreviewCard";
 
-export default function HomePostFeed({ post, liked, toggleLike }) {
+export default function HomePostFeed({
+  post,
+  liked,
+  toggleLike,
+  activeCommentPostId,
+  setActiveCommentPostId,
+}) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [isPrivatePost, setIsPrivatePost] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+
+  const isCommentsOpen = typeof setActiveCommentPostId === "function"
+    ? activeCommentPostId === post.id
+    : commentsOpen;
+
+  const handleToggleComments = () => {
+    if (typeof setActiveCommentPostId === "function") {
+      setActiveCommentPostId(isCommentsOpen ? null : post.id);
+    } else {
+      setCommentsOpen(!commentsOpen);
+    }
+  };
   //   Edit Post
   const [moreOpenPostId, setMoreOpenPostId] = useState(null);
   const [existingMedia, setExistingMedia] = useState([]);
@@ -53,7 +72,6 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   };
 
   const [activeMedia, setActiveMedia] = useState(null);
-  console.log("postpostpostpostpost", post);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -61,6 +79,8 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
   const isUnderReview = post?.isReported === true;
+
+  const linkData = getLinkPreview(post?.text || post?.bodyText);
 
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedOption, setSelectedOption] = useState("");
@@ -519,18 +539,18 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
                     className="w-[150px]"
                     alt="postUnderreview"
                   />
-                  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-orange-100">
-                    {/* <AlertTriangle className="w-4 h-4" /> */}
-                    {/* <span>Post is under review</span> */}
-                  </div>
                 </div>
               )}
             </div>
+          ) : !isUnderReview && linkData ? (
+            <div className="px-3">
+              <LinkPreviewCard linkData={linkData} />
+            </div>
           ) : (
-            <div className="relative" >
+            <div className="relative">
               {isUnderReview && (
                 <div
-                  className="absolute  inset-0  h-[175px] flex flex-col items-center justify-center 
+                  className="absolute inset-0 h-[175px] flex flex-col items-center justify-center 
                 bg-black/40 backdrop-blur-md rounded-2xl"
                 >
                   <img
@@ -538,28 +558,22 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
                     className="w-[150px]"
                     alt="postUnderreview"
                   />
-                  {/* <div className="mt-3  flex items-center gap-2 text-sm font-medium text-orange-100">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Post is under review</span>
-                  </div> */}
                 </div>
               )}
             </div>
           )}
           <div className="px-3">
             {!isUnderReview ? (
-              <p className="text-sm text-gray-700 mt-4 mb-6">{post?.text}</p>
+              (() => {
+                const rawText = post?.text || post?.bodyText || "";
+                const cleanText = linkData
+                  ? rawText.replace(linkData.url, "").trim()
+                  : rawText;
+                if (!cleanText) return null;
+                return <p className="text-sm text-gray-700 mt-4 mb-6">{cleanText}</p>;
+              })()
             ) : (
-              <div className="items-center gap-2 text-sm text-orange-600 py-6">
-                {/* <div className="flex justify-center">
-                  <IoWarning size={70} />
-                </div>
-                <div className="flex justify-center mt-3">
-                  <p className="leading-relaxed w-[11em] text-center p-1 rounded-full bg-orange-600 text-white">
-                    Post Under Review
-                  </p>
-                </div> */}
-              </div>
+              <div className="items-center gap-2 text-sm text-orange-600 py-6" />
             )}
           </div>
           {post.sharedBy ? (
@@ -601,7 +615,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
             </button>
 
             <button
-              onClick={() => setCommentsOpen(!commentsOpen)}
+              onClick={handleToggleComments}
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <MessageCircle className="w-5 h-5" />
@@ -656,7 +670,7 @@ export default function HomePostFeed({ post, liked, toggleLike }) {
       />
 
       {/* Comments Section */}
-      {commentsOpen && <CommentsSection postId={post.id} />}
+      {isCommentsOpen && <CommentsSection postId={post.id} />}
 
       {/* Share Post Modal */}
       {sharepost && (

@@ -23,6 +23,8 @@ import ShareToPagesModal from "./ShareToPagesModal";
 import CommentFilterModal from "../app/profile/CommentFilterModal";
 import { VscSettings } from "react-icons/vsc";
 import { PiDotsThreeOutlineFill } from "react-icons/pi";
+import { getLinkPreview } from "../../lib/helpers";
+import LinkPreviewCard from "./LinkPreviewCard";
 
 
 
@@ -214,6 +216,8 @@ export default function PagePostsComponent({ pageId }) {
                 const mediaIndex = currentMediaIndex[post._id] || 0;
                 const currentMedia = post.media?.[mediaIndex];
                 const hasMultipleMedia = post.media && post.media.length > 1;
+                const hasMedia = Boolean(post.media && post.media.length > 0);
+                const linkData = getLinkPreview(post.bodyText || post.text);
                 const isMediaLoading = loadingMedia[post._id] || false;
                 const likeData = getPostLikeData(post._id, post);
 
@@ -315,11 +319,22 @@ export default function PagePostsComponent({ pageId }) {
                         </div>
                       )}
 
-                        {post.bodyText && (
-                        <p className="text-gray-800 mb-4 text-base leading-relaxed">
-                          {post.bodyText}
-                        </p>
+                      {!hasMedia && linkData && (
+                        <LinkPreviewCard linkData={linkData} />
                       )}
+
+                      {(() => {
+                        const rawText = post?.bodyText || post?.text || "";
+                        const cleanText = linkData
+                          ? rawText.replace(linkData.url, "").trim()
+                          : rawText;
+                        if (!cleanText) return null;
+                        return (
+                          <p className="text-gray-800 mb-4 text-base leading-relaxed">
+                            {cleanText}
+                          </p>
+                        );
+                      })()}
                     </div>
 
                     {/* Footer - Interactions */}

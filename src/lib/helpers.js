@@ -22,3 +22,47 @@ export function timeAgo(dateString) {
 
   return "Just now";
 }
+
+/**
+ * Extracts URL and YouTube thumbnail from a text string.
+ */
+export function getLinkPreview(text) {
+  if (!text || typeof text !== "string") return null;
+
+  // Match HTTP/HTTPS URL
+  const urlRegex = /(https?:\/\/[^\s]+)/i;
+  const match = text.match(urlRegex);
+  if (!match) return null;
+
+  const url = match[0];
+  let domain = "";
+  try {
+    const parsed = new URL(url);
+    domain = parsed.hostname.replace(/^www\./, "");
+  } catch (e) {
+    domain = "link";
+  }
+
+  // Check for YouTube (Shorts, Watch, Embed, YouTu.be)
+  const ytMatch = url.match(
+    /(?:youtube\.com\/(?:shorts\/|watch\?(?:.*&)?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
+  );
+
+  if (ytMatch && ytMatch[1]) {
+    const videoId = ytMatch[1];
+    return {
+      url,
+      domain: "youtube.com",
+      thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      isYoutube: true,
+      videoId,
+    };
+  }
+
+  return {
+    url,
+    domain,
+    thumbnail: null,
+    isYoutube: false,
+  };
+}

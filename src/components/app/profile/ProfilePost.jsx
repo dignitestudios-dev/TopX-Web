@@ -9,7 +9,9 @@ import {
   Filter,
   LucideSettings2,
   Cross,
+  UserCheck,
 } from "lucide-react";
+import FollowRequestsModal from "./FollowRequestsModal";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -82,6 +84,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
   const [expertModal, setExpertModal] = useState(false);
+  const [followRequestsModal, setFollowRequestsModal] = useState(false);
   const [expertForm, setExpertForm] = useState({
     topic: "",
     summary: "",
@@ -956,24 +959,36 @@ useEffect(()=>{
                 {(isSubscribed || isPageOwner) &&
                   (!isPrivatePage || isRequestAccepted || isPageOwner) && (
                     <button
-                      onClick={async() => {
-                         await dispatch(getPageDetail(pageId));                        
+                      onClick={async () => {
+                        await dispatch(getPageDetail(pageId));
                         navigate(`/live-chat`, {
                           state: {
                             pageId: pageId,
                             pageName: pageDetail?.name,
                             pageOwner: page?.liveChat,
-                            page:pageDetail
+                            page: pageDetail,
                           },
                         });
                       }}
-                      className="border-[1px] p-2 text-nowrap px-4 flex gap-4 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-5"
+                      className="border-[1px] border-orange-200 p-2 text-nowrap px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm"
                     >
-                      {page?.liveChat
-                        ? "Start A Live Chat"
-                        : "Start A Live Chat"}
+                      <span>Start A Live Chat</span>
+                      <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
+                         {page?.followersCount || page?.followers?.length || 0} 
+                      </span>
                     </button>
                   )}
+
+                {/* Follow Requests Button - Only show for private page owner */}
+                {isPageOwner && (page?.pageType === "private" || page?.isPrivate) && (
+                  <button
+                    onClick={() => setFollowRequestsModal(true)}
+                    className="px-3 py-2 text-nowrap rounded-2xl border border-orange-500 text-orange-600 hover:bg-orange-50 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                  >
+                    <UserCheck className="w-4 h-4 text-orange-500" />
+                    <span>Follow Requests</span>
+                  </button>
+                )}
 
                 {/* Plus Icon Button - Only show for page owner */}
                 {isPageOwner && (
@@ -990,7 +1005,7 @@ useEffect(()=>{
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-9 h-9 -ml-2 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
                   >
                     <MoreVertical className="w-5 h-5 text-gray-600" />
                   </button>
@@ -999,6 +1014,19 @@ useEffect(()=>{
                       {/* Only show these items if the user is the page owner */}
                       {isPageOwner && (
                         <>
+                          {(page?.pageType === "private" || page?.isPrivate) && (
+                            <button
+                              onClick={() => {
+                                setFollowRequestsModal(true);
+                                setShowDropdown(false);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+                            >
+                              <UserCheck className="w-4 h-4 text-orange-500" />
+                              <span>Follow Requests</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => {
                               setExpertModal(true);
@@ -1141,29 +1169,41 @@ useEffect(()=>{
             </button>
 
             {isPageOwner && (
-              <button
-                onClick={() => setActiveTab("postrequest")}
-                className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
-                    ? "text-orange-600"
-                    : "text-gray-500 hover:text-gray-700"
-                  }`}
-              >
-                <div className="p-1.5 rounded">
-                  <TbNotification
-                    size={30}
-                    className={`${activeTab === "postrequest"
-                        ? "text-orange-600"
-                        : "text-gray-500"
-                      } transition-colors`}
-                  />
-                </div>
+              page?.pageType === "private" || page?.isPrivate ? (
+                <button
+                  onClick={() => setFollowRequestsModal(true)}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative text-gray-500 hover:text-orange-600`}
+                >
+                  <div className="p-1 rounded">
+                    <UserCheck className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <span className="text-[13px] font-[500]">Follow Request</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setActiveTab("postrequest")}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
+                      ? "text-orange-600"
+                      : "text-gray-500 hover:text-gray-700"
+                    }`}
+                >
+                  <div className="p-1.5 rounded">
+                    <TbNotification
+                      size={30}
+                      className={`${activeTab === "postrequest"
+                          ? "text-orange-600"
+                          : "text-gray-500"
+                        } transition-colors`}
+                    />
+                  </div>
 
-                <span className="text-[13px] font-[500] -ml-[10px]">Post Request</span>
+                  <span className="text-[13px] font-[500] -ml-[10px]">Post Request</span>
 
-                {activeTab === "postrequest" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
-                )}
-              </button>
+                  {activeTab === "postrequest" && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
+                  )}
+                </button>
+              )
             )}
           </div>
 
@@ -2211,6 +2251,15 @@ useEffect(()=>{
           </div>
         </div>
       )}
+      {/* Follow Requests Modal (Private Page) */}
+      <FollowRequestsModal
+        isOpen={followRequestsModal}
+        onClose={() => setFollowRequestsModal(false)}
+        pageId={pageId}
+        onActionComplete={() => {
+          if (pageId) dispatch(getPageDetail(pageId));
+        }}
+      />
     </div>
   );
 }

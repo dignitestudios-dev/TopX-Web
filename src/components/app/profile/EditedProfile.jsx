@@ -3,15 +3,18 @@ import Button from "../../common/Button";
 import Input from "../../common/Input";
 import { BiArrowBack } from "react-icons/bi";
 import { auth } from "../../../assets/export";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import {
   getAllUserData,
   updateProfile,
 } from "../../../redux/slices/auth.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import { getInterests, checkUsername } from "../../../redux/slices/onboarding.slice";
+import ProfilePictureModal from "./ProfilePictureModal";
+import EmojiPickerModal from "./EmojiPickerModal";
 
 export default function EditedProfile() {
   const navigate = useNavigate();
@@ -35,8 +38,37 @@ export default function EditedProfile() {
   const [originalUsername, setOriginalUsername] = useState(allUserData?.username || "");
   const [usernameSuggestions, setUsernameSuggestions] = useState([]);
   const [usernameStatus, setUsernameStatus] = useState(null); // 'available', 'unavailable', null
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const [openCategoryId, setOpenCategoryId] = useState(null);
 
   const { isLoading, interestsList } = useSelector((state) => state.onboarding);
+
+  // Set default open category to the 1st category once loaded
+  useEffect(() => {
+    if (interestsList && interestsList.length > 0 && openCategoryId === null) {
+      const firstCat = interestsList[0];
+      const firstId = firstCat._id || firstCat.id || "cat-0";
+      setOpenCategoryId(firstId);
+    }
+  }, [interestsList, openCategoryId]);
+
+  // Helper to extract sub-interests array from an interest item
+  const getSubList = (item) => {
+    if (!item) return [];
+    if (Array.isArray(item.subCategories)) return item.subCategories;
+    if (Array.isArray(item.subTopics)) return item.subTopics;
+    if (Array.isArray(item.subInterests)) return item.subInterests;
+    if (Array.isArray(item.children)) return item.children;
+    return [];
+  };
+
+  // Toggle single open category (Accordion: only 1 open at a time)
+  const handleHeaderClick = (catId) => {
+    setOpenCategoryId((prev) => (prev === catId ? null : catId));
+  };
 
   useEffect(() => {
     dispatch(getAllUserData());
@@ -49,14 +81,13 @@ export default function EditedProfile() {
   // Auto-select API interests
   useEffect(() => {
     if (allUserData?.interests?.length > 0) {
-      // Convert all interests to lowercase for uniformity
       setActiveCategories(allUserData.interests.map((i) => i));
     }
   }, [allUserData]);
 
   // Toggle category
   const toggleCategory = (category) => {
-    const c = category; // make category lowercase to match with activeCategories
+    const c = category;
     if (activeCategories.includes(c)) {
       setActiveCategories(activeCategories.filter((cat) => cat !== c));
     } else {
@@ -135,6 +166,11 @@ export default function EditedProfile() {
     }
   };
 
+  const handleSelectEmoji = (emojiUrl) => {
+    setPreview(emojiUrl);
+    setProfileFile(null);
+  };
+
   const handleSubmit = async () => {
     // Check username if it has changed
     if (username !== originalUsername && username.trim() !== "") {
@@ -164,9 +200,9 @@ export default function EditedProfile() {
 
     formData.append("bio", bio);
     console.log(activeCategories, "active categories");
-    // Add each valid interest to FormData
-    activeCategories.forEach((interest) => {
-      formData.append("interests", interest);
+    // Add each valid interest to FormData as indexed array (interests[0], interests[1], etc.)
+    activeCategories.forEach((interest, index) => {
+      formData.append(`interests[${index}]`, interest);
     });
 
     // Fix: Backend expects existingProfilePicture when no new file
@@ -174,10 +210,10 @@ export default function EditedProfile() {
       // New image selected → send in profilePicture
       formData.append("profilePicture", profileFile);
     } else {
-      // No new image → preserve old image
+      // No new image → preserve old image or selected emoji URL
       formData.append(
         "existingProfilePicture",
-        allUserData?.profilePicture || ""
+        preview || allUserData?.profilePicture || ""
       );
     }
 
@@ -223,15 +259,35 @@ export default function EditedProfile() {
       </button>
 
       {/* Profile Picture */}
-      <Input
-        size="md"
-        type="file"
-        placeholder="Upload Profile Picture"
-        onChange={handleImageChange}
-        label=""
-        preview={preview}
-        fileClassName="w-[100px] h-[100px]"
-      />
+      <div className="flex flex-col items-start gap-2">
+        <div
+          onClick={() => setIsOptionsModalOpen(true)}
+          className="w-[100px] h-[100px] flex items-center justify-center border-2 border-dashed border-orange-400 rounded-full bg-[#FFF5F2] cursor-pointer overflow-hidden relative group hover:border-orange-500 transition-all"
+        >
+          {preview ? (
+            <img
+              src={preview}
+              alt="Profile Preview"
+              className="w-full h-full object-cover rounded-full"
+            />
+          ) : (
+            <span className="text-orange-400 text-3xl">+</span>
+          )}
+          {/* Hover overlay badge */}
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+            <span className="text-white text-xs font-semibold">Change</span>
+          </div>
+        </div>
+
+        {/* Hidden File Input triggered when user clicks Upload Image in modal */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+      </div>
 
       {/* Name + Username */}
       <div className="w-full flex justify-between gap-4">
@@ -354,26 +410,91 @@ export default function EditedProfile() {
 
       {/* Interests */}
       <div className="w-full flex flex-col px-4 space-y-4">
-        <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
+          {activeCategories.length > 0 && (
+            <span className="text-xs font-semibold text-orange-600">
+              Selected: {activeCategories.length}
+            </span>
+          )}
+        </div>
 
-        <div className="flex flex-wrap gap-4 w-full">
+        <div className="w-full space-y-3 max-h-[380px] overflow-y-auto pr-1 custom-orange-scrollbar">
           {isLoading ? (
-            <div>Loading...</div>
+            <div className="text-center text-gray-500 py-4 text-sm">Loading interests...</div>
+          ) : !interestsList || interestsList.length === 0 ? (
+            <div className="text-center text-gray-500 py-4 text-sm">No interests found</div>
           ) : (
-            interestsList?.map((item, index) => {
-              const title = item.name; // Get the name of the interest
-              const isActive = activeCategories.includes(title); // Convert title to lowercase for matching
+            interestsList.map((item, index) => {
+              const catName = typeof item === "string" ? item : item.name || `Interest ${index + 1}`;
+              const catId = item._id || item.id || `cat-${index}`;
+              const subList = getSubList(item);
+              const hasSubs = subList.length > 0;
+              const isCatSelected = activeCategories.includes(catName);
+              const isExpanded = openCategoryId === catId;
+
               return (
-                <button
-                  key={index}
-                  onClick={() => toggleCategory(item.name)} // Pass title to toggleCategory
-                  className={`h-[38px] px-5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-200 ${isActive
-                    ? "bg-orange-600 text-white hover:bg-orange-700"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                <div
+                  key={catId}
+                  className="bg-gray-50/80 border border-gray-200/80 rounded-2xl p-4 transition-all duration-200"
                 >
-                  {title}
-                </button>
+                  {/* Category Header Row */}
+                  <div
+                    className="flex items-center justify-between gap-3 cursor-pointer select-none"
+                    onClick={() => handleHeaderClick(catId)}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCategory(catName);
+                      }}
+                      className={`px-4 py-1.5 rounded-full font-semibold text-xs transition-all duration-200 flex items-center gap-2 ${
+                        isCatSelected
+                          ? "bg-orange-600 text-white shadow-sm hover:bg-orange-700"
+                          : "bg-white text-gray-800 border border-gray-300 hover:bg-orange-50 hover:text-orange-600"
+                      }`}
+                    >
+                      <span>{catName}</span>
+                    </button>
+
+                    {hasSubs && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500 hover:text-orange-600 font-medium px-2 py-1 rounded-lg hover:bg-gray-200/50 transition-colors">
+                        <span>{subList.length} sub-interests</span>
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Sub-interests Pills Panel */}
+                  {hasSubs && isExpanded && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200/60 animate-fadeIn">
+                      {subList.map((sub, subIdx) => {
+                        const subName = typeof sub === "string" ? sub : sub?.name || "";
+                        if (!subName) return null;
+                        const isSubSelected = activeCategories.includes(subName);
+
+                        return (
+                          <button
+                            key={subIdx}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCategory(subName);
+                            }}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                              isSubSelected
+                                ? "bg-orange-600 text-white shadow-sm hover:bg-orange-700"
+                                : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                            }`}
+                          >
+                            {subName}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })
           )}
@@ -389,6 +510,20 @@ export default function EditedProfile() {
           {updateProfileLoading ? "Updating..." : "Update Profile"}
         </Button>
       </div>
+
+      {/* Modals */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
     </div>
   );
 }

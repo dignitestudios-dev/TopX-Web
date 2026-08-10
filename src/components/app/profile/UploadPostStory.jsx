@@ -9,6 +9,8 @@ import {
   getPostsByPageId,
 } from "../../../redux/slices/posts.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
+import { getLinkPreview } from "../../../lib/helpers";
+import LinkPreviewCard from "../../global/LinkPreviewCard";
 
 export default function UploadPostStory({
   setIsOpen,
@@ -22,11 +24,22 @@ export default function UploadPostStory({
   const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
   const MAX_IMAGES = 6;
+  const linkData = getLinkPreview(bodyText);
+
+  const handleCloseModal = () => {
+    setBodyText("");
+    setImages([]);
+    if (typeof setIsOpen === "function") {
+      setIsOpen(false);
+    }
+    if (typeof setSelectedType === "function") {
+      setSelectedType(null);
+    }
+  };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
 
-    // ✅ Image ho toh sirf JPG/PNG, video sab allowed
     const invalidFiles = files.filter((f) => {
       if (f.type.startsWith("video/")) return false;
       return f.type !== "image/jpeg" && f.type !== "image/png";
@@ -37,7 +50,6 @@ export default function UploadPostStory({
       return;
     }
 
-    // ✅ Image 5MB se zyada nahi honi chahiye
     const oversizedImages = files.filter(
       (f) => f.type.startsWith("image/") && f.size > 5 * 1024 * 1024
     );
@@ -75,7 +87,7 @@ export default function UploadPostStory({
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
-  const handlePostNow = () => {
+  const handlePostNow = async () => {
     if (!bodyText.trim()) {
       ErrorToast("Body text is required!");
       return;
@@ -86,53 +98,65 @@ export default function UploadPostStory({
       return;
     }
 
-    const pageId = selectedPages[0];
+    const rawPage = selectedPages[0];
+    const pageId =
+      typeof rawPage === "object" ? rawPage?._id || rawPage?.id : rawPage;
 
     const fd = new FormData();
     selectedPages.forEach((page) => {
-      fd.append("pages[]", page);
+      const pid = typeof page === "object" ? page?._id || page?.id : page;
+      if (pid) {
+        fd.append("pages[]", pid);
+      }
     });
     fd.append("bodyText", bodyText);
 
     images.forEach((img) => {
-      fd.append("media", img.fileObject);
+      if (img.fileObject) {
+        fd.append("media", img.fileObject);
+      }
     });
 
-    dispatch(title == "Create Story" ? createStory(fd) : createPost(fd))
-      .unwrap()
-      .then(async () => {
-        if (pageId) {
-          try {
-            await dispatch(
-              getPostsByPageId({ pageId, page: 1, limit: 100 })
-            ).unwrap();
-          } catch (err) {
-            console.error("Failed to refresh posts after create:", err);
-          }
-        }
+    try {
+      if (title === "Create Story") {
+        await dispatch(createStory(fd)).unwrap();
+      } else {
+        await dispatch(createPost(fd)).unwrap();
+      }
 
-        SuccessToast(title + " Successfully!");
+      SuccessToast((title || "Post") + " Successfully!");
 
-        setBodyText("");
-        setImages([]);
+      if (pageId) {
+        try {
+          await dispatch(
+            getPostsByPageId({ pageId, page: 1, limit: 100 })
+          ).unwrap();
+        } catch (err) {
+          console.error("Failed to refresh posts after create:", err);
+        }
+      }
 
-        if (setSelectedType) {
-          setSelectedType("Done");
-        }
-        if (setIsOpen) {
-          setIsOpen(false);
-        }
-      })
-      .catch((err) => {
-        ErrorToast(err || "Failed to create post");
-      });
+      handleCloseModal();
+    } catch (err) {
+      console.error("Post creation error:", err);
+      const errorMessage =
+        (typeof err === "string" && err) ||
+        err?.response?.data?.message ||
+        err?.data?.message ||
+        err?.message ||
+        "Failed to create post";
+      ErrorToast(errorMessage);
+    }
   };
 
   return (
     <div>
       {isOpen && (
         <>
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50" />
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 cursor-pointer"
+            onClick={handleCloseModal}
+          />
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl animate-slideUp overflow-hidden">
@@ -140,7 +164,7 @@ export default function UploadPostStory({
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                   <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleCloseModal}
                     className="text-orange-500 hover:text-orange-600 transition-colors"
                   >
                     <X className="w-6 h-6" />
@@ -161,6 +185,14 @@ export default function UploadPostStory({
                     rows="4"
                     className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 resize-none transition-all"
                   />
+                  {images.length === 0 && linkData && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-gray-500 mb-1">
+                        Link Preview
+                      </p>
+                      <LinkPreviewCard linkData={linkData} />
+                    </div>
+                  )}
                 </div>
 
                 {/* MEDIA UPLOAD */}

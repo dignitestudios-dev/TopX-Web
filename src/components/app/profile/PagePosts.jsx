@@ -32,6 +32,8 @@ import { TiPin } from "react-icons/ti";
 import { nofound, PostUnderReview } from "../../../assets/export";
 import DeletePostModal from "../../global/DeletePostModal";
 import { NavLink, useNavigate } from "react-router";
+import { getLinkPreview } from "../../../lib/helpers";
+import LinkPreviewCard from "../../global/LinkPreviewCard";
 
 const PagePosts = ({
   pageId,
@@ -506,6 +508,8 @@ const PagePosts = ({
               (nameParts[1]?.[0] || "").toUpperCase();
             const authorInitial =
               post?.author?.name?.[0]?.toUpperCase() || pageInitials[0] || "";
+            const hasMedia = Array.isArray(post.media) && post.media.length > 0;
+            const linkData = getLinkPreview(post.bodyText || post.text);
 
             return (
               <div
@@ -776,8 +780,8 @@ const PagePosts = ({
                   </div>
                 )}
 
-                {/* First Image Only */}
-                {post.media && post.media.length > 0 && (
+                {/* Media or Link Preview */}
+                {hasMedia ? (
                   <div
                     className="m-4 cursor-pointer"
                     onClick={() => openImageModal(post.media)}
@@ -804,7 +808,11 @@ const PagePosts = ({
                       )}
                     </div>
                   </div>
-                )}
+                ) : linkData ? (
+                  <div className="px-4">
+                    <LinkPreviewCard linkData={linkData} />
+                  </div>
+                ) : null}
 
                 {post.sharedBy ? (
                   <div className="text-sm text-nowrap flex gap-4 ml-2 mt-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[18em]">
@@ -826,8 +834,18 @@ const PagePosts = ({
                               )} */}
 
                 {/* Body Text */}
-                <div className="p-4 ">
-                  <p className="text-sm text-gray-700 mb-4">{post.bodyText}</p>
+                {(() => {
+                  const rawText = post.bodyText || post.text || "";
+                  const cleanText = linkData
+                    ? rawText.replace(linkData.url, "").trim()
+                    : rawText;
+                  if (!cleanText) return null;
+                  return (
+                    <div className="p-4">
+                      <p className="text-sm text-gray-700 mb-4">{cleanText}</p>
+                    </div>
+                  );
+                })()}
 
                   {/* Stats & Actions */}
                   <div className="flex  border-t py-2 border-gray-200 items-center gap-4 text-sm text-orange-500 ">
@@ -889,8 +907,8 @@ const PagePosts = ({
                       />
                     </div>
                   )}
-                </div>
-                {/* 🔒 Under Review Overlay (hide only for non-owners) */}
+
+                  {/* 🔒 Under Review Overlay (hide only for non-owners) */}
                 {post?.isReported && !isPageOwner && (
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center 

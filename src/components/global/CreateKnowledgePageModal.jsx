@@ -119,7 +119,13 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
     fd.append("name", formData.name);
     fd.append("about", formData.about);
-    fd.append("topic", formData.topic);
+
+    let topicValue = (formData.topic || "").trim();
+    if (topicValue.includes(">")) {
+      topicValue = topicValue.split(">").pop().trim();
+    }
+    fd.append("topic", topicValue);
+
     fd.append("pageType", formData.pageType);
     fd.append("contentType", "knowledge");
     if (imageFile) {
@@ -260,6 +266,35 @@ export default function CreateKnowledgePageModal({ onClose }) {
             disabled={loadingCreate || isLoading}
             error={errors.topic}
           />
+          {/* Subcategories Display for selected Category */}
+          {(() => {
+            const selectedCategory = alltopics?.find(
+              (item) =>
+                item.name === formData.topic || item._id === formData.topic
+            );
+            const availableSubCategories =
+              selectedCategory?.subCategories || [];
+            if (!formData.topic || availableSubCategories.length === 0)
+              return null;
+
+            return (
+              <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Subcategories:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {availableSubCategories.map((sub, idx) => (
+                    <span
+                      key={idx}
+                      className="text-xs px-2.5 py-1 rounded-full bg-white text-gray-700 border border-gray-200 font-medium"
+                    >
+                      {sub}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {/* KEYWORDS */}
           <div>
             <label className="text-sm font-semibold text-black">Keywords</label>

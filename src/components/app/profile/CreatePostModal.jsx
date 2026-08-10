@@ -84,7 +84,12 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
       {(selectedType?.type === "upload Post" ||
         selectedType?.type === "upload story") && (
         <UploadPostStory
-          setIsOpen={setSelectedOption}
+          setIsOpen={(val) => {
+            setSelectedOption(val);
+            if (!val) {
+              setSelectedType(null);
+            }
+          }}
           isOpen={selectedOption}
           title={title}
           setSelectedType={setSelectedType}

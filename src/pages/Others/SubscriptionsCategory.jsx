@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, TrendingUp } from "lucide-react";
+import { ChevronRight, TrendingUp, SlidersHorizontal } from "lucide-react";
 import { nofound, notes, postone, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
@@ -25,6 +25,7 @@ import axios from "../../axios";
 import { IoChevronBackSharp } from "react-icons/io5";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
 import { FaCheckSquare } from "react-icons/fa";
+import CollectionCommentFilterModal from "../../components/global/CollectionCommentFilterModal";
 
 const AlertPopup = ({ open, title, description, onClose }) => {
   if (!open) return null;
@@ -55,6 +56,8 @@ export default function SubscriptionsCategory() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const collectionId = location.state?.id;
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [popup, setPopup] = useState({
     open: false,
     title: "",
@@ -378,23 +381,30 @@ export default function SubscriptionsCategory() {
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
         {/* Pages List - Horizontal Scrollable */}
         <div className="bg-gradient-to-r from-orange-500 to-orange-400 pl-3 pr-3 rounded-2xl">
-          <div className="flex items-center">
-            {/* Collection Name */}
-            <IoChevronBackSharp
-              color="white"
-              size={24}
-              className="cursor-pointer"
-              onClick={() => navigate(-1)}
-            />
-            <div className="flex justify-center w-full">
+          <div className="flex items-center justify-between py-2">
+            <div className="flex items-center gap-2">
+              <IoChevronBackSharp
+                color="white"
+                size={24}
+                className="cursor-pointer hover:opacity-80 transition"
+                onClick={() => navigate(-1)}
+              />
               {collectionName && (
-                <div className="mb-4">
-                  <h2 className="text-[20px] text-white text-center pt-3">
-                    {collectionName}
-                  </h2>
-                </div>
+                <h2 className="text-[20px] font-bold text-white">
+                  {collectionName}
+                </h2>
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsFilterModalOpen(true)}
+              title="Comment Filter"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all text-xs font-semibold shadow-sm backdrop-blur-sm"
+            >
+              <SlidersHorizontal size={16} />
+              <span>Comment Filter</span>
+            </button>
           </div>
           {uniquePages.length > 0 && (
             <div className="mt-0 mb-0">
@@ -465,6 +475,8 @@ export default function SubscriptionsCategory() {
                 text={post?.bodyText}
                 page={post?.page}
                 collectionId={collectionId}
+                activeCommentPostId={activeCommentPostId}
+                setActiveCommentPostId={setActiveCommentPostId}
               />
             ))
           ) : (
@@ -512,6 +524,18 @@ export default function SubscriptionsCategory() {
         activeStory={activeStory}
         setActiveStory={setActiveStory}
         handleViewStory={handleViewStory}
+      />
+
+      {/* Collection Comment Filter Modal */}
+      <CollectionCommentFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        collectionId={collectionId}
+        onFilterApplied={() => {
+          if (collectionId) {
+            dispatch(getCollectionFeed({ id: collectionId }));
+          }
+        }}
       />
     </div>
   );

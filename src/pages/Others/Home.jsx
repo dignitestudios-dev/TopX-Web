@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, TrendingUp } from "lucide-react";
+import { ChevronRight, TrendingUp, Plus } from "lucide-react";
 import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -13,9 +13,12 @@ import HomePostFeed from "../../components/global/HomePostFeed";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
+import PageCreateModal from "../../components/app/profile/PageCreateModal";
 
 export default function Home() {
   const [liked, setLiked] = useState({});
+  const [showPageCreateModal, setShowPageCreateModal] = useState(false);
+  const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { allfeedposts, postsLoading } = useSelector(
@@ -122,10 +125,18 @@ export default function Home() {
 
         {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
-          <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
-            <TbNotes className="w-5 h-5 text-orange-500" />
-            Topic Pages
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-[500] text-lg flex items-center gap-2">
+              <TbNotes className="w-5 h-5 text-orange-500" />
+              Topic Pages
+            </h3>
+            <button
+              onClick={() => setShowPageCreateModal(true)}
+              className="bg-orange-500 text-white p-1.5 rounded-md hover:bg-orange-600 transition-colors"
+            >
+              <Plus size={18} className="cursor-pointer" />
+            </button>
+          </div>
           <div className="space-y-4">
             {pagesLoading ? (
               Array.from({ length: 3 }).map((_, idx) => (
@@ -231,6 +242,8 @@ export default function Home() {
               post={post} // ✅ normalized keys: post.isLiked + post.likesCount
               liked={liked} // optional, can remove if you rely only on post.isLiked
               toggleLike={toggleLike} // optional, can remove if you rely on handleLikeClick inside component
+              activeCommentPostId={activeCommentPostId}
+              setActiveCommentPostId={setActiveCommentPostId}
             />
           ))
         ) : (
@@ -254,6 +267,12 @@ export default function Home() {
           <SuggestionsPagesGlobal />
         </div>
       </div>
+
+      {/* Create New Page Modal */}
+      <PageCreateModal
+        isOpen={showPageCreateModal}
+        setIsOpen={setShowPageCreateModal}
+      />
     </div>
   );
 }

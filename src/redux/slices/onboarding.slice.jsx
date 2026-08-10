@@ -213,21 +213,19 @@ export const getInterests = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const token = Cookies.get("access_token");
-      if (!token) return thunkAPI.rejectWithValue("No access token found");
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      const res = await axios.get("/users/interests", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.data?.success) {
-        return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to load interests"
-        );
+      try {
+        const res = await axios.get("/users/interests", { headers });
+        if (res.data?.data && res.data.data.length > 0) {
+          return res.data.data;
+        }
+      } catch (err) {
+        console.log("Fallback to /interests");
       }
 
-      return res.data.data; // <-- backend should return list of interests
+      const res2 = await axios.get("/interests", { headers });
+      return res2.data?.data || [];
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to load interests"

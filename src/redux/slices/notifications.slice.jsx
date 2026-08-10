@@ -34,10 +34,10 @@ export const fetchNotifications = createAsyncThunk(
 // Notification Follow Request API call
 export const notificationfollowrequest = createAsyncThunk(
     "notifications/notificationfollowrequest",
-    async ({ status, followRequestId, notificationId }, thunkAPI) => {
+    async ({ status, followRequestId }, thunkAPI) => {
         try {
-            const res = await axios.post(`/requests/${followRequestId}/follow`, { status, notificationId });
-            return res.data; // Assuming the response returns success data
+            const res = await axios.post(`/requests/${followRequestId}/follow`, { status });
+            return res.data;
         } catch (error) {
             return thunkAPI.rejectWithValue(error.response?.data?.message || "Failed to send follow request");
         }

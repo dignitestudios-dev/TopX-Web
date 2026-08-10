@@ -28,6 +28,8 @@ import PrivatePostModal from "./PrivatePostModal";
 import { IoWarning } from "react-icons/io5";
 import DeletePostModal from "./DeletePostModal";
 import { getCollectionFeed } from "../../redux/slices/Subscription.slice";
+import { getLinkPreview } from "../../lib/helpers";
+import LinkPreviewCard from "./LinkPreviewCard";
 
 export default function CollectionFeedPostCard({
   post,
@@ -41,6 +43,8 @@ export default function CollectionFeedPostCard({
   text,
   page,
   collectionId,
+  activeCommentPostId,
+  setActiveCommentPostId,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -49,8 +53,33 @@ export default function CollectionFeedPostCard({
   const navigate = useNavigate();
   const { user, allUserData } = useSelector((state) => state.auth);
   const { isLoading: postsUpdating } = useSelector((state) => state.posts);
+  const { currentCollectionFilter } = useSelector(
+    (state) => state.collections || {}
+  );
+  const isCommentsHidden = currentCollectionFilter?.filterType === "none-comments";
+  const displayCommentCount = isCommentsHidden ? 0 : (commentCount || 0);
+
+  const isCommentsOpen = typeof setActiveCommentPostId === "function"
+    ? activeCommentPostId === isPostId
+    : commentsOpen;
+
+  const handleToggleComments = () => {
+    if (isCommentsHidden) return;
+    if (typeof setActiveCommentPostId === "function") {
+      setActiveCommentPostId(isCommentsOpen ? null : isPostId);
+    } else {
+      setCommentsOpen(!commentsOpen);
+    }
+  };
+
   const currentUserId = user?._id || allUserData?._id;
-  const pageId = page?._id || fullPost?.page?._id || fullPost?.pageId;
+  const postTextString = text || fullPost?.bodyText || fullPost?.text || "";
+  const linkData = getLinkPreview(postTextString);
+  const hasUploadedMedia = Boolean(
+    (Array.isArray(post) && post.length > 0) ||
+    (Array.isArray(fullPost?.media) && fullPost.media.length > 0) ||
+    (Array.isArray(fullPost?.postimage) && fullPost.postimage.length > 0)
+  );
   const [isPrivatePost, setIsPrivatePost] = useState(false);
   const isUnderReview = Boolean(fullPost?.isReported);
 
@@ -489,14 +518,28 @@ export default function CollectionFeedPostCard({
         </div>
       )}
 
-      {/* Content */}
-      {!isUnderReview && (text || fullPost?.bodyText) && (
-        <div className="px-4 py-3">
-          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-            {text || fullPost?.bodyText}
-          </p>
+      {!hasUploadedMedia && linkData && (
+        <div className="px-4">
+          <LinkPreviewCard linkData={linkData} />
         </div>
       )}
+
+      {/* Content */}
+      {!isUnderReview &&
+        (() => {
+          const rawText = text || fullPost?.bodyText || fullPost?.text || "";
+          const cleanText = linkData
+            ? rawText.replace(linkData.url, "").trim()
+            : rawText;
+          if (!cleanText) return null;
+          return (
+            <div className="px-4 py-3">
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {cleanText}
+              </p>
+            </div>
+          );
+        })()}
       {fullPost?.sharedBy ? (
         <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-[7px] w-[18em]">
           {fullPost?.profilePicture ? (
@@ -578,11 +621,18 @@ export default function CollectionFeedPostCard({
         </button>
 
         <button
-          onClick={() => setCommentsOpen(!commentsOpen)}
-          className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
+          type="button"
+          onClick={handleToggleComments}
+          disabled={isCommentsHidden}
+          className={`flex items-center gap-1.5 transition ${
+            isCommentsHidden
+              ? "text-gray-400 cursor-not-allowed opacity-60"
+              : "text-gray-600 hover:text-orange-500 cursor-pointer"
+          }`}
+          title={isCommentsHidden ? "Comments hidden for this collection" : "Comments"}
         >
           <MessageCircle className="w-5 h-5" />
-          <span className="text-sm font-medium">{commentCount}</span>
+          <span className="text-sm font-medium">{displayCommentCount}</span>
         </button>
 
         <button
@@ -644,7 +694,13 @@ export default function CollectionFeedPostCard({
         }}
       />
       {/* Comments Section */}
-      {commentsOpen && <CommentsSection postId={isPostId} />}
+      {isCommentsOpen && !isCommentsHidden && (
+        <CommentsSection
+          postId={isPostId}
+          collectionId={collectionId}
+          applyFilter={true}
+        />
+      )}
 
       {/* Delete Modal */}
       {deleteModal && (

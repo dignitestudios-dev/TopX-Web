@@ -345,24 +345,24 @@ const Trendingpagedetail = () => {
                 {/* Live Chat Button - Only show when subscribed */}
                 {isSubscribed && (
                   <button
-                    onClick={async() =>{
-                        await dispatch(getPageDetail(id)); 
+                    onClick={async () => {
+                      await dispatch(getPageDetail(id));
                       navigate(`/live-chat`, {
                         state: {
                           pageId: id,
                           pageName: pageDetail?.name,
                           pageOwner: pageDetail?.liveChat,
-                          page:pageDetail
+                          page: pageDetail,
                         },
-                      })
-                    }
-                    }
-                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
+                      });
+                    }}
+                    className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm border border-orange-200"
                   >
                     <MessageSquareText size={20} />
-                    {pageDetail?.liveChat
-                      ? "Start A Live Chat"
-                      : "Start A Live Chat"}
+                    <span>Start A Live Chat</span>
+                    <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
+                       {pageDetail?.followersCount || pageDetail?.followers?.length || 0} 
+                    </span>
                   </button>
                 )}
 

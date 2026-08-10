@@ -25,11 +25,26 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [errors, setErrors] = useState({ name: "", image: "" });
   const [selectedCollectionId, setSelectedCollectionId] = useState(null);
   const dispatch = useDispatch();
+
+  const resetModalState = () => {
+    setCreating(false);
+    setCollectionName("");
+    setImageFile(null);
+    setImagePreview(null);
+    setSelectedCollections([]);
+    setSelectedCollectionId(null);
+    setSearch("");
+    setErrors({ name: "", image: "" });
+    setShowSuccess(false);
+  };
+
   useEffect(() => {
     if (isOpen) {
+      resetModalState();
       dispatch(fetchOtherPages({ page: 1, limit: 20 }));
     }
-  }, [dispatch]);
+  }, [dispatch, isOpen]);
+
   const { isLoading, error } = useSelector((state) => state.collections);
   const { isLoading: addPageToCollectionLoading } = useSelector(
     (state) => state.subscriptions,
@@ -37,6 +52,13 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const { recommendationPages, pagesLoading } = useSelector(
     (state) => state.pages,
   );
+
+  const handleCloseModal = () => {
+    resetModalState();
+    if (typeof onClose === "function") {
+      onClose();
+    }
+  };
 
   // FINAL SAVE
   const handleFinalSave = async () => {
@@ -50,8 +72,10 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
       setShowSuccess(true);
       dispatch(getMySubsctiptions({ page: 1, limit: 10 }));
       setTimeout(() => {
-        setShowSuccess(false);
-        onClose();
+        resetModalState();
+        if (typeof onClose === "function") {
+          onClose();
+        }
       }, 2000);
     } catch (err) {
       console.error("Add page error:", err);
@@ -63,10 +87,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   // Image upload preview
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-
-    setErrors((prev) => ({ ...prev, image: "" }));
+    if (file) {
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, image: "" }));
+    }
   };
 
   // Validation before create
@@ -99,8 +124,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
     if (createCollection.fulfilled.match(result)) {
       setSelectedCollectionId(result.payload.newCollection._id);
-      // Reset fields
-
+      // Reset input fields but move to step 2 (selecting pages)
       setCreating(true);
       setCollectionName("");
       setImageFile(null);
@@ -118,17 +142,6 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }
   };
 
-  const handleAdd = () => {
-    if (!subscriptionName || selected.length === 0) return;
-    onAdd({ subscriptionName, selectedPages: selected });
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      onClose();
-    }, 2000);
-  };
-
-
   // Filter pages based on search
   const filteredPages =
     recommendationPages?.filter((col) =>
@@ -144,7 +157,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
           <div className="flex items-center justify-between border-b px-5 py-3">
             <h2 className="text-[17px] font-semibold">Create New Collection</h2>
             <button
-              onClick={onClose}
+              onClick={handleCloseModal}
               className="text-gray-500 hover:text-gray-700"
             >
               <X size={22} />
@@ -162,6 +175,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                       <img
                         src={imagePreview}
                         className="w-full h-full object-cover"
+                        alt="Preview"
                       />
                     ) : (
                       <FaPlus className="text-orange-500 text-3xl" />
@@ -184,7 +198,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                     Collection Name
                   </label>
                   <input
-                    className="w-full mt-1 border rounded-xl p-3 bg-gray-100"
+                    className="w-full mt-1 border rounded-xl p-3 bg-gray-100 text-gray-800 focus:outline-none focus:border-orange-500"
                     placeholder="Enter name here"
                     value={collectionName}
                     onChange={(e) => {
@@ -200,7 +214,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                 {/* Save */}
                 <button
                   onClick={handleCreateSubscription}
-                  className="w-full bg-orange-600 text-white py-3 rounded-xl"
+                  disabled={isLoading}
+                  className="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50"
                 >
                   {isLoading ? "Saving..." : "Save"}
                 </button>
@@ -220,7 +235,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                     className="w-full pl-10 pr-4 py-2 rounded-[10px] border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-white"
                   />
                 </div>
-                {/* ================= EXISTING COLLECTIONS ================= */}
+                {/* ================= EXISTING COLLECTIONS / PAGES ================= */}
                 <div className="space-y-4 max-h-[300px] overflow-y-auto mt-4 pr-2">
                   {pagesLoading &&
                     [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
@@ -247,18 +262,23 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                                     col.image ||
                                     "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
                                   }
-                                  className="w-10 h-10 rounded-full"
+                                  className="w-10 h-10 rounded-full object-cover"
+                                  alt=""
                                 />
-                                <p>{col.name}</p>
+                                <p className="font-medium text-gray-800">{col.name}</p>
                               </div>
 
                               <div
-                                className={`w-5 h-5 rounded border ${
+                                className={`w-5 h-5 rounded border flex items-center justify-center ${
                                   selectedCollections.includes(col._id)
-                                    ? "bg-orange-500"
-                                    : ""
+                                    ? "bg-orange-500 border-orange-500 text-white"
+                                    : "border-gray-300"
                                 }`}
-                              ></div>
+                              >
+                                {selectedCollections.includes(col._id) && (
+                                  <Check size={14} />
+                                )}
+                              </div>
                             </div>
                           ))
                         ) : (
@@ -268,7 +288,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                         )
                       ) : (
                         <p className="text-center text-gray-500 py-4">
-                          No collections here
+                          No recommendations available
                         </p>
                       )}
                     </>
@@ -277,14 +297,14 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                 <Button
                   variant="orange"
                   size="full"
-                  onClick={() => handleFinalSave({ selectedCollections })}
+                  onClick={handleFinalSave}
                   disabled={selectedCollections.length === 0}
                   loading={addPageToCollectionLoading}
                   className={`w-full mt-5 py-3 rounded-xl text-white 
                                     ${
                                       selectedCollections.length === 0
                                         ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-orange-600 cursor-pointer"
+                                        : "bg-orange-600 cursor-pointer hover:bg-orange-700"
                                     }`}
                 >
                   Save
@@ -292,20 +312,6 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
               </>
             )}
           </div>
-          {/* Footer */}
-          {/* <div className="border-t p-4">
-            <button
-              onClick={handleAdd}
-              disabled={!subscriptionName || selected.length === 0}
-              className={`w-full py-2 rounded-lg font-semibold transition-all ${
-                !subscriptionName || selected.length === 0
-                  ? "bg-orange-300 text-white cursor-not-allowed"
-                  : "bg-orange-500 hover:bg-orange-600 text-white"
-              }`}
-            >
-              Add
-            </button>
-          </div> */}
         </div>
       </div>
 
@@ -325,10 +331,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
               New Subscription has been successfully created.
             </p>
             <button
-              onClick={() => {
-                setShowSuccess(false);
-                onClose();
-              }}
+              onClick={handleCloseModal}
               className="w-full bg-orange-500 hover:bg-orange-600 text-white py-2 rounded-lg font-medium transition-all"
             >
               Continue

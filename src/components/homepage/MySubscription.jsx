@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { ChevronRight, Layers } from "lucide-react";
+import { ChevronRight, Layers, Plus } from "lucide-react";
 import { ballone, ballthree, balltwo, nofound } from "../../assets/export";
 import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
+import CreateSubscriptionModal from "../global/CreateSubscriptionModal";
 
 const MySubscription = () => {
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true); // Loading state
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
 
   // Fetch subscriptions
@@ -28,9 +30,17 @@ const MySubscription = () => {
   return (
     <div className="max-w-sm bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-5">
-        <Layers className="w-5 h-5 text-orange-500" />
-        <h3 className="text-lg font-[500] text-gray-900">My Subscriptions</h3>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <Layers className="w-5 h-5 text-orange-500" />
+          <h3 className="text-lg font-[500] text-gray-900">My Subscriptions</h3>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-orange-500 text-white p-1.5 rounded-md hover:bg-orange-600 transition-colors"
+        >
+          <Plus size={18} className="cursor-pointer" />
+        </button>
       </div>
 
       {/* Subscription List */}
@@ -111,7 +121,7 @@ const MySubscription = () => {
                             </div>
                             <p className="font-bold pt-4 text-black capitalize">You have no collections</p>
                           </div>
-                              </div>
+                               </div>
           </div>
         )}
       </div>
@@ -125,6 +135,12 @@ const MySubscription = () => {
           <ChevronRight className="w-4 h-4" />
         </div>
       )}
+
+      {/* Create Subscription Modal */}
+      <CreateSubscriptionModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
     </div>
   );
 };
