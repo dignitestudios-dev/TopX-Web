@@ -12,16 +12,14 @@ export default function FollowRequestsModal({ isOpen, onClose, pageId, onActionC
   const fetchFollowRequests = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/requests/follow?page=1&limit=50");
+      const url = pageId
+        ? `/requests/follow?pageId=${pageId}&page=1&limit=50`
+        : `/requests/follow?page=1&limit=50`;
+      const res = await axios.get(url);
       const allFollowReqs = res.data?.data || [];
-      // Filter for current page if pageId provided, else show all pending for user's pages
-      const filtered = pageId
-        ? allFollowReqs.filter((req) => req.page?._id === pageId || req.page === pageId)
-        : allFollowReqs;
-      setRequests(filtered);
+      setRequests(allFollowReqs);
     } catch (err) {
       console.error("Error fetching follow requests:", err);
-      // Fallback: clear loading without crash
       setRequests([]);
     } finally {
       setLoading(false);

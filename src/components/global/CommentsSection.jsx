@@ -26,15 +26,13 @@ export default function CommentsSection({
   isMyPostsPage = false, // Flag to indicate if this is from /my-posts route
   collectionId = null,
   applyFilter = false,
+  commentFilter = "all-comments",
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
     (state) => state.postsfeed,
   );
 
-  console.log(postComments,"postComments")
-
-  console.log(postComments,"postComments")
   // Get post from Redux state to extract pageId and page owner
   const { posts, pagepost, allfeedposts } = useSelector(
     (state) => state.posts || {},
@@ -72,9 +70,26 @@ export default function CommentsSection({
   );
   const dispatch = useDispatch();
 
+  const isNoComments = commentFilter === "none-comments" || commentFilter === "no";
+
   const handleGetComments = async () => {
+    if (isNoComments) {
+      return;
+    }
+
+    let normalizedFilter = null;
+    if (commentFilter) {
+      if (commentFilter === "all" || commentFilter === "all-comments") normalizedFilter = "all-comments";
+      else if (commentFilter === "elevated" || commentFilter === "elevated-comments") normalizedFilter = "elevated-comments";
+      else if (commentFilter === "userLiked" || commentFilter === "liked" || commentFilter === "liked-comments") normalizedFilter = "liked-comments";
+    }
+
     if (collectionId && applyFilter) {
-      await dispatch(getComment({ postId, collectionId, applyFilter: true }));
+      await dispatch(getComment({ postId, collectionId, applyFilter: true, filterType: normalizedFilter }));
+    } else if (pageId && applyFilter) {
+      await dispatch(getComment({ postId, pageId, applyFilter: true, filterType: normalizedFilter }));
+    } else if (normalizedFilter) {
+      await dispatch(getComment({ postId, applyFilter: true, filterType: normalizedFilter }));
     } else {
       await dispatch(getComment(postId));
     }
@@ -82,7 +97,7 @@ export default function CommentsSection({
 
   useEffect(() => {
     handleGetComments();
-  }, [postId, collectionId, applyFilter]);
+  }, [postId, collectionId, pageId, applyFilter, commentFilter]);
 
   const addOrUpdateComment = async () => {
     if (!newComment.trim()) return;
@@ -674,6 +689,16 @@ export default function CommentsSection({
       </div>
     );
   };
+
+  if (isNoComments) {
+    return (
+      <div className="mt-4 border-t border-gray-100 p-5">
+        <div className="text-center py-4 text-xs font-medium text-gray-500 bg-gray-50/90 rounded-2xl border border-gray-200/60">
+          Comments are turned off for this view.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6 border-t border-gray-200 p-6">

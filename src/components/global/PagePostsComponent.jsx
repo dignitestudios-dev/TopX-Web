@@ -28,7 +28,7 @@ import LinkPreviewCard from "./LinkPreviewCard";
 
 
 
-export default function PagePostsComponent({ pageId }) {
+export default function PagePostsComponent({ pageId, commentFilter: externalFilter = "all" }) {
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
   const [selectedOption, setSelectedOption] = useState("");
@@ -48,14 +48,27 @@ export default function PagePostsComponent({ pageId }) {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [postLikes, setPostLikes] = useState({}); // Track like state and count
   const [selectedPostForShare, setSelectedPostForShare] = useState(null);
-  const [commentFilter, setCommentFilter] = useState("all");
+  const [commentFilter, setCommentFilter] = useState(externalFilter || "all");
   const [filterModalOpen, setFilterModalOpen] = useState(false);
 
   useEffect(() => {
-    if (pageId) {
-      dispatch(fetchPagePosts({ pageId }));
+    if (externalFilter) {
+      setCommentFilter(externalFilter);
     }
-  }, [dispatch, pageId]);
+  }, [externalFilter]);
+
+  useEffect(() => {
+    if (pageId) {
+      dispatch(
+        fetchPagePosts({
+          pageId,
+          filterType: commentFilter,
+          commentFilter: commentFilter,
+          applyFilter: true,
+        })
+      );
+    }
+  }, [dispatch, pageId, commentFilter]);
 
   // Initialize post likes from localStorage on mount
   useEffect(() => {
@@ -153,30 +166,8 @@ export default function PagePostsComponent({ pageId }) {
     });
   };
 
-  // Filter posts based on commentFilter
-  const getFilteredPosts = () => {
-    if (!pagePosts || pagePosts.length === 0) return [];
-
-    switch (commentFilter) {
-      case "all":
-        return pagePosts;
-      case "no":
-        return pagePosts.filter((post) => (post.commentsCount || 0) === 0);
-      case "elevated":
-        return pagePosts.filter(
-          (post) => post.isElevated === true && (post.likesCount || 0) > 0
-        );
-      case "userLiked":
-        return pagePosts.filter((post) => {
-          const likeData = getPostLikeData(post._id, post);
-          return likeData.isLiked === true;
-        });
-      default:
-        return pagePosts;
-    }
-  };
-
-  const filteredPosts = getFilteredPosts();
+  // Comment filter applies to comments inside posts, not the posts themselves
+  const filteredPosts = pagePosts || [];
 
   if (pagePostsLoading) {
     return (
@@ -200,13 +191,23 @@ export default function PagePostsComponent({ pageId }) {
         {/* Posts Column - Left Side */}
         <div className="lg:col-span-2">
           {/* Comment Filter Button */}
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-between items-center bg-white p-3 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="text-xs font-semibold text-gray-600">
+              {commentFilter === "none-comments" || commentFilter === "no"
+                ? "Showing: No Comments"
+                : commentFilter === "elevated-comments" || commentFilter === "elevated"
+                ? "Showing: Elevated Comments"
+                : commentFilter === "liked-comments" || commentFilter === "userLiked"
+                ? "Showing: Liked Comments"
+                : "Showing: All Comments"}
+            </div>
             <button
+              type="button"
               onClick={() => setFilterModalOpen(true)}
-              className=""
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 transition-all text-xs font-semibold cursor-pointer border border-orange-200 shadow-xs"
             >
-              <VscSettings size={18} className="text-gray-600" />
-
+              <VscSettings size={16} className="text-orange-500" />
+              <span>Comment Filter</span>
             </button>
           </div>
 
@@ -396,7 +397,13 @@ export default function PagePostsComponent({ pageId }) {
                       </button>
                     </div>
                     {openCommentsPostId === post._id && (
-                      <CommentsSection postId={post._id} />
+                      <CommentsSection
+                        postId={post._id}
+                        pageId={pageId}
+                        isPageOwner={post.author?._id === user?._id}
+                        applyFilter={true}
+                        commentFilter={commentFilter}
+                      />
                     )}
                   </div>
                 );

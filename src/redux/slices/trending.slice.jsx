@@ -86,11 +86,15 @@ export const fetchRecommendedPages = createAsyncThunk(
 ================================*/
 export const fetchPagePosts = createAsyncThunk(
     "trending/fetchPagePosts",
-    async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
+    async ({ pageId, page = 1, limit = 10, filterType, commentFilter, applyFilter }, thunkAPI) => {
         try {
-            const res = await axios.get(
-                `/posts/page/${pageId}?page=${page}&limit=${limit}`
-            );
+            let url = `/posts/page/${pageId}?page=${page}&limit=${limit}`;
+            const activeFilter = filterType || commentFilter;
+            if (activeFilter && activeFilter !== "all" && activeFilter !== "all-comments") {
+                url += `&filterType=${activeFilter}&commentFilter=${activeFilter}&applyFilter=true`;
+            }
+
+            const res = await axios.get(url);
 
             return {
                 posts: res.data?.data?.posts || [],

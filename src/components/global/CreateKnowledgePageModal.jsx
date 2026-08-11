@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { X, Upload } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { gettopics } from "../../redux/slices/topics.slice";
@@ -8,6 +8,9 @@ import {
   resetKnowledge,
 } from "../../redux/slices/knowledgepost.slice";
 import CustomSelect from "./CustomeSelect";
+import ProfilePictureModal from "../app/profile/ProfilePictureModal";
+import EmojiPickerModal from "../app/profile/EmojiPickerModal";
+import { emojiUrlToFile } from "../../lib/helpers";
 
 export default function CreateKnowledgePageModal({ onClose }) {
   // FORM DATA
@@ -24,6 +27,9 @@ export default function CreateKnowledgePageModal({ onClose }) {
   // IMAGE UPLOAD
   const [imageFile, setImageFile] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   // TAGS
   const [subCategories, setSubCategories] = useState([]);
@@ -60,6 +66,23 @@ export default function CreateKnowledgePageModal({ onClose }) {
     if (e.target.files[0]) {
       setImageFile(e.target.files[0]);
       setPreviewImage(URL.createObjectURL(e.target.files[0]));
+      setErrors((prev) => ({ ...prev, image: "" }));
+    }
+  };
+
+  const handleSelectEmoji = async (emojiUrl) => {
+    setPreviewImage(emojiUrl);
+    setErrors((prev) => ({ ...prev, image: "" }));
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "knowledge_page_emoji.png");
+      if (file) {
+        setImageFile(file);
+      } else {
+        setImageFile(null);
+      }
+    } catch (err) {
+      console.error("Error setting emoji file:", err);
+      setImageFile(null);
     }
   };
 
@@ -112,8 +135,13 @@ export default function CreateKnowledgePageModal({ onClose }) {
   };
 
   // SUBMIT
-  const handleCreatePage = () => {
+  const handleCreatePage = async () => {
     if (!validateFields()) return;
+
+    let binaryFile = imageFile;
+    if (!(binaryFile instanceof File) && previewImage) {
+      binaryFile = await emojiUrlToFile(previewImage, "knowledge_page_emoji.png");
+    }
 
     const fd = new FormData();
 
@@ -128,8 +156,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
     fd.append("pageType", formData.pageType);
     fd.append("contentType", "knowledge");
-    if (imageFile) {
-      fd.append("image", imageFile);
+    if (binaryFile instanceof File) {
+      fd.append("image", binaryFile, binaryFile.name || "knowledge_page.png");
     }
 
     keywords.forEach((kw, i) => fd.append(`keywords[${i}]`, `#${kw}`));
@@ -156,9 +184,12 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
         {/* IMAGE UPLOAD */}
         <div className="flex justify-center mb-6">
-          <label className="relative cursor-pointer">
+          <div
+            onClick={() => setIsOptionsModalOpen(true)}
+            className="relative cursor-pointer select-none"
+          >
             <div
-              className={`w-24 h-24 border-2 rounded-full flex items-center justify-center bg-orange-50 ${
+              className={`w-24 h-24 border-2 rounded-full flex items-center justify-center bg-orange-50 overflow-hidden ${
                 errors.image
                   ? "border-red-500"
                   : "border-orange-400 border-dashed"
@@ -174,12 +205,13 @@ export default function CreateKnowledgePageModal({ onClose }) {
               )}
             </div>
             <input
+              ref={fileInputRef}
               type="file"
               disabled={loadingCreate}
               className="hidden"
               onChange={handleFileUpload}
             />
-          </label>
+          </div>
         </div>
 
         {errors.image && (
@@ -393,6 +425,21 @@ export default function CreateKnowledgePageModal({ onClose }) {
           {loadingCreate ? "Creating..." : "Create Knowledge Page"}
         </button>
       </div>
+
+      {/* Profile Picture Options Modal */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
     </div>
   );
 }

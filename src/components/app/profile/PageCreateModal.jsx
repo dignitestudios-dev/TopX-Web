@@ -12,6 +12,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { gettopics } from "../../../redux/slices/topics.slice";
 import { createPage, fetchMyPages } from "../../../redux/slices/pages.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
+import ProfilePictureModal from "./ProfilePictureModal";
+import EmojiPickerModal from "./EmojiPickerModal";
+import { emojiUrlToFile } from "../../../lib/helpers";
 
 export default function PageCreateModal({
   setIsOpen,
@@ -28,6 +31,9 @@ export default function PageCreateModal({
 
   const [uploadedImage, setUploadedImage] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
   const [errors, setErrors] = useState({});
   const [keywordInput, setKeywordInput] = useState("");
 
@@ -76,6 +82,21 @@ export default function PageCreateModal({
         setPreviewImage(reader.result);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSelectEmoji = async (emojiUrl) => {
+    setPreviewImage(emojiUrl);
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "topic_page_emoji.png");
+      if (file) {
+        setUploadedImage(file);
+      } else {
+        setUploadedImage(null);
+      }
+    } catch (err) {
+      console.error("Error setting emoji file:", err);
+      setUploadedImage(null);
     }
   };
 
@@ -166,16 +187,21 @@ export default function PageCreateModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCreatePage = () => {
+  const handleCreatePage = async () => {
     try {
       if (!validateForm()) {
         return;
       }
 
+      let binaryFile = uploadedImage;
+      if (!(binaryFile instanceof File) && previewImage) {
+        binaryFile = await emojiUrlToFile(previewImage, "topic_page_emoji.png");
+      }
+
       const fd = new FormData();
 
-      if (uploadedImage) {
-        fd.append("image", uploadedImage);
+      if (binaryFile instanceof File) {
+        fd.append("image", binaryFile, binaryFile.name || "topic_page.png");
       }
 
       fd.append("name", (formData.name || "").trim());
@@ -294,8 +320,11 @@ export default function PageCreateModal({
                       <label className="block text-sm font-medium text-gray-900 mb-2">
                         Topic Page Type
                       </label>
-                      <label className="relative inline-block cursor-pointer group">
-                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-orange-400 flex items-center justify-center relative bg-orange-50/20 group-hover:bg-orange-50/50 transition-colors">
+                      <div
+                        onClick={() => setIsOptionsModalOpen(true)}
+                        className="relative inline-block cursor-pointer group select-none"
+                      >
+                        <div className="w-24 h-24 rounded-full border-2 border-dashed border-orange-400 flex items-center justify-center relative bg-orange-50/20 group-hover:bg-orange-50/50 transition-colors overflow-hidden">
                           {previewImage ? (
                             <img
                               src={previewImage}
@@ -306,17 +335,18 @@ export default function PageCreateModal({
                             <ImageIcon className="w-9 h-9 text-orange-400" />
                           )}
                           <div className="absolute bottom-0 right-0 z-40 w-7 h-7 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-md">
-                            <Plus className="w-4 h-4 "  />
+                            <Plus className="w-4 h-4 " />
                           </div>
                         </div>
                         <input
+                          ref={fileInputRef}
                           type="file"
                           accept="image/*"
                           onChange={handleImageUpload}
                           className="hidden"
                           disabled={pagesLoading}
                         />
-                      </label>
+                      </div>
                     </div>
 
                     {/* Name */}
@@ -633,6 +663,21 @@ export default function PageCreateModal({
           </div>
         </>
       )}
+
+      {/* Profile Picture Options Modal */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
     </div>
   );
 }

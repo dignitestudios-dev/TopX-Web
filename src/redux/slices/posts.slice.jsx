@@ -24,7 +24,7 @@ const initialState = {
 // ====================================================
 export const createPost = createAsyncThunk(
   "posts/createPost",
-  async (formData, thunkAPI) => {
+  async (formData, thunkAPI) => {   
     try {
       const res = await axios.post("/posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -130,11 +130,14 @@ export const editPost = createAsyncThunk(
 // ====================================================
 export const getPostsByPageId = createAsyncThunk(
   "posts/getPostsByPageId",
-  async ({ pageId, page = 1, limit = 10 }, thunkAPI) => {
+  async ({ pageId, page = 1, limit = 10, filterType, commentFilter, applyFilter }, thunkAPI) => {
     try {
-      const res = await axios.get(
-        `/posts/page/${pageId}?page=${page}&limit=${limit}`,
-      );
+      let url = `/posts/page/${pageId}?page=${page}&limit=${limit}`;
+      const activeFilter = filterType || commentFilter;
+      if (activeFilter && activeFilter !== "all" && activeFilter !== "all-comments") {
+        url += `&filterType=${activeFilter}&commentFilter=${activeFilter}&applyFilter=true`;
+      }
+      const res = await axios.get(url);
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(

@@ -15,6 +15,7 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import { getInterests, checkUsername } from "../../../redux/slices/onboarding.slice";
 import ProfilePictureModal from "./ProfilePictureModal";
 import EmojiPickerModal from "./EmojiPickerModal";
+import { emojiUrlToFile } from "../../../lib/helpers";
 
 export default function EditedProfile() {
   const navigate = useNavigate();
@@ -166,9 +167,19 @@ export default function EditedProfile() {
     }
   };
 
-  const handleSelectEmoji = (emojiUrl) => {
+  const handleSelectEmoji = async (emojiUrl) => {
     setPreview(emojiUrl);
-    setProfileFile(null);
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "profile_emoji.png");
+      if (file) {
+        setProfileFile(file);
+      } else {
+        setProfileFile(null);
+      }
+    } catch (err) {
+      console.error("Error converting profile emoji:", err);
+      setProfileFile(null);
+    }
   };
 
   const handleSubmit = async () => {
@@ -188,6 +199,11 @@ export default function EditedProfile() {
       setUsernameError("");
     }
 
+    let binaryFile = profileFile;
+    if (!(binaryFile instanceof File) && preview && preview !== allUserData?.profilePicture) {
+      binaryFile = await emojiUrlToFile(preview, "profile_emoji.png");
+    }
+
     const formData = new FormData();
 
     // Add all fields to FormData
@@ -205,12 +221,9 @@ export default function EditedProfile() {
       formData.append(`interests[${index}]`, interest);
     });
 
-    // Fix: Backend expects existingProfilePicture when no new file
-    if (profileFile) {
-      // New image selected → send in profilePicture
-      formData.append("profilePicture", profileFile);
+    if (binaryFile instanceof File) {
+      formData.append("profilePicture", binaryFile, binaryFile.name || "profile.png");
     } else {
-      // No new image → preserve old image or selected emoji URL
       formData.append(
         "existingProfilePicture",
         preview || allUserData?.profilePicture || ""

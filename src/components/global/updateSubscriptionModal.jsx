@@ -1,9 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateCollection } from "../../redux/slices/collection.slice";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
 import { FaPlusCircle } from "react-icons/fa";
+import ProfilePictureModal from "../app/profile/ProfilePictureModal";
+import EmojiPickerModal from "../app/profile/EmojiPickerModal";
+import { emojiUrlToFile } from "../../lib/helpers";
+
 const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const dispatch = useDispatch();
   const { isLoading } = useSelector((state) => state.collections);
@@ -11,6 +15,9 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const [name, setName] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   // ✅ Prefill data
   useEffect(() => {
@@ -30,10 +37,32 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
     }
   };
 
+  const handleSelectEmoji = async (emojiUrl) => {
+    setImagePreview(emojiUrl);
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "collection_emoji.png");
+      if (file) {
+        setImageFile(file);
+      } else {
+        setImageFile(null);
+      }
+    } catch (err) {
+      console.error("Error setting emoji file:", err);
+      setImageFile(null);
+    }
+  };
+
   const handleUpdate = async () => {
+    let binaryFile = imageFile;
+    if (!(binaryFile instanceof File) && imagePreview && imagePreview !== collection?.image) {
+      binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
+    }
+
     const formData = new FormData();
-    formData.append("name", name);
-    if (imageFile) formData.append("image", imageFile);
+    formData.append("name", name.trim());
+    if (binaryFile instanceof File) {
+      formData.append("image", binaryFile, binaryFile.name || "collection.png");
+    }
 
     const result = await dispatch(
       updateCollection({
@@ -49,61 +78,85 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white w-[380px] rounded-2xl shadow-xl overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center px-5 py-3 border-b">
-          <h2 className="text-lg font-semibold">Edit Collection</h2>
-          <button onClick={onClose}>
-            <X />
-          </button>
-        </div>
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white w-[380px] rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex justify-between items-center px-5 py-3 border-b">
+            <h2 className="text-lg font-semibold">Edit Collection</h2>
+            <button onClick={onClose}>
+              <X />
+            </button>
+          </div>
 
-        {/* Body */}
-        <div className="p-5 relative space-y-4">
-          {/* Image */}
-          <label className="">
-            {imagePreview ? (
-              <div className="relative flex items-center justify-center  cursor-pointer">
-                <div className="relative w-24 h-24 ">
+          {/* Body */}
+          <div className="p-5 relative space-y-4">
+            {/* Image */}
+            <div
+              onClick={() => setIsOptionsModalOpen(true)}
+              className="relative flex items-center justify-center cursor-pointer select-none"
+            >
+              <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-orange-400 bg-gray-100 flex items-center justify-center">
+                {imagePreview ? (
                   <img
                     src={imagePreview}
                     className="w-full h-full rounded-full object-cover"
+                    alt="Collection"
                   />
-                <FaPlusCircle className="absolute right-3 bg-white rounded-full bottom-1 z-30" />
-                </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">Upload</span>
+                )}
+                <FaPlusCircle className="absolute right-1 bottom-1 text-orange-500 bg-white rounded-full text-lg z-30" />
               </div>
-            ) : (
-              <span className="text-gray-400">Upload</span>
-            )}
-            <input type="file" hidden onChange={handleImageUpload} />
-          </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                onChange={handleImageUpload}
+              />
+            </div>
 
-          {/* Name */}
-          <div>
-            <label htmlFor="" className="text-gray-400 font-light text-[14px]">
-              Update Collection Name
-            </label>
-            <p className="text-[15px] mt-2 text-gray-700">Collection Name</p>
-            <input
-              className="w-full border rounded-xl mt-1 p-3 bg-gray-100"
-              placeholder="Subscription Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+            {/* Name */}
+            <div>
+              <label htmlFor="" className="text-gray-400 font-light text-[14px]">
+                Update Collection Name
+              </label>
+              <p className="text-[15px] mt-2 text-gray-700 font-medium">Collection Name</p>
+              <input
+                className="w-full border rounded-xl mt-1 p-3 bg-gray-100 focus:outline-none focus:border-orange-500"
+                placeholder="Subscription Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            {/* Save */}
+            <button
+              onClick={handleUpdate}
+              disabled={!name || isLoading}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-semibold transition-colors disabled:opacity-50"
+            >
+              {isLoading ? "Updating..." : "Save"}
+            </button>
           </div>
-
-          {/* Save */}
-          <button
-            onClick={handleUpdate}
-            disabled={!name}
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl"
-          >
-            {isLoading ? "Updating..." : "Save"}
-          </button>
         </div>
       </div>
-    </div>
+
+      {/* Profile Picture Options Modal */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
+    </>
   );
 };
 

@@ -420,10 +420,13 @@ export default function CollectionFeedPostCard({
               <img
                 src={fullPost.page.image}
                 alt={fullPost.page.name || "Page"}
-                className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition"
+                className="w-10 h-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition bg-white"
+                onError={(e) => {
+                  e.target.style.display = "none";
+                }}
               />
             ) : (
-              <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize">
+              <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize text-sm font-semibold">
                 {fullPost?.page?.name
                   ? fullPost.page.name.split(" ").length > 1
                     ? fullPost.page.name.split(" ")[0][0] +
@@ -432,14 +435,29 @@ export default function CollectionFeedPostCard({
                   : "P"}
               </div>
             )}
-            {author?.profilePicture && (
-              <img
-                src={author.profilePicture}
-                alt={author.name || author.username}
-                onClick={handleAuthorClick}
-                className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover border-2 border-white cursor-pointer hover:opacity-80 transition"
-              />
-            )}
+            {(() => {
+              const authorPic =
+                author?.profilePicture ||
+                fullPost?.author?.profilePicture ||
+                fullPost?.page?.user?.profilePicture;
+              const authorName =
+                author?.name ||
+                fullPost?.author?.name ||
+                author?.username ||
+                "User";
+              if (!authorPic) return null;
+              return (
+                <img
+                  src={authorPic}
+                  alt={authorName}
+                  onClick={handleAuthorClick}
+                  className="w-5 h-5 absolute -right-1 -bottom-0 rounded-full object-cover border-2 border-white cursor-pointer hover:opacity-80 transition bg-white"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
+              );
+            })()}
           </div>
 
           <div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { X, Check, Search } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { FaPlus } from "react-icons/fa6";
@@ -10,6 +10,9 @@ import {
 } from "../../redux/slices/Subscription.slice";
 import Button from "../common/Button";
 import { fetchOtherPages } from "../../redux/slices/pages.slice";
+import ProfilePictureModal from "../app/profile/ProfilePictureModal";
+import EmojiPickerModal from "../app/profile/EmojiPickerModal";
+import { emojiUrlToFile } from "../../lib/helpers";
 
 const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [subscriptionName, setSubscriptionName] = useState("");
@@ -22,6 +25,9 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   console.log(selectedCollections, "selectedSelections");
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
   const [errors, setErrors] = useState({ name: "", image: "" });
   const [selectedCollectionId, setSelectedCollectionId] = useState(null);
   const dispatch = useDispatch();
@@ -94,6 +100,22 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }
   };
 
+  const handleSelectEmoji = async (emojiUrl) => {
+    setImagePreview(emojiUrl);
+    setErrors((prev) => ({ ...prev, image: "" }));
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "collection_emoji.png");
+      if (file) {
+        setImageFile(file);
+      } else {
+        setImageFile(null);
+      }
+    } catch (err) {
+      console.error("Error setting emoji file:", err);
+      setImageFile(null);
+    }
+  };
+
   // Validation before create
   const validateCreate = () => {
     let valid = true;
@@ -104,8 +126,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
       valid = false;
     }
 
-    if (!imageFile) {
-      err.image = "Please upload an image.";
+    if (!imageFile && !imagePreview) {
+      err.image = "Please upload an image or choose an emoji.";
       valid = false;
     }
 
@@ -116,9 +138,18 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   // CREATE COLLECTION
   const handleCreateSubscription = async () => {
     if (!validateCreate()) return;
+
+    let binaryFile = imageFile;
+    if (!(binaryFile instanceof File) && imagePreview) {
+      binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
+    }
+
     const formData = new FormData();
-    formData.append("name", collectionName);
-    formData.append("image", imageFile);
+    formData.append("name", collectionName.trim());
+    
+    if (binaryFile instanceof File) {
+      formData.append("image", binaryFile, binaryFile.name || "collection.png");
+    }
 
     const result = await dispatch(createCollection(formData));
 
@@ -170,7 +201,10 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
               <div className="space-y-5">
                 {/* Upload Image */}
                 <div className="flex flex-col items-center gap-2">
-                  <label className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer">
+                  <div
+                    onClick={() => setIsOptionsModalOpen(true)}
+                    className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all relative group select-none"
+                  >
                     {imagePreview ? (
                       <img
                         src={imagePreview}
@@ -181,11 +215,12 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                       <FaPlus className="text-orange-500 text-3xl" />
                     )}
                     <input
+                      ref={fileInputRef}
                       type="file"
                       className="hidden"
                       onChange={handleImageUpload}
                     />
-                  </label>
+                  </div>
 
                   {errors.image && (
                     <p className="text-red-500 text-sm">{errors.image}</p>
@@ -339,6 +374,20 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
           </div>
         </div>
       )}
+      {/* Profile Picture Options Modal */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
     </>
   );
 };

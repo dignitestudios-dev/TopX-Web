@@ -12,9 +12,13 @@ import {
   MessageCircleWarning,
   MessageSquareText,
   MoreHorizontal,
+  UserCheck,
+  SlidersHorizontal,
 } from "lucide-react";
 import CollectionModal from "../../components/global/CollectionModal";
 import UnsubscribeModal from "../../components/global/UnsubscribeModal";
+import FollowRequestsModal from "../../components/app/profile/FollowRequestsModal";
+import CommentFilterModal from "../../components/app/profile/CommentFilterModal";
 import {
   addPageToCollections,
   removePageFromCollections,
@@ -48,8 +52,14 @@ const Trendingpagedetail = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
   const [suggestPostModal, setSuggestPostModal] = useState(false);
+  const [followRequestsModal, setFollowRequestsModal] = useState(false);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [commentFilter, setCommentFilter] = useState("all");
   const dropdownRef = useRef(null);
   const optionsDropdownRef = useRef(null);
+
+  const { user, allUserData } = useSelector((state) => state.auth);
+  const currentUserId = user?._id || allUserData?._id;
 
   /* ================= FETCH PAGE DETAIL ================= */
   useEffect(() => {
@@ -59,10 +69,15 @@ const Trendingpagedetail = () => {
   const { pagePosts } = useSelector((state) => state.trending);
 
   useEffect(() => {
-    dispatch(fetchPagePosts({ pageId: id }));
-  }, [dispatch, id]);
-
-  console.log(pagePosts, "pagePosts");
+    dispatch(
+      fetchPagePosts({
+        pageId: id,
+        filterType: commentFilter,
+        commentFilter: commentFilter,
+        applyFilter: true,
+      })
+    );
+  }, [dispatch, id, commentFilter]);
 
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
@@ -72,7 +87,17 @@ const Trendingpagedetail = () => {
     (state) => state.trending,
   );
 
-  console.log(pageDetail, "pageDetail");
+  const isPageOwner = Boolean(
+    pageDetail && (
+      pageDetail.isOwner ||
+      pageDetail.user?._id === currentUserId ||
+      pageDetail.user === currentUserId ||
+      pageDetail.author?._id === currentUserId ||
+      pageDetail.author === currentUserId
+    )
+  );
+  const isPrivatePage = pageDetail?.pageType === "private" || pageDetail?.isPrivate;
+  const isRequestPending = pageDetail?.requestStatus === "pending";
 
   // Join stream from Trending page – just navigate, LiveStreampage handles role + join logic
   const handleJoinStream = useCallback(
@@ -88,16 +113,10 @@ const Trendingpagedetail = () => {
   useEffect(() => {
     if (reportSuccess) {
       SuccessToast("Report submitted successfully");
-
-      // reset success so it does not fire again
       dispatch(resetReportState());
-
-      // optional: close modal
       setReportmodal(false);
     }
   }, [reportSuccess, dispatch]);
-
-  console.log(pageDetail, "pageDetail");
 
   /* ================= SET SUBSCRIPTION STATE ================= */
   useEffect(() => {
@@ -125,7 +144,6 @@ const Trendingpagedetail = () => {
         dispatch(fetchPageById(id));
         setOpenModal(false);
 
-        // optional refresh (already in your flow)
         dispatch(getMyCollections({ page: 1, limit: 100 }));
         dispatch(fetchTrendingPages({ page: 1, limit: 10 }));
         dispatch(fetchRecommendedPages({ page: 1, limit: 10 }));
@@ -156,7 +174,6 @@ const Trendingpagedetail = () => {
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Close subscribe dropdown if clicked outside
       if (
         showDropdown &&
         dropdownRef.current &&
@@ -164,7 +181,6 @@ const Trendingpagedetail = () => {
       ) {
         setShowDropdown(false);
       }
-      // Close options dropdown if clicked outside
       if (
         showOptionsDropdown &&
         optionsDropdownRef.current &&
@@ -215,7 +231,7 @@ const Trendingpagedetail = () => {
 
   /* ================= PRIVATE PAGE CHECK ================= */
   const isPrivateAndNotSubscribed =
-    pageDetail.pageType === "private" && !isSubscribed;
+    isPrivatePage && !isSubscribed && !isPageOwner;
 
   return (
     <div className="flex max-w-7xl mx-auto min-h-screen">
@@ -227,27 +243,100 @@ const Trendingpagedetail = () => {
           }`}
         >
           {/* Header */}
-          <div className="h-[6em] relative">
+          <div className="h-[6em] relative flex items-start justify-between px-6 pt-5">
             <FaArrowLeft
               size={24}
-              onClick={() => navigate(-1)} // This will go back to the previous page
+              onClick={() => navigate(-1)}
               color="white"
-              className="absolute left-4 top-4 cursor-pointer" // Adjust the positioning as needed
+              className="cursor-pointer hover:opacity-80 transition"
             />
+
+            <div className="flex items-center gap-3">
+              {/* Comment Filter Button in Header */}
+              <button
+                type="button"
+                onClick={() => setIsFilterModalOpen(true)}
+                title="Comment Filter"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all text-xs font-semibold shadow-sm backdrop-blur-sm cursor-pointer"
+              >
+                <SlidersHorizontal size={16} />
+                <span>Comment Filter</span>
+              </button>
+
+              {/* Options Dropdown (3-dots) */}
+              <div
+                className="relative"
+                ref={optionsDropdownRef}
+              >
+                <button
+                  onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
+                  className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <BsThreeDotsVertical color="white" size={22} />
+                </button>
+                {showOptionsDropdown && (
+                  <div className="absolute top-full mt-2 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[170px] overflow-hidden py-1">
+                    {/* Follow Requests in dropdown for page owner */}
+                    {isPageOwner && isPrivatePage && (
+                      <button
+                        onClick={() => {
+                          setFollowRequestsModal(true);
+                          setShowOptionsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2 font-medium"
+                      >
+                        <UserCheck size={16} className="text-orange-500" />
+                        <span>Follow Requests</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setIsFilterModalOpen(true);
+                        setShowOptionsDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+                    >
+                      <SlidersHorizontal size={16} />
+                      <span>Comment Filter</span>
+                    </button>
+                    {isSubscribed && !isPageOwner && (
+                      <button
+                        onClick={handleUnsubscribeClick}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                      >
+                        Unsubscribe
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setReportmodal(true);
+                        setShowOptionsDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                    >
+                      Report
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Profile Content */}
           <div className="px-8 pb-6">
-            <div className="flex items-end gap-4 -mt-16 mb-0">
+            <div className="flex items-end gap-4 -mt-10 mb-0">
               {pageDetail.image ? (
                 <img
                   src={pageDetail.image}
-                  alt={pageDetail.image}
-                  className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover"
+                  alt={pageDetail.name || "Topic Page"}
+                  className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover bg-white shadow-md"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
                 />
               ) : (
-                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                  {pageDetail.name?.charAt(0).toUpperCase()}
+                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold border-4 border-white shadow-md">
+                  {pageDetail.name?.charAt(0).toUpperCase() || "P"}
                 </div>
               )}
 
@@ -256,8 +345,8 @@ const Trendingpagedetail = () => {
                 <h1 className="text-2xl font-bold text-white capitalize">
                   {pageDetail.name}
                 </h1>
-                <p className="text-gray-300 text-[1em]">
-                  #{pageDetail.about || "username"}
+                <p className="text-gray-100 text-[1em]">
+                  #{pageDetail.about || "topic"}
                 </p>
                 <div>
                   <div className="flex -space-x-2 items-center pt-1">
@@ -270,7 +359,7 @@ const Trendingpagedetail = () => {
                               key={i}
                               src={img}
                               alt="follower"
-                              className="w-6 h-6 rounded-full border-2 border-white object-cover"
+                              className="w-6 h-6 rounded-full border-2 border-white object-cover bg-white"
                             />
                           ) : (
                             <div
@@ -280,70 +369,62 @@ const Trendingpagedetail = () => {
                           ),
                         )}
                     <p className="text-xs text-white font-medium pl-4">
-                      {pageDetail.followersCount}+ People Follows
+                      {pageDetail.followersCount || 0}+ People Follow
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Options Dropdown (Unsubscribe & Report) */}
-              <div
-                className="absolute top-[6em] right-[10em]"
-                ref={optionsDropdownRef}
-              >
-                <button
-                  onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                  className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
-                >
-                  <BsThreeDotsVertical color="white" size={24} />
-                </button>
-                {showOptionsDropdown && (
-                  <div className="absolute top-full mt-2 right-0 bg-white border rounded-lg shadow-lg z-50 min-w-[160px]">
-                    {isSubscribed && (
+              {/* Action Buttons */}
+              <div className="flex gap-3 mb-[0em] items-center flex-wrap">
+                {/* Follow Requests Button - Show for private page owner */}
+                {isPageOwner && isPrivatePage && (
+                  <button
+                    onClick={() => setFollowRequestsModal(true)}
+                    className="p-2 px-5 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm border border-orange-200"
+                  >
+                    <UserCheck size={20} />
+                    <span>Follow Requests</span>
+                  </button>
+                )}
+
+                {/* Non-owner Buttons */}
+                {!isPageOwner && (
+                  <>
+                    {/* Request Pending Button */}
+                    {isPrivatePage && isRequestPending && !isSubscribed && (
                       <button
-                        onClick={handleUnsubscribeClick}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
+                        disabled
+                        className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-600 cursor-not-allowed"
                       >
-                        Unsubscribe
+                        Request Pending
                       </button>
                     )}
-                    <button
-                      onClick={() => {
-                        setReportmodal(true);
-                        setShowOptionsDropdown(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      Report
-                    </button>
-                  </div>
-                )}
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3 mb-[0em] items-center">
-                {/* Subscribe Button - Show when not subscribed */}
-                {!isSubscribed && (
-                  <button
-                    onClick={handleSubscribeClick}
-                    className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
-                  >
-                    Subscribe
-                  </button>
+                    {/* Subscribe / Follow Request Button - Show when not subscribed */}
+                    {!isSubscribed && (!isPrivatePage || !isRequestPending) && (
+                      <button
+                        onClick={handleSubscribeClick}
+                        className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm"
+                      >
+                        {isPrivatePage ? "Follow Request" : "Subscribe"}
+                      </button>
+                    )}
+
+                    {/* Subscribed State */}
+                    {isSubscribed && (
+                      <button
+                        disabled
+                        className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
+                      >
+                        Subscribed
+                      </button>
+                    )}
+                  </>
                 )}
 
-                {/* Subscribed State - Show when subscribed */}
-                {isSubscribed && (
-                  <button
-                    disabled
-                    className="p-2 px-8 rounded-2xl font-semibold bg-gray-200 text-gray-500 cursor-not-allowed"
-                  >
-                    Subscribed
-                  </button>
-                )}
-
-                {/* Live Chat Button - Only show when subscribed */}
-                {isSubscribed && (
+                {/* Live Chat Button - Only show when subscribed or page owner */}
+                {(isSubscribed || isPageOwner) && (
                   <button
                     onClick={async () => {
                       await dispatch(getPageDetail(id));
@@ -366,8 +447,8 @@ const Trendingpagedetail = () => {
                   </button>
                 )}
 
-                {/* Suggest Post Button - Only show when subscribed */}
-                {isSubscribed && (
+                {/* Suggest Post Button - Only show when subscribed and not page owner */}
+                {isSubscribed && !isPageOwner && (
                   <button
                     onClick={() => setSuggestPostModal(true)}
                     className="p-2 px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
@@ -381,7 +462,7 @@ const Trendingpagedetail = () => {
               <div className="mb-[0em]">
                 {pageDetail?.isLiveStreaming && (
                   <button
-                    onClick={() => handleJoinStream(pageDetail._id)} // Pass the pageId here
+                    onClick={() => handleJoinStream(pageDetail._id)}
                     className="p-2 px-4 flex gap-4 rounded-2xl items-center cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50"
                   >
                     <RiLiveLine size={20} />
@@ -398,7 +479,7 @@ const Trendingpagedetail = () => {
           <div className="flex items-center justify-center mt-10 relative z-10 h-80">
             <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
               <div className="mb-4 flex justify-center">
-                <Lock size={40} />
+                <Lock size={40} className="text-orange-500" />
               </div>
 
               {/* Heading change based on requestStatus */}
@@ -410,17 +491,17 @@ const Trendingpagedetail = () => {
 
               <p className="text-gray-600 mb-6">
                 {pageDetail.requestStatus === "pending"
-                  ? "Your request is under review."
-                  : "You need to subscribe to view this page's content"}
+                  ? "Your follow request is currently under review by the page owner."
+                  : "You need to follow or subscribe to view this page's content"}
               </p>
 
               {/* Hide button when request is pending */}
               {pageDetail.requestStatus !== "pending" && (
                 <button
                   onClick={handleSubscribeClick}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full font-semibold transition-colors"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-2 rounded-full font-semibold transition-colors shadow-md"
                 >
-                  Subscribe Now
+                  Send Follow Request
                 </button>
               )}
             </div>
@@ -428,7 +509,7 @@ const Trendingpagedetail = () => {
         )}
 
         <div className={`${isPrivateAndNotSubscribed ? "hidden" : ""}`}>
-          <PagePostsComponent pageId={id} />
+          <PagePostsComponent pageId={id} commentFilter={commentFilter} />
         </div>
 
         {/* ================= COLLECTION MODAL ================= */}
@@ -453,10 +534,11 @@ const Trendingpagedetail = () => {
           />
         )}
 
+        {/* ================= REPORT MODAL ================= */}
         <ReportModal
           isOpen={reportmodal}
           onClose={() => setReportmodal(false)}
-          loading={reportLoading} // 👈 ADD THIS
+          loading={reportLoading}
           onSubmit={(reason) => {
             dispatch(
               sendReport({
@@ -477,9 +559,26 @@ const Trendingpagedetail = () => {
           title="Suggest Post"
           selectedPages={[id]}
         />
+
+        {/* Follow Requests Modal */}
+        <FollowRequestsModal
+          isOpen={followRequestsModal}
+          onClose={() => setFollowRequestsModal(false)}
+          pageId={id}
+          onActionComplete={() => dispatch(fetchPageById(id))}
+        />
+
+        {/* Comment Filter Modal */}
+        <CommentFilterModal
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApply={(filter) => setCommentFilter(filter)}
+          selectedFilter={commentFilter}
+        />
       </div>
     </div>
   );
 };
 
 export default Trendingpagedetail;
+

@@ -221,7 +221,7 @@ export default function SubscriptionsCategory() {
           _id: post.page._id,
           name: post.page.name,
           image: post.page.image,
-          user: post.page.user || post.page.author,
+          user: post.page.user || post.page.author || post.author,
           pageType: post.page.pageType,
         });
       }
@@ -424,13 +424,16 @@ export default function SubscriptionsCategory() {
                         className={`relative ${hasStories ? "ring-4 ring-orange-300 ring-offset-2 ring-offset-orange-500 rounded-full" : ""}`}
                       >
                         <div
-                          className={`w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md ${hasStories ? "shadow-yellow-200" : ""}`}
+                          className={`w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md bg-white ${hasStories ? "shadow-yellow-200" : ""}`}
                         >
                           {page.image ? (
                             <img
                               src={page.image}
                               alt={page.name}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
                             />
                           ) : (
                             <div className="w-full h-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
@@ -440,11 +443,14 @@ export default function SubscriptionsCategory() {
                         </div>
                         {/* Author Image at Bottom */}
                         {page.user?.profilePicture && (
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white overflow-hidden bg-white">
+                          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white overflow-hidden bg-white shadow-sm">
                             <img
                               src={page.user.profilePicture}
                               alt={page.user.name || page.user.username}
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
                             />
                           </div>
                         )}

@@ -96,9 +96,18 @@ const PagePosts = ({
   // Fetch posts on component mount
   useEffect(() => {
     if (pageId) {
-      dispatch(getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }));
+      dispatch(
+        getPostsByPageId({
+          pageId: pageId,
+          page: 1,
+          limit: 100,
+          filterType: commentFilter,
+          commentFilter: commentFilter,
+          applyFilter: true,
+        })
+      );
     }
-  }, [pageId, dispatch]);
+  }, [pageId, commentFilter, dispatch]);
 
   console.log(pagepost, "pagepost");
 
@@ -298,27 +307,8 @@ const PagePosts = ({
 
   console.log(mergedPosts, "pagepost (merged with elevated)");
 
-  // Filter posts based on commentFilter
-  const getFilteredPosts = () => {
-    if (!mergedPosts || mergedPosts.length === 0) return [];
-
-    switch (commentFilter) {
-      case "all":
-        return mergedPosts;
-      case "no":
-        return mergedPosts.filter((post) => post.commentsCount === 0);
-      case "elevated":
-        return mergedPosts.filter(
-          (post) => post.isElevated === true && post.likesCount > 0,
-        );
-      case "userLiked":
-        return mergedPosts.filter((post) => post.isLiked === true);
-      default:
-        return mergedPosts;
-    }
-  };
-
-  const filteredPosts = getFilteredPosts();
+  // Comment filter applies to comments inside posts, not the posts themselves
+  const filteredPosts = mergedPosts || [];
 
   // Toggle Elevate modal
   const handleModalToggle = (postId = null) => {
@@ -904,6 +894,9 @@ const PagePosts = ({
                         postId={post._id}
                         postDetail={post}
                         isPageOwner={isPageOwner}
+                        pageId={pageId}
+                        applyFilter={true}
+                        commentFilter={commentFilter}
                       />
                     </div>
                   )}

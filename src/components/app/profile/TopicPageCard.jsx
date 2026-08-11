@@ -38,12 +38,25 @@ const TopicPageCard = ({
   return (
     <div className={baseClasses} onClick={onClick} >
       <div className="w-full flex items-center gap-2 overflow-hidden ">
-        <img src={img} alt={img} className="w-[40px] h-[40px] rounded-full" />
-        <div className="flex justify-between items-center gap-3">
-          <h2 className="text-[14px] font-medium text-[##000000] cursor-pointer">
+        {img ? (
+          <img
+            src={img}
+            alt={formattedTitle || "Topic"}
+            className="w-[40px] h-[40px] rounded-full object-cover bg-white border border-gray-100 flex-shrink-0"
+            onError={(e) => {
+              e.target.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-[40px] h-[40px] rounded-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            {formattedTitle?.charAt(0)?.toUpperCase() || "T"}
+          </div>
+        )}
+        <div className="flex justify-between items-center gap-3 min-w-0 flex-1">
+          <h2 className="text-[14px] font-medium text-gray-900 cursor-pointer truncate">
             {formattedTitle}
           </h2>
-          <TbFileText className="w-[16px] h-[16px] " />
+          <TbFileText className="w-[16px] h-[16px] flex-shrink-0 text-gray-500" />
         </div>
       </div>
       <p className="text-[14px] font-normal  text-[#000000]">{description.slice(0, 60)}...</p>

@@ -1207,8 +1207,8 @@ useEffect(()=>{
             )}
           </div>
 
-          {/* Filter Icon - Show only for post tab when content is visible */}
-          {!isPageOwner && activeTab === "post" && shouldShowContent && (
+          {/* Filter Icon - Show for post tab when content is visible */}
+          {activeTab === "post" && shouldShowContent && (
             <button
               onClick={() => setFilterModal(true)}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors mr-4"

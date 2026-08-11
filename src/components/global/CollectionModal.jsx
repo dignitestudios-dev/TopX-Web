@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { IoClose } from "react-icons/io5";
 import { FaPlus } from "react-icons/fa6";
 import { FaCheck } from "react-icons/fa6";
 import SkeletonCard from "../global/SkeletonCard";
 import { getMyCollections, createCollection, addPageToCollections } from "../../redux/slices/collection.slice";
 import { useDispatch, useSelector } from "react-redux";
+import ProfilePictureModal from "../app/profile/ProfilePictureModal";
+import EmojiPickerModal from "../app/profile/EmojiPickerModal";
+import { emojiUrlToFile } from "../../lib/helpers";
 
 export default function CollectionModal({
     isOpen,
@@ -17,6 +20,9 @@ export default function CollectionModal({
     const [selectedCollections, setSelectedCollections] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
+    const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+    const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+    const fileInputRef = useRef(null);
 
     const [errors, setErrors] = useState({ name: "", image: "" });
     const [searchTerm, setSearchTerm] = useState(""); // Added search term state
@@ -51,10 +57,27 @@ export default function CollectionModal({
     // Image upload preview
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
-        setImageFile(file);
-        setImagePreview(URL.createObjectURL(file));
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+            setErrors((prev) => ({ ...prev, image: "" }));
+        }
+    };
 
+    const handleSelectEmoji = async (emojiUrl) => {
+        setImagePreview(emojiUrl);
         setErrors((prev) => ({ ...prev, image: "" }));
+        try {
+            const file = await emojiUrlToFile(emojiUrl, "collection_emoji.png");
+            if (file) {
+                setImageFile(file);
+            } else {
+                setImageFile(null);
+            }
+        } catch (err) {
+            console.error("Error setting emoji file:", err);
+            setImageFile(null);
+        }
     };
 
     // Validation before create
@@ -67,8 +90,8 @@ export default function CollectionModal({
             valid = false;
         }
 
-        if (!imageFile) {
-            err.image = "Please upload an image.";
+        if (!imageFile && !imagePreview) {
+            err.image = "Please upload an image or choose an emoji.";
             valid = false;
         }
 
@@ -80,9 +103,16 @@ export default function CollectionModal({
     const handleCreateCollection = async () => {
         if (!validateCreate()) return;
 
+        let binaryFile = imageFile;
+        if (!(binaryFile instanceof File) && imagePreview) {
+            binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
+        }
+
         const formData = new FormData();
-        formData.append("name", collectionName);
-        formData.append("image", imageFile);
+        formData.append("name", collectionName.trim());
+        if (binaryFile instanceof File) {
+            formData.append("image", binaryFile, binaryFile.name || "collection.png");
+        }
 
         const result = await dispatch(createCollection(formData));
 
@@ -111,6 +141,7 @@ export default function CollectionModal({
     );
 
     return (
+        <>
         <div className="fixed inset-0 rounded-2xl bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-white w-[90%] max-w-md rounded-2xl p-6 animate-zoomIn relative shadow-xl">
 
@@ -133,14 +164,17 @@ export default function CollectionModal({
 
                         {/* Upload Image */}
                         <div className="flex flex-col items-center gap-2">
-                            <label className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer">
+                            <div
+                                onClick={() => setIsOptionsModalOpen(true)}
+                                className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all select-none"
+                            >
                                 {imagePreview ? (
                                     <img src={imagePreview} className="w-full h-full object-cover" />
                                 ) : (
                                     <FaPlus className="text-orange-500 text-3xl" />
                                 )}
-                                <input type="file" className="hidden" onChange={handleImageUpload} />
-                            </label>
+                                <input ref={fileInputRef} type="file" className="hidden" onChange={handleImageUpload} />
+                            </div>
 
                             {errors.image && (
                                 <p className="text-red-500 text-sm">{errors.image}</p>
@@ -264,5 +298,21 @@ export default function CollectionModal({
                 )}
             </div>
         </div>
+
+        {/* Profile Picture Options Modal */}
+        <ProfilePictureModal
+            isOpen={isOptionsModalOpen}
+            onClose={() => setIsOptionsModalOpen(false)}
+            onSelectUploadImage={() => fileInputRef.current?.click()}
+            onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+        />
+
+        {/* Emoji Picker Modal */}
+        <EmojiPickerModal
+            isOpen={isEmojiModalOpen}
+            onClose={() => setIsEmojiModalOpen(false)}
+            onSelectEmoji={handleSelectEmoji}
+        />
+        </>
     );
 }

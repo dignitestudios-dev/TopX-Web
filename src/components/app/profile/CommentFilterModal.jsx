@@ -2,15 +2,24 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 
 const CommentFilterModal = ({ isOpen, onClose, onApply, selectedFilter }) => {
-  const [localSelectedFilter, setLocalSelectedFilter] = useState(selectedFilter || "all");
+  // Normalize incoming filter
+  const getNormalized = (f) => {
+    if (!f || f === "all" || f === "all-comments") return "all-comments";
+    if (f === "no" || f === "none-comments") return "none-comments";
+    if (f === "elevated" || f === "elevated-comments") return "elevated-comments";
+    if (f === "userLiked" || f === "liked" || f === "liked-comments") return "liked-comments";
+    return f;
+  };
+
+  const [localSelectedFilter, setLocalSelectedFilter] = useState(getNormalized(selectedFilter));
 
   if (!isOpen) return null;
 
   const filterOptions = [
-    { value: "all", label: "All Comments" },
-    { value: "no", label: "No Comments" },
-    { value: "elevated", label: "Elevated and Liked Comments" },
-    { value: "userLiked", label: "User Liked Comments" },
+    { value: "all-comments", label: "All Comments" },
+    { value: "none-comments", label: "No Comments" },
+    { value: "elevated-comments", label: "Elevated and Liked Comments" },
+    { value: "liked-comments", label: "User Liked Comments" },
   ];
 
   const handleApply = () => {

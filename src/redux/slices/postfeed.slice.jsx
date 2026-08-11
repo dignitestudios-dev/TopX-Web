@@ -156,17 +156,33 @@ export const demoteComment = createAsyncThunk(
   },
 );
 
-export const getComment = createAsyncThunk(
+export const getComments = createAsyncThunk(
   "posts/commentsGet",
   async (params, thunkAPI) => {
     try {
       const postId = typeof params === "object" ? params.postId : params;
       const collectionId = typeof params === "object" ? params.collectionId : null;
+      const pageId = typeof params === "object" ? params.pageId : null;
       const applyFilter = typeof params === "object" ? params.applyFilter : false;
+      const filterType = typeof params === "object" ? params.filterType : null;
 
       let url = `/comments/post/${postId}`;
-      if (collectionId && applyFilter) {
-        url += `?collectionId=${collectionId}&applyFilter=true`;
+      const queryParts = [];
+      if (collectionId) {
+        queryParts.push(`collectionId=${collectionId}`);
+      }
+      if (pageId) {
+        queryParts.push(`pageId=${pageId}`);
+      }
+      if (applyFilter) {
+        queryParts.push(`applyFilter=true`);
+      }
+      if (filterType) {
+        queryParts.push(`filterType=${filterType}`);
+      }
+
+      if (queryParts.length > 0) {
+        url += `?${queryParts.join("&")}`;
       }
 
       const res = await axios.get(url);
@@ -179,6 +195,8 @@ export const getComment = createAsyncThunk(
     }
   },
 );
+
+export const getComment = getComments;
 
 export const likeComment = createAsyncThunk(
   "posts/likeComment",
