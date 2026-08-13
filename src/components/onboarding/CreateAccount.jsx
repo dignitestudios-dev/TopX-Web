@@ -9,17 +9,17 @@ import { signupValues } from "../../init/onboarding/signupValues";
 import Button from "../common/Button";
 import Input from "../common/Input";
 import { useDispatch, useSelector } from "react-redux";
-import { signUp } from "../../redux/slices/auth.slice";
+import { signUp, socialLogin } from "../../redux/slices/auth.slice";
 import {
   auth,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  googleProvider,
 } from "../../firebase/firebase";
+import { signInWithPopup } from "firebase/auth";
 import { authlogo } from "../../assets/export";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 import Cookies from "js-cookie";
 import { FcGoogle } from "react-icons/fc";
-
-
 
 const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
   const dispatch = useDispatch();
@@ -33,6 +33,43 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [firebaseLoading, setFirebaseLoading] = useState(false);
+
+  // GOOGLE LOGIN / SIGNUP FUNCTION
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const idToken = await result.user.getIdToken();
+      const response = await dispatch(
+        socialLogin({
+          idToken,
+          role: "user",
+        })
+      );
+
+      if (response?.payload?.accessToken) {
+        Cookies.set("access_token", response.payload.accessToken, {
+          expires: 7,
+          secure: window.location.protocol === "https:",
+          sameSite: "lax",
+        });
+
+        navigate("/Home");
+      } else {
+        ErrorToast(response?.payload || "Social Login Failed");
+      }
+    } catch (error) {
+      console.error("Google Login Error:", error);
+      if (error?.code === "auth/unauthorized-domain") {
+        ErrorToast("This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).");
+      } else if (error?.code === "auth/popup-blocked") {
+        ErrorToast("Popup was blocked by your browser. Please allow popups for this site.");
+      } else if (error?.code === "auth/cancelled-popup-request" || error?.code === "auth/popup-closed-by-user") {
+        // User closed popup
+      } else {
+        ErrorToast(error?.message || "Google Login Failed");
+      }
+    }
+  };
 
 
   const {
@@ -102,7 +139,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
         if (response.payload?.accessToken) {
           Cookies.set("access_token", response.payload.accessToken, {
             expires: 7,
-            secure: false,
+            secure: window.location.protocol === "https:",
             sameSite: "lax",
           });
         }
@@ -353,6 +390,8 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
             {/* Google Button */}
             <div className="w-full flex flex-col gap-4 pt-8">
               <button
+                type="button"
+                onClick={handleGoogleLogin}
                 className="w-full h-[49px] rounded-[8px] border-[1px] border-gray-300 shadow-xl flex items-center justify-center gap-4 text-[14px] font-medium px-3 hover:bg-[#ffe8d9] hover:border-[#e2b97f] focus:outline-none"
               >
                 <FcGoogle className="w-[24px] h-[24px]" />

@@ -6,7 +6,7 @@ import { loginValues } from "../../init/authentication/dummyLoginValues";
 import { signInSchema } from "../../schema/authentication/dummyLoginSchema";
 import { NavLink, useNavigate } from "react-router";
 import { FiLoader } from "react-icons/fi";
-import { authlogo, authBg } from "../../assets/export";
+import { Logo, authBg } from "../../assets/export";
 import { IoLogoApple } from "react-icons/io";
 import { FcGoogle } from "react-icons/fc";
 import Input from "../../components/common/Input";
@@ -14,7 +14,7 @@ import { HiEye, HiEyeOff } from "react-icons/hi";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import Cookies from "js-cookie";
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "../../firebase/firebase";
+import { auth, googleProvider, appleProvider } from "../../firebase/firebase";
 
 const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -43,7 +43,7 @@ const Login = () => {
         if (result.payload?.accessToken) {
           Cookies.set("access_token", result.payload.accessToken, {
             expires: 7,
-            secure: false,   // localhost ke liye false rakhna zaroori
+            secure: window.location.protocol === "https:",
             sameSite: "lax",
           });
 
@@ -69,7 +69,7 @@ const Login = () => {
   // GOOGLE LOGIN FUNCTION
   const handleGoogleLogin = async () => {
     try {
-     const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
       const response = await dispatch(
         socialLogin({
@@ -81,14 +81,62 @@ const Login = () => {
       if (response?.payload?.accessToken) {
         Cookies.set("access_token", response.payload.accessToken, {
           expires: 7,
-          secure: false,
+          secure: window.location.protocol === "https:",
           sameSite: "lax",
         });
 
         navigate("/Home");
+      } else {
+        ErrorToast(response?.payload || "Social Login Failed");
       }
     } catch (error) {
-      ErrorToast("Google Login Failed");
+      console.error("Google Login Error:", error);
+      if (error?.code === "auth/unauthorized-domain") {
+        ErrorToast("This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).");
+      } else if (error?.code === "auth/popup-blocked") {
+        ErrorToast("Popup was blocked by your browser. Please allow popups for this site.");
+      } else if (error?.code === "auth/cancelled-popup-request" || error?.code === "auth/popup-closed-by-user") {
+        // User intentionally closed popup
+      } else {
+        ErrorToast(error?.message || "Google Login Failed");
+      }
+    }
+  };
+
+  // APPLE LOGIN FUNCTION
+  const handleAppleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      const idToken = await result.user.getIdToken();
+      const response = await dispatch(
+        socialLogin({
+          idToken,
+          role: "user",
+        })
+      );
+
+      if (response?.payload?.accessToken) {
+        Cookies.set("access_token", response.payload.accessToken, {
+          expires: 7,
+          secure: window.location.protocol === "https:",
+          sameSite: "lax",
+        });
+
+        navigate("/Home");
+      } else {
+        ErrorToast(response?.payload || "Social Login Failed");
+      }
+    } catch (error) {
+      console.error("Apple Login Error:", error);
+      if (error?.code === "auth/unauthorized-domain") {
+        ErrorToast("This domain is not authorized in Firebase Console (Authentication > Settings > Authorized domains).");
+      } else if (error?.code === "auth/popup-blocked") {
+        ErrorToast("Popup was blocked by your browser. Please allow popups for this site.");
+      } else if (error?.code === "auth/cancelled-popup-request" || error?.code === "auth/popup-closed-by-user") {
+        // User intentionally closed popup
+      } else {
+        ErrorToast(error?.message || "Apple Login Failed");
+      }
     }
   };
 
@@ -108,7 +156,7 @@ const Login = () => {
 
           <div className="bg-white flex items-start rounded-[19px] p-2 w-full">
             <div className="flex flex-col items-center justify-center w-full">
-              <img src={authlogo} alt="orange_logo" className="w-[100px]" />
+              <img src={Logo} alt="TopX Logo" className="w-[120px] object-contain" />
 
               <div className="flex flex-col mt-4 justify-center items-center">
                 <h2 className="text-[32px] font-[600] leading-[48px]">Log In</h2>
@@ -124,7 +172,7 @@ const Login = () => {
                 }}
                 className="w-full md:w-[393px] mt-5 flex flex-col justify-start items-start gap-4"
               >
-                <div className="w-full flex flex-col gap-1">
+                <div className="w-full flex flex-col gap-3">
                   <Input
                     label="Email Address"
                     type="text"
@@ -138,15 +186,6 @@ const Login = () => {
                     placeholder="Enter email address"
                     size="md"
                   />
-
-                  <div className="w-full mt-1 flex items-center justify-end">
-                    <NavLink
-                      to={"/auth/forgot-password"}
-                      className="text-blue-500 hover:text-black hover:no-underline text-[14px]"
-                    >
-                      Forgot Password?
-                    </NavLink>
-                  </div>
 
                   <Input
                     label="Password"
@@ -174,6 +213,15 @@ const Login = () => {
                       )
                     }
                   />
+
+                  <div className="w-full flex items-center justify-end">
+                    <NavLink
+                      to={"/auth/forgot-password"}
+                      className="text-blue-500 hover:text-black hover:no-underline text-[14px]"
+                    >
+                      Forgot Password?
+                    </NavLink>
+                  </div>
                 </div>
 
                 <button
@@ -186,15 +234,22 @@ const Login = () => {
                 </button>
 
                 <div className="w-full flex flex-col gap-4 pt-8">
-                  <button className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]"
-                    onClick={handleGoogleLogin}>
+                  <button
+                    type="button"
+                    className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]"
+                    onClick={handleGoogleLogin}
+                  >
                     <FcGoogle className="w-[24px] h-[24px]" />
                     <span className="text-[#000] w-full text-center">
                       Continue With Google
                     </span>
                   </button>
 
-                  <button className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]">
+                  <button
+                    type="button"
+                    className="w-full h-[49px] rounded-[8px] hover:bg-[#ffe8d9] text-white flex items-center justify-center text-[14px] font-medium px-3 hover:border border-[#F85E00]"
+                    onClick={handleAppleLogin}
+                  >
                     <IoLogoApple className="w-[24px] h-[24px]" color="#000" />
                     <span className="text-[#000] w-full text-center">
                       Continue With Apple
