@@ -43,11 +43,11 @@ const SuggestionsPagesGlobal = () => {
     .slice(0, 2); // Get only the 2 most recent pages
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm mt-3">
+    <div className="bg-white rounded-2xl p-4 shadow-sm mt-3 overflow-hidden">
       {/* Header */}
       <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-orange-500" />
-        <span className="text-gray-900">Suggestions based on your Interests/Activity</span>
+        <TrendingUp className="w-5 h-5 text-orange-500 shrink-0" />
+        <span className="text-gray-900 truncate">Suggestions based on your Interests/Activity</span>
       </h3>
 
       {/* Trending List */}
@@ -59,48 +59,50 @@ const SuggestionsPagesGlobal = () => {
             latestTrendingPages.map((item, idx) => (
               <div
                 key={idx}
-                className="border-b border-gray-200 pb-4 last:border-0 last:pb-0"
+                className="border-b border-gray-200 pb-4 last:border-0 last:pb-0 overflow-hidden"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <img
                     src={item.image || "https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg"} // Use image from API
                     alt=""
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-12 h-12 rounded-full object-cover shrink-0"
                   />
-                  <div>
-                    <div className="flex justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center gap-2">
                       <p className="font-semibold text-[14px] cursor-pointer text-gray-900 truncate" onClick={() => {
                         navigate(`/trending-page-detail/${item._id}`)
                       }}>
                         {item.name}
                       </p>
-                      <TbFileText className="w-[16px] h-[16px]" />
+                      <TbFileText className="w-[16px] h-[16px] shrink-0 text-gray-500" />
                     </div>
                   </div>
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-gray-600 mb-2 leading-snug">{item.about}</p>
+                <p className="text-sm text-gray-600 mb-2 leading-snug break-words">{item.about}</p>
 
                 {/* Hashtags */}
-                <p className="text-xs text-gray-700 mb-3">
-                  {item.keywords.map((tag, i) => (
-                    <span key={i} className="mr-1 text-gray-500">
-                      {tag}
-                    </span>
-                  ))}
-                </p>
+                {item.keywords && item.keywords.length > 0 && (
+                  <div className="text-xs text-gray-700 mb-3 flex flex-wrap gap-1">
+                    {item.keywords.map((tag, i) => (
+                      <span key={i} className="text-gray-500 break-all">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-                <div className="flex gap-1 items-center">
+                <div className="flex gap-1 items-center flex-wrap">
                   {/* Followers Images */}
-                  {item.followersCount > 0 && (
-                    <div className="flex items-center">
+                  {item.followersCount > 0 && item.followers && (
+                    <div className="flex items-center -space-x-1 shrink-0">
                       {item.followers.slice(0, 3).map((follower, index) => (
                         <img
                           key={index}
                           src={follower || "https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg"} // Use follower image or default image if null
                           alt={`Follower ${index + 1}`}
-                          className="w-[24px] h-[24px] rounded-full"
+                          className="w-[24px] h-[24px] rounded-full border border-white"
                         />
                       ))}
                     </div>
@@ -117,16 +119,16 @@ const SuggestionsPagesGlobal = () => {
               </div>
             ))
           ) : (
-            <p>No trending pages available.</p> // If no pages are available
+            <p className="text-sm text-gray-500">No suggestions available.</p> // If no pages are available
           )}
         </div>
       )}
 
       {/* Footer */}
       <Link to="/trending">
-        <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer">
+        <div className="flex justify-between items-center gap-1 text-black border-t pt-4 pb-1 font-semibold text-sm mt-5 cursor-pointer hover:text-orange-500 transition-colors">
           <span>View All</span>
-          <FaChevronRight color="orange" />
+          <FaChevronRight className="text-orange-500 shrink-0" />
         </div>
       </Link>
     </div>

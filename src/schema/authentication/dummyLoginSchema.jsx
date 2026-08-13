@@ -5,7 +5,7 @@ export const signInSchema = Yup.object({
     .email("Please enter a valid email address.")
     .required("Please enter your email"),
   password: Yup.string()
-    .matches(/^(?!\s)(?!.*\s$)/, "Password must not begin or end with spaces")
+    .matches(/^\S*$/, "Password should not contain spaces.")
     .min(6, "Password must contain atleast 6 alphanumeric characters.")
     .required("Please enter your password"),
 });
@@ -18,23 +18,25 @@ export const forgotPasswordSchema = Yup.object({
 
 export const updatePasswordSchema = Yup.object({
   password: Yup.string()
-    .matches(/^(?!\s)(?!.*\s$)/, "Password must not begin or end with spaces")
+    .matches(/^\S*$/, "Password should not contain spaces.")
     .min(6, "Password must contain atleast 6 alphanumeric characters.")
     .required("Please enter your password"),
   confirm_password: Yup.string()
+    .matches(/^\S*$/, "Confirm Password should not contain spaces.")
     .oneOf([Yup.ref("password"), null], "Passwords must match")
     .required("Please confirm your password"),
 });
 export const changePasswordSchema = Yup.object({
   old_password: Yup.string()
-    .matches(/^(?!.\s)(?!.*\s$)/, "Password must not begin or end with spaces")
+    .matches(/^\S*$/, "Password should not contain spaces.")
     .min(6, "Password must contain atleast 6 alphanumeric characters.")
     .required("Please enter your password"),
   password: Yup.string()
-    .matches(/^(?!.\s)(?!.*\s$)/, "Password must not begin or end with spaces")
+    .matches(/^\S*$/, "Password should not contain spaces.")
     .min(6, "Password must contain atleast 6 alphanumeric characters.")
     .required("Please enter your password"),
   confirm_password: Yup.string()
+    .matches(/^\S*$/, "Confirm Password should not contain spaces.")
     .oneOf([Yup.ref("password"), null], "Passwords must match")
     .required("Please confirm your password"),
 });

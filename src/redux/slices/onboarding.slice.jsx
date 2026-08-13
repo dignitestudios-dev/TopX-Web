@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 import Cookies from "js-cookie";
+import { deduplicateInterestsList } from "../../lib/helpers";
 
 const initialState = {
   isLoading: false,
@@ -394,7 +395,7 @@ const onboardingSlice = createSlice({
       })
       .addCase(getInterests.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.interestsList = action.payload; // Store list of interests
+        state.interestsList = deduplicateInterestsList(action.payload || []); // Store deduplicated list of interests
       })
       .addCase(getInterests.rejected, (state, action) => {
         state.isLoading = false;

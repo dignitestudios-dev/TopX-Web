@@ -172,15 +172,14 @@ export default function AddStore({ handleNext }) {
           )}
         </div>
 
-        {/* NEXT BUTTON */}
+        {/* NAVIGATION BUTTON */}
         <Button
           variant="orange"
           size="full"
           onClick={handleNext}
-          // disabled={!hasAnySubscribed}
           className="w-full flex items-center justify-center bg-[#F85E00] text-white border-none"
         >
-          Next
+          {hasAnySubscribed ? "Next" : "Skip"}
         </Button>
 
       </div>

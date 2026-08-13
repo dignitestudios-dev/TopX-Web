@@ -3,7 +3,7 @@ import Button from "../../common/Button";
 import Input from "../../common/Input";
 import { BiArrowBack } from "react-icons/bi";
 import { auth } from "../../../assets/export";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -15,9 +15,9 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import { getInterests, checkUsername } from "../../../redux/slices/onboarding.slice";
 import ProfilePictureModal from "./ProfilePictureModal";
 import EmojiPickerModal from "./EmojiPickerModal";
-import { emojiUrlToFile } from "../../../lib/helpers";
+import { emojiUrlToFile, deduplicateInterestsList } from "../../../lib/helpers";
 
-export default function EditedProfile() {
+export default function EditedProfile({ setIsEditProfile }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const {
@@ -47,14 +47,18 @@ export default function EditedProfile() {
 
   const { isLoading, interestsList } = useSelector((state) => state.onboarding);
 
+  const deduplicatedList = useMemo(() => {
+    return deduplicateInterestsList(interestsList);
+  }, [interestsList]);
+
   // Set default open category to the 1st category once loaded
   useEffect(() => {
-    if (interestsList && interestsList.length > 0 && openCategoryId === null) {
-      const firstCat = interestsList[0];
+    if (deduplicatedList && deduplicatedList.length > 0 && openCategoryId === null) {
+      const firstCat = deduplicatedList[0];
       const firstId = firstCat._id || firstCat.id || "cat-0";
       setOpenCategoryId(firstId);
     }
-  }, [interestsList, openCategoryId]);
+  }, [deduplicatedList, openCategoryId]);
 
   // Helper to extract sub-interests array from an interest item
   const getSubList = (item) => {
@@ -111,6 +115,48 @@ export default function EditedProfile() {
       return;
     }
 
+    if (usernameToCheck.length < 3) {
+      setUsernameError("Username must be at least 3 characters long");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
+    if (usernameToCheck.length > 50) {
+      setUsernameError("Username cannot exceed 50 characters");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
+    if (/\s/.test(usernameToCheck)) {
+      setUsernameError("Username cannot contain spaces");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_.]+$/.test(usernameToCheck)) {
+      setUsernameError("Username can only contain letters, numbers, underscores, and dots");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
+    if (/^[._]/.test(usernameToCheck) || /[._]$/.test(usernameToCheck)) {
+      setUsernameError("Username cannot start or end with a dot or underscore");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
+    if (/[_.]{2,}/.test(usernameToCheck)) {
+      setUsernameError("Username cannot contain consecutive dots or underscores");
+      setIsUsernameValid(false);
+      setUsernameStatus("unavailable");
+      return;
+    }
+
     setIsCheckingUsername(true);
     setUsernameError("");
     setUsernameSuggestions([]);
@@ -155,16 +201,34 @@ export default function EditedProfile() {
     setIsUsernameValid(true);
   };
 
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const DISALLOWED_EXTENSIONS = [".svg", ".gif"];
+
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setProfileFile(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = (file.name || "").toLowerCase();
+    const fileType = (file.type || "").toLowerCase();
+
+    if (
+      DISALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext)) ||
+      fileType.includes("svg") ||
+      fileType.includes("gif") ||
+      !ALLOWED_IMAGE_TYPES.includes(fileType)
+    ) {
+      ErrorToast("Unsupported file format! Only JPG, JPEG, PNG, and WEBP are supported. SVG and GIF files are not allowed.");
+      e.target.value = "";
+      setProfileFile(null);
+      return;
     }
+
+    setProfileFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSelectEmoji = async (emojiUrl) => {
@@ -183,6 +247,23 @@ export default function EditedProfile() {
   };
 
   const handleSubmit = async () => {
+    if (!name || name.trim() === "") {
+      ErrorToast("Please enter your name");
+      return;
+    }
+    if (name.trim().length < 3) {
+      ErrorToast("Name must be at least 3 characters long");
+      return;
+    }
+    if (name.trim().length > 50) {
+      ErrorToast("Name cannot exceed 50 characters");
+      return;
+    }
+    if (!/^[a-zA-Z\s'-]+$/.test(name.trim())) {
+      ErrorToast("Name can only contain letters, spaces, hyphens, and apostrophes");
+      return;
+    }
+
     // Check username if it has changed
     if (username !== originalUsername && username.trim() !== "") {
       // Check username availability before submitting
@@ -197,6 +278,12 @@ export default function EditedProfile() {
 
       setIsUsernameValid(true);
       setUsernameError("");
+    }
+
+    // Validate minimum interests
+    if (!activeCategories || activeCategories.length < 5) {
+      ErrorToast("Please select at least 5 interests.");
+      return;
     }
 
     let binaryFile = profileFile;
@@ -239,6 +326,7 @@ export default function EditedProfile() {
       if (username !== originalUsername) {
         setOriginalUsername(username);
       }
+      setIsEditProfile?.(false);
     }
   };
 
@@ -265,8 +353,8 @@ export default function EditedProfile() {
   return (
     <div className="w-full flex flex-col gap-4 bg-white rounded-[12px] p-4">
       <button
-        onClick={() => navigate(-1)}
-        className="items-center gap-2 bg-orange-600 w-6 h-6 flex justify-center rounded-full"
+        onClick={() => (setIsEditProfile ? setIsEditProfile(false) : navigate(-1))}
+        className="items-center gap-2 bg-orange-600 hover:bg-orange-700 w-7 h-7 flex justify-center rounded-full cursor-pointer transition-colors"
       >
         <BiArrowBack className="text-white" />
       </button>
@@ -296,7 +384,7 @@ export default function EditedProfile() {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp"
           onChange={handleImageChange}
           className="hidden"
         />
@@ -326,74 +414,71 @@ export default function EditedProfile() {
         /> */}
 
         <div className="w-full">
-          {username && (
-            <div className="flex flex-col gap-1 flex-1">
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Input
-                    size="md"
-                    type="text"
-                    placeholder="Text goes here"
-                    value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      setUsernameError("");
-                      setIsUsernameValid(true);
-                      setUsernameStatus(null);
-                      setUsernameSuggestions([]);
-                    }}
-                    label="Username"
-                    error={usernameError}
-                    touched={!!usernameError}
-                  />
-                </div>
-                <Button
+          <div className="flex flex-col gap-1 flex-1">
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input
                   size="md"
-                  variant="orange"
-                  onClick={() => {
-                    if (username !== originalUsername && username.trim() !== "") {
-                      checkUsernameAvailability(username);
-                    } else if (username === originalUsername) {
-                      setUsernameError("");
-                      setIsUsernameValid(true);
-                      setUsernameStatus(null);
-                      setUsernameSuggestions([]);
-                    } else {
-                      ErrorToast("Please enter a username");
-                    }
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    setUsernameError("");
+                    setIsUsernameValid(true);
+                    setUsernameStatus(null);
+                    setUsernameSuggestions([]);
                   }}
-                  disabled={isCheckingUsername || !username || username.trim() === "" || usernameStatus === "available"}
-                  className="h-[42px] whitespace-nowrap"
-                >
-                  {isCheckingUsername ? "Checking..." : "Check"}
-                </Button>
+                  label="Username"
+                  error={usernameError}
+                  touched={!!usernameError}
+                />
               </div>
-              {/* Username Status Indicator */}
-              {usernameStatus === "available" && (
-                <p className="text-[12px] text-green-600 font-medium">✓ Username is available</p>
-              )}
-             
-              {/* Username Suggestions */}
-              {usernameSuggestions.length > 0 && (
-                <div className="flex flex-col gap-2 mt-2">
-                  <p className="text-[12px] font-medium text-gray-700">Suggested usernames:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {usernameSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => handleSelectSuggestion(suggestion)}
-                        className="px-3 py-1.5 bg-[#F8F8F8] hover:bg-[#f85e00] hover:text-white text-[#f85e00] rounded-[8px] text-[12px] font-medium transition-colors border border-[#f85e00]"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Button
+                size="md"
+                variant="orange"
+                onClick={() => {
+                  if (username !== originalUsername && username.trim() !== "") {
+                    checkUsernameAvailability(username);
+                  } else if (username === originalUsername) {
+                    setUsernameError("");
+                    setIsUsernameValid(true);
+                    setUsernameStatus(null);
+                    setUsernameSuggestions([]);
+                  } else {
+                    ErrorToast("Please enter a username");
+                  }
+                }}
+                disabled={isCheckingUsername || !username || username.trim() === "" || usernameStatus === "available"}
+                className="h-[42px] whitespace-nowrap"
+              >
+                {isCheckingUsername ? "Checking..." : "Check"}
+              </Button>
             </div>
-          )}
-
+            {/* Username Status Indicator */}
+            {usernameStatus === "available" && (
+              <p className="text-[12px] text-green-600 font-medium">✓ Username is available</p>
+            )}
+           
+            {/* Username Suggestions */}
+            {usernameSuggestions.length > 0 && (
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-[12px] font-medium text-gray-700">Suggested usernames:</p>
+                <div className="flex flex-wrap gap-2">
+                  {usernameSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelectSuggestion(suggestion)}
+                      className="px-3 py-1.5 bg-[#F8F8F8] hover:bg-[#f85e00] hover:text-white text-[#f85e00] rounded-[8px] text-[12px] font-medium transition-colors border border-[#f85e00]"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
 
@@ -427,7 +512,7 @@ export default function EditedProfile() {
           <h2 className="text-[18px] font-[500] text-[#000000]">Interests</h2>
           {activeCategories.length > 0 && (
             <span className="text-xs font-semibold text-orange-600">
-              Selected: {activeCategories.length}
+              Selected: {activeCategories.length} (Min 5 required)
             </span>
           )}
         </div>
@@ -435,10 +520,10 @@ export default function EditedProfile() {
         <div className="w-full space-y-3 max-h-[380px] overflow-y-auto pr-1 custom-orange-scrollbar">
           {isLoading ? (
             <div className="text-center text-gray-500 py-4 text-sm">Loading interests...</div>
-          ) : !interestsList || interestsList.length === 0 ? (
+          ) : !deduplicatedList || deduplicatedList.length === 0 ? (
             <div className="text-center text-gray-500 py-4 text-sm">No interests found</div>
           ) : (
-            interestsList.map((item, index) => {
+            deduplicatedList.map((item, index) => {
               const catName = typeof item === "string" ? item : item.name || `Interest ${index + 1}`;
               const catId = item._id || item.id || `cat-${index}`;
               const subList = getSubList(item);
@@ -516,7 +601,7 @@ export default function EditedProfile() {
         <Button
           size="full"
           variant="orange"
-          className="w-full flex items-center justify-center"
+          className="w-full flex items-center justify-center mt-6 h-[46px] font-semibold text-[15px] shadow-sm hover:shadow transition-all cursor-pointer"
           onClick={handleSubmit}
           disabled={updateProfileLoading}
         >

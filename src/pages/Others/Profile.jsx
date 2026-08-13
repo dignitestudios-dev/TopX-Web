@@ -41,19 +41,19 @@ export default function Profile() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[41em] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 p-3 overflow-y-hidden  ">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-80px)] h-[calc(100vh-80px)] max-w-7xl mx-auto pt-3 md:gap-6 gap-2 p-3 overflow-hidden">
       {/* Left Side */}
-      <div className="w-full md:w-1/4  sticky top-0  overflow-hidden ">
+      <div className="w-full md:w-1/4 sticky top-0 h-full overflow-hidden">
         <MySubscription />
       </div>
 
       {/* Right Side */}
-      <div className="overflow-y-auto scrollbar-hide w-full md:w-3/4">
+      <div className="overflow-y-auto w-full md:w-3/4 h-full pr-1 pb-16 custom-orange-scrollbar scroll-smooth">
         {!isProfilePostOpen ? (
           <div className=" flex flex-col gap-3  ">
             {/* Edit OR Profile View */}
             {isEditProfile ? (
-              <EditedProfile />
+              <EditedProfile setIsEditProfile={setIsEditProfile} />
             ) : (
               <>
                 <LargeProfile setIsEditProfile={setIsEditProfile} />

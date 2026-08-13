@@ -286,7 +286,7 @@ export default function Mypost() {
       </div>
 
       {/* Right Sidebar */}
-      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200 scrollbar-hide">
+      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto overflow-x-hidden border-gray-200 scrollbar-hide">
         <div className="p-0">
           {/* Trending Pages */}
           <TrendingPagesGlobal />

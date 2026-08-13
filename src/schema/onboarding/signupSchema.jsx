@@ -2,9 +2,19 @@ import * as Yup from "yup";
 
 export const signupSchema = Yup.object().shape({
   name: Yup.string()
+    .required("Please enter your name.")
     .min(3, "Name must be at least 3 characters long.")
     .max(50, "Name cannot exceed 50 characters.")
-    .required("Please enter your name."),
+    .test("no-leading-trailing-space", "Name cannot start or end with a space.", (value) =>
+      value ? value.trim() === value : false
+    )
+    .matches(
+      /^[a-zA-Z\s'-]+$/,
+      "Name can only contain letters, spaces, hyphens, and apostrophes without special characters or numbers."
+    )
+    .test("no-consecutive-spaces", "Name cannot contain multiple consecutive spaces.", (value) =>
+      value ? !/\s{2,}/.test(value) : false
+    ),
 
   email: Yup.string()
     .required("Email is required")
@@ -26,6 +36,8 @@ export const signupSchema = Yup.object().shape({
     ),
 
   password: Yup.string()
+    .required("Please enter your password")
+    .matches(/^\S*$/, "Password should not contain spaces.")
     .min(8, "Password must be at least 8 characters long.")
     .max(50, "Password must not exceed 50 characters.")
     .matches(/[A-Z]/, "Password must contain at least one uppercase letter.")
@@ -33,14 +45,12 @@ export const signupSchema = Yup.object().shape({
     .matches(
       /[!@#$%^&*(),.?":{}|<>]/,
       "Password must contain at least one @ special character."
-    )
-    .matches(/^[^\s]*$/, "Password should not contain spaces.")
-    .trim()
-    .required("Please enter your password"),
+    ),
 
   cPassword: Yup.string()
-    .oneOf([Yup.ref("password")], "Passwords must match")
-    .required("Confirm Password is required"),
+    .required("Confirm Password is required")
+    .matches(/^\S*$/, "Password should not contain spaces.")
+    .oneOf([Yup.ref("password")], "Passwords must match"),
 
 
 

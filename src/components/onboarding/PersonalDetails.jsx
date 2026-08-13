@@ -1,6 +1,6 @@
 import { FiPlus } from "react-icons/fi";
 import { auth } from "../../assets/export";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useFormik } from "formik";
 import { PersonalValues } from "../../init/onboarding/signupValues";
 import Button from "../common/Button";
@@ -10,13 +10,19 @@ import { PersonalSchema } from "../../schema/onboarding/PersonalSchema";
 import { useDispatch, useSelector } from "react-redux";
 import { checkUsername, completeProfile } from "../../redux/slices/onboarding.slice";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
+import ProfilePictureModal from "../app/profile/ProfilePictureModal";
+import EmojiPickerModal from "../app/profile/EmojiPickerModal";
+import { emojiUrlToFile } from "../../lib/helpers";
 
-export default function PersonalDetails({ handleNext, handlePrevious }) {
+export default function PersonalDetails({ name, email, handleNext, handlePrevious }) {
   const dispatch = useDispatch();
   const { isLoading } = useSelector((state) => state.onboarding);
 
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const fileInputRef = useRef(null);
 
   // State to track selected gender and 'Other' input
   const [selectedGender, setSelectedGender] = useState("");
@@ -26,20 +32,88 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
   const [usernameSuggestions, setUsernameSuggestions] = useState([]);
   const [usernameStatus, setUsernameStatus] = useState(null); // 'available', 'unavailable', null
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setImageFile(file);
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+  const DISALLOWED_EXTENSIONS = [".svg", ".gif"];
 
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setImagePreview(e.target.result);
-      reader.readAsDataURL(file);
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = (file.name || "").toLowerCase();
+    const fileType = (file.type || "").toLowerCase();
+
+    if (
+      DISALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext)) ||
+      fileType.includes("svg") ||
+      fileType.includes("gif") ||
+      !ALLOWED_IMAGE_TYPES.includes(fileType)
+    ) {
+      ErrorToast("Unsupported file format! Only JPG, JPEG, PNG, and WEBP are supported. SVG and GIF files are not allowed.");
+      e.target.value = "";
+      setImageFile(null);
+      setImagePreview(null);
+      setFieldValue("profileImage", null);
+      return;
+    }
+
+    setImageFile(file);
+    setFieldValue("profileImage", file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => setImagePreview(event.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSelectEmoji = async (emojiUrl) => {
+    setImagePreview(emojiUrl);
+    setFieldValue("profileImage", emojiUrl);
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "profile_emoji.png");
+      if (file) {
+        setImageFile(file);
+      } else {
+        setImageFile(null);
+      }
+    } catch (err) {
+      console.error("Error converting profile emoji:", err);
+      setImageFile(null);
     }
   };
 
   const handleCheckUsername = async () => {
-    if (!values.username || values.username.trim() === "") {
+    const rawUsername = values.username;
+    if (!rawUsername || rawUsername.trim() === "") {
       ErrorToast("Please enter a username first");
+      return;
+    }
+
+    if (rawUsername.length < 3) {
+      ErrorToast("Username must be at least 3 characters long");
+      return;
+    }
+
+    if (rawUsername.length > 50) {
+      ErrorToast("Username cannot exceed 50 characters");
+      return;
+    }
+
+    if (/\s/.test(rawUsername)) {
+      ErrorToast("Username cannot contain spaces");
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_.]+$/.test(rawUsername)) {
+      ErrorToast("Username can only contain letters, numbers, underscores, and dots");
+      return;
+    }
+
+    if (/^[._]/.test(rawUsername) || /[._]$/.test(rawUsername)) {
+      ErrorToast("Username cannot start or end with a dot or underscore");
+      return;
+    }
+
+    if (/[_.]{2,}/.test(rawUsername)) {
+      ErrorToast("Username cannot contain consecutive dots or underscores");
       return;
     }
 
@@ -48,7 +122,7 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
     setUsernameStatus(null);
 
     try {
-      const usernameRes = await dispatch(checkUsername(values.username));
+      const usernameRes = await dispatch(checkUsername(rawUsername));
 
       if (usernameRes.meta.requestStatus === "fulfilled") {
         setUsernameStatus("available");
@@ -113,13 +187,20 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
       // ---------- STEP 2: Complete Profile ----------
       const formData = new FormData();
       formData.append("username", values.username);
-      formData.append("name", values.name);
+      if (name) {
+        formData.append("name", name);
+      }
       formData.append("dob", values.dateOfBirth);
       formData.append("gender", values.gender);
       formData.append("bio", values.bio || "");
 
-      if (imageFile) {
-        formData.append("profilePicture", imageFile);
+      let binaryFile = imageFile;
+      if (!(binaryFile instanceof File) && imagePreview) {
+        binaryFile = await emojiUrlToFile(imagePreview, "profile_emoji.png");
+      }
+
+      if (binaryFile instanceof File) {
+        formData.append("profilePicture", binaryFile, binaryFile.name || "profile.png");
       }
 
       const profileRes = await dispatch(completeProfile(formData));
@@ -151,25 +232,47 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
         <form onSubmit={handleSubmit}>
           {/* Profile Image */}
           <div className="flex flex-col justify-center items-center text-center gap-3">
-            <Input
+            <div
+              onClick={() => setIsOptionsModalOpen(true)}
+              className="w-[120px] h-[120px] flex items-center justify-center border-2 border-dashed border-orange-400 rounded-full bg-[#FFF5F2] cursor-pointer overflow-hidden relative group hover:border-orange-500 transition-all shadow-sm"
+            >
+              {imagePreview ? (
+                <img
+                  src={imagePreview}
+                  alt="Profile Preview"
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                <span className="text-orange-400 text-3xl font-light">+</span>
+              )}
+              {/* Hover overlay */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-full">
+                <span className="text-white text-xs font-semibold">Change</span>
+              </div>
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
               id="file"
-              size="md"
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/jpg,image/png,image/webp"
               onChange={(e) => {
                 handleImageChange(e);
-                setFieldValue("profileImage", e.target.files[0]); // REQUIRED
               }}
-              preview={imagePreview}
-              name="profileImage"
-              onBlur={handleBlur}
-              touched={touched.profileImage}
-              error={errors.profileImage}
-              fileClassName="w-[120px] h-[120px]"
+              className="hidden"
             />
-            <p className="text-[14px] font-[500] text-[#f85e00]">
+
+            <button
+              type="button"
+              onClick={() => setIsOptionsModalOpen(true)}
+              className="text-[14px] font-[500] text-[#f85e00] hover:underline cursor-pointer"
+            >
               Upload Profile Photo
-            </p>
+            </button>
+            {touched.profileImage && errors.profileImage && (
+              <p className="text-red-600 text-sm font-medium">{errors.profileImage}</p>
+            )}
           </div>
 
           <div className="w-full md:w-[500px] flex flex-col gap-3">
@@ -230,19 +333,6 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
               )}
             </div>
 
-            {/* Full Name */}
-            <Input
-              label="Full Name"
-              type="text"
-              name="name"
-              value={values.name}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Enter your name"
-              touched={touched.name}
-              error={errors.name}
-              size="md"
-            />
 
             {/* Date of Birth */}
             <Input
@@ -356,6 +446,20 @@ export default function PersonalDetails({ handleNext, handlePrevious }) {
           </Button>
         </form>
       </div>
+
+      {/* Profile Picture Modals */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => fileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
     </div>
   );
 }

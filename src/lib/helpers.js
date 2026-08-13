@@ -178,3 +178,84 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
   }
 }
 
+/**
+ * Deduplicates interest categories and sub-interests so each interest only appears once.
+ */
+export function deduplicateInterestsList(rawList) {
+  if (!Array.isArray(rawList)) return [];
+
+  // Pass 1: Identify all unique category names (normalized)
+  const categoryNamesSet = new Set();
+  const uniqueCategories = [];
+
+  rawList.forEach((item, index) => {
+    if (!item) return;
+    const catName = typeof item === "string" ? item.trim() : (item.name || item.title || "").trim();
+    if (!catName) return;
+
+    const lowerName = catName.toLowerCase();
+    let existingCategory = uniqueCategories.find(
+      (c) => (typeof c === "string" ? c.trim().toLowerCase() : (c.name || c.title || "").trim().toLowerCase()) === lowerName
+    );
+
+    const rawSubs = Array.isArray(item.subCategories)
+      ? item.subCategories
+      : Array.isArray(item.subTopics)
+      ? item.subTopics
+      : Array.isArray(item.subInterests)
+      ? item.subInterests
+      : Array.isArray(item.children)
+      ? item.children
+      : [];
+
+    if (!existingCategory) {
+      categoryNamesSet.add(lowerName);
+      existingCategory = {
+        ...(typeof item === "object" ? item : { name: catName }),
+        name: catName,
+        _id: item._id || item.id || `cat-${index}`,
+        subCategories: [],
+      };
+      uniqueCategories.push(existingCategory);
+    }
+
+    // Accumulate raw subs to existingCategory for later deduplication
+    if (!existingCategory._rawSubs) {
+      existingCategory._rawSubs = [];
+    }
+    existingCategory._rawSubs.push(...rawSubs);
+  });
+
+  // Pass 2: Deduplicate sub-interests across all categories
+  // `seenNames` already includes all top-level category names so no sub-interest duplicates a top-level category
+  const seenNames = new Set(categoryNamesSet);
+
+  const result = uniqueCategories.map((cat) => {
+    const rawSubs = cat._rawSubs || [];
+    const dedupedSubs = [];
+
+    rawSubs.forEach((sub) => {
+      if (!sub) return;
+      const subName = typeof sub === "string" ? sub.trim() : (sub.name || sub.title || "").trim();
+      if (!subName) return;
+
+      const lowerSub = subName.toLowerCase();
+      if (!seenNames.has(lowerSub)) {
+        seenNames.add(lowerSub);
+        dedupedSubs.push(typeof sub === "object" ? { ...sub, name: subName } : subName);
+      }
+    });
+
+    const { _rawSubs, ...cleanCat } = cat;
+    return {
+      ...cleanCat,
+      subCategories: dedupedSubs,
+      subTopics: dedupedSubs,
+      subInterests: dedupedSubs,
+      children: dedupedSubs,
+    };
+  });
+
+  return result;
+}
+

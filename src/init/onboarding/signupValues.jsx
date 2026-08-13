@@ -8,10 +8,10 @@ export const signupValues = {
 };
 
 export const PersonalValues = {
-    name: "",
+    username: "",
     dateOfBirth: "2013-01-01",
     gender: "",
     profileImage: "",
-   
+    bio: "",
 };
 

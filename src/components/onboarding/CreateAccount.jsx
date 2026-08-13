@@ -21,7 +21,7 @@ import { ErrorToast, SuccessToast } from "../global/Toaster";
 import Cookies from "js-cookie";
 import { FcGoogle } from "react-icons/fc";
 
-const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
+const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -144,6 +144,7 @@ const CreateAccount = ({ handleNext, setEmail, setPhone }) => {
           });
         }
 
+        setName?.(values.name);
         setEmail(values.email);
         setPhone(values.phone);
         handleNext();

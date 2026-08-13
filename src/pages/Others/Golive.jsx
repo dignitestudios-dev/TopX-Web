@@ -161,7 +161,7 @@ export default function Golive() {
       </div>
 
       {/* Right Sidebar - 1/4 width */}
-      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto border-gray-200">
+      <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto overflow-x-hidden border-gray-200">
         <div className="p-0">
           {/* Trending Pages Section */}
           <TrendingPagesGlobal />

@@ -16,9 +16,10 @@ import AccountCreated from "../../components/onboarding/AccountCreated";
 import { useLocation, useSearchParams } from "react-router";
 export default function SignUp() {
   const [currentStep, setCurrentStep] = useState(0);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-const [searchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const ref = searchParams.get("ref");
 
   const providerSteps = [
@@ -57,6 +58,7 @@ const [searchParams] = useSearchParams();
         <div className="bg-white w-full relative flex justify-center flex-col items-center h-full backdrop-blur-[34px] rounded-[28px]">
           {currentStep === 0 ? (
             <CreateAccount
+              setName={setName}
               setEmail={setEmail}
               setPhone={setPhone}
               handleNext={handleNext}
@@ -70,7 +72,7 @@ const [searchParams] = useSearchParams();
               handlePrevious={handlePrevious}
             />
           ) : currentStep === 2 ? (
-            <PersonalDetails email={email} handleNext={handleNext} handlePrevious={handlePrevious}/>
+            <PersonalDetails name={name} email={email} handleNext={handleNext} handlePrevious={handlePrevious}/>
           ) : currentStep === 3 ? (
             <Interests handleNext={handleNext} handlePrevious={handlePrevious}/>
           ) : currentStep === 4 ? (

@@ -65,17 +65,7 @@ export default function LargeProfile({
             )}
           </div>
 
-          <div className="flex items-end gap-12">
-            {/* Name Section */}
-            <div>
-              <h2 className="text-[18px] font-[500] text-[#000000]">
-                {userRecord.name || "No Name"}
-              </h2>
-              <p className="text-[14px] font-[400] text-[#18181899]">
-                {userRecord.username || "No Username"}
-              </p>
-            </div>
-
+          <div className="flex items-end gap-12 pb-2">
             {/* Stats Section */}
             <div className="text-center">
               <div className="text-[18px] font-[500] text-[#000000]">
@@ -126,26 +116,36 @@ export default function LargeProfile({
         {/* Bottom White Section - Bio */}
         <div className="pt-20 px-6 pb-8 space-y-1 bg-slate-50">
           <div className="flex justify-between items-center">
-            <p className="text-[16px] font-[700] text-[#000]">
-              {userRecord.name || "No username Available"}
-            </p>
-            {/* Message Button - Only show on other profile */}
+            <div>
+              <h2 className="text-[18px] md:text-[20px] font-bold text-[#000000]">
+                {userRecord.name || "No Name Available"}
+              </h2>
+              <p className="text-[14px] font-medium text-[#18181899]">
+                @{userRecord.username || "No username Available"}
+              </p>
+            </div>
+            {/* Action Buttons: Message for other profile, Edit Profile for my profile */}
             <div className="-mt-[7em] z-10">
-              {isFromOtherProfile && userRecord && (
+              {isFromOtherProfile && userRecord ? (
                 <button
                   onClick={() => setIsChatOpen(true)}
-                  className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors"
+                  className="mt-4 flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-full font-semibold transition-colors cursor-pointer"
                 >
                   <MessageCircle className="w-5 h-5" />
                   <span>Message</span>
                 </button>
-              )}
+              ) : !isFromOtherProfile ? (
+                <button
+                  onClick={() => setIsEditProfile(true)}
+                  className="mt-4 flex items-center gap-2 bg-gradient-to-r from-[#DE4B12] to-[#E56F41] hover:from-[#c73e0a] hover:to-[#d45e32] text-white px-6 py-2.5 rounded-full font-semibold text-[14px] shadow-sm hover:shadow transition-all cursor-pointer"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span>Edit Profile</span>
+                </button>
+              ) : null}
             </div>
           </div>
-          <p className="text-[14px] font-[400] text-[#413b3b99]">
-            @{userRecord.username || "No username Available"}
-          </p>
-          <p className="text-[14px] font-[400] text-[#413b3b99]">
+          <p className="text-[14px] font-[400] text-[#413b3b] pt-1">
             {userRecord.bio || "No Bio Available"}
           </p>
         </div>

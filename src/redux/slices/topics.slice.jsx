@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
+import { deduplicateInterestsList } from "../../lib/helpers";
 
 const initialState = {
   isLoading: false,
@@ -46,7 +47,7 @@ const topicsSlice = createSlice({
       })
       .addCase(gettopics.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.alltopics = action.payload || [];
+        state.alltopics = deduplicateInterestsList(action.payload || []);
         state.success = true;
       })
       .addCase(gettopics.rejected, (state, action) => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { auth } from "../../assets/export";
 import { BiArrowBack } from "react-icons/bi";
 import Input from "../common/Input";
@@ -11,6 +11,7 @@ import {
   getInterests,
   updateInterests,
 } from "../../redux/slices/onboarding.slice";
+import { deduplicateInterestsList } from "../../lib/helpers";
 
 export default function Interests({ handleNext, handlePrevious }) {
   const dispatch = useDispatch();
@@ -25,14 +26,18 @@ export default function Interests({ handleNext, handlePrevious }) {
     dispatch(getInterests());
   }, [dispatch]);
 
+  const deduplicatedList = useMemo(() => {
+    return deduplicateInterestsList(interestsList);
+  }, [interestsList]);
+
   // Set default open category to the 1st category once loaded
   useEffect(() => {
-    if (interestsList && interestsList.length > 0 && openCategoryId === null) {
-      const firstCat = interestsList[0];
+    if (deduplicatedList && deduplicatedList.length > 0 && openCategoryId === null) {
+      const firstCat = deduplicatedList[0];
       const firstId = firstCat._id || firstCat.id || "cat-0";
       setOpenCategoryId(firstId);
     }
-  }, [interestsList, openCategoryId]);
+  }, [deduplicatedList, openCategoryId]);
 
   // Helper to extract sub-interests array from an interest item
   const getSubList = (item) => {
@@ -50,7 +55,7 @@ export default function Interests({ handleNext, handlePrevious }) {
   };
 
   // ========== SEARCH FILTER ==========
-  const filteredCategories = interestsList?.filter((item) => {
+  const filteredCategories = deduplicatedList?.filter((item) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
 
@@ -76,8 +81,8 @@ export default function Interests({ handleNext, handlePrevious }) {
 
   // ========== NEXT BUTTON CLICK ==========
   const handleNextClick = async () => {
-    if (activeCategories.length < 4) {
-      return ErrorToast("Please select at least 4 interests.");
+    if (activeCategories.length < 5) {
+      return ErrorToast("Please select at least 5 interests.");
     }
 
     // SEND SELECTED CATEGORIES TO BACKEND
@@ -108,7 +113,7 @@ export default function Interests({ handleNext, handlePrevious }) {
           </p>
           {activeCategories.length > 0 && (
             <span className="text-xs font-semibold text-orange-600 mt-1">
-              Selected: {activeCategories.length} (Min 4 required)
+              Selected: {activeCategories.length} (Min 5 required)
             </span>
           )}
         </div>

@@ -16,6 +16,31 @@ body {
   /* Firefox */
 }
 
+/* Custom Orange Scrollbar */
+.custom-orange-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-orange-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 8px;
+}
+
+.custom-orange-scrollbar::-webkit-scrollbar-thumb {
+  background: #f85e00;
+  border-radius: 8px;
+}
+
+.custom-orange-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #de4b12;
+}
+
+.custom-orange-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #f85e00 #f1f1f1;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
