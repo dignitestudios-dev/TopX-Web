@@ -6,7 +6,11 @@ import {
   MoreHorizontal,
   AlertTriangle,
   X,
+  Zap,
+  BarChart2,
 } from "lucide-react";
+import BoostPostModal from "./BoostPostModal";
+import BoostAnalyticsModal from "./BoostAnalyticsModal";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,6 +20,12 @@ import {
   editPost,
   getPostsByPageId,
 } from "../../redux/slices/posts.slice";
+import { recordImpression } from "../../redux/slices/boost.slice";
+import {
+  getDeviceSessionId,
+  hasRecordedImpression,
+  markImpressionRecorded,
+} from "../../lib/boostHelpers";
 import { timeAgo } from "../../lib/helpers";
 import SharePostModal from "./SharePostModal";
 import ShareToChatsModal from "./ShareToChatsModal";
@@ -87,8 +97,8 @@ export default function CollectionFeedPostCard({
 
   const [existingMedia, setExistingMedia] = useState([]);
   const [currentImages, setCurrentImages] = useState([]);
-  const [deleteModal, setDeleteModal] = useState(false);
-  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [editText, setEditText] = useState("");
@@ -96,6 +106,38 @@ export default function CollectionFeedPostCard({
   const [editFilePreviews, setEditFilePreviews] = useState([]);
   const [editSaving, setEditSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const postCardRef = useRef(null);
+
+  // Impression Delivery Tracking
+  const targetPost = fullPost || post;
+  const boostId = targetPost?.boostId || targetPost?.boost?._id;
+
+  useEffect(() => {
+    if (!targetPost?.isBoosted || !boostId) return;
+    if (hasRecordedImpression(boostId)) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          markImpressionRecorded(boostId);
+          dispatch(
+            recordImpression({
+              boostId,
+              sessionId: getDeviceSessionId(),
+            })
+          );
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+
+    if (postCardRef.current) {
+      observer.observe(postCardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [targetPost?.isBoosted, boostId, dispatch]);
 
   const handleAuthorClick = () => {
     if (!author) return;
@@ -410,7 +452,12 @@ export default function CollectionFeedPostCard({
 
   console.log(fullPost, "sharedRepost");
   return (
-    <div className="bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border border-gray-100">
+    <div
+      ref={postCardRef}
+      className={`bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border transition-all ${
+        targetPost?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
+      }`}
+    >
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -461,12 +508,20 @@ export default function CollectionFeedPostCard({
           </div>
 
           <div>
-            <h3
-              onClick={handleAuthorClick}
-              className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
-            >
-              {author?.name}'s {fullPost?.page?.name}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                onClick={handleAuthorClick}
+                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
+              >
+                {author?.name}'s {fullPost?.page?.name}
+              </h3>
+              {targetPost?.isBoosted && (
+                <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-xs">
+                  <Zap className="w-2.5 h-2.5 fill-white" />
+                  <span>Boosted</span>
+                </span>
+              )}
+            </div>
             <p
               onClick={handleAuthorClick}
               className="text-xs text-gray-500 cursor-pointer hover:text-orange-600 transition-colors"
@@ -485,7 +540,7 @@ export default function CollectionFeedPostCard({
           </button>
 
           {moreOpen && (
-            <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+            <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-50 py-1">
               {user?._id == author._id && !fullPost.isShare ? (
                 <>
                   <button
@@ -496,6 +551,28 @@ export default function CollectionFeedPostCard({
                   >
                     Edit Post
                   </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setBoostModalOpen(true);
+                    }}
+                  >
+                    <Zap className="w-4 h-4 text-orange-500" />
+                    <span>Boost Post</span>
+                  </button>
+                  {(targetPost?.isBoosted || boostId) && (
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        setAnalyticsModalOpen(true);
+                      }}
+                    >
+                      <BarChart2 className="w-4 h-4 text-blue-500" />
+                      <span>Boost Analytics</span>
+                    </button>
+                  )}
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
                     disabled={deleteLoadingId === fullPost._id}
@@ -726,6 +803,24 @@ export default function CollectionFeedPostCard({
           onClose={() => setDeleteModal(false)}
           onConfirm={() => handleDeleteModal()}
           isLoading={postsUpdating}
+        />
+      )}
+
+      {/* Boost Post Stepper Modal */}
+      {boostModalOpen && (
+        <BoostPostModal
+          isOpen={boostModalOpen}
+          onClose={() => setBoostModalOpen(false)}
+          post={fullPost || post}
+        />
+      )}
+
+      {/* Boost Analytics Modal */}
+      {analyticsModalOpen && (
+        <BoostAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => setAnalyticsModalOpen(false)}
+          boostId={targetPost?.boostId || targetPost?.boost?._id}
         />
       )}
 

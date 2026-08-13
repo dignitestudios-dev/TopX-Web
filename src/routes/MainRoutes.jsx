@@ -14,6 +14,7 @@ import OtherProfile from "../pages/Others/OtherProfile";
 import Suggestpage from "../pages/Others/Suggestpage";
 import Searchitem from "../pages/Others/Searchitem";
 import { useState } from "react";
+import ChatWidget from '../components/global/ChatWidget';
 import FloatingChatButton from '../components/global/ChatWidget';
 import ProtectedRoute from "./ProtectedRoute";
 import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
@@ -21,6 +22,7 @@ import Trendingpagedetail from "../pages/Others/Trendingpagedetail";
 import KnowledgePageDetail from "../pages/Others/KnowledgePageDetail";
 import LiveStreampage from "../pages/Others/LiveStreampage";
 import Livechat from "../pages/Others/Livechat";
+import BoostSuccess from "../pages/Others/BoostSuccess";
 
 const MainRoutes = () => {
     const [open, setOpen] = useState(false);
@@ -173,6 +175,15 @@ const MainRoutes = () => {
                         element={
                             <ProtectedRoute>
                                 <LiveStreampage />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    <Route
+                        path="/boost/success"
+                        element={
+                            <ProtectedRoute>
+                                <BoostSuccess />
                             </ProtectedRoute>
                         }
                     />

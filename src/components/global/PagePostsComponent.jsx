@@ -8,7 +8,11 @@ import {
   ChevronRight,
   MessageCircleWarning,
   Filter,
+  Zap,
+  BarChart2,
 } from "lucide-react";
+import BoostPostModal from "./BoostPostModal";
+import BoostAnalyticsModal from "./BoostAnalyticsModal";
 import { fetchPagePosts } from "../../redux/slices/trending.slice";
 import ReportModal from "./ReportModal";
 import { sendReport, resetReportState } from "../../redux/slices/reports.slice";
@@ -38,9 +42,16 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
   const { pagePosts, pagePostsLoading, pagePostsPagination } = useSelector(
     (state) => state.trending
   );
+  const { user } = useSelector((state) => state.auth || {});
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports
   );
+
+  const [moreOpenPostId, setMoreOpenPostId] = useState(null);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [selectedBoostPost, setSelectedBoostPost] = useState(null);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
+  const [selectedAnalyticsBoostId, setSelectedAnalyticsBoostId] = useState(null);
 
   const [currentMediaIndex, setCurrentMediaIndex] = useState({});
   const [loadingMedia, setLoadingMedia] = useState({});
@@ -251,14 +262,62 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                             </p>
                           </div>
                         </div>
-                        <button
-                          onClick={() => handleReportClick(post._id)}
-                          className="p-2 hover:bg-gray-100 rounded-full transition"
-                          aria-label="Report post"
-                        >
-                          <PiDotsThreeOutlineFill color="black" size={20} />
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setMoreOpenPostId(
+                                moreOpenPostId === post._id ? null : post._id
+                              )
+                            }
+                            className="p-2 hover:bg-gray-100 rounded-full transition"
+                            aria-label="Options"
+                          >
+                            <PiDotsThreeOutlineFill color="black" size={20} />
+                          </button>
 
-                        </button>
+                          {moreOpenPostId === post._id && (
+                            <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl py-2 z-50 animate-fadeIn">
+                              {post.author?._id === user?._id ? (
+                                <>
+                                  <button
+                                    className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                    onClick={() => {
+                                      setMoreOpenPostId(null);
+                                      setSelectedBoostPost(post);
+                                      setBoostModalOpen(true);
+                                    }}
+                                  >
+                                    <Zap className="w-4 h-4 text-orange-500" />
+                                    <span>Boost Post</span>
+                                  </button>
+                                  {(post?.isBoosted || post?.boostId || post?.boost) && (
+                                    <button
+                                      className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                      onClick={() => {
+                                        setMoreOpenPostId(null);
+                                        setSelectedAnalyticsBoostId(post?.boostId || post?.boost?._id);
+                                        setAnalyticsModalOpen(true);
+                                      }}
+                                    >
+                                      <BarChart2 className="w-4 h-4 text-blue-500" />
+                                      <span>Boost Analytics</span>
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setMoreOpenPostId(null);
+                                    handleReportClick(post._id);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                >
+                                  Report
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                      
                     </div>
@@ -574,6 +633,30 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
         }}
         selectedFilter={commentFilter}
       />
+
+      {/* Boost Post Stepper Modal */}
+      {boostModalOpen && (
+        <BoostPostModal
+          isOpen={boostModalOpen}
+          onClose={() => {
+            setBoostModalOpen(false);
+            setSelectedBoostPost(null);
+          }}
+          post={selectedBoostPost}
+        />
+      )}
+
+      {/* Boost Analytics Modal */}
+      {analyticsModalOpen && (
+        <BoostAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => {
+            setAnalyticsModalOpen(false);
+            setSelectedAnalyticsBoostId(null);
+          }}
+          boostId={selectedAnalyticsBoostId}
+        />
+      )}
     </div>
   );
 }

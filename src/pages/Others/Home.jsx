@@ -14,8 +14,10 @@ import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import PageCreateModal from "../../components/app/profile/PageCreateModal";
+import useViewerLocation from "../../hooks/useViewerLocation";
 
 export default function Home() {
+  useViewerLocation();
   const [liked, setLiked] = useState({});
   const [showPageCreateModal, setShowPageCreateModal] = useState(false);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
@@ -108,6 +110,9 @@ export default function Home() {
           // ✅ pass reported flag to HomePostFeed
           isReported: post?.isReported,
           sharedBy: post?.sharedBy,
+          isBoosted: Boolean(post?.isBoosted || post?.boostId),
+          boostId: post?.boostId || post?.boost?._id || null,
+          boost: post?.boost || null,
         };
       })
     : [];

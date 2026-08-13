@@ -6,7 +6,11 @@ import {
   MoreHorizontal,
   X,
   AlertTriangle,
+  Zap,
+  BarChart2,
 } from "lucide-react";
+import BoostPostModal from "../../global/BoostPostModal";
+import BoostAnalyticsModal from "../../global/BoostAnalyticsModal";
 import {
   getPostsByPageId,
   likePost,
@@ -78,6 +82,10 @@ const PagePosts = ({
   const [editFiles, setEditFiles] = useState([]);
   const [editFilePreviews, setEditFilePreviews] = useState([]);
   const [editSaving, setEditSaving] = useState(false);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [selectedBoostPost, setSelectedBoostPost] = useState(null);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
+  const [selectedAnalyticsBoostId, setSelectedAnalyticsBoostId] = useState(null);
   const fileInputRef = useRef(null);
 
   const { reportSuccess, reportLoading } = useSelector(
@@ -618,6 +626,30 @@ const PagePosts = ({
                             >
                               Edit Post
                             </button>
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
+                              onClick={() => {
+                                setMoreOpenPostId(null);
+                                setSelectedBoostPost(post);
+                                setBoostModalOpen(true);
+                              }}
+                            >
+                              <Zap className="w-4 h-4 text-orange-500" />
+                              <span>Boost Post</span>
+                            </button>
+                            {(post?.isBoosted || post?.boostId || post?.boost) && (
+                              <button
+                                className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                onClick={() => {
+                                  setMoreOpenPostId(null);
+                                  setSelectedAnalyticsBoostId(post?.boostId || post?.boost?._id);
+                                  setAnalyticsModalOpen(true);
+                                }}
+                              >
+                                <BarChart2 className="w-4 h-4 text-blue-500" />
+                                <span>Boost Analytics</span>
+                              </button>
+                            )}
                             <button
                               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
                               disabled={deleteLoadingId === post._id}
@@ -1189,6 +1221,30 @@ const PagePosts = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Boost Post Stepper Modal */}
+      {boostModalOpen && (
+        <BoostPostModal
+          isOpen={boostModalOpen}
+          onClose={() => {
+            setBoostModalOpen(false);
+            setSelectedBoostPost(null);
+          }}
+          post={selectedBoostPost}
+        />
+      )}
+
+      {/* Boost Analytics Modal */}
+      {analyticsModalOpen && (
+        <BoostAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => {
+            setAnalyticsModalOpen(false);
+            setSelectedAnalyticsBoostId(null);
+          }}
+          boostId={selectedAnalyticsBoostId}
+        />
       )}
     </div>
   );

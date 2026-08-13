@@ -18,6 +18,7 @@ import trendingReducer from "./slices/trending.slice"
 import reportsReducder from "./slices/reports.slice";
 import GlobalSearchReducder from "./slices/Global.Slice";
 import livestreamReducer from "./slices/livestream.slice";
+import boostReducer from "./slices/boost.slice";
 import { persistStore, persistReducer } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -47,6 +48,7 @@ const rootReducer = combineReducers({
   livestream: livestreamReducer,
   chat: chatReducer,
   changeEmail: changeEmailReducer,
+  boost: boostReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

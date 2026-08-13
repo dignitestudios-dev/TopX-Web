@@ -16,8 +16,10 @@ import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import { useNavigate } from "react-router";
+import useViewerLocation from "../../hooks/useViewerLocation";
 
 export default function Mypost() {
+  useViewerLocation();
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -126,6 +128,9 @@ export default function Mypost() {
       },
       page: p?.page,
       isLiked: p.isLiked,
+      isBoosted: Boolean(p.isBoosted || p.boostId || p.boost),
+      boostId: p.boostId || p.boost?._id || null,
+      boost: p.boost || null,
     };
   };
 

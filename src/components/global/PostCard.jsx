@@ -8,7 +8,11 @@ import {
   X,
   Pin,
   Repeat,
+  Zap,
+  BarChart2,
 } from "lucide-react";
+import BoostPostModal from "./BoostPostModal";
+import BoostAnalyticsModal from "./BoostAnalyticsModal";
 import EditPostModal from "./EditPostModal";
 import DeletePostModal from "./DeletePostModal";
 import { Link, useNavigate } from "react-router";
@@ -24,6 +28,12 @@ import {
   elevatePost,
   demotePost,
 } from "../../redux/slices/posts.slice";
+import { recordImpression } from "../../redux/slices/boost.slice";
+import {
+  getDeviceSessionId,
+  hasRecordedImpression,
+  markImpressionRecorded,
+} from "../../lib/boostHelpers";
 import { FaRegTrashCan } from "react-icons/fa6";
 import { TiPin } from "react-icons/ti";
 import { SuccessToast } from "./Toaster";
@@ -106,7 +116,42 @@ const PostCard = ({
   const [elevatePostId, setElevatePostId] = useState(null);
   const [elevateDuration, setElevateDuration] = useState("24h");
   const [elevateLoading, setElevateLoading] = useState(false);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const fileInputRef = useRef(null);
+  const postCardRef = useRef(null);
+
+  const dispatch = useDispatch();
+
+  // Impression Delivery Tracking
+  useEffect(() => {
+    const boostId = post?.boostId || post?.boost?._id;
+    if (!post?.isBoosted || !boostId) return;
+    if (hasRecordedImpression(boostId)) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          markImpressionRecorded(boostId);
+          dispatch(
+            recordImpression({
+              boostId,
+              sessionId: getDeviceSessionId(),
+            })
+          );
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+
+    if (postCardRef.current) {
+      observer.observe(postCardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [post?.isBoosted, post?.boostId, post?.boost, dispatch]);
+
   const options = [
     "Share to your Story",
     "Share with Topic Page",
@@ -214,6 +259,7 @@ const PostCard = ({
   };
 
   const isPostLiked = liked[post.id] ?? post.isLiked;
+  const linkData = getLinkPreview(post?.text || post?.bodyText || "");
   const images =
     post.postImages && post.postImages.length > 0 ? post.postImages : [];
   
@@ -242,7 +288,6 @@ const PostCard = ({
     setCurrentImageIndex((prev) => (prev - 1 + allMedia.length) % allMedia.length);
   };
 
-  const dispatch = useDispatch();
   const { likeLoading } = useSelector((state) => state.posts);
 
   // ✅ FIXED: Proper like toggle handler
@@ -457,7 +502,12 @@ const PostCard = ({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300">
+      <div
+        ref={postCardRef}
+        className={`bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 ${
+          post?.isBoosted ? "border border-orange-200/90 ring-1 ring-orange-500/20" : ""
+        }`}
+      >
         {/* Repost Navigation Banner */}
         {(post?.originalPost || post?.sharedBy || post?.isRepost) && (
           <div
@@ -502,20 +552,28 @@ const PostCard = ({
                 )}
 
                 <div className="flex-1">
-                  <p className="text-sm font-bold flex items-center text-gray-700">
-                    {post?.author?.name ? `${post.author.name}'s ` : ""}
-                    {post?.page?.name}
-                    {activeTab === "postrequest" && (
-                      <span className="text-xs text-black">
-                        <Pin size={16} />
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold flex items-center text-gray-700">
+                      {post?.author?.name ? `${post.author.name}'s ` : ""}
+                      {post?.page?.name}
+                      {activeTab === "postrequest" && (
+                        <span className="text-xs text-black">
+                          <Pin size={16} />
+                        </span>
+                      )}
+                      {post?.isElevated && (
+                        <span className="text-xs text-black inline-flex items-center ml-1">
+                          <TiPin size={20} />
+                        </span>
+                      )}
+                    </p>
+                    {post?.isBoosted && (
+                      <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-xs">
+                        <Zap className="w-2.5 h-2.5 fill-white" />
+                        <span>Boosted</span>
                       </span>
                     )}
-                    {post?.isElevated && (
-                      <span className="text-xs text-black inline-flex items-center ml-1">
-                        <TiPin size={20} />
-                      </span>
-                    )}
-                  </p>
+                  </div>
                   {post && (
                     <div className="flex items-center gap-1 mt-0.5 -ml-[20px]">
                       {post?.avatar && (
@@ -549,7 +607,7 @@ const PostCard = ({
             {showpopup && (
               <div
                 ref={popupRef}
-                className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-[10em] z-50"
+                className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-[11em] z-50"
               >
                 {/* Edit sirf tab jab repost nahi hai */}
                 {!post.sharedBy && (
@@ -561,6 +619,32 @@ const PostCard = ({
                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     Edit
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setShowpopup(false);
+                    setMoreOpenPostId(null);
+                    setBoostModalOpen(true);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
+                >
+                  <Zap className="w-4 h-4 text-orange-500" />
+                  <span>Boost Post</span>
+                </button>
+
+                {(post?.isBoosted || post?.boostId || post?.boost) && (
+                  <button
+                    onClick={() => {
+                      setShowpopup(false);
+                      setMoreOpenPostId(null);
+                      setAnalyticsModalOpen(true);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                  >
+                    <BarChart2 className="w-4 h-4 text-blue-500" />
+                    <span>Boost Analytics</span>
                   </button>
                 )}
 
@@ -1177,6 +1261,24 @@ const PostCard = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Boost Post Stepper Modal */}
+      {boostModalOpen && (
+        <BoostPostModal
+          isOpen={boostModalOpen}
+          onClose={() => setBoostModalOpen(false)}
+          post={post}
+        />
+      )}
+
+      {/* Boost Analytics Modal */}
+      {analyticsModalOpen && (
+        <BoostAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => setAnalyticsModalOpen(false)}
+          boostId={post?.boostId || post?.boost?._id}
+        />
       )}
     </>
   );

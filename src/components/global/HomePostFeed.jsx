@@ -6,7 +6,11 @@ import {
   MoreHorizontal,
   AlertTriangle,
   X,
+  Zap,
+  BarChart2,
 } from "lucide-react";
+import BoostPostModal from "./BoostPostModal";
+import BoostAnalyticsModal from "./BoostAnalyticsModal";
 import PostImageViewerModal from "./PostDetailModal";
 import CommentsSection from "./CommentsSection";
 import { useDispatch, useSelector } from "react-redux";
@@ -15,6 +19,12 @@ import {
   getPostsByPageId,
   likePost,
 } from "../../redux/slices/posts.slice";
+import { recordImpression } from "../../redux/slices/boost.slice";
+import {
+  getDeviceSessionId,
+  hasRecordedImpression,
+  markImpressionRecorded,
+} from "../../lib/boostHelpers";
 import { useNavigate } from "react-router";
 import { PostUnderReview } from "../../assets/export";
 import ReportModal from "./ReportModal";
@@ -61,11 +71,14 @@ export default function HomePostFeed({
   const [deleteLoadingId, setDeleteLoadingId] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [editText, setEditText] = useState("");
   const [editFiles, setEditFiles] = useState([]);
   const [editFilePreviews, setEditFilePreviews] = useState([]);
   const [editSaving, setEditSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const postCardRef = useRef(null);
 
   const isVideo = (url) => {
     return /\.(mp4|webm|ogg)$/i.test(url);
@@ -75,6 +88,35 @@ export default function HomePostFeed({
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  // Impression Delivery Tracking
+  useEffect(() => {
+    const boostId = post?.boostId || post?.boost?._id;
+    if (!post?.isBoosted || !boostId) return;
+    if (hasRecordedImpression(boostId)) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          markImpressionRecorded(boostId);
+          dispatch(
+            recordImpression({
+              boostId,
+              sessionId: getDeviceSessionId(),
+            })
+          );
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 }
+    );
+
+    if (postCardRef.current) {
+      observer.observe(postCardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [post?.isBoosted, post?.boostId, post?.boost, dispatch]);
   const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
   const firstMedia = hasImages ? post.postimage[0] : null;
   const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
@@ -385,7 +427,12 @@ export default function HomePostFeed({
   };
 
   return (
-    <div className="bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border border-gray-100 flex flex-col">
+    <div
+      ref={postCardRef}
+      className={`bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border flex flex-col transition-all ${
+        post?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
+      }`}
+    >
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -420,11 +467,20 @@ export default function HomePostFeed({
           </div>
           <div>
             {/* Page Name (or fallback to user) */}
-            <h3
-              className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
-              onClick={post.page ? handlePageClick : handleAuthorClick}
-            >
-              {post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}            </h3>
+            <div className="flex items-center gap-2">
+              <h3
+                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
+                onClick={post.page ? handlePageClick : handleAuthorClick}
+              >
+                {post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}
+              </h3>
+              {post?.isBoosted && (
+                <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-xs">
+                  <Zap className="w-2.5 h-2.5 fill-white" />
+                  <span>Boosted</span>
+                </span>
+              )}
+            </div>
             {/* Author username */}
             <p
               onClick={handleAuthorClick}
@@ -445,7 +501,7 @@ export default function HomePostFeed({
             </button>
 
             {moreOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+              <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-50 py-1">
                 {post.author._id === authUser?._id && !post.sharedBy ? (
                   <>
                     <button
@@ -459,10 +515,34 @@ export default function HomePostFeed({
                     </button>
                     <button
                       onClick={() => {
+                        setMoreOpen(false);
+                        setMoreOpenPostId(null);
+                        setBoostModalOpen(true);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Zap className="w-4 h-4 text-orange-500" />
+                      <span>Boost Post</span>
+                    </button>
+                    {(post?.isBoosted || post?.boostId || post?.boost) && (
+                      <button
+                        onClick={() => {
+                          setMoreOpen(false);
+                          setMoreOpenPostId(null);
+                          setAnalyticsModalOpen(true);
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+                      >
+                        <BarChart2 className="w-4 h-4 text-blue-500" />
+                        <span>Boost Analytics</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
                         setMoreOpenPostId(null);
                         handleDeletePost(post._id);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
                       Delete
                     </button>
@@ -887,6 +967,24 @@ export default function HomePostFeed({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Boost Post Stepper Modal */}
+      {boostModalOpen && (
+        <BoostPostModal
+          isOpen={boostModalOpen}
+          onClose={() => setBoostModalOpen(false)}
+          post={post}
+        />
+      )}
+
+      {/* Boost Analytics Modal */}
+      {analyticsModalOpen && (
+        <BoostAnalyticsModal
+          isOpen={analyticsModalOpen}
+          onClose={() => setAnalyticsModalOpen(false)}
+          boostId={post?.boostId || post?.boost?._id}
+        />
       )}
     </div>
   );
