@@ -133,11 +133,11 @@ export const applyExpertStatus = createAsyncThunk(
 );
 // ================= FETCH Other PAGES =================
 export const fetchOtherPages = createAsyncThunk(
-  "pages/recommendations",
-  async ({ page = 1, limit = 10 }, thunkAPI) => {
+  "pages/fetchOtherPages",
+  async ({ page = 1, limit = 100 }, thunkAPI) => {
     try {
       const res = await axios.get(
-        `/pages/recommendations?page=${page}&limit=${limit}`
+        `/trends/pages?page=${page}&limit=${limit}`
       );
       return res.data; // full response with pagination + data
     } catch (error) {

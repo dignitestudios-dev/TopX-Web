@@ -111,7 +111,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           setSelectedType={setSelectedType}
         />
       )}
-      {selectedType === "Page done" && title === "Create New Page" && (
+      {(selectedType === "Page done" || (selectedType === "Done" && title === "Create New Page")) && (
         <SuccessModal
           setIsOpen={setSelectedOption}
           isOpen={selectedOption}

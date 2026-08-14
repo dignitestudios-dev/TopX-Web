@@ -68,16 +68,77 @@ export function getLinkPreview(text) {
 }
 
 /**
- * Converts a remote emoji image URL to a real binary File object for FormData uploads.
+ * Checks if a string is a raw Unicode emoji (e.g. "😊", "🔥", "⚽") vs a URL/path.
+ */
+export function isEmoji(str) {
+  if (!str || typeof str !== "string") return false;
+  const trimmed = str.trim();
+  if (!trimmed) return false;
+  // If it starts with http, https, data:, blob:, or /, it's a URL or relative path
+  if (/^(https?:\/\/|data:|blob:|\/|\.\/)/i.test(trimmed)) {
+    return false;
+  }
+  // Check if string contains emoji characters or is a short string of unicode emojis
+  const emojiRegex = /(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji})/u;
+  return emojiRegex.test(trimmed) && trimmed.length <= 10;
+}
+
+/**
+ * Converts a remote emoji image URL or Unicode emoji to a real binary File object for FormData uploads.
  */
 export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
   if (!emojiUrl) return null;
+
+  // If it's already a File or Blob
+  if (emojiUrl instanceof File) return emojiUrl;
+  if (emojiUrl instanceof Blob) {
+    return new File([emojiUrl], filename, { type: emojiUrl.type || "image/png" });
+  }
+
+  if (typeof emojiUrl !== "string") return null;
+  const trimmed = emojiUrl.trim();
+
+  // If it's a raw Unicode emoji (e.g. "😊" or "🚀")
+  if (isEmoji(trimmed)) {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 256;
+      canvas.height = 256;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, 256, 256);
+        ctx.font = "180px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(trimmed, 128, 140);
+        const blob = await new Promise((resolve) =>
+          canvas.toBlob(resolve, "image/png")
+        );
+        if (blob && blob.size > 0) {
+          return new File([blob], filename, { type: "image/png" });
+        }
+      }
+    } catch (err) {
+      console.error("Canvas emoji render error:", err);
+    }
+  }
+
+  // If it's a Data URL (base64)
+  if (trimmed.startsWith("data:")) {
+    try {
+      const res = await fetch(trimmed);
+      const blob = await res.blob();
+      if (blob && blob.size > 0) {
+        return new File([blob], filename, { type: blob.type || "image/png" });
+      }
+    } catch {}
+  }
 
   // Extract clean filename from URL if available
   let cleanFilename = filename;
   let pathname = "";
   try {
-    const urlObj = new URL(emojiUrl);
+    const urlObj = new URL(trimmed);
     pathname = urlObj.pathname;
     const extractedName = pathname.split("/").pop();
     if (extractedName && extractedName.includes(".")) {
@@ -91,16 +152,16 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
   const candidateUrls = [];
 
   // In Vite dev mode, use local proxy to bypass S3 CORS completely
-  if (import.meta.env.DEV && emojiUrl.includes("topx-uploads.s3.us-east-1.amazonaws.com")) {
+  if (import.meta.env.DEV && trimmed.includes("topx-uploads.s3.us-east-1.amazonaws.com")) {
     candidateUrls.push(`/s3-proxy${pathname}`);
   }
 
   // Direct URL
-  candidateUrls.push(emojiUrl);
+  candidateUrls.push(trimmed);
 
   // CORS proxies for production or fallback
-  candidateUrls.push(`https://corsproxy.io/?url=${encodeURIComponent(emojiUrl)}`);
-  candidateUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(emojiUrl)}`);
+  candidateUrls.push(`https://corsproxy.io/?url=${encodeURIComponent(trimmed)}`);
+  candidateUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(trimmed)}`);
 
   // Try fetching binary from candidate URLs
   for (const url of candidateUrls) {
@@ -124,7 +185,7 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
   try {
     const blob = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      xhr.open("GET", emojiUrl, true);
+      xhr.open("GET", trimmed, true);
       xhr.responseType = "blob";
       xhr.onload = () => {
         if (xhr.status === 200 || xhr.status === 0) {
@@ -171,7 +232,7 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
       img.onerror = () => {
         resolve(null);
       };
-      img.src = emojiUrl;
+      img.src = trimmed;
     });
   } catch {
     return null;

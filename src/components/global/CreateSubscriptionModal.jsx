@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { X, Check, Search } from "lucide-react";
+import { X, Check, Search, Lock, Globe } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { FaPlus } from "react-icons/fa6";
 import SkeletonCard from "./SkeletonCard";
@@ -9,10 +9,11 @@ import {
   getMySubsctiptions,
 } from "../../redux/slices/Subscription.slice";
 import Button from "../common/Button";
+import Avatar from "../common/Avatar";
 import { fetchOtherPages } from "../../redux/slices/pages.slice";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
-import { emojiUrlToFile } from "../../lib/helpers";
+import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
 
 const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [subscriptionName, setSubscriptionName] = useState("");
@@ -30,6 +31,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const fileInputRef = useRef(null);
   const [errors, setErrors] = useState({ name: "", image: "" });
   const [selectedCollectionId, setSelectedCollectionId] = useState(null);
+  const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+  const [isFinalSaving, setIsFinalSaving] = useState(false);
   const dispatch = useDispatch();
 
   const resetModalState = () => {
@@ -42,17 +45,22 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     setSearch("");
     setErrors({ name: "", image: "" });
     setShowSuccess(false);
+    setIsCreatingCollection(false);
+    setIsFinalSaving(false);
   };
 
   useEffect(() => {
     if (isOpen) {
       resetModalState();
-      dispatch(fetchOtherPages({ page: 1, limit: 20 }));
+      dispatch(fetchOtherPages({ page: 1, limit: 100 }));
+      dispatch(getMySubsctiptions({ page: 1, limit: 100 }));
     }
   }, [dispatch, isOpen]);
 
-  const { isLoading, error } = useSelector((state) => state.collections);
-  const { isLoading: addPageToCollectionLoading } = useSelector(
+  const { isLoading, error, allcollections } = useSelector(
+    (state) => state.collections,
+  );
+  const { mySubscriptions, isLoading: addPageToCollectionLoading } = useSelector(
     (state) => state.subscriptions,
   );
   const { recommendationPages, pagesLoading } = useSelector(
@@ -68,7 +76,9 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
   // FINAL SAVE
   const handleFinalSave = async () => {
+    if (isFinalSaving || addPageToCollectionLoading) return;
     try {
+      setIsFinalSaving(true);
       await dispatch(
         createPageToCollections({
           pages: selectedCollections, // page IDs array
@@ -85,6 +95,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
       }, 2000);
     } catch (err) {
       console.error("Add page error:", err);
+    } finally {
+      setIsFinalSaving(false);
     }
   };
 
@@ -120,10 +132,27 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const validateCreate = () => {
     let valid = true;
     let err = { name: "", image: "" };
+    const trimmedName = collectionName.trim();
 
-    if (!collectionName.trim()) {
+    if (!trimmedName) {
       err.name = "Collection name is required.";
       valid = false;
+    } else {
+      const existingCollections = [
+        ...(Array.isArray(mySubscriptions) ? mySubscriptions : []),
+        ...(Array.isArray(allcollections) ? allcollections : []),
+      ];
+
+      const isDuplicate = existingCollections.some(
+        (col) =>
+          (col?.name || "").trim().toLowerCase() === trimmedName.toLowerCase()
+      );
+
+      if (isDuplicate) {
+        err.name =
+          "A subscription/collection with this name already exists. Please choose a different name.";
+        valid = false;
+      }
     }
 
     if (!imageFile && !imagePreview) {
@@ -137,30 +166,55 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
   // CREATE COLLECTION
   const handleCreateSubscription = async () => {
+    if (isCreatingCollection || isLoading) return;
     if (!validateCreate()) return;
 
-    let binaryFile = imageFile;
-    if (!(binaryFile instanceof File) && imagePreview) {
-      binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
-    }
+    try {
+      setIsCreatingCollection(true);
 
-    const formData = new FormData();
-    formData.append("name", collectionName.trim());
-    
-    if (binaryFile instanceof File) {
-      formData.append("image", binaryFile, binaryFile.name || "collection.png");
-    }
+      let binaryFile = imageFile;
+      if (!(binaryFile instanceof File) && imagePreview) {
+        binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
+      }
 
-    const result = await dispatch(createCollection(formData));
+      const formData = new FormData();
+      formData.append("name", collectionName.trim());
+      
+      if (binaryFile instanceof File) {
+        formData.append("image", binaryFile, binaryFile.name || "collection.png");
+      }
 
-    if (createCollection.fulfilled.match(result)) {
-      setSelectedCollectionId(result.payload.newCollection._id);
-      // Reset input fields but move to step 2 (selecting pages)
-      setCreating(true);
-      setCollectionName("");
-      setImageFile(null);
-      setImagePreview(null);
-      setErrors({ name: "", image: "" });
+      const result = await dispatch(createCollection(formData));
+
+      if (createCollection.fulfilled.match(result)) {
+        setSelectedCollectionId(result.payload.newCollection._id);
+        // Reset input fields but move to step 2 (selecting pages)
+        setCreating(true);
+        setCollectionName("");
+        setImageFile(null);
+        setImagePreview(null);
+        setErrors({ name: "", image: "" });
+      } else {
+        const errorMsg = result.payload || result.error?.message || "";
+        const lowerMsg = String(errorMsg).toLowerCase();
+        if (
+          lowerMsg.includes("already exist") ||
+          lowerMsg.includes("duplicate") ||
+          lowerMsg.includes("already taken") ||
+          lowerMsg.includes("collection with this name") ||
+          lowerMsg.includes("unique")
+        ) {
+          setErrors((prev) => ({
+            ...prev,
+            name:
+              "A subscription/collection with this name already exists. Please choose a different name.",
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Create subscription error:", err);
+    } finally {
+      setIsCreatingCollection(false);
     }
   };
 
@@ -206,11 +260,17 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                     className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all relative group select-none"
                   >
                     {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        className="w-full h-full object-cover"
-                        alt="Preview"
-                      />
+                      isEmoji(imagePreview) ? (
+                        <span className="text-5xl select-none flex items-center justify-center">
+                          {imagePreview}
+                        </span>
+                      ) : (
+                        <img
+                          src={imagePreview}
+                          className="w-full h-full object-cover"
+                          alt="Preview"
+                        />
+                      )
                     ) : (
                       <FaPlus className="text-orange-500 text-3xl" />
                     )}
@@ -248,11 +308,19 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
                 {/* Save */}
                 <button
+                  type="button"
                   onClick={handleCreateSubscription}
-                  disabled={isLoading}
-                  className="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50"
+                  disabled={isCreatingCollection || isLoading}
+                  className="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed font-medium"
                 >
-                  {isLoading ? "Saving..." : "Save"}
+                  {isCreatingCollection || isLoading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <span>Save</span>
+                  )}
                 </button>
               </div>
             ) : (
@@ -285,37 +353,74 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                     <>
                       {recommendationPages && recommendationPages.length > 0 ? (
                         filteredPages.length > 0 ? (
-                          filteredPages.map((col) => (
-                            <div
-                              key={col._id}
-                              className="flex justify-between items-center cursor-pointer p-2 border rounded-lg hover:bg-gray-50 transition"
-                              onClick={() => toggleSelect(col._id)}
-                            >
-                              <div className="flex items-center gap-3">
-                                <img
-                                  src={
-                                    col.image ||
-                                    "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"
-                                  }
-                                  className="w-10 h-10 rounded-full object-cover"
-                                  alt=""
-                                />
-                                <p className="font-medium text-gray-800">{col.name}</p>
-                              </div>
-
+                          filteredPages.map((col) => {
+                            const isPrivate =
+                              col.pageType === "private" || col.isPrivate;
+                            return (
                               <div
-                                className={`w-5 h-5 rounded border flex items-center justify-center ${
-                                  selectedCollections.includes(col._id)
-                                    ? "bg-orange-500 border-orange-500 text-white"
-                                    : "border-gray-300"
-                                }`}
+                                key={col._id}
+                                className="flex justify-between items-center cursor-pointer p-2.5 border rounded-xl hover:bg-gray-50 transition gap-2"
+                                onClick={() => toggleSelect(col._id)}
                               >
-                                {selectedCollections.includes(col._id) && (
-                                  <Check size={14} />
-                                )}
+                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                  <Avatar
+                                    src={
+                                      col.image ||
+                                      col.user?.profilePicture ||
+                                      col.author?.profilePicture ||
+                                      col.userData?.profilePicture
+                                    }
+                                    alt={col.name}
+                                    size="md"
+                                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                  />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="font-medium text-gray-800 text-sm truncate max-w-[150px]">
+                                        {col.name}
+                                      </p>
+                                      <span
+                                        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
+                                          isPrivate
+                                            ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                        }`}
+                                      >
+                                        {isPrivate ? (
+                                          <>
+                                            <Lock size={10} />
+                                            <span>Private</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Globe size={10} />
+                                            <span>Public</span>
+                                          </>
+                                        )}
+                                      </span>
+                                    </div>
+                                    {col.topic && (
+                                      <p className="text-xs text-gray-400 truncate mt-0.5">
+                                        {col.topic}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div
+                                  className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${
+                                    selectedCollections.includes(col._id)
+                                      ? "bg-orange-500 border-orange-500 text-white"
+                                      : "border-gray-300 bg-white"
+                                  }`}
+                                >
+                                  {selectedCollections.includes(col._id) && (
+                                    <Check size={14} />
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                         ) : (
                           <p className="text-center text-gray-500 py-8">
                             No items found
@@ -323,7 +428,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                         )
                       ) : (
                         <p className="text-center text-gray-500 py-4">
-                          No recommendations available
+                          No pages available
                         </p>
                       )}
                     </>
@@ -333,11 +438,17 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   variant="orange"
                   size="full"
                   onClick={handleFinalSave}
-                  disabled={selectedCollections.length === 0}
-                  loading={addPageToCollectionLoading}
+                  disabled={
+                    selectedCollections.length === 0 ||
+                    isFinalSaving ||
+                    addPageToCollectionLoading
+                  }
+                  loading={isFinalSaving || addPageToCollectionLoading}
                   className={`w-full mt-5 py-3 rounded-xl text-white 
                                     ${
-                                      selectedCollections.length === 0
+                                      selectedCollections.length === 0 ||
+                                      isFinalSaving ||
+                                      addPageToCollectionLoading
                                         ? "bg-gray-400 cursor-not-allowed"
                                         : "bg-orange-600 cursor-pointer hover:bg-orange-700"
                                     }`}

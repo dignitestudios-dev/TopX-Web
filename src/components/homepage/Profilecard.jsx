@@ -10,9 +10,14 @@ const Profilecard = () => {
 
     useEffect(() => {
         dispatch(getAllUserData())
-    }, [])
+    }, [dispatch])
 
-
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good Morning";
+        if (hour < 18) return "Good Afternoon";
+        return "Good Evening";
+    };
 
     // =======================
     // SKELETON LOADING
@@ -21,16 +26,15 @@ const Profilecard = () => {
         return (
             <div className="max-w-xs rounded-xl overflow-hidden border border-gray-200 bg-white p-5 animate-pulse">
                 {/* Header Skeleton */}
-                <div className="bg-gradient-to-r from-orange-600 to-orange-400 pt-8 pl-3 rounded-xl h-[120px] relative">
+                <div className="bg-gradient-to-r from-orange-600 to-orange-400 pt-8 pl-3 pr-3 rounded-xl h-[120px] relative">
                     <div className="absolute left-5 bottom-[-30px]">
                         <div className="h-20 w-20 rounded-full bg-gray-300"></div>
                     </div>
 
-                    {/* Stats skeleton */}
-                    <div className="absolute right-4 bottom-4 flex gap-6">
-                        <div className="h-6 w-10 bg-gray-300 rounded"></div>
-                        <div className="h-6 w-10 bg-gray-300 rounded"></div>
-                        <div className="h-6 w-10 bg-gray-300 rounded"></div>
+                    {/* Welcome message skeleton */}
+                    <div className="absolute right-4 bottom-4 flex flex-col items-end gap-1.5">
+                        <div className="h-5 w-28 bg-orange-300/60 rounded"></div>
+                        <div className="h-3 w-20 bg-orange-300/40 rounded"></div>
                     </div>
                 </div>
 
@@ -48,44 +52,47 @@ const Profilecard = () => {
     // =======================
     // REAL DATA VIEW
     // =======================
+    const firstName = allUserData?.name?.trim()?.split(" ")?.[0] || allUserData?.username || "User";
+
     return (
         <div>
-            <div className="max-w-xs rounded-xl overflow-hidden border border-gray-200 bg-white">
+            <div className="max-w-xs rounded-xl overflow-hidden border border-gray-200 bg-white shadow-xs">
 
-                <div className="bg-gradient-to-r from-orange-600 to-orange-400 pt-8 pl-3 relative">
+                <div className="bg-gradient-to-r from-orange-600 to-orange-400 pt-8 pl-3 pr-3 relative">
                     <div className="flex items-center gap-4 mb-0">
-                        <div className='flex items-center -mb-[60px] gap-4 pb-10'>
+                        <div className='flex items-center -mb-[60px] gap-3 pb-10 min-w-0 w-full'>
 
                             <img
                                 src={allUserData?.profilePicture || dummyprofile}
                                 loading="lazy"
                                 alt="profile"
-                                className="h-20 w-20 object-cover rounded-full"
+                                className="h-20 w-20 object-cover rounded-full flex-shrink-0 border-2 border-white shadow-sm"
                             />
 
-                            <div className="text-white flex gap-6 pb-3">
-                                <div className="text-center">
-                                    <div className="text-[17px] font-[600]">{allUserData?.postsCount || "0"}</div>
-                                    <div className="text-xs">Posts</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-[17px] font-[600]">{allUserData?.followersCount || "0"}</div>
-                                    <div className="text-xs">Followers</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-[17px] font-[600]">{allUserData?.followingCount || "0"}</div>
-                                    <div className="text-xs">Following</div>
-                                </div>
+                            <div className="text-white pb-3 flex-1 min-w-0 pr-1">
+                                <span className="text-[11px] font-medium text-orange-100 uppercase tracking-wider block">
+                                    {getGreeting()} 👋
+                                </span>
+                                <h3 className="text-[16px] font-bold leading-tight truncate mt-0.5" title={`Welcome back, ${firstName}!`}>
+                                    Welcome Back!
+                                </h3>
+                                <p className="text-xs text-orange-100/90 font-medium truncate mt-0.5" title={`Hello, ${allUserData?.name || firstName}!`}>
+                                    {allUserData?.name ? `Hello, ${firstName}!` : "Welcome to TopX"}
+                                </p>
                             </div>
 
                         </div>
                     </div>
                 </div>
 
-                <div className="p-5 pt-8">
-                    <h2 className="text-lg font-semibold text-gray-800">{allUserData?.name || "Not Available"}</h2>
-                    <p className="text-sm text-gray-500 mb-2">{allUserData?.username || "No Username"}</p>
-                    <p className="text-sm text-gray-600 leading-snug">
+                <div className="p-5 pt-8 overflow-hidden">
+                    <h2 className="text-lg font-semibold text-gray-800 truncate" title={allUserData?.name || "Not Available"}>
+                        {allUserData?.name || "Not Available"}
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-2 truncate" title={allUserData?.username || "No Username"}>
+                        {allUserData?.username || "No Username"}
+                    </p>
+                    <p className="text-sm text-gray-600 leading-snug break-words">
   {allUserData?.bio
     ? allUserData.bio.length > 100
       ? allUserData.bio.substring(0, 100) + "..."

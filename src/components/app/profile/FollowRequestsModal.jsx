@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
 import { X, UserCheck, Check, UserX } from "lucide-react";
 import axios from "../../../axios";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
 import { nofound } from "../../../assets/export";
+import Avatar from "../../common/Avatar";
 
 export default function FollowRequestsModal({ isOpen, onClose, pageId, onActionComplete }) {
   const [requests, setRequests] = useState([]);
@@ -130,17 +130,11 @@ export default function FollowRequestsModal({ isOpen, onClose, pageId, onActionC
                 >
                   {/* Author Info */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={
-                        req.author?.profilePicture ||
-                        "https://via.placeholder.com/48?text=User"
-                      }
-                      alt={req.author?.name || "User"}
-                      className="w-12 h-12 rounded-full object-cover bg-gray-200 border border-gray-200 flex-shrink-0"
-                      onError={(e) => {
-                        e.target.src =
-                          "https://via.placeholder.com/48?text=User";
-                      }}
+                    <Avatar
+                      src={req.author?.profilePicture}
+                      alt={req.author?.name || req.author?.username || "User"}
+                      size="lg"
+                      className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                     />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">

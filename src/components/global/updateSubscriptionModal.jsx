@@ -6,13 +6,15 @@ import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
 import { FaPlusCircle } from "react-icons/fa";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
-import { emojiUrlToFile } from "../../lib/helpers";
+import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
 
 const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const dispatch = useDispatch();
   const { isLoading } = useSelector((state) => state.collections);
+  const { mySubscriptions } = useSelector((state) => state.subscriptions);
 
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -23,6 +25,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   useEffect(() => {
     if (collection) {
       setName(collection.name);
+      setNameError("");
       setImagePreview(collection.image);
     }
   }, [collection]);
@@ -53,13 +56,39 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   };
 
   const handleUpdate = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setNameError("Subscription name is required.");
+      return;
+    }
+
+    const existingCollections = Array.isArray(mySubscriptions)
+      ? mySubscriptions
+      : [];
+    const isDuplicate = existingCollections.some(
+      (col) =>
+        col._id !== collection?._id &&
+        (col?.name || "").trim().toLowerCase() === trimmedName.toLowerCase(),
+    );
+
+    if (isDuplicate) {
+      setNameError(
+        "A subscription/collection with this name already exists. Please choose a different name.",
+      );
+      return;
+    }
+
     let binaryFile = imageFile;
-    if (!(binaryFile instanceof File) && imagePreview && imagePreview !== collection?.image) {
+    if (
+      !(binaryFile instanceof File) &&
+      imagePreview &&
+      imagePreview !== collection?.image
+    ) {
       binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
     }
 
     const formData = new FormData();
-    formData.append("name", name.trim());
+    formData.append("name", trimmedName);
     if (binaryFile instanceof File) {
       formData.append("image", binaryFile, binaryFile.name || "collection.png");
     }
@@ -74,6 +103,20 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
     if (updateCollection.fulfilled.match(result)) {
       dispatch(getMySubsctiptions({ page: 1, limit: 10 }));
       onClose();
+    } else {
+      const errorMsg = result.payload || result.error?.message || "";
+      const lowerMsg = String(errorMsg).toLowerCase();
+      if (
+        lowerMsg.includes("already exist") ||
+        lowerMsg.includes("duplicate") ||
+        lowerMsg.includes("already taken") ||
+        lowerMsg.includes("collection with this name") ||
+        lowerMsg.includes("unique")
+      ) {
+        setNameError(
+          "A subscription/collection with this name already exists. Please choose a different name.",
+        );
+      }
     }
   };
 
@@ -98,11 +141,17 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
             >
               <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-orange-400 bg-gray-100 flex items-center justify-center">
                 {imagePreview ? (
-                  <img
-                    src={imagePreview}
-                    className="w-full h-full rounded-full object-cover"
-                    alt="Collection"
-                  />
+                  isEmoji(imagePreview) ? (
+                    <span className="text-4xl select-none flex items-center justify-center">
+                      {imagePreview}
+                    </span>
+                  ) : (
+                    <img
+                      src={imagePreview}
+                      className="w-full h-full rounded-full object-cover"
+                      alt="Collection"
+                    />
+                  )
                 ) : (
                   <span className="text-gray-400 text-sm">Upload</span>
                 )}
@@ -126,8 +175,14 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
                 className="w-full border rounded-xl mt-1 p-3 bg-gray-100 focus:outline-none focus:border-orange-500"
                 placeholder="Subscription Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setNameError("");
+                }}
               />
+              {nameError && (
+                <p className="text-red-500 text-xs mt-1">{nameError}</p>
+              )}
             </div>
 
             {/* Save */}

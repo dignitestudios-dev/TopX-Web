@@ -11,6 +11,7 @@ import {
 import { nofound, notes } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
+import Avatar from "../../components/common/Avatar";
 
 import CreateSubscriptionModal from "../../components/global/CreateSubscriptionModal";
 import { useDispatch, useSelector } from "react-redux";
@@ -240,22 +241,27 @@ export default function Subscriptions() {
                       />
                     </div>
 
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center min-w-0 flex-1">
                       <p
                         onClick={() =>
                           navigate(`/profile`, { state: { id: item._id } })
                         }
-                        className="cursor-pointer font-[400] text-[14px]"
+                        className="cursor-pointer font-[400] text-[14px] truncate"
+                        title={
+                          user?.name || user?.username
+                            ? `${user?.name || user?.username}'s ${item?.name}`
+                            : item?.name
+                        }
                       >
                         {user?.name || user?.username
                           ? `${user?.name || user?.username}'s ${item?.name}`
                           : item?.name}
                       </p>
-                      <img src={notes} alt="" />
+                      <img src={notes} alt="" className="shrink-0" />
                     </div>
                   </div>
 
-                  <p className="text-[14px] text-gray-600 leading-snug">
+                  <p className="text-[14px] text-gray-600 leading-snug break-words">
                     {item?.about}
                   </p>
 
@@ -375,15 +381,18 @@ export default function Subscriptions() {
                         state: { id: item._id },
                       })
                     }
-                    className="text-[14px] font-semibold text-gray-800 flex items-center gap-1"
+                    className="text-[14px] font-semibold text-gray-800 flex items-center gap-1.5 min-w-0"
                   >
-                    <img
+                    <Avatar
                       src={item?.image}
-                      className="rounded-full object-cover w-6 h-6"
-                      alt=""
+                      alt={item?.name}
+                      size="sm"
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                     />
-                    {item.userData?.name}
-                    {activeTab === "saved" && "'s"} {item.name}
+                    <span className="truncate">
+                      {item.userData?.name}
+                      {activeTab === "saved" && "'s"} {item.name}
+                    </span>
                     <span className="text-gray-400 pl-1">
                       <Layers size={16} />
                     </span>
@@ -434,14 +443,11 @@ export default function Subscriptions() {
                       item?.pages
                         .slice(0, 3)
                         .map((page, i) => (
-                          <img
+                          <Avatar
                             key={page?._id || i}
-                            src={
-                              page?.image ||
-                              page ||
-                              "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTj9uaOHSUP94_FgVeF4BtFT6hETgBW_a8xXw&s"
-                            }
+                            src={page?.image || page}
                             alt=""
+                            size="sm"
                             className="w-6 h-6 rounded-full border border-white object-cover"
                           />
                         ))

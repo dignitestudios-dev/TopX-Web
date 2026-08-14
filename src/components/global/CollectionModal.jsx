@@ -7,7 +7,8 @@ import { getMyCollections, createCollection, addPageToCollections } from "../../
 import { useDispatch, useSelector } from "react-redux";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
-import { emojiUrlToFile } from "../../lib/helpers";
+import Avatar from "../common/Avatar";
+import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
 
 export default function CollectionModal({
     isOpen,
@@ -25,6 +26,7 @@ export default function CollectionModal({
     const fileInputRef = useRef(null);
 
     const [errors, setErrors] = useState({ name: "", image: "" });
+    const [isCreatingCollection, setIsCreatingCollection] = useState(false);
     const [searchTerm, setSearchTerm] = useState(""); // Added search term state
 
     const dispatch = useDispatch();
@@ -84,10 +86,20 @@ export default function CollectionModal({
     const validateCreate = () => {
         let valid = true;
         let err = { name: "", image: "" };
+        const trimmedName = collectionName.trim();
 
-        if (!collectionName.trim()) {
+        if (!trimmedName) {
             err.name = "Collection name is required.";
             valid = false;
+        } else {
+            const existingCollections = Array.isArray(allcollections) ? allcollections : [];
+            const isDuplicate = existingCollections.some(
+                (col) => (col?.name || "").trim().toLowerCase() === trimmedName.toLowerCase()
+            );
+            if (isDuplicate) {
+                err.name = "A collection with this name already exists. Please choose a different name.";
+                valid = false;
+            }
         }
 
         if (!imageFile && !imagePreview) {
@@ -101,28 +113,51 @@ export default function CollectionModal({
 
     // CREATE COLLECTION
     const handleCreateCollection = async () => {
+        if (isCreatingCollection || isLoading) return;
         if (!validateCreate()) return;
 
-        let binaryFile = imageFile;
-        if (!(binaryFile instanceof File) && imagePreview) {
-            binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
-        }
+        try {
+            setIsCreatingCollection(true);
+            let binaryFile = imageFile;
+            if (!(binaryFile instanceof File) && imagePreview) {
+                binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
+            }
 
-        const formData = new FormData();
-        formData.append("name", collectionName.trim());
-        if (binaryFile instanceof File) {
-            formData.append("image", binaryFile, binaryFile.name || "collection.png");
-        }
+            const formData = new FormData();
+            formData.append("name", collectionName.trim());
+            if (binaryFile instanceof File) {
+                formData.append("image", binaryFile, binaryFile.name || "collection.png");
+            }
 
-        const result = await dispatch(createCollection(formData));
+            const result = await dispatch(createCollection(formData));
 
-        if (createCollection.fulfilled.match(result)) {
-            // Reset fields
-            setCreating(false);
-            setCollectionName("");
-            setImageFile(null);
-            setImagePreview(null);
-            setErrors({ name: "", image: "" });
+            if (createCollection.fulfilled.match(result)) {
+                // Reset fields
+                setCreating(false);
+                setCollectionName("");
+                setImageFile(null);
+                setImagePreview(null);
+                setErrors({ name: "", image: "" });
+            } else {
+                const errorMsg = result.payload || result.error?.message || "";
+                const lowerMsg = String(errorMsg).toLowerCase();
+                if (
+                    lowerMsg.includes("already exist") ||
+                    lowerMsg.includes("duplicate") ||
+                    lowerMsg.includes("already taken") ||
+                    lowerMsg.includes("collection with this name") ||
+                    lowerMsg.includes("unique")
+                ) {
+                    setErrors((prev) => ({
+                        ...prev,
+                        name: "A collection with this name already exists. Please choose a different name.",
+                    }));
+                }
+            }
+        } catch (err) {
+            console.error("Create collection error:", err);
+        } finally {
+            setIsCreatingCollection(false);
         }
     };
 
@@ -169,7 +204,13 @@ export default function CollectionModal({
                                 className="w-28 h-28 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-orange-400 transition-all select-none"
                             >
                                 {imagePreview ? (
-                                    <img src={imagePreview} className="w-full h-full object-cover" />
+                                    isEmoji(imagePreview) ? (
+                                        <span className="text-5xl select-none flex items-center justify-center">
+                                            {imagePreview}
+                                        </span>
+                                    ) : (
+                                        <img src={imagePreview} className="w-full h-full object-cover" />
+                                    )
                                 ) : (
                                     <FaPlus className="text-orange-500 text-3xl" />
                                 )}
@@ -200,10 +241,19 @@ export default function CollectionModal({
 
                         {/* Save */}
                         <button
+                            type="button"
                             onClick={handleCreateCollection}
-                            className="w-full bg-orange-600 text-white py-3 rounded-xl"
+                            disabled={isCreatingCollection || isLoading}
+                            className="w-full bg-orange-600 text-white py-3 rounded-xl hover:bg-orange-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed font-medium"
                         >
-                            {isLoading ? "Saving..." : "Save"}
+                            {isCreatingCollection || isLoading ? (
+                                <>
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>Saving...</span>
+                                </>
+                            ) : (
+                                <span>Save</span>
+                            )}
                         </button>
                     </div>
                 ) : (
@@ -253,9 +303,11 @@ export default function CollectionModal({
                                                 onClick={() => toggleSelect(col._id)}
                                             >
                                                 <div className="flex items-center gap-3">
-                                                    <img
-                                                        src={col.image || "https://cdn-icons-png.flaticon.com/512/12478/12478035.png"}
-                                                        className="w-10 h-10 rounded-full"
+                                                    <Avatar
+                                                        src={col.image}
+                                                        alt={col.name}
+                                                        size="md"
+                                                        className="w-10 h-10 rounded-full object-cover"
                                                     />
                                                     <p>{col.name}</p>
                                                 </div>

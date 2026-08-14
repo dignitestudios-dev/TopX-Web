@@ -434,10 +434,10 @@ export default function HomePostFeed({
       }`}
     >
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-           <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize">
+      <div className="p-4 flex items-center justify-between border-b border-gray-100 gap-3">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="relative flex-shrink-0">
+           <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize overflow-hidden">
   {post?.page?.image ? (
     <img
       src={post.page.image}
@@ -465,17 +465,18 @@ export default function HomePostFeed({
               </div>
             )}
           </div>
-          <div>
+          <div className="min-w-0 flex-1">
             {/* Page Name (or fallback to user) */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 max-w-full">
               <h3
-                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors"
+                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-orange-600 transition-colors truncate"
+                title={`${post?.author?.name ? `${post.author.name}'s ` : ""}${post?.page?.name || post?.user}`}
                 onClick={post.page ? handlePageClick : handleAuthorClick}
               >
-                {post?.author?.name && `${post.author.name}'s`} &nbsp;{post?.page?.name || post?.user}
+                {post?.author?.name && `${post.author.name}'s `}{post?.page?.name || post?.user}
               </h3>
               {post?.isBoosted && (
-                <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-xs">
+                <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-xs flex-shrink-0">
                   <Zap className="w-2.5 h-2.5 fill-white" />
                   <span>Boosted</span>
                 </span>
@@ -484,7 +485,8 @@ export default function HomePostFeed({
             {/* Author username */}
             <p
               onClick={handleAuthorClick}
-              className="text-xs cursor-pointer text-gray-500 hover:text-orange-600 transition-colors"
+              className="text-xs cursor-pointer text-gray-500 hover:text-orange-600 transition-colors truncate"
+              title={`${post.author.username} · ${post.time}`}
             >
               {post.author.username} · {post.time}
             </p>
@@ -657,18 +659,20 @@ export default function HomePostFeed({
             )}
           </div>
           {post.sharedBy ? (
-            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
+            <div className="text-sm inline-flex gap-2 ml-3 items-center bg-slate-200 rounded-3xl px-3 py-1.5 mb-2 max-w-xs">
               {post.sharedBy?.profilePicture ? (
                 <img
                   src={post.sharedBy.profilePicture}
-                  className="w-7 h-7 rounded-full object-cover"
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                 />
               ) : (
-                <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                  {post.sharedBy?.name.split(" ")[0][0]}
+                <div className="w-6 h-6 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                  {post.sharedBy?.name?.split(" ")?.[0]?.[0] || "U"}
                 </div>
               )}
-              {post.sharedBy.name} Reposted
+              <span className="truncate" title={`${post.sharedBy.name || "User"} Reposted`}>
+                {post.sharedBy.name || "User"} Reposted
+              </span>
             </div>
           ) : null}
         </div>

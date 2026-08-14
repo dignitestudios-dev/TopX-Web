@@ -5,6 +5,7 @@ import { ballone, balltwo, nofound } from "../../assets/export";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
+import Avatar from "../common/Avatar";
 
 const AlertPopup = ({ open, title, description, onClose }) => {
   if (!open) return null;
@@ -95,11 +96,12 @@ const MySubscriptiononprofile = ({ userCollections, toggleBookmark }) => {
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex -space-x-2">
                       {item?.pages?.slice(0, 3).map((img, index) => (
-                        <img
+                        <Avatar
                           key={index}
                           src={img}
                           alt=""
-                          className="w-5 h-5 rounded-full border border-white"
+                          size="xs"
+                          className="w-5 h-5 rounded-full border border-white object-cover"
                         />
                       ))}
                     </div>

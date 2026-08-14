@@ -244,9 +244,9 @@ const Header = () => {
         <div className="flex-shrink-0 relative pt-3" ref={dropdownRef}>
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-gray-100 transition-colors max-w-[180px] sm:max-w-[220px]"
           >
-            <div className="w-8 h-8">
+            <div className="w-8 h-8 flex-shrink-0">
               {allUserData?.profilePicture ? (
                 <img
                   src={allUserData.profilePicture}
@@ -265,11 +265,14 @@ const Header = () => {
                 <span>No Data</span>
               )}
             </div>
-            <span className="text-black font-[500] text-sm">
+            <span
+              className="text-black font-[500] text-sm truncate max-w-[90px] sm:max-w-[130px]"
+              title={allUserData?.name?.trim() ? allUserData.name : "Not Available"}
+            >
               {allUserData?.name?.trim() ? allUserData.name : "Not Available"}
             </span>
 
-            <ChevronDown size={16} className="text-gray-600 hidden sm:block" />
+            <ChevronDown size={16} className="text-gray-600 hidden sm:block flex-shrink-0" />
           </button>
 
           {isDropdownOpen && (

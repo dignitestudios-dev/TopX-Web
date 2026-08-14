@@ -197,22 +197,27 @@ export default function Mypost() {
                       />
                     </div>
 
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center min-w-0 flex-1">
                       <p
                         onClick={() =>
                           navigate(`/profile`, { state: { id: item._id } })
                         }
-                        className="cursor-pointer font-[400] text-[14px]"
+                        className="cursor-pointer font-[400] text-[14px] truncate"
+                        title={
+                          user?.name || user?.username
+                            ? `${user?.name || user?.username}'s ${item?.name}`
+                            : item?.name
+                        }
                       >
                         {user?.name || user?.username
                           ? `${user?.name || user?.username}'s ${item?.name}`
                           : item?.name}
                       </p>
-                      <img src={notes} alt="" />
+                      <img src={notes} alt="" className="shrink-0" />
                     </div>
                   </div>
 
-                  <p className="text-[14px] text-gray-600 leading-snug">
+                  <p className="text-[14px] text-gray-600 leading-snug break-words">
                     {item?.about}
                   </p>
 

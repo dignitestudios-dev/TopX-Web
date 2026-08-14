@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
 import CreateSubscriptionModal from "../global/CreateSubscriptionModal";
+import Avatar from "../common/Avatar";
 
 const MySubscription = () => {
   const dispatch = useDispatch();
@@ -65,8 +66,8 @@ const MySubscription = () => {
               key={idx}
               className="flex items-center justify-between border-b border-gray-200 pb-3 last:border-0"
             >
-              <div className="flex items-start gap-3">
-                <div>
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="min-w-0 flex-1">
                   {/* Subscription Name */}
                   <p
                     onClick={() =>
@@ -74,14 +75,19 @@ const MySubscription = () => {
                         state: { id: item._id },
                       })
                     }
-                    className="cursor-pointer font-medium text-gray-900 flex items-center gap-1"
+                    className="cursor-pointer font-medium text-gray-900 flex items-center gap-1.5 min-w-0"
                   >
-                    <img src={item?.image} className="rounded-full object-cover w-6 h-6" alt="" />
-                    <span className="pl-1">
+                    <Avatar
+                      src={item?.image}
+                      alt={item?.name}
+                      size="sm"
+                      className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                    />
+                    <span className="truncate" title={item.name}>
                       {item.name}
                     </span>
 
-                    <Layers className="w-4 h-4 text-gray-500" />
+                    <Layers className="w-4 h-4 text-gray-500 flex-shrink-0" />
                   </p>
 
                   {/* Page avatars + number */}
@@ -92,10 +98,11 @@ const MySubscription = () => {
                         .filter((p) => p) // remove nulls
                         .slice(0, 3)
                         .map((p, index) => (
-                          <img
+                          <Avatar
                             key={index}
                             src={p}
                             alt=""
+                            size="xs"
                             className="w-5 h-5 rounded-full border border-white object-cover"
                           />
                         ))}

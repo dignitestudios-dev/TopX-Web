@@ -10,7 +10,7 @@ import {
 import CustomSelect from "./CustomeSelect";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
-import { emojiUrlToFile } from "../../lib/helpers";
+import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
 
 export default function CreateKnowledgePageModal({ onClose }) {
   // FORM DATA
@@ -40,12 +40,13 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
   const dispatch = useDispatch();
   const { alltopics, isLoading } = useSelector((state) => state.topics);
-  const { loading: loadingCreate, success } = useSelector(
+  const { loading: loadingCreate, success, myKnowledgePages } = useSelector(
     (state) => state.knowledgepost,
   );
 
   useEffect(() => {
     dispatch(gettopics());
+    dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
   }, [dispatch]);
 
   // Auto close on success
@@ -59,6 +60,9 @@ export default function CreateKnowledgePageModal({ onClose }) {
   // INPUT HANDLER
   const handleInputChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   // IMAGE UPLOAD
@@ -117,8 +121,21 @@ export default function CreateKnowledgePageModal({ onClose }) {
   // VALIDATION
   const validateFields = () => {
     const newErrors = {};
+    const trimmedName = (formData.name || "").trim();
 
-    if (!formData.name.trim()) newErrors.name = "Name is required";
+    if (!trimmedName) {
+      newErrors.name = "Name is required";
+    } else {
+      const isDuplicate = (myKnowledgePages || []).some(
+        (page) =>
+          (page?.name || "").trim().toLowerCase() === trimmedName.toLowerCase(),
+      );
+      if (isDuplicate) {
+        newErrors.name =
+          "A page with this name already exists. Please choose a different page name.";
+      }
+    }
+
     if (!formData.about.trim()) newErrors.about = "About is required";
     if (!formData.topic.trim()) newErrors.topic = "Topic is required";
 
@@ -196,10 +213,16 @@ export default function CreateKnowledgePageModal({ onClose }) {
               }`}
             >
               {previewImage ? (
-                <img
-                  src={previewImage}
-                  className="w-full h-full rounded-full object-cover"
-                />
+                isEmoji(previewImage) ? (
+                  <span className="text-4xl select-none flex items-center justify-center">
+                    {previewImage}
+                  </span>
+                ) : (
+                  <img
+                    src={previewImage}
+                    className="w-full h-full rounded-full object-cover"
+                  />
+                )
               ) : (
                 <Upload className="text-orange-500" size={28} />
               )}

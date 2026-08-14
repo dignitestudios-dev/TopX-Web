@@ -27,6 +27,7 @@ import { BsFileEarmarkTextFill } from "react-icons/bs";
 import PagePosts from "./PagePosts";
 import CommentFilterModal from "./CommentFilterModal";
 import UploadPostStory from "./UploadPostStory";
+import Avatar from "../../common/Avatar";
 import { PiNotificationThin } from "react-icons/pi";
 
 
@@ -85,6 +86,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }
   const [editImagePreview, setEditImagePreview] = useState(null);
   const [expertModal, setExpertModal] = useState(false);
   const [followRequestsModal, setFollowRequestsModal] = useState(false);
+  const [followRequestsCount, setFollowRequestsCount] = useState(0);
   const [expertForm, setExpertForm] = useState({
     topic: "",
     summary: "",
@@ -362,6 +364,29 @@ useEffect(()=>{
       setPostRequestsLoading(false);
     }
   };
+
+  // Fetch follow requests count for unread indicator
+  const fetchFollowRequestsCount = async () => {
+    if (!pageId || !isPageOwner) return;
+    try {
+      const url = `/requests/follow?pageId=${pageId}&page=1&limit=20`;
+      const res = await axios.get(url);
+      const reqs = res.data?.data || [];
+      const pendingReqs = Array.isArray(reqs)
+        ? reqs.filter((r) => r?.status === "pending" || !r?.status)
+        : [];
+      setFollowRequestsCount(pendingReqs.length);
+    } catch (err) {
+      console.error("Failed to fetch follow requests count:", err);
+      setFollowRequestsCount(0);
+    }
+  };
+
+  useEffect(() => {
+    if (pageId && isPageOwner && (page?.pageType === "private" || page?.isPrivate)) {
+      fetchFollowRequestsCount();
+    }
+  }, [pageId, isPageOwner, page?.pageType, page?.isPrivate]);
 
   // Load requests when switching to Post Request tab
   useEffect(() => {
@@ -837,10 +862,10 @@ useEffect(()=>{
 
           {/* PROFILE SECTION */}
           <div className="px-4 pb-6">
-            <div className="flex items-start justify-between -mt-12">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between -mt-12 gap-4">
               {/* IMAGE + NAME */}
-              <div className="flex items-center gap-4">
-                <div className="relative">
+              <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+                <div className="relative flex-shrink-0">
                   {/* Outer glow wrapper when stories exist */}
                   <div
                     className={`rounded-full ${PageStories && PageStories.length > 0
@@ -855,20 +880,21 @@ useEffect(()=>{
                           handleViewStory(PageStories[0]?._id);
                         }
                       }}
-                      className={`w-[135px] cursor-pointer h-[135px] rounded-full ${PageStories && PageStories.length > 0
+                      className={`w-[110px] sm:w-[135px] cursor-pointer h-[110px] sm:h-[135px] rounded-full overflow-hidden ${PageStories && PageStories.length > 0
                         ? "bg-white"
                         : "bg-gradient-to-r from-[#fd8d1c] to-[#ffd906]"
                         }`}
                     >
                       {page?.image ? (
-                        <img
+                        <Avatar
                           src={page.image}
-                          alt="Page"
+                          alt={page?.name || "Page"}
+                          size="xl"
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center">
-                          <span className="text-6xl font-semibold text-white">
+                          <span className="text-4xl sm:text-6xl font-semibold text-white">
                             {(() => {
                               if (!page?.name) return "P";
                               const words = page.name.trim().split(/\s+/);
@@ -884,28 +910,32 @@ useEffect(()=>{
                   {isPageOwner && (
                     <button
                       onClick={() => setStoryModal(true)}
-                      className="absolute bottom-0 right-0 w-9 h-9 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors shadow-md"
+                      className="absolute bottom-0 right-0 w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors shadow-md"
                     >
-                      <Plus className="w-5 h-5 text-white" />
+                      <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </button>
                   )}
                 </div>
 
                 {/* PAGE NAME + ABOUT */}
-                <div className="mt-12">
-                  <div className="flex gap-4 items-center">
-                    <h1 className="text-[18px] font-[500] text-[#000000] ">
+                <div className="mt-8 sm:mt-12 min-w-0 flex-1">
+                  <div className="flex gap-2 items-center flex-wrap min-w-0">
+                    <h1
+                      className="text-[18px] sm:text-[20px] font-[600] text-[#000000] break-words line-clamp-2 max-w-full"
+                      title={topicPageTitle}
+                    >
                       {topicPageTitle}
                     </h1>
                     {page.expertLevelStatus == "accepted" && (
                       <img
                         src={expert}
-                        className="w-[80px] h-[25px]"
+                        className="w-[80px] h-[25px] flex-shrink-0"
+                        alt="Expert"
                       />
                     )}
                   </div>
 
-                  <p className="text-gray-500 text-[13px] leading-relaxed flex-1 w-[26em] mt-[6px]">
+                  <p className="text-gray-500 text-[13px] leading-relaxed mt-[6px] break-words max-w-xl">
                     {page?.about && page?.about.length > maxLength
                       ? page?.about.substring(0, maxLength) + "..."
                       : page?.about}
@@ -920,7 +950,7 @@ useEffect(()=>{
               </div>
 
               {/* ACTION BUTTONS */}
-              <div className="flex items-center gap-2 mt-14">
+              <div className="flex items-center gap-2 mt-4 sm:mt-14 flex-shrink-0 flex-wrap">
                 {/* Request Pending Button - Show when requestStatus is pending (only for non-owners) */}
                 {isPrivatePage && isRequestPending && !isPageOwner && (
                   <button
@@ -983,10 +1013,15 @@ useEffect(()=>{
                 {isPageOwner && (page?.pageType === "private" || page?.isPrivate) && (
                   <button
                     onClick={() => setFollowRequestsModal(true)}
-                    className="px-3 py-2 text-nowrap rounded-2xl border border-orange-500 text-orange-600 hover:bg-orange-50 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm"
+                    className="px-3 py-2 text-nowrap rounded-2xl border border-orange-500 text-orange-600 hover:bg-orange-50 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-sm relative cursor-pointer"
                   >
                     <UserCheck className="w-4 h-4 text-orange-500" />
                     <span>Follow Requests</span>
+                    {followRequestsCount > 0 && (
+                      <span className="flex items-center justify-center bg-red-500 text-white rounded-full text-[10px] font-bold min-w-[18px] h-[18px] px-1 shadow-sm animate-pulse">
+                        {followRequestsCount}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -1005,9 +1040,12 @@ useEffect(()=>{
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
-                    className="w-9 h-9 -ml-2 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors"
+                    className="w-9 h-9 -ml-2 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors relative"
                   >
                     <MoreVertical className="w-5 h-5 text-gray-600" />
+                    {followRequestsCount > 0 && isPageOwner && (page?.pageType === "private" || page?.isPrivate) && (
+                      <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+                    )}
                   </button>
                   {showDropdown && (
                     <div className="absolute right-0 -bottom-[6em] mt-1 w-[13em] bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
@@ -1020,10 +1058,17 @@ useEffect(()=>{
                                 setFollowRequestsModal(true);
                                 setShowDropdown(false);
                               }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center gap-2"
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center justify-between gap-2 cursor-pointer"
                             >
-                              <UserCheck className="w-4 h-4 text-orange-500" />
-                              <span>Follow Requests</span>
+                              <div className="flex items-center gap-2">
+                                <UserCheck className="w-4 h-4 text-orange-500" />
+                                <span>Follow Requests</span>
+                              </div>
+                              {followRequestsCount > 0 && (
+                                <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                  {followRequestsCount}
+                                </span>
+                              )}
                             </button>
                           )}
 
@@ -1264,14 +1309,11 @@ useEffect(()=>{
                   >
                     {/* Author */}
                     <div className="flex-shrink-0">
-                      <img
+                      <Avatar
                         src={req.author?.profilePicture}
-                        alt={req.author?.name}
-                        className="w-12 h-12 rounded-full object-cover bg-gray-200"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/48?text=User";
-                        }}
+                        alt={req.author?.name || req.author?.username || "User"}
+                        size="lg"
+                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
                       />
                     </div>
 
@@ -2254,9 +2296,13 @@ useEffect(()=>{
       {/* Follow Requests Modal (Private Page) */}
       <FollowRequestsModal
         isOpen={followRequestsModal}
-        onClose={() => setFollowRequestsModal(false)}
+        onClose={() => {
+          setFollowRequestsModal(false);
+          fetchFollowRequestsCount();
+        }}
         pageId={pageId}
         onActionComplete={() => {
+          fetchFollowRequestsCount();
           if (pageId) dispatch(getPageDetail(pageId));
         }}
       />

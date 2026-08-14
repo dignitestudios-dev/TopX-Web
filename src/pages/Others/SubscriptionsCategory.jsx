@@ -23,6 +23,7 @@ import { Link, useNavigate } from "react-router";
 import ActiveStoryModal from "../../components/app/profile/ActiveStoryModal";
 import axios from "../../axios";
 import { IoChevronBackSharp } from "react-icons/io5";
+import Avatar from "../../components/common/Avatar";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
 import { FaCheckSquare } from "react-icons/fa";
 import CollectionCommentFilterModal from "../../components/global/CollectionCommentFilterModal";
@@ -330,22 +331,27 @@ export default function SubscriptionsCategory() {
                       />
                     </div>
 
-                    <div className="flex gap-2 items-center">
+                    <div className="flex gap-2 items-center min-w-0 flex-1">
                       <p
                         onClick={() =>
                           navigate(`/profile`, { state: { id: item._id } })
                         }
-                        className="cursor-pointer font-[400] text-[14px]"
+                        className="cursor-pointer font-[400] text-[14px] truncate"
+                        title={
+                          user?.name || user?.username
+                            ? `${user?.name || user?.username}'s ${item?.name}`
+                            : item?.name
+                        }
                       >
                         {user?.name || user?.username
                           ? `${user?.name || user?.username}'s ${item?.name}`
                           : item?.name}
                       </p>
-                      <img src={notes} alt="" />
+                      <img src={notes} alt="" className="shrink-0" />
                     </div>
                   </div>
 
-                  <p className="text-[14px] text-gray-600 leading-snug">
+                  <p className="text-[14px] text-gray-600 leading-snug break-words">
                     {item?.about}
                   </p>
 
@@ -426,31 +432,21 @@ export default function SubscriptionsCategory() {
                         <div
                           className={`w-20 h-20 rounded-full overflow-hidden border-2 border-white shadow-md bg-white ${hasStories ? "shadow-yellow-200" : ""}`}
                         >
-                          {page.image ? (
-                            <img
-                              src={page.image}
-                              alt={page.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm">
-                              {page.name?.charAt(0)?.toUpperCase() || "P"}
-                            </div>
-                          )}
+                          <Avatar
+                            src={page.image}
+                            alt={page.name}
+                            size="xl"
+                            className="w-full h-full"
+                          />
                         </div>
                         {/* Author Image at Bottom */}
                         {page.user?.profilePicture && (
                           <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-white overflow-hidden bg-white shadow-sm">
-                            <img
+                            <Avatar
                               src={page.user.profilePicture}
                               alt={page.user.name || page.user.username}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = "none";
-                              }}
+                              size="xs"
+                              className="w-full h-full"
                             />
                           </div>
                         )}

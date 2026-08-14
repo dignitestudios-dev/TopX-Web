@@ -43,7 +43,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
     const fileType = (file.type || "").toLowerCase();
 
     if (
-      DISALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext)) ||
+      DISALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext)) ||  
       fileType.includes("svg") ||
       fileType.includes("gif") ||
       !ALLOWED_IMAGE_TYPES.includes(fileType)
@@ -163,7 +163,6 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
     validationSchema: PersonalSchema,
     validateOnChange: true,
     validateOnBlur: true,
-
     onSubmit: async (values) => {
       // ---------- STEP 1: Check Username ----------
       // Only check if not already checked and available
@@ -328,7 +327,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                         {suggestion}
                       </button>
                     ))}
-                  </div>
+                  </div>  
                 </div>
               )}
             </div>

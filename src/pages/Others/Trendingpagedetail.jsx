@@ -19,6 +19,7 @@ import CollectionModal from "../../components/global/CollectionModal";
 import UnsubscribeModal from "../../components/global/UnsubscribeModal";
 import FollowRequestsModal from "../../components/app/profile/FollowRequestsModal";
 import CommentFilterModal from "../../components/app/profile/CommentFilterModal";
+import Avatar from "../../components/common/Avatar";
 import {
   addPageToCollections,
   removePageFromCollections,
@@ -34,10 +35,10 @@ import { sendReport, resetReportState } from "../../redux/slices/reports.slice";
 import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
 import { FaArrowLeft } from "react-icons/fa6";
 import PagePostsComponent from "../../components/global/PagePostsComponent";
-import { RiLiveLine } from "react-icons/ri";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import UploadPostStory from "../../components/app/profile/UploadPostStory";
 import { getPageDetail } from "../../redux/slices/pages.slice";
+import axios from "../../axios";
 
 const Trendingpagedetail = () => {
   const dispatch = useDispatch();
@@ -53,6 +54,7 @@ const Trendingpagedetail = () => {
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
   const [suggestPostModal, setSuggestPostModal] = useState(false);
   const [followRequestsModal, setFollowRequestsModal] = useState(false);
+  const [followRequestsCount, setFollowRequestsCount] = useState(0);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [commentFilter, setCommentFilter] = useState("all");
   const dropdownRef = useRef(null);
@@ -98,6 +100,28 @@ const Trendingpagedetail = () => {
   );
   const isPrivatePage = pageDetail?.pageType === "private" || pageDetail?.isPrivate;
   const isRequestPending = pageDetail?.requestStatus === "pending";
+
+  const fetchFollowRequestsCount = useCallback(async () => {
+    if (!id || !isPageOwner) return;
+    try {
+      const url = `/requests/follow?pageId=${id}&page=1&limit=20`;
+      const res = await axios.get(url);
+      const reqs = res.data?.data || [];
+      const pendingReqs = Array.isArray(reqs)
+        ? reqs.filter((r) => r?.status === "pending" || !r?.status)
+        : [];
+      setFollowRequestsCount(pendingReqs.length);
+    } catch (err) {
+      console.error("Failed to fetch follow requests count:", err);
+      setFollowRequestsCount(0);
+    }
+  }, [id, isPageOwner]);
+
+  useEffect(() => {
+    if (id && isPageOwner && isPrivatePage) {
+      fetchFollowRequestsCount();
+    }
+  }, [id, isPageOwner, isPrivatePage, fetchFollowRequestsCount]);
 
   // Join stream from Trending page – just navigate, LiveStreampage handles role + join logic
   const handleJoinStream = useCallback(
@@ -270,9 +294,12 @@ const Trendingpagedetail = () => {
               >
                 <button
                   onClick={() => setShowOptionsDropdown(!showOptionsDropdown)}
-                  className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition"
+                  className="cursor-pointer p-2 hover:bg-white/20 rounded-full transition relative"
                 >
                   <BsThreeDotsVertical color="white" size={22} />
+                  {followRequestsCount > 0 && isPageOwner && isPrivatePage && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white" />
+                  )}
                 </button>
                 {showOptionsDropdown && (
                   <div className="absolute top-full mt-2 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[170px] overflow-hidden py-1">
@@ -283,10 +310,17 @@ const Trendingpagedetail = () => {
                           setFollowRequestsModal(true);
                           setShowOptionsDropdown(false);
                         }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2 font-medium"
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center justify-between gap-2 font-medium cursor-pointer"
                       >
-                        <UserCheck size={16} className="text-orange-500" />
-                        <span>Follow Requests</span>
+                        <div className="flex items-center gap-2">
+                          <UserCheck size={16} className="text-orange-500" />
+                          <span>Follow Requests</span>
+                        </div>
+                        {followRequestsCount > 0 && (
+                          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {followRequestsCount}
+                          </span>
+                        )}
                       </button>
                     )}
                     <button
@@ -323,68 +357,76 @@ const Trendingpagedetail = () => {
           </div>
 
           {/* Profile Content */}
-          <div className="px-8 pb-6">
-            <div className="flex items-end gap-4 -mt-10 mb-0">
-              {pageDetail.image ? (
-                <img
-                  src={pageDetail.image}
-                  alt={pageDetail.name || "Topic Page"}
-                  className="w-[6em] h-[6em] rounded-full border-4 border-white object-cover bg-white shadow-md"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                  }}
-                />
-              ) : (
-                <div className="text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold border-4 border-white shadow-md">
-                  {pageDetail.name?.charAt(0).toUpperCase() || "P"}
-                </div>
-              )}
+          <div className="px-6 sm:px-8 pb-6">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-10 mb-0">
+              <div className="flex items-end gap-4 min-w-0 flex-1">
+                {pageDetail.image ? (
+                  <Avatar
+                    src={pageDetail.image}
+                    alt={pageDetail.name || "Topic Page"}
+                    size="xl"
+                    className="w-[5em] sm:w-[6em] h-[5em] sm:h-[6em] rounded-full border-4 border-white object-cover bg-white shadow-md flex-shrink-0"
+                  />
+                ) : (
+                  <div className="text-2xl sm:text-3xl w-[3em] h-[3em] bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white font-bold border-4 border-white shadow-md flex-shrink-0">
+                    {pageDetail.name?.charAt(0).toUpperCase() || "P"}
+                  </div>
+                )}
 
-              {/* Info */}
-              <div className="flex-1 pb-2">
-                <h1 className="text-2xl font-bold text-white capitalize">
-                  {pageDetail.name}
-                </h1>
-                <p className="text-gray-100 text-[1em]">
-                  #{pageDetail.about || "topic"}
-                </p>
-                <div>
-                  <div className="flex -space-x-2 items-center pt-1">
-                    {pageDetail.followers &&
-                      pageDetail.followers
-                        .slice(0, 3)
-                        .map((img, i) =>
-                          img ? (
-                            <img
-                              key={i}
-                              src={img}
-                              alt="follower"
-                              className="w-6 h-6 rounded-full border-2 border-white object-cover bg-white"
-                            />
-                          ) : (
-                            <div
-                              key={i}
-                              className="w-6 h-6 rounded-full border-2 border-white bg-gray-300"
-                            />
-                          ),
-                        )}
-                    <p className="text-xs text-white font-medium pl-4">
-                      {pageDetail.followersCount || 0}+ People Follow
-                    </p>
+                {/* Info */}
+                <div className="min-w-0 flex-1 pb-2">
+                  <h1
+                    className="text-xl sm:text-2xl font-bold text-white capitalize break-words line-clamp-2 max-w-full"
+                    title={pageDetail.name}
+                  >
+                    {pageDetail.name}
+                  </h1>
+                  <p className="text-gray-100 text-[1em] break-words line-clamp-2 max-w-xl">
+                    #{pageDetail.about || "topic"}
+                  </p>
+                  <div>
+                    <div className="flex -space-x-2 items-center pt-1">
+                      {pageDetail.followers &&
+                        pageDetail.followers
+                          .slice(0, 3)
+                          .map((img, i) =>
+                            img ? (
+                              <img
+                                key={i}
+                                src={img}
+                                alt="follower"
+                                className="w-6 h-6 rounded-full border-2 border-white object-cover bg-white flex-shrink-0"
+                              />
+                            ) : (
+                              <div
+                                key={i}
+                                className="w-6 h-6 rounded-full border-2 border-white bg-gray-300 flex-shrink-0"
+                              />
+                            ),
+                          )}
+                      <p className="text-xs text-white font-medium pl-4 truncate">
+                        {pageDetail.followersCount || 0}+ People Follow
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 mb-[0em] items-center flex-wrap">
+              <div className="flex gap-3 mb-[0em] items-center flex-wrap flex-shrink-0">
                 {/* Follow Requests Button - Show for private page owner */}
                 {isPageOwner && isPrivatePage && (
                   <button
                     onClick={() => setFollowRequestsModal(true)}
-                    className="p-2 px-5 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm border border-orange-200"
+                    className="p-2 px-5 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm border border-orange-200 relative"
                   >
                     <UserCheck size={20} />
                     <span>Follow Requests</span>
+                    {followRequestsCount > 0 && (
+                      <span className="flex items-center justify-center bg-red-500 text-white rounded-full text-[10px] font-bold min-w-[18px] h-[18px] px-1 shadow-sm animate-pulse">
+                        {followRequestsCount}
+                      </span>
+                    )}
                   </button>
                 )}
 
@@ -563,9 +605,15 @@ const Trendingpagedetail = () => {
         {/* Follow Requests Modal */}
         <FollowRequestsModal
           isOpen={followRequestsModal}
-          onClose={() => setFollowRequestsModal(false)}
+          onClose={() => {
+            setFollowRequestsModal(false);
+            fetchFollowRequestsCount();
+          }}
           pageId={id}
-          onActionComplete={() => dispatch(fetchPageById(id))}
+          onActionComplete={() => {
+            fetchFollowRequestsCount();
+            dispatch(fetchPageById(id));
+          }}
         />
 
         {/* Comment Filter Modal */}

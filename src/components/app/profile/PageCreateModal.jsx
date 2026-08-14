@@ -14,7 +14,7 @@ import { createPage, fetchMyPages } from "../../../redux/slices/pages.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
 import ProfilePictureModal from "./ProfilePictureModal";
 import EmojiPickerModal from "./EmojiPickerModal";
-import { emojiUrlToFile } from "../../../lib/helpers";
+import { emojiUrlToFile, isEmoji } from "../../../lib/helpers";
 
 export default function PageCreateModal({
   setIsOpen,
@@ -326,11 +326,17 @@ export default function PageCreateModal({
                       >
                         <div className="w-24 h-24 rounded-full border-2 border-dashed border-orange-400 flex items-center justify-center relative bg-orange-50/20 group-hover:bg-orange-50/50 transition-colors overflow-hidden">
                           {previewImage ? (
-                            <img
-                              src={previewImage}
-                              alt="Preview"
-                              className="w-full h-full object-cover rounded-full"
-                            />
+                            isEmoji(previewImage) ? (
+                              <span className="text-4xl select-none flex items-center justify-center">
+                                {previewImage}
+                              </span>
+                            ) : (
+                              <img
+                                src={previewImage}
+                                alt="Preview"
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            )
                           ) : (
                             <ImageIcon className="w-9 h-9 text-orange-400" />
                           )}

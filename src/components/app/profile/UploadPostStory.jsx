@@ -23,7 +23,7 @@ export default function UploadPostStory({
   const { postsLoading } = useSelector((state) => state.posts);
   const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
-  const MAX_IMAGES = 6;
+  const MAX_IMAGES = 9;
   const linkData = getLinkPreview(bodyText);
 
   const handleCloseModal = () => {
