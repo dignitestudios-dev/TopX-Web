@@ -1,12 +1,17 @@
 import React, { useState } from "react";
 import { X, ArrowLeft, Upload } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { createKnowledgePost } from "../../redux/slices/knowledgepost.slice";
+import {
+  createKnowledgePost,
+  fetchKnowledgeFeed,
+  getKnowledgePostDetail,
+} from "../../redux/slices/knowledgepost.slice";
 import { ErrorToast, SuccessToast } from "./Toaster";
 
 const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }) => {
   const [text, setText] = useState("");
   const [showPreview, setShowPreview] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Font styling states
   const [fontFamily, setFontFamily] = useState("Classic");
@@ -24,7 +29,9 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
   const [imagePreview, setImagePreview] = useState(null);
 
   const dispatch = useDispatch();
-  const { loadingCreate, success } = useSelector((state) => state.knowledgepost);
+  const { loadingCreate } = useSelector((state) => state.knowledgepost);
+
+  const isBusy = loadingCreate || isSubmitting;
 
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
@@ -33,7 +40,6 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
     { id: 4, name: "bg_green", imagePath: "/bg_green.png" },
     { id: 5, name: "bg_multicolor", imagePath: "/bg_multicolor.png" }
   ];
-
 
   const fontFamilies = [
     { name: "Classic", family: "font-sans" },
@@ -62,32 +68,52 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
   ];
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      setImageFile(file);
-      setBackgroundType("upload");
-      setSelectedBg(null);  // ✅ ADD: selected background ko null karo
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setImagePreview(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      ErrorToast("Please select a valid image file");
+    if (!file.type.startsWith("image/")) {
+      ErrorToast("Please select a valid image file (PNG, JPG, JPEG, WEBP)");
+      e.target.value = "";
+      return;
     }
+
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    if (file.size > MAX_SIZE) {
+      ErrorToast("Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setImageFile(file);
+    setBackgroundType("upload");
+    setSelectedBg(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handlePost = async () => {
-    if (!text || (!selectedBg && !imageFile)) {
+    if (isBusy) return;
+
+    if (!text?.trim() || (!selectedBg && !imageFile)) {
       ErrorToast("Please fill all required fields");
       return;
     }
 
+    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+      ErrorToast("Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       const formData = new FormData();
-      formData.append("text", text);
-      formData.append("pageId", selectedPageId);
+      formData.append("text", text.trim());
+      formData.append("pageId", selectedPageId || "");
       formData.append("backgroundType", backgroundType);
       formData.append("fontFamily", fontFamily);
       formData.append("fontSize", fontSize);
@@ -97,41 +123,38 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
       formData.append("isUnderline", isUnderline);
       formData.append("textAlignment", textAlignment);
 
-      // Add image file if uploaded
-      // if (imageFile) {
-      //   formData.append("image", imageFile);
-      // } else if (selectedBg) {
-      //   // Add preset background gradient info
-      //   formData.append("backgroundGradient", selectedBg.gradient);
-      // }
-
-      // Add image file if uploaded
-      if (imageFile) {
+      if (imageFile instanceof File) {
         formData.append("image", imageFile);
       } else if (selectedBg) {
-        // ✅ CHANGE: backgroundGradient ko backgroundCode mein send karo
         formData.append("backgroundCode", selectedBg.name);
       }
 
-      formData.append("subTopic", selectedSubTopics.join(", "));
+      // Subcategory is optional
+      const subTopicStr = Array.isArray(selectedSubTopics)
+        ? selectedSubTopics.join(", ")
+        : typeof selectedSubTopics === "string"
+          ? selectedSubTopics
+          : "";
+      formData.append("subTopic", subTopicStr);
 
-      // Dispatch the action
-      if (dispatch) {
-        dispatch(createKnowledgePost(formData));
-
-        // Wait for success
-        setTimeout(() => {
-          if (success) {
-            SuccessToast("Post created successfully");
-            setShowPreview(false);
-            resetForm();
-            onClose();
-          }
-        }, 1000);
+      await dispatch(createKnowledgePost(formData)).unwrap();
+      SuccessToast("Post created successfully");
+      dispatch(fetchKnowledgeFeed({ page: 1, limit: 10 }));
+      if (selectedPageId) {
+        dispatch(getKnowledgePostDetail({ pageId: selectedPageId, page: 1, limit: 10 }));
       }
+      setShowPreview(false);
+      resetForm();
+      onClose();
     } catch (error) {
       console.error("Error creating post:", error);
-      ErrorToast("Failed to create post. Please try again.");
+      ErrorToast(
+        typeof error === "string"
+          ? error
+          : error?.message || "Failed to create post. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -413,14 +436,15 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
 
               {/* Post Button */}
               <button
+                type="button"
                 onClick={handlePost}
-                disabled={loadingCreate}
-                className={`w-full font-bold py-3 rounded-2xl transition-all duration-300 text-white ${loadingCreate
-                  ? "bg-gray-400 cursor-not-allowed"
+                disabled={isBusy}
+                className={`w-full font-bold py-3 rounded-2xl transition-all duration-300 text-white ${isBusy
+                  ? "bg-gray-400 cursor-not-allowed pointer-events-none opacity-60"
                   : "bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-lg active:scale-95"
                   }`}
               >
-                {loadingCreate ? (
+                {isBusy ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                     Posting...

@@ -177,6 +177,23 @@ const RecentActivityPopup = ({ onClose }) => {
 
                 {/* Card */}
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                  {/* Repost attribution at top */}
+                  {item?.action === "share" && actor?.name ? (
+                    <div className="text-xs flex items-center gap-2 bg-slate-200/80 rounded-xl px-3 py-1.5 mb-2.5 font-medium text-gray-700">
+                      {actor?.profilePicture ? (
+                        <img
+                          src={actor.profilePicture}
+                          className="w-5 h-5 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-5 h-5 object-cover text-[9px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
+                          {actor?.name.split(" ")[0][0]}
+                        </div>
+                      )}
+                      <span>{actor?.name} Reposted</span>
+                    </div>
+                  ) : null}
+
                   {/* Post Author Info */}
                   {post?.author && (
                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
@@ -290,26 +307,6 @@ const RecentActivityPopup = ({ onClose }) => {
                       </p>
                     </div>
                   )}
-
-                  {item?.action == "share" ? (
-                    <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[14em]">
-                      {actor?.profilePicture ? (
-                        <img
-                          src={actor?.profilePicture}
-                          className="w-7 h-7 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                          {actor?.name.split(" ")[0][0]}
-                        </div>
-                      )}
-                      {/* <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          /> */}
-                      {actor?.name} Reposted
-                    </div>
-                  ) : null}
                 </div>
               </div>
             );

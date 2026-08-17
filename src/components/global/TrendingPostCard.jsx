@@ -261,7 +261,9 @@ export default function TrendingPostCard({
           <div className="flex items-center gap-2 text-xs font-semibold text-orange-700">
             <Repeat className="w-3.5 h-3.5 text-orange-600" />
             <span>
-              Reposted from {post?.originalPost?.author?.name || post?.originalPost?.page?.name || post?.sharedBy?.username || "Original Post"}
+              {post?.sharedBy?.name
+                ? `${post.sharedBy.name} reposted`
+                : `Reposted from ${post?.originalPost?.author?.name || post?.originalPost?.page?.name || post?.sharedBy?.username || "Original Post"}`}
             </span>
           </div>
           <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1">
@@ -452,25 +454,6 @@ export default function TrendingPostCard({
           if (!cleanText) return null;
           return <p className="text-sm text-gray-800 leading-snug mb-3">{cleanText}</p>;
         })()}
-        {post?.sharedBy ? (
-          <div className="text-sm text-nowrap  flex gap-2 justify-start items-center bg-slate-200 rounded-3xl text-center p-2 w-[16em]">
-            {post.sharedBy?.profilePicture ? (
-              <img
-                src={post.sharedBy.profilePicture}
-                className="w-8 h-8 rounded-full"
-              />
-            ) : (
-              <div className="w-8 h-8 text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                {post.sharedBy?.name.split(" ")[0][0]}
-              </div>
-            )}
-            {/* <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          /> */}
-            {post.sharedBy.name} Reposted
-          </div>
-        ) : null}
         {/* Keywords */}
         {post.keywords && post.keywords.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
@@ -559,6 +542,7 @@ export default function TrendingPostCard({
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={post}
         />
       )}
 

@@ -125,6 +125,35 @@ export const shareKnowledgePostToCategory = createAsyncThunk(
 );
 
 /* ===============================
+   ASSIGN KNOWLEDGE POSTS TO CATEGORY
+   API → POST /knowledgeposts/share for each post
+   BODY → { originalKnowledgePost, pageId, sharedToCategory }
+================================*/
+export const assignKnowledgePostsToCategory = createAsyncThunk(
+  "knowledgepost/assignKnowledgePostsToCategory",
+  async ({ postIds, pageId, subCategory }, thunkAPI) => {
+    try {
+      const ids = Array.isArray(postIds) ? postIds : [postIds];
+      const results = [];
+      for (const postId of ids) {
+        const res = await axios.post("/knowledgeposts/share", {
+          originalKnowledgePost: postId,
+          pageId: pageId,
+          sharedToCategory: subCategory || "",
+        });
+        results.push(res.data?.data || res.data);
+      }
+      return { pageId, subCategory, postIds: ids, results };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message ||
+          "Failed to assign knowledge post(s) to subcategory",
+      );
+    }
+  },
+);
+
+/* ===============================
    SHARE KNOWLEDGE POST TO CATEGORY
    API → POST /knowledgeposts/share
    BODY → { originalKnowledgePost, pageId, sharedToCategory }
@@ -183,6 +212,24 @@ export const deleteKnowledgePost = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to delete post",
+      );
+    }
+  },
+);
+
+/* ===============================
+   DELETE KNOWLEDGE PAGE
+   API → DELETE /pages/:pageId
+================================*/
+export const deleteKnowledgePage = createAsyncThunk(
+  "knowledgepost/deleteKnowledgePage",
+  async (pageId, thunkAPI) => {
+    try {
+      const res = await axios.delete(`/pages/${pageId}`);
+      return { pageId, data: res.data?.data || res.data };
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to delete knowledge page",
       );
     }
   },
@@ -420,7 +467,6 @@ const knowledgeSlice = createSlice({
         state.loading = false;
         state.knowledgePages = action.payload.data;
         state.pagination = action.payload.pagination;
-        state.success = true;
       })
       .addCase(fetchMyKnowledgePages.rejected, (state, action) => {
         state.loading = false;
@@ -472,6 +518,19 @@ const knowledgeSlice = createSlice({
         state.loadingCreate = false;
         state.error = action.payload;
       })
+      // Assign Knowledge Posts to Category
+      .addCase(assignKnowledgePostsToCategory.pending, (state) => {
+        state.loadingCreate = true;
+        state.error = null;
+      })
+      .addCase(assignKnowledgePostsToCategory.fulfilled, (state, action) => {
+        state.loadingCreate = false;
+        state.success = true;
+      })
+      .addCase(assignKnowledgePostsToCategory.rejected, (state, action) => {
+        state.loadingCreate = false;
+        state.error = action.payload;
+      })
       //getknowledgepost detail
       .addCase(getKnowledgePostDetail.pending, (state) => {
         state.knowledgePageLoading = true;
@@ -504,6 +563,27 @@ const knowledgeSlice = createSlice({
       })
 
       .addCase(deleteKnowledgePost.rejected, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteSuccess = false;
+        state.error = action.payload;
+      })
+      // DELETE KNOWLEDGE PAGE
+      .addCase(deleteKnowledgePage.pending, (state) => {
+        state.deleteLoading = true;
+        state.deleteSuccess = false;
+      })
+      .addCase(deleteKnowledgePage.fulfilled, (state, action) => {
+        state.deleteLoading = false;
+        state.deleteSuccess = true;
+        state.knowledgePages = (state.knowledgePages || []).filter(
+          (p) => p._id !== action.payload.pageId,
+        );
+        if (state.knowledgePageDetail?._id === action.payload.pageId) {
+          state.knowledgePageDetail = null;
+          state.knowledgePagePosts = [];
+        }
+      })
+      .addCase(deleteKnowledgePage.rejected, (state, action) => {
         state.deleteLoading = false;
         state.deleteSuccess = false;
         state.error = action.payload;

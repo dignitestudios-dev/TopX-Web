@@ -6,6 +6,8 @@ import {
   Share2,
   MoreHorizontal,
   ArrowLeft,
+  Trash2,
+  Layers,
 } from "lucide-react";
 import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
@@ -15,14 +17,17 @@ import {
   getKnowledgePostDetail,
   likePost as likeKnowledgePost,
   toggleKnowledgePageSubscription,
+  deleteKnowledgePage,
 } from "../../redux/slices/knowledgepost.slice";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
 import KnowledgePostComments from "../../components/global/KnowledgePostComments";
 import ShareToChatsModal from "../../components/global/ShareToChatsModal";
 import ReportModal from "../../components/global/ReportModal";
+import DeleteKnowledgePageModal from "../../components/global/DeleteKnowledgePageModal";
+import ManageKnowledgePostsModal from "../../components/global/ManageKnowledgePostsModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
-import { SuccessToast } from "../../components/global/Toaster";
+import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
 import { timeAgo } from "../../lib/helpers";
 
 export default function KnowledgePageDetail() {
@@ -37,6 +42,9 @@ export default function KnowledgePageDetail() {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [activeSubTopic, setActiveSubTopic] = useState("");
+  const [showDeletePageModal, setShowDeletePageModal] = useState(false);
+  const [showManagePostsModal, setShowManagePostsModal] = useState(false);
+  const [isDeletingPage, setIsDeletingPage] = useState(false);
   const dropdownRef = useRef(null);
   const { user } = useSelector((state) => state.auth);
   const currentUserId = user?._id;
@@ -129,6 +137,38 @@ export default function KnowledgePageDetail() {
       console.error("Knowledge page subscription failed:", error);
       // Revert on failure
       setIsSubscribed(false);
+    }
+  };
+
+  const isPageOwner = Boolean(
+    user?._id &&
+      knowledgePageDetail &&
+      (user._id === knowledgePageDetail?.user?._id ||
+        user._id === knowledgePageDetail?.user ||
+        user._id === knowledgePageDetail?.creator?._id ||
+        user._id === knowledgePageDetail?.creator ||
+        user._id === knowledgePageDetail?.author?._id ||
+        user._id === knowledgePageDetail?.author ||
+        knowledgePageDetail?.isOwner)
+  );
+
+  const handleDeleteKnowledgePage = async () => {
+    if (!knowledgePageDetail?._id || isDeletingPage) return;
+    try {
+      setIsDeletingPage(true);
+      await dispatch(deleteKnowledgePage(knowledgePageDetail._id)).unwrap();
+      SuccessToast("Knowledge page deleted successfully");
+      setShowDeletePageModal(false);
+      navigate("/knowledge");
+    } catch (err) {
+      console.error("Delete knowledge page error:", err);
+      ErrorToast(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to delete knowledge page",
+      );
+    } finally {
+      setIsDeletingPage(false);
     }
   };
 
@@ -259,14 +299,102 @@ export default function KnowledgePageDetail() {
       {/* Middle Feed */}
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto scrollbar-hide">
         <div className="max-w-2xl mx-auto p-4 space-y-5">
-          {/* Back Button */}
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
+          {/* Top Bar with Back and Actions */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              Back
+            </button>
+
+            {isPageOwner && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowManagePostsModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200"
+                >
+                  <Layers size={14} />
+                  Manage Posts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePageModal(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition border border-red-200"
+                >
+                  <Trash2 size={14} />
+                  Delete Page
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Knowledge Page Header Card */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div className="flex items-start gap-4">
+              {knowledgePageDetail.image ? (
+                <img
+                  src={knowledgePageDetail.image}
+                  alt={knowledgePageDetail.name}
+                  className="w-14 h-14 rounded-full object-cover border border-gray-200 flex-shrink-0"
+                />
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  {(knowledgePageDetail.name || "K").charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h1 className="text-xl font-bold text-gray-900 truncate">
+                    {knowledgePageDetail.name}
+                  </h1>
+
+                  {!isPageOwner && (
+                    <button
+                      type="button"
+                      onClick={handleSubscribeClick}
+                      className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
+                        isSubscribed
+                          ? "bg-gray-100 text-gray-600 cursor-default"
+                          : "bg-orange-500 text-white hover:bg-orange-600 shadow-sm"
+                      }`}
+                    >
+                      {isSubscribed ? "Subscribed" : "Subscribe"}
+                    </button>
+                  )}
+                </div>
+
+                {knowledgePageDetail.topic && (
+                  <span className="inline-block mt-1 text-xs bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full font-medium">
+                    {knowledgePageDetail.topic}
+                  </span>
+                )}
+
+                {knowledgePageDetail.about && (
+                  <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                    {knowledgePageDetail.about}
+                  </p>
+                )}
+
+                {Array.isArray(knowledgePageDetail.keywords) &&
+                  knowledgePageDetail.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {knowledgePageDetail.keywords.map((kw, i) => (
+                        <span
+                          key={i}
+                          className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-medium"
+                        >
+                          {kw.startsWith("#") ? kw : `#${kw}`}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
 
           {/* SubTopic Tabs */}
           {subTopicTabs.length > 0 && (
@@ -500,6 +628,25 @@ export default function KnowledgePageDetail() {
           }}
         />
       )}
+
+      {/* Delete Knowledge Page Modal */}
+      <DeleteKnowledgePageModal
+        isOpen={showDeletePageModal}
+        onClose={() => setShowDeletePageModal(false)}
+        onConfirm={handleDeleteKnowledgePage}
+        isLoading={isDeletingPage}
+        pageName={knowledgePageDetail?.name || "this knowledge page"}
+      />
+
+      {/* Manage / Group Knowledge Posts Modal */}
+      <ManageKnowledgePostsModal
+        isOpen={showManagePostsModal}
+        onClose={() => setShowManagePostsModal(false)}
+        pageId={id}
+        posts={knowledgePagePosts || []}
+        existingSubTopics={subTopicTabs}
+        pageName={knowledgePageDetail?.name}
+      />
     </div>
   );
 }

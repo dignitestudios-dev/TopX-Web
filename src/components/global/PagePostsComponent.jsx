@@ -588,6 +588,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={pagePosts?.find(p => p._id === selectedPostForShare) || { _id: selectedPostForShare }}
         />
       )}
 

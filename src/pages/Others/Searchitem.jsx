@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   MoreHorizontal,
   FileText,
+  Repeat2,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import PostCard from "../../components/global/PostCard";
@@ -398,6 +399,30 @@ const SearchItem = () => {
                   key={post._id}
                   className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
                 >
+                  {/* Repost Header Attribution at TOP */}
+                  {post?.sharedBy && (
+                    <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700">
+                      <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                      {post.sharedBy.profilePicture ? (
+                        <img
+                          src={post.sharedBy.profilePicture}
+                          alt="Shared by"
+                          className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                          {(post.sharedBy.username || post.sharedBy.name || "U")[0]}
+                        </div>
+                      )}
+                      <span className="truncate">
+                        <span className="font-semibold text-gray-900">
+                          {post.sharedBy.username || post.sharedBy.name}
+                        </span>{" "}
+                        reposted
+                      </span>
+                    </div>
+                  )}
+
                   {/* Header */}
                   <div className="p-4 flex items-start justify-between border-b border-gray-100">
                     <div className="flex items-center gap-3 flex-1">
@@ -475,19 +500,6 @@ const SearchItem = () => {
                     <p className="text-white text-lg font-semibold text-center leading-snug">
                       {post.text}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-4 text-sm p-3 w-[20em] bg-slate-300 m-6 rounded-[100px]">
-                    <img
-                      src={
-                        post.author?.profilePicture ||
-                        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQz68b1g8MSxSUqvFtuo44MvagkdFGoG7Z7DQ&s"
-                      }
-                      alt={post.author?.name || "User"}
-                      className="w-6 h-6 rounded-full object-cover"
-                    />
-                    <div >
-                    {post?.sharedBy?.username && `${post.sharedBy.username} Reposted`}
-                    </div>
                   </div>
 
                   {/* Stats */}

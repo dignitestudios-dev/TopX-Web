@@ -49,6 +49,37 @@ export default function LiveChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const renderMessageWithLinks = (content, isMe = false) => {
+    if (!content || typeof content !== "string") return content;
+    const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+    const parts = content.split(urlRegex);
+
+    return parts.map((part, index) => {
+      if (urlRegex.test(part)) {
+        const href = part.startsWith("http://") || part.startsWith("https://")
+          ? part
+          : `https://${part}`;
+        return (
+          <a
+            key={index}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className={`underline break-all transition font-medium ${
+              isMe
+                ? "text-blue-100 hover:text-white"
+                : "text-blue-600 hover:text-blue-800"
+            }`}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -371,7 +402,11 @@ const ALLOWED_TYPES = [
                     msg.isMe ? "bg-orange-500 text-white" : "bg-white border"
                   }`}
                 >
-                  {msg.text && <p className="text-sm">{msg.text}</p>}
+                  {msg.text && (
+                    <p className="text-sm break-words whitespace-pre-wrap">
+                      {renderMessageWithLinks(msg.text, msg.isMe)}
+                    </p>
+                  )}
                   {msg.media.map((url, i) =>
                     url.match(/\.(mp4|webm|mov)$/) ? (
                       <video

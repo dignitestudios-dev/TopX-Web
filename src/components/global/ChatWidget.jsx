@@ -49,6 +49,40 @@ import ReportModal from "./ReportModal";
 import { sendReport } from "../../redux/slices/reports.slice";
 import AcceptMessageModal from "./AcceptMessageModal";
 
+// Helper to auto-detect links in chat messages and render clickable hyperlinks
+const renderMessageWithLinks = (content, isMe = false) => {
+  if (!content || typeof content !== "string") return content;
+
+  // Regex to match URLs (http, https, www)
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  const parts = content.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (urlRegex.test(part)) {
+      const href = part.startsWith("http://") || part.startsWith("https://")
+        ? part
+        : `https://${part}`;
+      return (
+        <a
+          key={index}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`underline break-all transition font-medium ${
+            isMe
+              ? "text-blue-100 hover:text-white"
+              : "text-blue-600 hover:text-blue-800"
+          }`}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -1583,17 +1617,22 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
       {msg.content &&
         msg.content !== "Shared a post" && (
-          <p className="text-sm mt-2">{msg.content}</p>
+          <p className="text-sm mt-2 break-words whitespace-pre-wrap">
+            {renderMessageWithLinks(
+              msg.content,
+              (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+            )}
+          </p>
         )}
     </div>
   )
 ) : (
-  <>
-    <p className="text-sm mb-2">
-      {msg.sender?.name || "Someone"} shared a text post
-    </p>
-    <p>{msg.content}</p>
-  </>
+  <p className="text-sm break-words whitespace-pre-wrap">
+    {renderMessageWithLinks(
+      msg.content,
+      (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+    )}
+  </p>
 )}
                       
                      

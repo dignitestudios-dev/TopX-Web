@@ -8,6 +8,7 @@ import {
   X,
   Zap,
   BarChart2,
+  Repeat2,
 } from "lucide-react";
 import BoostPostModal from "./BoostPostModal";
 import BoostAnalyticsModal from "./BoostAnalyticsModal";
@@ -433,6 +434,30 @@ export default function HomePostFeed({
         post?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
       }`}
     >
+      {/* Repost Attribution Header at TOP */}
+      {post.sharedBy && (
+        <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700 rounded-t-2xl">
+          <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+          {post.sharedBy?.profilePicture ? (
+            <img
+              src={post.sharedBy.profilePicture}
+              alt={post.sharedBy.name}
+              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+              {post.sharedBy?.name?.split(" ")?.[0]?.[0] || "U"}
+            </div>
+          )}
+          <span className="truncate">
+            <span className="font-semibold text-gray-900">
+              {post.sharedBy.name || "User"}
+            </span>{" "}
+            reposted
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100 gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -658,23 +683,6 @@ export default function HomePostFeed({
               <div className="items-center gap-2 text-sm text-orange-600 py-6" />
             )}
           </div>
-          {post.sharedBy ? (
-            <div className="text-sm inline-flex gap-2 ml-3 items-center bg-slate-200 rounded-3xl px-3 py-1.5 mb-2 max-w-xs">
-              {post.sharedBy?.profilePicture ? (
-                <img
-                  src={post.sharedBy.profilePicture}
-                  className="w-6 h-6 rounded-full object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-6 h-6 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                  {post.sharedBy?.name?.split(" ")?.[0]?.[0] || "U"}
-                </div>
-              )}
-              <span className="truncate" title={`${post.sharedBy.name || "User"} Reposted`}>
-                {post.sharedBy.name || "User"} Reposted
-              </span>
-            </div>
-          ) : null}
         </div>
         {/* Stats - Action Bar */}
         {!isUnderReview && (
@@ -763,6 +771,11 @@ export default function HomePostFeed({
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={{
+            _id: post.id || post._id,
+            text: post.text,
+            ...post,
+          }}
         />
       )}
 

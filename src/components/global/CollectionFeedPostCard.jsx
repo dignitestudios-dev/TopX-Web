@@ -8,6 +8,7 @@ import {
   X,
   Zap,
   BarChart2,
+  Repeat2,
 } from "lucide-react";
 import BoostPostModal from "./BoostPostModal";
 import BoostAnalyticsModal from "./BoostAnalyticsModal";
@@ -458,6 +459,30 @@ export default function CollectionFeedPostCard({
         targetPost?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
       }`}
     >
+      {/* Repost Header Attribution at TOP */}
+      {(fullPost?.sharedBy || post?.sharedBy) && (
+        <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700">
+          <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+          {(fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture) ? (
+            <img
+              src={fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture}
+              alt="Shared by"
+              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+              {(fullPost?.sharedBy?.name || post?.sharedBy?.name || "U")[0]}
+            </div>
+          )}
+          <span className="truncate">
+            <span className="font-semibold text-gray-900">
+              {fullPost?.sharedBy?.name || post?.sharedBy?.name || "User"}
+            </span>{" "}
+            reposted
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -635,25 +660,6 @@ export default function CollectionFeedPostCard({
             </div>
           );
         })()}
-      {fullPost?.sharedBy ? (
-        <div className="text-sm flex gap-4 ml-4 justify-center items-center bg-slate-200 rounded-3xl text-center p-[7px] w-[18em]">
-          {fullPost?.profilePicture ? (
-            <img
-              src={fullPost.sharedBy.profilePicture}
-              className="w-7 h-7 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-              {fullPost.sharedBy.name.split(" ")[0][0]}
-            </div>
-          )}
-          {/* <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          /> */}
-          {fullPost?.sharedBy?.name} Reposted
-        </div>
-      ) : null}
 
       {fullPost?.page?.pageType == "private" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
@@ -758,6 +764,7 @@ export default function CollectionFeedPostCard({
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={fullPost || post}
         />
       )}
 

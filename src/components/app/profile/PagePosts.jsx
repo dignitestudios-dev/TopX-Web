@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Zap,
   BarChart2,
+  Repeat2,
 } from "lucide-react";
 import BoostPostModal from "../../global/BoostPostModal";
 import BoostAnalyticsModal from "../../global/BoostAnalyticsModal";
@@ -514,6 +515,30 @@ const PagePosts = ({
                 key={post._id}
                 className="bg-white relative pb-6 rounded-lg shadow-sm overflow-hidden"
               >
+                {/* Repost Header Attribution at TOP */}
+                {post.sharedBy && (
+                  <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700">
+                    <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
+                    {post.sharedBy.profilePicture ? (
+                      <img
+                        src={post.sharedBy.profilePicture}
+                        alt="Shared by"
+                        className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                        {(post.sharedBy.name || "U")[0]}
+                      </div>
+                    )}
+                    <span className="truncate">
+                      <span className="font-semibold text-gray-900">
+                        {post.sharedBy.name}
+                      </span>{" "}
+                      reposted
+                    </span>
+                  </div>
+                )}
+
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3">
@@ -836,16 +861,6 @@ const PagePosts = ({
                   </div>
                 ) : null}
 
-                {post.sharedBy ? (
-                  <div className="text-sm text-nowrap flex gap-4 ml-2 mt-2 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 w-[18em]">
-                    <img
-                      src={post.sharedBy.profilePicture}
-                      className="w-7 h-7 rounded-full object-cover"
-                    />
-                    {post.sharedBy.name} Reposted
-                  </div>
-                ) : null}
-
                 {/* Topic Tag */}
                 {/* {post.page?.topic && (
                                   <div className="px-4">
@@ -1024,6 +1039,7 @@ const PagePosts = ({
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={selectedPost}
         />
       )}
 

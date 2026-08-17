@@ -525,7 +525,9 @@ const PostCard = ({
             <div className="flex items-center gap-2 text-xs font-semibold text-orange-700">
               <Repeat className="w-3.5 h-3.5 text-orange-600" />
               <span>
-                Reposted from {post?.originalPost?.author?.name || post?.originalPost?.page?.name || post?.sharedBy?.username || "Original Post"}
+                {post?.sharedBy?.name
+                  ? `${post.sharedBy.name} reposted`
+                  : `Reposted from ${post?.originalPost?.author?.name || post?.originalPost?.page?.name || post?.sharedBy?.username || "Original Post"}`}
               </span>
             </div>
             <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1">
@@ -756,25 +758,6 @@ const PostCard = ({
             if (!cleanText) return null;
             return <p className="text-sm text-gray-700 mb-4">{cleanText}</p>;
           })()}
-          {post.sharedBy ? (
-            <div className="text-sm flex gap-4 ml-3 justify-center items-center bg-slate-200 rounded-3xl text-center p-2 mb-2 w-[18em]">
-              {post.sharedBy?.profilePicture ? (
-                <img
-                  src={post.sharedBy.profilePicture}
-                  className="w-7 h-7 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-7 h-7 object-cover text-[10px] bg-purple-800 text-white flex justify-center items-center rounded-full capitalize">
-                  {post.sharedBy?.name.split(" ")[0][0]}
-                </div>
-              )}
-              {/* <img
-            src={post.sharedBy.profilePicture}
-            className="w-7 h-7 rounded-full object-cover"
-          /> */}
-              {post.sharedBy.name} Reposted
-            </div>
-          ) : null}
           {/* Actions */}
           {activeTab !== "postrequest" ? (
             <div className="flex items-center gap-4 text-sm text-orange-500 mb-2 pb-2">
@@ -932,6 +915,7 @@ const PostCard = ({
           setSelectedOption={setSelectedOption}
           setSharepost={setSharepost}
           options={options}
+          post={post}
         />
       )}
 

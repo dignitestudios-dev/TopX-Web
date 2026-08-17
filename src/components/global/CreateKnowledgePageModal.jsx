@@ -7,10 +7,12 @@ import {
   fetchMyKnowledgePages,
   resetKnowledge,
 } from "../../redux/slices/knowledgepost.slice";
+import { fetchMyPages } from "../../redux/slices/pages.slice";
 import CustomSelect from "./CustomeSelect";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
+import { SuccessToast, ErrorToast } from "./Toaster";
 
 export default function CreateKnowledgePageModal({ onClose }) {
   // FORM DATA
@@ -23,6 +25,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // IMAGE UPLOAD
   const [imageFile, setImageFile] = useState(null);
@@ -40,26 +43,23 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
   const dispatch = useDispatch();
   const { alltopics, isLoading } = useSelector((state) => state.topics);
-  const { loading: loadingCreate, success, myKnowledgePages } = useSelector(
+  const { loadingCreate, knowledgePages } = useSelector(
     (state) => state.knowledgepost,
   );
+  const { myPages } = useSelector((state) => state.pages);
+
+  const isBusy = loadingCreate || isSubmitting;
 
   useEffect(() => {
+    dispatch(resetKnowledge());
     dispatch(gettopics());
     dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
+    dispatch(fetchMyPages({ page: 1, limit: 100 }));
   }, [dispatch]);
-
-  // Auto close on success
-  useEffect(() => {
-    if (success === true) {
-      dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
-      onClose();
-    }
-  }, [success]);
 
   // INPUT HANDLER
   const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
@@ -67,7 +67,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
   // IMAGE UPLOAD
   const handleFileUpload = (e) => {
-    if (e.target.files[0]) {
+    if (e.target.files && e.target.files[0]) {
       setImageFile(e.target.files[0]);
       setPreviewImage(URL.createObjectURL(e.target.files[0]));
       setErrors((prev) => ({ ...prev, image: "" }));
@@ -90,62 +90,170 @@ export default function CreateKnowledgePageModal({ onClose }) {
     }
   };
 
-  // SUB CATEGORY TAG INPUT
+  // SUB CATEGORY HELPERS
+  const addSubCategory = (rawText) => {
+    const text = (rawText || "").trim();
+    if (!text) return;
+
+    const items = text
+      .split(/[,\n;]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    if (items.length === 0) return;
+
+    setSubCategories((prev) => {
+      const updated = [...prev];
+      items.forEach((item) => {
+        if (
+          updated.length < 5 &&
+          !updated.some((s) => s.toLowerCase() === item.toLowerCase())
+        ) {
+          updated.push(item);
+        }
+      });
+      return updated;
+    });
+
+    setSubInput("");
+    if (errors.subCategories) {
+      setErrors((prev) => ({ ...prev, subCategories: "" }));
+    }
+  };
+
+  const toggleSubCategoryChip = (subName) => {
+    const name = (
+      typeof subName === "string" ? subName : subName?.name || ""
+    ).trim();
+    if (!name) return;
+
+    setSubCategories((prev) => {
+      const exists = prev.some((s) => s.toLowerCase() === name.toLowerCase());
+      if (exists) {
+        return prev.filter((s) => s.toLowerCase() !== name.toLowerCase());
+      } else {
+        if (prev.length >= 5) return prev;
+        return [...prev, name];
+      }
+    });
+
+    if (errors.subCategories) {
+      setErrors((prev) => ({ ...prev, subCategories: "" }));
+    }
+  };
+
   const handleSubCategoryKeyDown = (e) => {
-    if (e.key === "Enter" && subInput.trim() !== "") {
-      if (subCategories.length >= 5) return;
-      setSubCategories([...subCategories, subInput.trim()]);
-      setSubInput("");
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
+      addSubCategory(subInput);
     }
   };
 
   const removeSubCategory = (index) => {
-    setSubCategories(subCategories.filter((_, i) => i !== index));
+    setSubCategories((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // KEYWORDS TAG INPUT
+  // KEYWORDS HELPERS
+  const addKeyword = (rawText) => {
+    const text = (rawText || "").trim();
+    if (!text) return;
+
+    const items = text
+      .split(/[,\n;]/)
+      .map((k) => k.trim().replace(/^#+/, ""))
+      .filter((k) => k.length > 0);
+
+    if (items.length === 0) return;
+
+    setKeywords((prev) => {
+      const updated = [...prev];
+      items.forEach((item) => {
+        if (
+          updated.length < 5 &&
+          !updated.some((k) => k.toLowerCase() === item.toLowerCase())
+        ) {
+          updated.push(item);
+        }
+      });
+      return updated;
+    });
+
+    setKeywordInput("");
+    if (errors.keywords) {
+      setErrors((prev) => ({ ...prev, keywords: "" }));
+    }
+  };
+
   const handleKeywordKeyDown = (e) => {
-    if (e.key === "Enter" && keywordInput.trim() !== "") {
-      if (keywords.length >= 5) return;
-      setKeywords([...keywords, keywordInput.trim()]);
-      setKeywordInput("");
+    if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
+      addKeyword(keywordInput);
     }
   };
 
   const removeKeyword = (index) => {
-    setKeywords(keywords.filter((_, i) => i !== index));
+    setKeywords((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // HELPER TO EXTRACT PAGE NAME STRING
+  const getPageNameStr = (item) => {
+    if (!item) return "";
+    if (typeof item === "string") return item.trim();
+    const name =
+      item.name ||
+      item.title ||
+      item.pageName ||
+      item.page?.name ||
+      item.pageId?.name ||
+      "";
+    return String(name).trim();
   };
 
   // VALIDATION
-  const validateFields = () => {
+  const validateFields = (
+    currentKeywords = keywords,
+    currentSubCategories = subCategories,
+  ) => {
     const newErrors = {};
     const trimmedName = (formData.name || "").trim();
 
     if (!trimmedName) {
       newErrors.name = "Name is required";
     } else {
-      const isDuplicate = (myKnowledgePages || []).some(
-        (page) =>
-          (page?.name || "").trim().toLowerCase() === trimmedName.toLowerCase(),
-      );
+      const allExistingPages = [
+        ...(Array.isArray(knowledgePages) ? knowledgePages : []),
+        ...(Array.isArray(myPages) ? myPages : []),
+      ];
+
+      const isDuplicate = allExistingPages.some((page) => {
+        const nameStr = getPageNameStr(page);
+        return (
+          nameStr.length > 0 &&
+          nameStr.toLowerCase() === trimmedName.toLowerCase()
+        );
+      });
+
       if (isDuplicate) {
         newErrors.name =
           "A page with this name already exists. Please choose a different page name.";
       }
     }
 
-    if (!formData.about.trim()) newErrors.about = "About is required";
-    if (!formData.topic.trim()) newErrors.topic = "Topic is required";
+    if (!(formData.about || "").trim()) {
+      newErrors.about = "About is required";
+    }
 
-    if (subCategories.length === 0)
+    if (!(formData.topic || "").trim()) {
+      newErrors.topic = "Topic is required";
+    }
+
+    if (currentSubCategories.length === 0) {
       newErrors.subCategories = "At least 1 sub category required";
+    }
 
-    if (keywords.length === 0)
+    if (currentKeywords.length === 0) {
       newErrors.keywords = "At least 1 keyword required";
-
-    // if (!imageFile) newErrors.image = "Image is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -153,34 +261,112 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
   // SUBMIT
   const handleCreatePage = async () => {
-    if (!validateFields()) return;
+    if (isBusy) return;
 
-    let binaryFile = imageFile;
-    if (!(binaryFile instanceof File) && previewImage) {
-      binaryFile = await emojiUrlToFile(previewImage, "knowledge_page_emoji.png");
+    // Auto-commit any typed text in keywords before validation
+    let finalKeywords = [...keywords];
+    if (keywordInput.trim()) {
+      const items = keywordInput
+        .split(/[,\n;]/)
+        .map((k) => k.trim().replace(/^#+/, ""))
+        .filter((k) => k.length > 0);
+
+      items.forEach((item) => {
+        if (
+          finalKeywords.length < 5 &&
+          !finalKeywords.some((k) => k.toLowerCase() === item.toLowerCase())
+        ) {
+          finalKeywords.push(item);
+        }
+      });
+      setKeywords(finalKeywords);
+      setKeywordInput("");
     }
 
-    const fd = new FormData();
+    // Auto-commit any typed text in subcategories before validation
+    let finalSubCategories = [...subCategories];
+    if (subInput.trim()) {
+      const items = subInput
+        .split(/[,\n;]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
 
-    fd.append("name", formData.name);
-    fd.append("about", formData.about);
-
-    let topicValue = (formData.topic || "").trim();
-    if (topicValue.includes(">")) {
-      topicValue = topicValue.split(">").pop().trim();
+      items.forEach((item) => {
+        if (
+          finalSubCategories.length < 5 &&
+          !finalSubCategories.some((s) => s.toLowerCase() === item.toLowerCase())
+        ) {
+          finalSubCategories.push(item);
+        }
+      });
+      setSubCategories(finalSubCategories);
+      setSubInput("");
     }
-    fd.append("topic", topicValue);
 
-    fd.append("pageType", formData.pageType);
-    fd.append("contentType", "knowledge");
-    if (binaryFile instanceof File) {
-      fd.append("image", binaryFile, binaryFile.name || "knowledge_page.png");
+    if (!validateFields(finalKeywords, finalSubCategories)) return;
+
+    setIsSubmitting(true);
+
+    try {
+      let binaryFile = imageFile;
+      if (!(binaryFile instanceof File) && previewImage) {
+        binaryFile = await emojiUrlToFile(
+          previewImage,
+          "knowledge_page_emoji.png",
+        );
+      }
+
+      const fd = new FormData();
+      fd.append("name", formData.name.trim());
+      fd.append("about", formData.about.trim());
+
+      let topicValue = (formData.topic || "").trim();
+      if (topicValue.includes(">")) {
+        topicValue = topicValue.split(">").pop().trim();
+      }
+      fd.append("topic", topicValue);
+
+      fd.append("pageType", formData.pageType || "public");
+      fd.append("contentType", "knowledge");
+      if (binaryFile instanceof File) {
+        fd.append("image", binaryFile, binaryFile.name || "knowledge_page.png");
+      }
+
+      finalKeywords.forEach((kw, i) =>
+        fd.append(`keywords[${i}]`, kw.startsWith("#") ? kw : `#${kw}`),
+      );
+      finalSubCategories.forEach((sub, i) => fd.append(`subTopic[${i}]`, sub));
+
+      await dispatch(createKnowledgePage(fd)).unwrap();
+      SuccessToast("Knowledge page created successfully!");
+      dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
+      dispatch(fetchMyPages({ page: 1, limit: 100 }));
+      onClose();
+    } catch (err) {
+      console.error("Create Knowledge Page error:", err);
+      const errMsg =
+        typeof err === "string" ? err : err?.message || err?.data?.message || "";
+      const lower = errMsg.toLowerCase();
+
+      if (
+        lower.includes("already exist") ||
+        lower.includes("duplicate") ||
+        lower.includes("already taken") ||
+        lower.includes("page with this name") ||
+        lower.includes("name must be unique") ||
+        lower.includes("name is already")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          name:
+            "A page with this name already exists. Please choose a different page name.",
+        }));
+      } else {
+        ErrorToast(errMsg || "Failed to create knowledge page");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-
-    keywords.forEach((kw, i) => fd.append(`keywords[${i}]`, `#${kw}`));
-    subCategories.forEach((sub, i) => fd.append(`subTopic[${i}]`, sub));
-
-    dispatch(createKnowledgePage(fd));
   };
 
   return (
@@ -188,8 +374,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
       <div className="bg-white w-full max-w-xl rounded-2xl p-6 relative shadow-lg overflow-y-auto max-h-[90vh]">
         {/* Close */}
         <button
-          disabled={loadingCreate}
-          className="absolute top-4 right-4 text-gray-600 hover:text-gray-800"
+          disabled={isBusy}
+          className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 disabled:opacity-50"
           onClick={onClose}
         >
           <X size={24} />
@@ -202,8 +388,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
         {/* IMAGE UPLOAD */}
         <div className="flex justify-center mb-6">
           <div
-            onClick={() => setIsOptionsModalOpen(true)}
-            className="relative cursor-pointer select-none"
+            onClick={() => !isBusy && setIsOptionsModalOpen(true)}
+            className={`relative select-none ${isBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
           >
             <div
               className={`w-24 h-24 border-2 rounded-full flex items-center justify-center bg-orange-50 overflow-hidden ${
@@ -221,6 +407,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
                   <img
                     src={previewImage}
                     className="w-full h-full rounded-full object-cover"
+                    alt="Knowledge Page Profile"
                   />
                 )
               ) : (
@@ -230,7 +417,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
             <input
               ref={fileInputRef}
               type="file"
-              disabled={loadingCreate}
+              disabled={isBusy}
               className="hidden"
               onChange={handleFileUpload}
             />
@@ -243,22 +430,23 @@ export default function CreateKnowledgePageModal({ onClose }) {
           </p>
         )}
 
-        {/* NAME */}
+        {/* FORM FIELDS */}
         <div className="space-y-4">
+          {/* NAME */}
           <div>
             <label className="text-sm font-semibold text-black">Name</label>
             <input
-              disabled={loadingCreate}
+              disabled={isBusy}
               type="text"
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               placeholder="Enter your Knowledge page name"
               className={`w-full border rounded-xl px-4 py-3 mt-1 text-sm ${
                 errors.name ? "border-red-500" : "border-gray-300"
-              }`}
+              } ${isBusy ? "bg-gray-50 cursor-not-allowed" : ""}`}
             />
             {errors.name && (
-              <p className="text-red-500 text-sm">{errors.name}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
             )}
           </div>
 
@@ -268,96 +456,85 @@ export default function CreateKnowledgePageModal({ onClose }) {
               About Knowledge Page
             </label>
             <textarea
-              disabled={loadingCreate}
+              disabled={isBusy}
               value={formData.about}
               onChange={(e) => handleInputChange("about", e.target.value)}
               placeholder="Text goes here"
               className={`w-full border rounded-xl px-4 py-3 mt-1 text-sm h-[3.4em] ${
                 errors.about ? "border-red-500" : "border-gray-300"
-              }`}
+              } ${isBusy ? "bg-gray-50 cursor-not-allowed" : ""}`}
             />
             {errors.about && (
-              <p className="text-red-500 text-sm">{errors.about}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.about}</p>
             )}
           </div>
 
-          {/* TOPIC */}
-          {/* <div>
-            <label className="text-sm font-semibold text-black">
-              Topic / Category
-            </label>
-
-            <select
-              disabled={loadingCreate || isLoading}
-              value={formData.topic}
-              onChange={(e) => handleInputChange("topic", e.target.value)}
-              className={`w-full border rounded-xl px-4 py-3 text-sm ${
-                errors.topic ? "border-red-500" : "border-gray-300"
-              }`}
-            >
-              {isLoading ? (
-                <option>Loading topics…</option>
-              ) : (
-                <>
-                  <option value="">Select</option>
-                  {alltopics?.map((item) => (
-                    <option key={item._id} value={item.name}>
-                      {item.name}
-                    </option>
-                  ))}
-                </>
-              )}
-            </select>
-
-            {errors.topic && <p className="text-red-500 text-sm">{errors.topic}</p>}
-          </div> */}
+          {/* TOPIC / CATEGORY */}
           <CustomSelect
-            options={alltopics?.map((item) => ({
+            options={(alltopics || []).map((item) => ({
               value: item.name,
               label: item.name,
             }))}
             value={formData.topic}
             onChange={(val) => handleInputChange("topic", val)}
-            disabled={loadingCreate || isLoading}
+            disabled={isBusy || isLoading}
             error={errors.topic}
           />
+
           {/* Subcategories Display for selected Category */}
           {(() => {
-            const selectedCategory = alltopics?.find(
+            const selectedCategory = (alltopics || []).find(
               (item) =>
-                item.name === formData.topic || item._id === formData.topic
+                item.name === formData.topic || item._id === formData.topic,
             );
             const availableSubCategories =
-              selectedCategory?.subCategories || [];
+              selectedCategory?.subCategories ||
+              selectedCategory?.subTopics ||
+              [];
             if (!formData.topic || availableSubCategories.length === 0)
               return null;
 
             return (
-              <div className="mt-2 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl">
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Subcategories:
+                  Suggested Subcategories (click to select):
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  {availableSubCategories.map((sub, idx) => (
-                    <span
-                      key={idx}
-                      className="text-xs px-2.5 py-1 rounded-full bg-white text-gray-700 border border-gray-200 font-medium"
-                    >
-                      {sub}
-                    </span>
-                  ))}
+                  {availableSubCategories.map((sub, idx) => {
+                    const subName =
+                      typeof sub === "string" ? sub : sub?.name || "";
+                    if (!subName) return null;
+                    const isSelected = subCategories.some(
+                      (s) => s.toLowerCase() === subName.toLowerCase(),
+                    );
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={isBusy}
+                        onClick={() => toggleSubCategoryChip(subName)}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition cursor-pointer font-medium ${
+                          isSelected
+                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600"
+                        }`}
+                      >
+                        {isSelected ? `✓ ${subName}` : `+ ${subName}`}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             );
           })()}
+
           {/* KEYWORDS */}
           <div>
             <label className="text-sm font-semibold text-black">Keywords</label>
-
             <div
               className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 ${
                 errors.keywords ? "border-red-500" : "border-gray-300"
-              }`}
+              } ${isBusy ? "bg-gray-50" : ""}`}
             >
               {keywords.map((tag, i) => (
                 <div
@@ -366,9 +543,9 @@ export default function CreateKnowledgePageModal({ onClose }) {
                 >
                   #{tag}
                   <button
-                    disabled={loadingCreate}
+                    disabled={isBusy}
                     onClick={() => removeKeyword(i)}
-                    className="font-bold"
+                    className="font-bold hover:text-blue-900"
                   >
                     ×
                   </button>
@@ -376,31 +553,40 @@ export default function CreateKnowledgePageModal({ onClose }) {
               ))}
 
               <input
-                disabled={loadingCreate}
+                disabled={isBusy}
                 type="text"
-                placeholder="Text goes here (hashtags)"
+                placeholder={
+                  keywords.length >= 5
+                    ? "Max 5 keywords added"
+                    : "Type keyword and press Enter or comma"
+                }
                 value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
+                onChange={(e) => {
+                  setKeywordInput(e.target.value);
+                  if (errors.keywords) {
+                    setErrors((prev) => ({ ...prev, keywords: "" }));
+                  }
+                }}
                 onKeyDown={handleKeywordKeyDown}
-                className="flex-1 outline-none text-sm py-1"
+                onBlur={() => addKeyword(keywordInput)}
+                className="flex-1 outline-none text-sm py-1 min-w-[120px]"
               />
             </div>
 
             {errors.keywords && (
-              <p className="text-red-500 text-sm">{errors.keywords}</p>
+              <p className="text-red-500 text-sm mt-1">{errors.keywords}</p>
             )}
           </div>
 
-          {/* SUB CATEGORY */}
+          {/* SUB CATEGORIES */}
           <div>
             <label className="text-sm font-semibold text-black">
               Sub Categories
             </label>
-
             <div
               className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 ${
                 errors.subCategories ? "border-red-500" : "border-gray-300"
-              }`}
+              } ${isBusy ? "bg-gray-50" : ""}`}
             >
               {subCategories.map((tag, i) => (
                 <div
@@ -409,9 +595,9 @@ export default function CreateKnowledgePageModal({ onClose }) {
                 >
                   {tag}
                   <button
-                    disabled={loadingCreate}
+                    disabled={isBusy}
                     onClick={() => removeSubCategory(i)}
-                    className="font-bold"
+                    className="font-bold hover:text-orange-900"
                   >
                     ×
                   </button>
@@ -419,33 +605,53 @@ export default function CreateKnowledgePageModal({ onClose }) {
               ))}
 
               <input
-                disabled={loadingCreate}
+                disabled={isBusy}
                 type="text"
-                placeholder="Text goes here (Sub-Catrgories)"
+                placeholder={
+                  subCategories.length >= 5
+                    ? "Max 5 subcategories added"
+                    : "Type subcategory and press Enter or comma"
+                }
                 value={subInput}
-                onChange={(e) => setSubInput(e.target.value)}
+                onChange={(e) => {
+                  setSubInput(e.target.value);
+                  if (errors.subCategories) {
+                    setErrors((prev) => ({ ...prev, subCategories: "" }));
+                  }
+                }}
                 onKeyDown={handleSubCategoryKeyDown}
-                className="flex-1 outline-none text-sm py-1"
+                onBlur={() => addSubCategory(subInput)}
+                className="flex-1 outline-none text-sm py-1 min-w-[120px]"
               />
             </div>
 
             {errors.subCategories && (
-              <p className="text-red-500 text-sm">{errors.subCategories}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.subCategories}
+              </p>
             )}
           </div>
         </div>
 
         {/* SUBMIT BUTTON */}
         <button
-          disabled={loadingCreate}
-          className={`w-full bg-orange-600 text-white font-semibold rounded-xl py-3 mt-6 transition ${
-            loadingCreate
-              ? "opacity-60 cursor-not-allowed"
+          type="button"
+          disabled={isBusy}
+          className={`w-full bg-orange-600 text-white font-semibold rounded-xl py-3 mt-6 transition flex items-center justify-center gap-2 ${
+            isBusy
+              ? "opacity-50 cursor-not-allowed pointer-events-none"
               : "hover:bg-orange-700"
           }`}
           onClick={handleCreatePage}
         >
-          {loadingCreate ? "Creating..." : "Create Knowledge Page"}
+          {isBusy ? (
+            <>
+              <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span>Creating Knowledge Page...</span>
+            </>
+          ) : (
+            "Create Knowledge Page"
+          )}
         </button>
       </div>
 

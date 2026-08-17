@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { CiSearch } from "react-icons/ci";
 export default function CustomSelect({
-  options,
+  options = [],
   value,
   onChange,
   disabled,
@@ -22,8 +22,9 @@ export default function CustomSelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(search.toLowerCase()),
+  const safeOptions = Array.isArray(options) ? options : [];
+  const filteredOptions = safeOptions.filter((opt) =>
+    (opt?.label || "").toLowerCase().includes((search || "").toLowerCase()),
   );
 
   return (
