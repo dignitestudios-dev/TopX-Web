@@ -384,8 +384,11 @@ const Trendingpagedetail = () => {
                   <p className="text-gray-100 text-[1em] break-words line-clamp-2 max-w-xl">
                     #{pageDetail.about || "topic"}
                   </p>
-                  <div>
-                    <div className="flex -space-x-2 items-center pt-1">
+                  <div className="flex items-center gap-2 pt-2 flex-wrap text-xs text-white">
+                    <span className="bg-white/20 backdrop-blur-xs px-3 py-1 rounded-full font-semibold border border-white/20 shadow-xs">
+                      {pageDetail?.postsCount ?? (Array.isArray(pageDetail?.posts) ? pageDetail.posts.length : (Array.isArray(pagePosts) ? pagePosts.length : 0))} Posts
+                    </span>
+                    <div className="flex -space-x-2 items-center pl-2">
                       {pageDetail.followers &&
                         pageDetail.followers
                           .slice(0, 3)
@@ -404,7 +407,7 @@ const Trendingpagedetail = () => {
                               />
                             ),
                           )}
-                      <p className="text-xs text-white font-medium pl-4 truncate">
+                      <p className="text-xs text-white/95 font-medium pl-3 truncate">
                         {pageDetail.followersCount || 0}+ People Follow
                       </p>
                     </div>

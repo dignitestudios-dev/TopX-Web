@@ -144,7 +144,9 @@ useEffect(()=>{
     expertStatusLoading,
     expertStatusSuccess,
   } = useSelector((state) => state.pages);
-  const { postsLoading } = useSelector((state) => state.posts);
+  const { postsLoading, pagepost = [] } = useSelector(
+    (state) => state.posts || {}
+  );
   const { PageStories, isLoading } = useSelector(
     (state) => state.subscriptions,
   );
@@ -941,10 +943,15 @@ useEffect(()=>{
                       : page?.about}
                   </p>
 
-                  <div className="flex items-center gap-[70px] relative">
-                    <span className="text-gray-600 font-medium text-sm">
-                      {/* Add followers count if necessary */}
+                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                    <span className="bg-orange-50 text-orange-600 border border-orange-200 text-xs font-semibold px-3 py-0.5 rounded-full shadow-xs">
+                      {page?.postsCount ?? pageDetail?.postsCount ?? (Array.isArray(page?.posts) ? page.posts.length : (Array.isArray(pagepost) ? pagepost.length : 0))} Posts
                     </span>
+                    {(page?.followersCount || page?.followers?.length) ? (
+                      <span className="text-gray-500 font-medium text-xs">
+                        {page?.followersCount || page?.followers?.length || 0}+ Followers
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               </div>

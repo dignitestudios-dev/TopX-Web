@@ -335,6 +335,33 @@ const postFeedSlice = createSlice({
         state.deleteCommentLoading = false;
         state.error = action.payload;
       })
+      .addCase(demoteComment.pending, (state) => {
+        state.deleteCommentLoading = true;
+      })
+      .addCase(demoteComment.fulfilled, (state, action) => {
+        state.deleteCommentLoading = false;
+        const updateCommentDemoted = (comments) => {
+          return comments.map((comment) => {
+            if (comment._id === action.payload?._id) {
+              return { ...comment, isElevated: false };
+            }
+            if (comment.replies?.length) {
+              return {
+                ...comment,
+                replies: updateCommentDemoted(comment.replies),
+              };
+            }
+            return comment;
+          });
+        };
+        if (state.postComments?.length) {
+          state.postComments = updateCommentDemoted(state.postComments);
+        }
+      })
+      .addCase(demoteComment.rejected, (state, action) => {
+        state.deleteCommentLoading = false;
+        state.error = action.payload;
+      })
       // Like/Unlike Post
       .addCase(likePost.pending, (state, action) => {
         const { postId, likeToggle } = action.meta.arg;

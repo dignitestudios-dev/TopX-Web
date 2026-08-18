@@ -435,25 +435,54 @@ export default function HomePostFeed({
       }`}
     >
       {/* Repost Attribution Header at TOP */}
-      {post.sharedBy && (
-        <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700 rounded-t-2xl">
-          <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
-          {post.sharedBy?.profilePicture ? (
-            <img
-              src={post.sharedBy.profilePicture}
-              alt={post.sharedBy.name}
-              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-              {post.sharedBy?.name?.split(" ")?.[0]?.[0] || "U"}
-            </div>
-          )}
-          <span className="truncate">
-            <span className="font-semibold text-gray-900">
-              {post.sharedBy.name || "User"}
-            </span>{" "}
-            reposted
+      {(post.sharedBy || post.originalPost || post.isRepost) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            const origPageId =
+              post?.originalPost?.page?._id ||
+              post?.originalPost?.page ||
+              post?.page?._id ||
+              post?.pageId ||
+              post?.page;
+            const origPostId =
+              post?.originalPost?._id ||
+              post?.originalPost?.id ||
+              post?.originalPost ||
+              post?.id ||
+              post?._id;
+            if (origPageId) {
+              navigate(`/trending-page-detail/${origPageId}`, {
+                state: { postId: origPostId },
+              });
+            } else if (origPostId) {
+              navigate(`/home`, { state: { postId: origPostId } });
+            }
+          }}
+          className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 rounded-t-2xl cursor-pointer hover:bg-orange-100 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+            {post.sharedBy?.profilePicture ? (
+              <img
+                src={post.sharedBy.profilePicture}
+                alt={post.sharedBy.name}
+                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                {post.sharedBy?.name?.split(" ")?.[0]?.[0] || "U"}
+              </div>
+            )}
+            <span className="truncate">
+              <span className="font-semibold text-gray-900">
+                {post.sharedBy?.name || "User"}
+              </span>{" "}
+              reposted
+            </span>
+          </div>
+          <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
+            Go to original post →
           </span>
         </div>
       )}

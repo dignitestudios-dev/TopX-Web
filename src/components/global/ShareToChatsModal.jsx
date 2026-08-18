@@ -236,8 +236,8 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
       // Get media (first media item)
       const media = post?.media?.[0]?.fileUrl || post?.media?.[0] || null;
 
-      // Get optional fields
-      const textOnImage = post?.textOnImage || post?.backgroundCode || null;
+      // Get optional fields (ensure text posts send their text content)
+      const textOnImage = post?.textOnImage || post?.bodyText || post?.text || post?.backgroundCode || null;
       const imageStyle = post?.imageStyle || null;
       const imageLocalPath = post?.imageLocalPath || null;
 

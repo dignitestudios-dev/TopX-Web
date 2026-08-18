@@ -10,7 +10,9 @@ import {
   Filter,
   Zap,
   BarChart2,
+  Repeat2,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 import BoostPostModal from "./BoostPostModal";
 import BoostAnalyticsModal from "./BoostAnalyticsModal";
 import { fetchPagePosts } from "../../redux/slices/trending.slice";
@@ -33,6 +35,7 @@ import LinkPreviewCard from "./LinkPreviewCard";
 
 
 export default function PagePostsComponent({ pageId, commentFilter: externalFilter = "all" }) {
+  const navigate = useNavigate();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
   const [selectedOption, setSelectedOption] = useState("");
@@ -207,9 +210,9 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
               {commentFilter === "none-comments" || commentFilter === "no"
                 ? "Showing: No Comments"
                 : commentFilter === "elevated-comments" || commentFilter === "elevated"
-                ? "Showing: Elevated Comments"
-                : commentFilter === "liked-comments" || commentFilter === "userLiked"
-                ? "Showing: Liked Comments"
+                ? "Showing: Elevated and Liked Comments"
+                : commentFilter === "liked-comments" || commentFilter === "userLiked" || commentFilter === "liked"
+                ? "Showing: User Liked Comments"
                 : "Showing: All Comments"}
             </div>
             <button
@@ -238,6 +241,57 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                     key={post._id}
                     className="bg-white rounded-lg shadow-md overflow-hidden"
                   >
+                    {/* Repost Attribution Header at TOP */}
+                    {(post.sharedBy || post.originalPost || post.isRepost) && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const origPageId =
+                            post?.originalPost?.page?._id ||
+                            post?.originalPost?.page ||
+                            post?.page?._id ||
+                            pageId;
+                          const origPostId =
+                            post?.originalPost?._id ||
+                            post?.originalPost?.id ||
+                            post?.originalPost ||
+                            post?._id;
+                          if (origPageId) {
+                            navigate(`/trending-page-detail/${origPageId}`, {
+                              state: { postId: origPostId },
+                            });
+                          } else if (origPostId) {
+                            navigate(`/home`, { state: { postId: origPostId } });
+                          }
+                        }}
+                        className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+                          {post.sharedBy?.profilePicture ? (
+                            <img
+                              src={post.sharedBy.profilePicture}
+                              alt={post.sharedBy.name}
+                              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                              {(post.sharedBy?.name || "U")[0]}
+                            </div>
+                          )}
+                          <span className="truncate">
+                            <span className="font-semibold text-gray-900">
+                              {post.sharedBy?.name || "User"}
+                            </span>{" "}
+                            reposted
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
+                          Go to original post →
+                        </span>
+                      </div>
+                    )}
+
                     {/* Header */}
                     <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center justify-between">

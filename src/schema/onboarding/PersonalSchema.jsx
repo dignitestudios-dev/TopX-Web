@@ -56,4 +56,25 @@ export const PersonalSchema = Yup.object().shape({
   ),
 
   bio: Yup.string().max(250, "Bio cannot exceed 250 characters."),
+
+  link: Yup.string()
+    .trim()
+    .test(
+      "is-valid-url",
+      "Please enter a valid URL (e.g., https://example.com)",
+      (value) => {
+        if (!value || value.trim() === "") return true;
+        try {
+          const urlToTest =
+            value.startsWith("http://") || value.startsWith("https://")
+              ? value
+              : `https://${value}`;
+          new URL(urlToTest);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+    )
+    .max(200, "Link cannot exceed 200 characters."),
 });

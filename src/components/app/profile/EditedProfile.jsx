@@ -30,6 +30,7 @@ export default function EditedProfile({ setIsEditProfile }) {
   const [username, setUsername] = useState(allUserData?.username || "");
   const [email, setEmail] = useState(allUserData?.email || "");
   const [bio, setBio] = useState(allUserData?.bio || "");
+  const [link, setLink] = useState(allUserData?.link || allUserData?.website || "");
   const [preview, setPreview] = useState(allUserData?.profilePicture || "");
   const [profileFile, setProfileFile] = useState(null);
   const [activeCategories, setActiveCategories] = useState([]);
@@ -302,6 +303,10 @@ export default function EditedProfile({ setIsEditProfile }) {
     }
 
     formData.append("bio", bio);
+    if (link && link.trim()) {
+      formData.append("link", link.trim());
+      formData.append("website", link.trim());
+    }
     console.log(activeCategories, "active categories");
     // Add each valid interest to FormData as indexed array (interests[0], interests[1], etc.)
     activeCategories.forEach((interest, index) => {
@@ -337,6 +342,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       setOriginalUsername(allUserData.username || "");
       setEmail(allUserData.email || "");
       setBio(allUserData.bio || "");
+      setLink(allUserData.link || allUserData.website || "");
       setPreview(allUserData.profilePicture || "");
       setActiveCategories(
         allUserData.interests?.map((i) => i) || []
@@ -503,6 +509,18 @@ export default function EditedProfile({ setIsEditProfile }) {
           placeholder="Text goes here"
           maxLength={400}
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
+        />
+      </div>
+
+      {/* Website / Link */}
+      <div className="w-full flex flex-col gap-2 py-2">
+        <label className="text-[14px] font-[500] text-gray-700">Website / Link</label>
+        <Input
+          type="text"
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="https://example.com"
+          size="md"
         />
       </div>
 

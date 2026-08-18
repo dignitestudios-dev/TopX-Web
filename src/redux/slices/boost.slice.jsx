@@ -37,32 +37,88 @@ const initialState = {
   locationLoading: false,
 };
 
+export const DEFAULT_FALLBACK_PLANS = [
+  {
+    _id: "plan_starter_10",
+    key: "boost_10_views",
+    label: "Starter – 10 Views",
+    impressions: 10,
+    durationDays: 3,
+    displayPrice: 0.99,
+    currency: "USD",
+  },
+  {
+    _id: "plan_growth_50",
+    key: "boost_50_views",
+    label: "Growth – 50 Views",
+    impressions: 50,
+    durationDays: 7,
+    displayPrice: 2.99,
+    currency: "USD",
+  },
+  {
+    _id: "plan_pro_100",
+    key: "boost_100_views",
+    label: "Pro – 100 Views",
+    impressions: 100,
+    durationDays: 14,
+    displayPrice: 4.99,
+    currency: "USD",
+  },
+  {
+    _id: "plan_viral_500",
+    key: "boost_500_views",
+    label: "Viral – 500 Views",
+    impressions: 500,
+    durationDays: 30,
+    displayPrice: 19.99,
+    currency: "USD",
+  },
+];
+
 // ====================================================
-// 🚀 1. LIST PLANS (GET /api/boosts/plans)
+// 🚀 1. LIST PLANS (GET /boosts/plans)
 // ====================================================
 export const fetchBoostPlans = createAsyncThunk(
   "boost/fetchPlans",
   async (_, thunkAPI) => {
     try {
-      const res = await axios.get("/api/boosts/plans");
-      return res.data?.data || [];
+      try {
+        const res = await axios.get("/boosts/plans");
+        if (res.data?.data && res.data.data.length > 0) {
+          return res.data.data;
+        }
+      } catch {
+        try {
+          const res2 = await axios.get("/api/boosts/plans");
+          if (res2.data?.data && res2.data.data.length > 0) {
+            return res2.data.data;
+          }
+        } catch {
+          // Gracefully fallback to default plans
+          return DEFAULT_FALLBACK_PLANS;
+        }
+      }
+      return DEFAULT_FALLBACK_PLANS;
     } catch (error) {
-      const msg = error.response?.data?.message || "Failed to fetch boost plans";
-      return thunkAPI.rejectWithValue(msg);
+      return DEFAULT_FALLBACK_PLANS;
     }
   }
 );
 
 // ====================================================
-// 🚀 2. CREATE STRIPE CHECKOUT SESSION (POST /api/boosts/stripe/checkout-session)
+// 🚀 2. CREATE STRIPE CHECKOUT SESSION (POST /boosts/stripe/checkout-session)
 // ====================================================
 export const createStripeCheckoutSession = createAsyncThunk(
   "boost/createStripeCheckoutSession",
   async ({ planId }, thunkAPI) => {
     try {
-      const res = await axios.post("/api/boosts/stripe/checkout-session", {
-        planId,
-      });
+      let res;
+      try {
+        res = await axios.post("/boosts/stripe/checkout-session", { planId });
+      } catch {
+        res = await axios.post("/api/boosts/stripe/checkout-session", { planId });
+      }
       return res.data?.data;
     } catch (error) {
       const msg =
@@ -74,16 +130,18 @@ export const createStripeCheckoutSession = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 3. VERIFY PURCHASE (POST /api/boosts/verify-purchase)
+// 🚀 3. VERIFY PURCHASE (POST /boosts/verify-purchase)
 // ====================================================
 export const verifyPurchase = createAsyncThunk(
   "boost/verifyPurchase",
   async (payload, thunkAPI) => {
     try {
-      // payload: { platform: "stripe", checkoutSessionId }
-      // or { platform: "apple", receiptData }
-      // or { platform: "google", productId, purchaseToken }
-      const res = await axios.post("/api/boosts/verify-purchase", payload);
+      let res;
+      try {
+        res = await axios.post("/boosts/verify-purchase", payload);
+      } catch {
+        res = await axios.post("/api/boosts/verify-purchase", payload);
+      }
       return res.data?.data;
     } catch (error) {
       const msg =
@@ -95,13 +153,18 @@ export const verifyPurchase = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 4. CREATE ACTIVE BOOST (POST /api/boosts)
+// 🚀 4. CREATE ACTIVE BOOST (POST /boosts)
 // ====================================================
 export const createBoost = createAsyncThunk(
   "boost/createBoost",
   async (payload, thunkAPI) => {
     try {
-      const res = await axios.post("/api/boosts", payload);
+      let res;
+      try {
+        res = await axios.post("/boosts", payload);
+      } catch {
+        res = await axios.post("/api/boosts", payload);
+      }
       SuccessToast(res.data?.message || "Boost campaign created successfully!");
       return res.data?.data;
     } catch (error) {
@@ -113,15 +176,18 @@ export const createBoost = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 5. RECORD IMPRESSION (POST /api/boosts/:boostId/impression)
+// 🚀 5. RECORD IMPRESSION (POST /boosts/:boostId/impression)
 // ====================================================
 export const recordImpression = createAsyncThunk(
   "boost/recordImpression",
   async ({ boostId, sessionId }, thunkAPI) => {
     try {
-      const res = await axios.post(`/api/boosts/${boostId}/impression`, {
-        sessionId,
-      });
+      let res;
+      try {
+        res = await axios.post(`/boosts/${boostId}/impression`, { sessionId });
+      } catch {
+        res = await axios.post(`/api/boosts/${boostId}/impression`, { sessionId });
+      }
       return { boostId, data: res.data };
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -132,17 +198,22 @@ export const recordImpression = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 6. LIST MY BOOSTS (GET /api/boosts/my)
+// 🚀 6. LIST MY BOOSTS (GET /boosts/my)
 // ====================================================
 export const fetchMyBoosts = createAsyncThunk(
   "boost/fetchMyBoosts",
   async ({ page = 1, limit = 10, status } = {}, thunkAPI) => {
     try {
-      let url = `/api/boosts/my?page=${page}&limit=${limit}`;
+      let query = `?page=${page}&limit=${limit}`;
       if (status) {
-        url += `&status=${status}`;
+        query += `&status=${status}`;
       }
-      const res = await axios.get(url);
+      let res;
+      try {
+        res = await axios.get(`/boosts/my${query}`);
+      } catch {
+        res = await axios.get(`/api/boosts/my${query}`);
+      }
       return {
         boosts: res.data?.data || [],
         pagination: res.data?.pagination || null,
@@ -156,14 +227,19 @@ export const fetchMyBoosts = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 7. GET BOOST ANALYTICS (GET /api/boosts/:boostId/analytics)
+// 🚀 7. GET BOOST ANALYTICS (GET /boosts/:boostId/analytics)
 // ====================================================
 export const fetchBoostAnalytics = createAsyncThunk(
   "boost/fetchBoostAnalytics",
   async (boostId, thunkAPI) => {
     try {
-      const res = await axios.get(`/api/boosts/${boostId}/analytics`);
-      return res.data?.data; // { boost: {}, analytics: {} }
+      let res;
+      try {
+        res = await axios.get(`/boosts/${boostId}/analytics`);
+      } catch {
+        res = await axios.get(`/api/boosts/${boostId}/analytics`);
+      }
+      return res.data?.data;
     } catch (error) {
       const msg =
         error.response?.data?.message || "Failed to fetch boost analytics";
@@ -174,13 +250,18 @@ export const fetchBoostAnalytics = createAsyncThunk(
 );
 
 // ====================================================
-// 🚀 8. CANCEL ACTIVE BOOST (DELETE /api/boosts/:boostId)
+// 🚀 8. CANCEL ACTIVE BOOST (DELETE /boosts/:boostId)
 // ====================================================
 export const cancelBoost = createAsyncThunk(
   "boost/cancelBoost",
   async (boostId, thunkAPI) => {
     try {
-      const res = await axios.delete(`/api/boosts/${boostId}`);
+      let res;
+      try {
+        res = await axios.delete(`/boosts/${boostId}`);
+      } catch {
+        res = await axios.delete(`/api/boosts/${boostId}`);
+      }
       SuccessToast(res.data?.message || "Boost cancelled successfully");
       return { boostId, message: res.data?.message };
     } catch (error) {

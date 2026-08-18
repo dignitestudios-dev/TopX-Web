@@ -3,6 +3,7 @@ import axios from "../../../axios";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
 import { nofound } from "../../../assets/export";
 import Avatar from "../../common/Avatar";
+import { useEffect, useState } from "react";
 
 export default function FollowRequestsModal({ isOpen, onClose, pageId, onActionComplete }) {
   const [requests, setRequests] = useState([]);
@@ -36,7 +37,7 @@ export default function FollowRequestsModal({ isOpen, onClose, pageId, onActionC
     try {
       setActionLoadingId(requestId);
       const res = await axios.post(`/requests/${requestId}/follow`, { status });
-      
+
       SuccessToast(
         status === "accepted"
           ? "Follow request accepted!"

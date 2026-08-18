@@ -83,7 +83,7 @@ export default function Home() {
           id: post._id,
           user: post.page?.name || post.author?.name || "Unknown User",
           username: `@${
-            post.page?.user?.username || post.author?.username || "user"
+            post.author?.username || post.page?.user?.username || "user"
           }`,
           time: timeAgo(post.createdAt), // Use the new timeAgo function here
           tag: post.page?.topic || "",
@@ -99,12 +99,26 @@ export default function Home() {
           isLiked: local?.isLiked ?? post.isLiked ?? false,
           likesCount: local?.likesCount ?? post.likesCount ?? 0,
           avatar:
-            post.page?.user?.profilePicture ||
             post.author?.profilePicture ||
+            post.page?.user?.profilePicture ||
             "https://randomuser.me/api/portraits/men/1.jpg",
           postimage: post.media?.map((m) => m.fileUrl) || [],
           media: post.media || [],
-          author: post.author || null,
+          author: post.author
+            ? {
+                _id: post.author._id || post.author.id,
+                name: post.author.name,
+                username: post.author.username,
+                profilePicture: post.author.profilePicture,
+              }
+            : post.page?.user
+            ? {
+                _id: post.page.user._id || post.page.user.id,
+                name: post.page.user.name,
+                username: post.page.user.username,
+                profilePicture: post.page.user.profilePicture,
+              }
+            : null,
           page: post.page || null,
           isAllowedByAdmin: post?.isAllowedByAdmin,
           // ✅ pass reported flag to HomePostFeed

@@ -381,7 +381,12 @@ export default function KnowledgeCommentsSection({
               />
               <button
                 onClick={() => submitReply()}
-                className="bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-600 transition"
+                disabled={!replyText.trim()}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  !replyText.trim()
+                    ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+                    : "bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
+                }`}
               >
                 Reply
               </button>
@@ -396,23 +401,32 @@ export default function KnowledgeCommentsSection({
         )}
 
         {/* Nested Replies */}
-        {comment.replies.map((reply) => (
-          <CommentItem
-            key={reply._id}
-            comment={reply}
-            isReply={true}
-            parentId={comment._id}
-            onAddReply={addReply}
-            setNewComment={setNewComment}
-            setEditingCommentId={setEditingCommentId}
-            onDeleteComment={onDeleteComment}
-            onElevateComment={onElevateComment}
-            onReportComment={onReportComment}
-          />
-        ))}
+        {Array.isArray(comment.replies) &&
+          comment.replies.map((reply, idx) => (
+            <CommentItem
+              key={reply._id || reply.id || idx}
+              comment={reply}
+              isReply={true}
+              parentId={comment._id}
+              onAddReply={addReply}
+              setNewComment={setNewComment}
+              setEditingCommentId={setEditingCommentId}
+              onDeleteComment={onDeleteComment}
+              onElevateComment={onElevateComment}
+              onReportComment={onReportComment}
+            />
+          ))}
       </div>
     );
   };
+
+  const sortedComments = Array.isArray(postComments)
+    ? [...postComments].sort((a, b) => {
+        const aElevated = a?.isElevated ? 1 : 0;
+        const bElevated = b?.isElevated ? 1 : 0;
+        return bElevated - aElevated;
+      })
+    : [];
 
   return (
     <div className="mt-6 border-t border-gray-200 p-6">
@@ -430,17 +444,17 @@ export default function KnowledgeCommentsSection({
             }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addComment()}
+            onKeyPress={(e) => e.key === "Enter" && addOrUpdateComment()}
             className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm border border-gray-300 focus:outline-none focus:border-orange-500"
           />
           <button
             onClick={addOrUpdateComment}
-            disabled={commentLoading}
+            disabled={commentLoading || !newComment.trim()}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
     ${
-      commentLoading
-        ? "bg-orange-300 cursor-not-allowed"
-        : "bg-orange-500 hover:bg-orange-600 text-white"
+      commentLoading || !newComment.trim()
+        ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+        : "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
     }
   `}
           >
@@ -457,35 +471,41 @@ export default function KnowledgeCommentsSection({
 
       {/* Comments List */}
       <div className="space-y-1">
-        {getCommentsLoading
-          ? Array.from({ length: 2 }).map((_, idx) => (
-              <div key={idx} className="flex gap-3 py-3 animate-pulse">
-                {/* Avatar */}
-                <div className="w-8 h-8 bg-gray-300 rounded-full" />
+        {getCommentsLoading ? (
+          Array.from({ length: 2 }).map((_, idx) => (
+            <div key={idx} className="flex gap-3 py-3 animate-pulse">
+              {/* Avatar */}
+              <div className="w-8 h-8 bg-gray-300 rounded-full" />
 
-                {/* Content */}
-                <div className="flex-1 space-y-2">
-                  <div className="h-3 w-24 bg-gray-300 rounded" />
-                  <div className="h-3 w-full bg-gray-200 rounded" />
-                  <div className="h-3 w-3/4 bg-gray-200 rounded" />
-                </div>
+              {/* Content */}
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 bg-gray-300 rounded" />
+                <div className="h-3 w-full bg-gray-200 rounded" />
+                <div className="h-3 w-3/4 bg-gray-200 rounded" />
               </div>
-            ))
-          : postComments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                onAddReply={addReply}
-                comment={comment}
-                setNewComment={setNewComment}
-                setEditingCommentId={setEditingCommentId}
-                onDeleteComment={handleDeleteComment}
-                onElevateComment={handleElevateComment}
-                onReportComment={(commentId) => {
-                  setReportTargetId(commentId);
-                  setReportmodal(true);
-                }}
-              />
-            ))}
+            </div>
+          ))
+        ) : sortedComments.length > 0 ? (
+          sortedComments.map((comment, idx) => (
+            <CommentItem
+              key={comment._id || comment.id || idx}
+              onAddReply={addReply}
+              comment={comment}
+              setNewComment={setNewComment}
+              setEditingCommentId={setEditingCommentId}
+              onDeleteComment={handleDeleteComment}
+              onElevateComment={handleElevateComment}
+              onReportComment={(commentId) => {
+                setReportTargetId(commentId);
+                setReportmodal(true);
+              }}
+            />
+          ))
+        ) : (
+          <div className="text-center py-6 text-xs text-gray-500 bg-gray-50/70 rounded-xl border border-gray-100">
+            No comments yet.
+          </div>
+        )}
       </div>
 
       {/* Report Modal */}

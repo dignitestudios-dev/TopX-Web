@@ -192,6 +192,10 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
       formData.append("dob", values.dateOfBirth);
       formData.append("gender", values.gender);
       formData.append("bio", values.bio || "");
+      if (values.link && values.link.trim()) {
+        formData.append("link", values.link.trim());
+        formData.append("website", values.link.trim());
+      }
 
       let binaryFile = imageFile;
       if (!(binaryFile instanceof File) && imagePreview) {
@@ -431,6 +435,22 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                 placeholder="My Bio"
                 className="w-full h-[143px] border bg-[#F8F8F899] outline-none rounded-[12px] p-2 text-[16px] resize-none"
               ></textarea>
+            </div>
+
+            {/* Link / Website */}
+            <div className="flex flex-col gap-1">
+              <Input
+                label="Website / Link (optional)"
+                type="text"
+                name="link"
+                value={values.link}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="https://example.com"
+                touched={touched.link}
+                error={errors.link}
+                size="md"
+              />
             </div>
           </div>
 

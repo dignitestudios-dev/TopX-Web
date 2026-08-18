@@ -13,5 +13,6 @@ export const PersonalValues = {
     gender: "",
     profileImage: "",
     bio: "",
+    link: "",
 };
 

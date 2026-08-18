@@ -92,10 +92,11 @@ export default function CollectionFeedPostCard({
     (Array.isArray(fullPost?.postimage) && fullPost.postimage.length > 0)
   );
   const [isPrivatePost, setIsPrivatePost] = useState(false);
-  const isUnderReview = Boolean(fullPost?.isReported);
-
+  const isUnderReview = Boolean(fullPost?.isReported || post?.isReported);
   //  Edit / delete Post Stats
-
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteLoadingId, setDeleteLoadingId] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
   const [existingMedia, setExistingMedia] = useState([]);
   const [currentImages, setCurrentImages] = useState([]);
   const [boostModalOpen, setBoostModalOpen] = useState(false);
@@ -442,13 +443,11 @@ export default function CollectionFeedPostCard({
   };
 
   const handleDeleteModal = async () => {
-    await dispatch(deletePost({ postId: selectedPost })).unwrap();
-    setDeleteModal(false);
-    if (pageId) {
-      await dispatch(
-        getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
-      ).unwrap();
+    const targetPostId = selectedPost || fullPost?._id || isPostId;
+    if (targetPostId) {
+      await handleDeletePost(targetPostId);
     }
+    setDeleteModal(false);
   };
 
   console.log(fullPost, "sharedRepost");
@@ -460,25 +459,57 @@ export default function CollectionFeedPostCard({
       }`}
     >
       {/* Repost Header Attribution at TOP */}
-      {(fullPost?.sharedBy || post?.sharedBy) && (
-        <div className="px-4 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700">
-          <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
-          {(fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture) ? (
-            <img
-              src={fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture}
-              alt="Shared by"
-              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-            />
-          ) : (
-            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-              {(fullPost?.sharedBy?.name || post?.sharedBy?.name || "U")[0]}
-            </div>
-          )}
-          <span className="truncate">
-            <span className="font-semibold text-gray-900">
-              {fullPost?.sharedBy?.name || post?.sharedBy?.name || "User"}
-            </span>{" "}
-            reposted
+      {(fullPost?.sharedBy || post?.sharedBy || fullPost?.originalPost || post?.originalPost || fullPost?.isRepost || post?.isRepost) && (
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            const origPostObj = fullPost?.originalPost || post?.originalPost;
+            const origPageId =
+              origPostObj?.page?._id ||
+              origPostObj?.page ||
+              fullPost?.page?._id ||
+              post?.page?._id ||
+              page?._id ||
+              page;
+            const origPostId =
+              origPostObj?._id ||
+              origPostObj?.id ||
+              origPostObj ||
+              isPostId ||
+              fullPost?._id ||
+              post?._id;
+            if (origPageId) {
+              navigate(`/trending-page-detail/${origPageId}`, {
+                state: { postId: origPostId },
+              });
+            } else if (origPostId) {
+              navigate(`/home`, { state: { postId: origPostId } });
+            }
+          }}
+          className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
+            {(fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture) ? (
+              <img
+                src={fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture}
+                alt="Shared by"
+                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
+                {(fullPost?.sharedBy?.name || post?.sharedBy?.name || "U")[0]}
+              </div>
+            )}
+            <span className="truncate">
+              <span className="font-semibold text-gray-900">
+                {fullPost?.sharedBy?.name || post?.sharedBy?.name || "User"}
+              </span>{" "}
+              reposted
+            </span>
+          </div>
+          <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
+            Go to original post →
           </span>
         </div>
       )}
@@ -600,14 +631,13 @@ export default function CollectionFeedPostCard({
                   )}
                   <button
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={deleteLoadingId === fullPost._id}
                     onClick={() => {
-                      handleDeletePost(fullPost._id);
+                      setMoreOpen(false);
+                      setSelectedPost(fullPost?._id || isPostId);
+                      setDeleteModal(true);
                     }}
                   >
-                    {deleteLoadingId === fullPost._id
-                      ? "Deleting..."
-                      : "Delete Post"}
+                    Delete Post
                   </button>
                 </>
               ) : (
@@ -801,6 +831,7 @@ export default function CollectionFeedPostCard({
           postId={isPostId}
           collectionId={collectionId}
           applyFilter={true}
+          commentFilter={currentCollectionFilter?.filterType || "all-comments"}
         />
       )}
 

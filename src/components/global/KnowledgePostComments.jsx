@@ -325,7 +325,12 @@ export default function KnowledgePostComments({ postId }) {
               />
               <button
                 onClick={() => submitReply()}
-                className="bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-600 transition"
+                disabled={!replyText.trim()}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  !replyText.trim()
+                    ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+                    : "bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
+                }`}
               >
                 Reply
               </button>
@@ -340,17 +345,18 @@ export default function KnowledgePostComments({ postId }) {
         )}
 
         {/* Nested Replies */}
-        {comment.replies.map((reply) => (
-          <CommentItem
-            key={reply._id}
-            comment={reply}
-            isReply={true}
-            parentId={comment._id}
-            onAddReply={addReply}
-            setNewComment={setNewComment}
-            setEditingCommentId={setEditingCommentId}
-          />
-        ))}
+        {Array.isArray(comment.replies) &&
+          comment.replies.map((reply, idx) => (
+            <CommentItem
+              key={reply._id || reply.id || idx}
+              comment={reply}
+              isReply={true}
+              parentId={comment._id}
+              onAddReply={addReply}
+              setNewComment={setNewComment}
+              setEditingCommentId={setEditingCommentId}
+            />
+          ))}
       </div>
     );
   };
@@ -371,17 +377,17 @@ export default function KnowledgePostComments({ postId }) {
             }
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && addComment()}
+            onKeyPress={(e) => e.key === "Enter" && addOrUpdateComment()}
             className="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm border border-gray-300 focus:outline-none focus:border-orange-500"
           />
           <button
             onClick={addOrUpdateComment}
-            disabled={commentLoading}
+            disabled={commentLoading || !newComment.trim()}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
     ${
-      commentLoading
-        ? "bg-orange-300 cursor-not-allowed"
-        : "bg-orange-500 hover:bg-orange-600 text-white"
+      commentLoading || !newComment.trim()
+        ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+        : "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
     }
   `}
           >

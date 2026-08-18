@@ -249,11 +249,23 @@ export default function TrendingPostCard({
         <div
           onClick={(e) => {
             e.stopPropagation();
-            const origPageId = post?.originalPost?.page?._id || post?.originalPost?.page || post?.page?._id;
+            const origPageId =
+              post?.originalPost?.page?._id ||
+              post?.originalPost?.page ||
+              post?.page?._id ||
+              post?.pageId ||
+              post?.page;
+            const origPostId =
+              post?.originalPost?._id ||
+              post?.originalPost?.id ||
+              post?.originalPost ||
+              post?._id;
             if (origPageId) {
               navigate(`/trending-page-detail/${origPageId}`, {
-                state: { postId: post?.originalPost?._id || post?.originalPost || post?._id }
+                state: { postId: origPostId }
               });
+            } else if (origPostId) {
+              navigate(`/home`, { state: { postId: origPostId } });
             }
           }}
           className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between cursor-pointer hover:bg-orange-100 transition-colors"

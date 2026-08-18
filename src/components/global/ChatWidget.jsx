@@ -83,6 +83,24 @@ const renderMessageWithLinks = (content, isMe = false) => {
   });
 };
 
+// Helper to detect generic automated shared-post strings to avoid cluttered repetitive text
+const isBoilerplateContent = (content) => {
+  if (!content || typeof content !== "string") return false;
+  const lower = content.trim().toLowerCase();
+  return (
+    lower === "shared a post" ||
+    lower === "shared a text post" ||
+    lower === "user shared a text post" ||
+    lower === "user shared a post" ||
+    lower === "shared a knowledge post" ||
+    lower === "shared a story" ||
+    lower === "shared a live" ||
+    lower === "shared a video post" ||
+    lower === "shared an image post" ||
+    lower === "shared a media post"
+  );
+};
+
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -1461,26 +1479,30 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     >
                     {msg.type === "shared" && msg.shared ? (
   msg.shared.sharedType === "knowledge" ? (
-    // KNOWLEDGE UI (same as yours)
+    // KNOWLEDGE UI
     <div className="space-y-2">
       {msg.shared.name && (
-        <div className="flex items-center gap-2 mb-2">
-          {msg.shared.pageImage && (
-            <img
-              src={msg.shared.pageImage}
-              alt="Page"
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          )}
-          <p className="text-xs font-semibold opacity-90">
-            {msg.shared.name}
-          </p>
+        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {msg.shared.pageImage && (
+              <img
+                src={msg.shared.pageImage}
+                alt="Page"
+                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <p className="text-xs font-semibold truncate">
+              {msg.shared.name}
+            </p>
+          </div>
+          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+            Knowledge
+          </span>
         </div>
       )}
-      <p className="text-xs opacity-80 mb-2">Shared a knowledge post</p>
 
       <div
-        className="rounded-xl overflow-hidden min-h-[120px] flex items-center justify-center p-6 relative"
+        className="rounded-xl overflow-hidden min-h-[100px] flex items-center justify-center p-4 relative shadow-sm"
         style={{
           background:
             "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -1488,9 +1510,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       >
         <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
 
-        {msg.shared.textOnImage && (
-          <p className="text-center relative z-10 text-white font-medium">
-            {msg.shared.textOnImage}
+        {(msg.shared.textOnImage || (!isBoilerplateContent(msg.content) && msg.content)) && (
+          <p className="text-center relative z-10 text-white font-medium text-sm">
+            {msg.shared.textOnImage || msg.content}
           </p>
         )}
       </div>
@@ -1499,21 +1521,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     // STORY UI
     <div className="space-y-2">
       {msg.shared.name && (
-        <div className="flex items-center gap-2 mb-2">
-          {msg.shared.pageImage && (
-            <img
-              src={msg.shared.pageImage}
-              alt="Page"
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          )}
-          <p className="text-xs font-semibold opacity-90">
-            {msg.shared.name}
-          </p>
+        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {msg.shared.pageImage && (
+              <img
+                src={msg.shared.pageImage}
+                alt="Page"
+                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <p className="text-xs font-semibold truncate">
+              {msg.shared.name}
+            </p>
+          </div>
+          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+            Story
+          </span>
         </div>
       )}
-
-      <p className="text-xs opacity-80 mb-2">Shared a story</p>
 
       <div
         className="relative rounded-lg overflow-hidden cursor-pointer"
@@ -1525,11 +1550,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         <img
           src={msg.shared.media}
           alt="Story"
-          className="w-full h-40 object-cover"
+          className="w-full h-40 object-cover rounded-lg"
         />
 
         {/* Story badge */}
-        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded">
+        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-medium">
           STORY
         </div>
       </div>
@@ -1538,21 +1563,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     // LIVE UI
     <div className="space-y-2">
       {msg.shared.name && (
-        <div className="flex items-center gap-2 mb-2">
-          {msg.shared.pageImage && (
-            <img
-              src={msg.shared.pageImage}
-              alt="Page"
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          )}
-          <p className="text-xs font-semibold opacity-90">
-            {msg.shared.name}
-          </p>
+        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {msg.shared.pageImage && (
+              <img
+                src={msg.shared.pageImage}
+                alt="Page"
+                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <p className="text-xs font-semibold truncate">
+              {msg.shared.name}
+            </p>
+          </div>
+          <span className="text-[10px] font-medium opacity-90 uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-600/80 text-white flex-shrink-0">
+            Live
+          </span>
         </div>
       )}
-
-      <p className="text-xs opacity-80 mb-2">Shared a live</p>
 
       <div
         className="relative rounded-lg overflow-hidden cursor-pointer"
@@ -1564,34 +1592,37 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         <img
           src={msg.shared.media}
           alt="Live"
-          className="w-full h-40 object-cover"
+          className="w-full h-40 object-cover rounded-lg"
         />
 
         {/* LIVE badge */}
-        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-1 rounded animate-pulse">
+        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold animate-pulse">
           LIVE
         </div>
       </div>
     </div>
   ) : (
-    // NORMAL POST UI
+    // NORMAL / TEXT POST UI
     <div className="space-y-2">
-      {msg.shared.name && (
-        <div className="flex items-center gap-2 mb-2">
-          {msg.shared.pageImage && (
-            <img
-              src={msg.shared.pageImage}
-              alt="Page"
-              className="w-6 h-6 rounded-full object-cover"
-            />
-          )}
-          <p className="text-xs font-semibold opacity-90">
-            {msg.shared.name}
-          </p>
+      {msg.shared.name ? (
+        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {msg.shared.pageImage && (
+              <img
+                src={msg.shared.pageImage}
+                alt="Page"
+                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <p className="text-xs font-semibold truncate">
+              {msg.shared.name}
+            </p>
+          </div>
+          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+            Post
+          </span>
         </div>
-      )}
-
-      <p className="text-xs opacity-80 mb-2">Shared a post</p>
+      ) : null}
 
       {msg.shared.media && (
         <div className="rounded-lg overflow-hidden">
@@ -1611,13 +1642,26 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         </div>
       )}
 
-      {msg.shared.textOnImage && (
-        <p className="text-sm mt-2">{msg.shared.textOnImage}</p>
-      )}
+      {/* Post Text content (either from textOnImage or content if not boilerplate) */}
+      {(() => {
+        const textContent =
+          msg.shared.textOnImage ||
+          (!isBoilerplateContent(msg.content) ? msg.content : "");
+        if (!textContent) return null;
+        return (
+          <p className="text-sm mt-1 break-words whitespace-pre-wrap">
+            {renderMessageWithLinks(
+              textContent,
+              (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+            )}
+          </p>
+        );
+      })()}
 
       {msg.content &&
-        msg.content !== "Shared a post" && (
-          <p className="text-sm mt-2 break-words whitespace-pre-wrap">
+        !isBoilerplateContent(msg.content) &&
+        msg.content !== msg.shared.textOnImage && (
+          <p className="text-sm mt-1 break-words whitespace-pre-wrap opacity-95">
             {renderMessageWithLinks(
               msg.content,
               (msg.sender?._id || msg.sender) === (user?._id || user?.id),
@@ -1629,7 +1673,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 ) : (
   <p className="text-sm break-words whitespace-pre-wrap">
     {renderMessageWithLinks(
-      msg.content,
+      isBoilerplateContent(msg.content) ? "" : msg.content,
       (msg.sender?._id || msg.sender) === (user?._id || user?.id),
     )}
   </p>

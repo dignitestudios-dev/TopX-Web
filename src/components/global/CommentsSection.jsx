@@ -72,17 +72,20 @@ export default function CommentsSection({
 
   const isNoComments = commentFilter === "none-comments" || commentFilter === "no";
 
+  const getNormalizedCommentFilter = (f) => {
+    if (!f || f === "all" || f === "all-comments") return "all-comments";
+    if (f === "no" || f === "none-comments") return "none-comments";
+    if (f === "elevated" || f === "elevated-comments") return "elevated-comments";
+    if (f === "userLiked" || f === "liked" || f === "liked-comments") return "liked-comments";
+    return f;
+  };
+
   const handleGetComments = async () => {
     if (isNoComments) {
       return;
     }
 
-    let normalizedFilter = null;
-    if (commentFilter) {
-      if (commentFilter === "all" || commentFilter === "all-comments") normalizedFilter = "all-comments";
-      else if (commentFilter === "elevated" || commentFilter === "elevated-comments") normalizedFilter = "elevated-comments";
-      else if (commentFilter === "userLiked" || commentFilter === "liked" || commentFilter === "liked-comments") normalizedFilter = "liked-comments";
-    }
+    const normalizedFilter = getNormalizedCommentFilter(commentFilter);
 
     if (collectionId && applyFilter) {
       await dispatch(getComment({ postId, collectionId, applyFilter: true, filterType: normalizedFilter }));
@@ -656,7 +659,12 @@ export default function CommentsSection({
               />
               <button
                 onClick={() => submitReply()}
-                className="bg-orange-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-orange-600 transition"
+                disabled={!replyText.trim()}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                  !replyText.trim()
+                    ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+                    : "bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
+                }`}
               >
                 Reply
               </button>
@@ -671,23 +679,68 @@ export default function CommentsSection({
         )}
 
         {/* Nested Replies */}
-        {comment.replies.map((reply) => (
-          <CommentItem
-            key={reply._id}
-            comment={reply}
-            isReply={true}
-            parentId={comment._id}
-            onAddReply={addReply}
-            setNewComment={setNewComment}
-            setEditingCommentId={setEditingCommentId}
-            onDeleteComment={onDeleteComment}
-            onElevateComment={onElevateComment}
-            onReportComment={onReportComment}
-            onBlockUser={onBlockUser}
-          />
-        ))}
+        {Array.isArray(comment.replies) &&
+          comment.replies.map((reply, idx) => (
+            <CommentItem
+              key={reply._id || reply.id || idx}
+              comment={reply}
+              isReply={true}
+              parentId={comment._id}
+              onAddReply={onAddReply}
+              setNewComment={setNewComment}
+              setEditingCommentId={setEditingCommentId}
+              onDeleteComment={onDeleteComment}
+              onElevateComment={onElevateComment}
+              onReportComment={onReportComment}
+              onBlockUser={onBlockUser}
+            />
+          ))}
       </div>
     );
+  };
+
+  const isCommentElevated = (c) => Boolean(c?.isElevated);
+  const isCommentLiked = (c) =>
+    Boolean(c?.isLiked) ||
+    Number(c?.likesCount ?? 0) > 0 ||
+    (Array.isArray(c?.likes) && c.likes.length > 0);
+
+  const filterCommentTree = (comments, filterType) => {
+    if (!Array.isArray(comments)) return [];
+    const normalized = getNormalizedCommentFilter(filterType);
+    if (!normalized || normalized === "all-comments") {
+      return comments;
+    }
+
+    return comments
+      .map((comment) => {
+        const filteredReplies = comment.replies?.length
+          ? filterCommentTree(comment.replies, normalized)
+          : [];
+
+        let matches = false;
+        if (normalized === "elevated-comments") {
+          matches = isCommentElevated(comment) || isCommentLiked(comment);
+        } else if (normalized === "liked-comments") {
+          matches = isCommentLiked(comment);
+        } else {
+          matches = true;
+        }
+
+        if (matches || filteredReplies.length > 0) {
+          return {
+            ...comment,
+            replies:
+              filteredReplies.length > 0
+                ? filteredReplies
+                : matches
+                ? comment.replies || []
+                : [],
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
   };
 
   if (isNoComments) {
@@ -728,12 +781,12 @@ export default function CommentsSection({
           />
           <button
             onClick={addOrUpdateComment}
-            disabled={commentLoading}
+            disabled={commentLoading || !newComment.trim()}
             className={`px-4 py-2 rounded-full text-sm font-medium transition
     ${
-      commentLoading
-        ? "bg-orange-300 cursor-not-allowed"
-        : "bg-orange-500 hover:bg-orange-600 text-white"
+      commentLoading || !newComment.trim()
+        ? "bg-orange-300 cursor-not-allowed opacity-60 text-white"
+        : "bg-orange-500 hover:bg-orange-600 text-white cursor-pointer"
     }
   `}
           >
@@ -748,49 +801,56 @@ export default function CommentsSection({
         </div>
       </div>
 
-      {/* Top-level comments: elevated first */}
+      {/* Top-level comments: filtered and elevated first */}
       {(() => {
-        const sortedComments = Array.isArray(postComments)
-          ? [...postComments].sort((a, b) => {
-              const aElevated = a?.isElevated ? 1 : 0;
-              const bElevated = b?.isElevated ? 1 : 0;
-              // Elevated comments first; keep relative order otherwise
-              return bElevated - aElevated;
-            })
-          : [];
+        const filteredComments = filterCommentTree(
+          postComments,
+          commentFilter
+        ).sort((a, b) => {
+          const aElevated = a?.isElevated ? 1 : 0;
+          const bElevated = b?.isElevated ? 1 : 0;
+          // Elevated comments first; keep relative order otherwise
+          return bElevated - aElevated;
+        });
 
         return (
           <div className="space-y-1">
-            {getCommentsLoading
-              ? Array.from({ length: 2 }).map((_, idx) => (
-                  <div key={idx} className="flex gap-3 py-3 animate-pulse">
-                    {/* Avatar */}
-                    <div className="w-8 h-8 bg-gray-300 rounded-full" />
+            {getCommentsLoading ? (
+              Array.from({ length: 2 }).map((_, idx) => (
+                <div key={idx} className="flex gap-3 py-3 animate-pulse">
+                  {/* Avatar */}
+                  <div className="w-8 h-8 bg-gray-300 rounded-full" />
 
-                    {/* Content */}
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-24 bg-gray-300 rounded" />
-                      <div className="h-3 w-full bg-gray-200 rounded" />
-                      <div className="h-3 w-3/4 bg-gray-200 rounded" />
-                    </div>
+                  {/* Content */}
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-24 bg-gray-300 rounded" />
+                    <div className="h-3 w-full bg-gray-200 rounded" />
+                    <div className="h-3 w-3/4 bg-gray-200 rounded" />
                   </div>
-                ))
-              : sortedComments.map((comment) => (
-                  <CommentItem
-                    key={comment.id}
-                    onAddReply={addReply}
-                    comment={comment}
-                    setNewComment={setNewComment}
-                    setEditingCommentId={setEditingCommentId}
-                    onDeleteComment={handleDeleteComment}
-                    onElevateComment={handleElevateComment}
-                    onReportComment={(commentId) => {
-                      setReportTargetId(commentId);
-                      setReportmodal(true);
-                    }}
-                    onBlockUser={handleBlockUser}
-                  />
-                ))}
+                </div>
+              ))
+            ) : filteredComments.length > 0 ? (
+              filteredComments.map((comment, idx) => (
+                <CommentItem
+                  key={comment._id || comment.id || idx}
+                  onAddReply={addReply}
+                  comment={comment}
+                  setNewComment={setNewComment}
+                  setEditingCommentId={setEditingCommentId}
+                  onDeleteComment={handleDeleteComment}
+                  onElevateComment={handleElevateComment}
+                  onReportComment={(commentId) => {
+                    setReportTargetId(commentId);
+                    setReportmodal(true);
+                  }}
+                  onBlockUser={handleBlockUser}
+                />
+              ))
+            ) : (
+              <div className="text-center py-6 text-xs text-gray-500 bg-gray-50/70 rounded-xl border border-gray-100">
+                No comments match the selected filter.
+              </div>
+            )}
           </div>
         );
       })()}

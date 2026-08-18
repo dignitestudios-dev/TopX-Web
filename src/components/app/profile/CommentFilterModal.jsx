@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 const CommentFilterModal = ({ isOpen, onClose, onApply, selectedFilter }) => {
@@ -12,6 +12,12 @@ const CommentFilterModal = ({ isOpen, onClose, onApply, selectedFilter }) => {
   };
 
   const [localSelectedFilter, setLocalSelectedFilter] = useState(getNormalized(selectedFilter));
+
+  useEffect(() => {
+    if (isOpen) {
+      setLocalSelectedFilter(getNormalized(selectedFilter));
+    }
+  }, [isOpen, selectedFilter]);
 
   if (!isOpen) return null;
 
