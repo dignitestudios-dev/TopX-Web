@@ -40,6 +40,7 @@ import PrivatePostModal from "./PrivatePostModal";
 import DeletePostModal from "./DeletePostModal";
 import { getLinkPreview } from "../../lib/helpers";
 import LinkPreviewCard from "./LinkPreviewCard";
+import { fetchpostfeed } from "../../redux/slices/postfeed.slice";
 
 export default function HomePostFeed({
   post,

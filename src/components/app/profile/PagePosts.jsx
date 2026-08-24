@@ -232,6 +232,7 @@ const PagePosts = ({
         isReported: true,
       }),
     );
+    dispatch(getPostsByPageId({ pageId, page: 1, limit: 100 }));
   };
 
   // Loading State
@@ -314,7 +315,7 @@ const PagePosts = ({
     );
   }
 
-  console.log(mergedPosts, "pagepost (merged with elevated)");
+  
 
   // Comment filter applies to comments inside posts, not the posts themselves
   const filteredPosts = mergedPosts || [];
