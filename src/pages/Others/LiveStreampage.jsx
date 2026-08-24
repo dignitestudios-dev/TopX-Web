@@ -37,7 +37,6 @@ const LiveStreampage = () => {
   const [role, setRole] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
-  const [viewerCount, setViewerCount] = useState(0);
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
@@ -238,6 +237,7 @@ const LiveStreampage = () => {
     error: rtmError,
     sendComment,
     sendLike,
+    viewerCount,
   } = useRTM(
     hasRTMParams
       ? {
@@ -314,14 +314,17 @@ const LiveStreampage = () => {
   useEffect(() => {
     // Only play local video if user is host
     if (role === "host" && localVideo && localVideoRef.current) {
-      console.log("📹 Playing local video (host)", {
-        hasLocalVideo: !!localVideo,
-        hasRef: !!localVideoRef.current,
-        isPlaying: localVideo.isPlaying,
-      });
+      if (localVideo.isPlaying) {
+        console.log("📹 Local video is already playing, skipping play() call");
+      } else {
+        console.log("📹 Playing local video (host)", {
+          hasLocalVideo: !!localVideo,
+          hasRef: !!localVideoRef.current,
+          isPlaying: localVideo.isPlaying,
+        });
 
-      try {
-        const playPromise = localVideo.play(localVideoRef.current);
+        try {
+          const playPromise = localVideo.play(localVideoRef.current);
         // Handle promise if it exists
         if (playPromise && typeof playPromise.then === "function") {
           playPromise
@@ -338,6 +341,7 @@ const LiveStreampage = () => {
       } catch (err) {
         console.error("❌ Error calling localVideo.play():", err);
       }
+    }
     } else if (role === "host" && !localVideo) {
       console.log("⏳ Host: Waiting for local video track...");
     }
@@ -467,12 +471,7 @@ const LiveStreampage = () => {
     });
   }, [remoteUsers, role]);
 
-  // Update viewer count (simplified - in production, get from Agora stats)
-  useEffect(() => {
-    if (isJoined) {
-      setViewerCount(remoteUsers.length + (role === "host" ? 1 : 0));
-    }
-  }, [remoteUsers.length, isJoined, role]);
+  // Viewer count is now handled by RTM presence directly from useRTM hook
 
   // Handle leave/end stream
   const handleEndStream = async () => {

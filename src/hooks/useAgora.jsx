@@ -46,7 +46,11 @@ export const useAgora = ({
 
         setRemoteUsers((prev) => {
           const exists = prev.find((u) => u.uid === user.uid);
-          return exists ? prev : [...prev, user];
+          // Return a NEW array to trigger React re-render so video is displayed
+          if (exists) {
+            return prev.map((u) => (u.uid === user.uid ? user : u));
+          }
+          return [...prev, user];
         });
 
         if (mediaType === "audio" && user.audioTrack) {
@@ -66,6 +70,9 @@ export const useAgora = ({
     const handleUserUnpublished = (user, mediaType) => {
       if (mediaType === "video") user.videoTrack?.stop();
       if (mediaType === "audio") user.audioTrack?.stop();
+      
+      // Force UI update
+      setRemoteUsers((prev) => prev.map((u) => (u.uid === user.uid ? user : u)));
     };
 
     // 🔹 User left

@@ -9,6 +9,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
   const [comments, setComments] = useState([]);
   const [likesCount, setLikesCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
+  const [viewerCount, setViewerCount] = useState(0);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -56,6 +57,24 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             event.state === "RECONNECTING"
           ) {
             setIsConnected(false);
+            setViewerCount(0);
+          }
+        });
+
+        // ✅ Add Presence Listener for Viewer Count
+        client.addEventListener("presence", (event) => {
+          if (!isMounted) return;
+          
+          if (event.eventType === "SNAPSHOT") {
+            // Snapshot gives us the initial list of users currently in the channel
+            setViewerCount(event.snapshot.length);
+          } else if (event.eventType === "REMOTE_JOIN") {
+            setViewerCount((prev) => prev + 1);
+          } else if (
+            event.eventType === "REMOTE_LEAVE" ||
+            event.eventType === "REMOTE_TIMEOUT"
+          ) {
+            setViewerCount((prev) => Math.max(0, prev - 1));
           }
         });
 
@@ -72,6 +91,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         // Subscribe to channel messages (agora-rtm 2.x uses subscribe method)
         await client.subscribe(channelName, {
           withMessage: true,
+          withPresence: true, // Enable presence to track viewers
           types: ["msg"],
         });
         console.log("✅ RTM: Subscribed to channel");
@@ -309,5 +329,6 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
     error,
     sendComment,
     sendLike,
+    viewerCount,
   };
 };
