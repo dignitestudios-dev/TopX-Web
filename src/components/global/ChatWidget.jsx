@@ -442,7 +442,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       dispatch(markChatAsRead({ chatId, userId: authId }));
       setScreen("chat");
 
-      socket.readChats({ chatId, unreadCount: 0 }, () => {});
+      socket.readChats({ chatId, unreadCount: 0 }, () => {
+        dispatch(fetchIndividualChats({ page: 1, limit: 10, type: "active" }));
+      });
 
       // ✅ FETCH MESSAGES IN BACKGROUND
       dispatch(fetchIndividualChatDetail({ chatId, page: 1, limit: 50 }));
@@ -485,7 +487,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
       if (isOpen && currentScreen === "chat" && activeChat?._id === data.chatId) {
         dispatch(markChatAsRead({ chatId: data.chatId, userId: currentUserId }));
-        socket.readChats({ chatId: data.chatId, unreadCount: 0 }, () => {});
+        socket.readChats({ chatId: data.chatId, unreadCount: 0 }, () => {
+          dispatch(fetchIndividualChats({ page: 1, limit: 10, type: "active" }));
+        });
       } else if (!isMe) {
         playNotificationSound();
         const senderName =
@@ -609,6 +613,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           }),
         );
       }
+      // Recall recent individual chats API (/chats/individual/recent)
+      dispatch(fetchIndividualChats({ page: 1, limit: 10, type: "active" }));
     };
 
     const handleUserStatus = (data) => {
@@ -794,7 +800,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         }),
       );
     } else {
-      socket?.readChats?.({ chatId: chat._id, unreadCount: 0 }, () => {});
+      socket?.readChats?.({ chatId: chat._id, unreadCount: 0 }, () => {
+        dispatch(fetchIndividualChats({ page: 1, limit: 10, type: "active" }));
+      });
       if (chat.receiverInfo?._id) {
         socket?.requestIndividualChat?.(
           { receiverId: chat.receiverInfo._id },

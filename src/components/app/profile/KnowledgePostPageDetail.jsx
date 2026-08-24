@@ -28,6 +28,7 @@ import KnowledgeCommentsSection from "../../global/KnowledgeCommentsSection";
 import ShareToChatsModal from "../../global/ShareToChatsModal";
 import DeleteKnowledgePageModal from "../../global/DeleteKnowledgePageModal";
 import ManageKnowledgePostsModal from "../../global/ManageKnowledgePostsModal";
+import EditKnowledgePostModal from "../../global/EditKnowledgePostModal";
 import { sendReport } from "../../../redux/slices/reports.slice";
 
 export default function KnowledgePostPageDetail({
@@ -38,6 +39,7 @@ export default function KnowledgePostPageDetail({
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
   const [showDeleteMenu, setShowDeleteMenu] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
   const [likingPostId, setLikingPostId] = useState(null);
   const [activeSubTopic, setActiveSubTopic] = useState("All");
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -490,29 +492,37 @@ export default function KnowledgePostPageDetail({
                     <MoreHorizontal size={20} className="text-gray-600" />
                   </button>
 
-                  {/* Delete Menu */}
+                  {/* Options Menu (Edit / Delete / Report) */}
                   {showDeleteMenu === post._id &&
                     (user?._id == post?.author?._id ? (
-                      <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                      <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 z-10 w-36 overflow-hidden py-1">
+                        <button
+                          onClick={() => {
+                            setShowDeleteMenu(null);
+                            setEditingPost(post);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 font-medium text-gray-700 transition-colors"
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => {
                             handleDelete(post?._id);
-                            console.log("Report clicked");
                           }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 font-medium transition-colors"
                         >
                           Delete
                         </button>
                       </div>
                     ) : (
-                      <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 z-10 w-44">
+                      <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 z-10 w-36 overflow-hidden py-1">
                         <button
                           onClick={() => {
                             setSelectedPostForShare(post);
                             setReportmodal(!reportmodal);
-                            console.log("Report clicked");
+                            setShowDeleteMenu(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors"
                         >
                           Report
                         </button>
@@ -707,6 +717,23 @@ export default function KnowledgePostPageDetail({
         existingSubTopics={subTopicTabs}
         pageName={knowledgePageDetail?.name}
       />
+
+      {/* Edit Knowledge Post Modal */}
+      {editingPost && (
+        <EditKnowledgePostModal
+          post={editingPost}
+          selectedPageId={pageId}
+          onClose={() => setEditingPost(null)}
+          onSuccess={() => {
+            setEditingPost(null);
+            if (pageId) {
+              dispatch(
+                getKnowledgePostDetail({ pageId, page: 1, limit: 10 })
+              );
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

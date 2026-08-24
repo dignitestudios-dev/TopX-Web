@@ -36,6 +36,7 @@ import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
 import { FaArrowLeft } from "react-icons/fa6";
 import PagePostsComponent from "../../components/global/PagePostsComponent";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { TbNotification } from "react-icons/tb";
 import UploadPostStory from "../../components/app/profile/UploadPostStory";
 import { getPageDetail } from "../../redux/slices/pages.slice";
 import axios from "../../axios";
@@ -321,6 +322,19 @@ const Trendingpagedetail = () => {
                             {followRequestsCount}
                           </span>
                         )}
+                      </button>
+                    )}
+                    {/* View Post Requests for page owner */}
+                    {isPageOwner && (
+                      <button
+                        onClick={() => {
+                          navigate("/profile", { state: { id, req: true } });
+                          setShowOptionsDropdown(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2 font-medium cursor-pointer"
+                      >
+                        <TbNotification size={16} className="text-orange-500" />
+                        <span>View Post Requests</span>
                       </button>
                     )}
                     <button

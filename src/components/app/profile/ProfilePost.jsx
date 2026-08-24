@@ -390,8 +390,11 @@ console.log(pageDetail,"pageDetail==>")
   };
 
   useEffect(() => {
-    if (pageId && isPageOwner && (page?.pageType === "private" || page?.isPrivate)) {
-      fetchFollowRequestsCount();
+    if (pageId && isPageOwner) {
+      if (page?.pageType === "private" || page?.isPrivate) {
+        fetchFollowRequestsCount();
+      }
+      fetchPostRequests();
     }
   }, [pageId, isPageOwner, page?.pageType, page?.isPrivate]);
 
@@ -1195,6 +1198,24 @@ console.log(pageDetail,"pageDetail==>")
 
                           <button
                             onClick={() => {
+                              setActiveTab("postrequest");
+                              setShowDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center justify-between gap-2 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <TbNotification className="w-4 h-4 text-orange-500" />
+                              <span>Post Requests</span>
+                            </div>
+                            {postRequests.length > 0 && (
+                              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                {postRequests.length}
+                              </span>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => {
                               setExpertModal(true);
                               setShowDropdown(false);
                             }}
@@ -1335,41 +1356,60 @@ console.log(pageDetail,"pageDetail==>")
             </button>
 
             {isPageOwner && (
-              page?.pageType === "private" || page?.isPrivate ? (
-                <button
-                  onClick={() => setFollowRequestsModal(true)}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative text-gray-500 hover:text-orange-600`}
-                >
-                  <div className="p-1 rounded">
-                    <UserCheck className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <span className="text-[13px] font-[500]">Follow Request</span>
-                </button>
-              ) : (
+              <>
+                {/* Post Request Tab - Consistently displayed for all pages */}
                 <button
                   onClick={() => setActiveTab("postrequest")}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
+                    activeTab === "postrequest"
                       ? "text-orange-600"
                       : "text-gray-500 hover:text-gray-700"
-                    }`}
+                  }`}
                 >
-                  <div className="p-1.5 rounded">
+                  <div className="p-1 rounded">
                     <TbNotification
-                      size={30}
-                      className={`${activeTab === "postrequest"
+                      size={20}
+                      className={`${
+                        activeTab === "postrequest"
                           ? "text-orange-600"
                           : "text-gray-500"
-                        } transition-colors`}
+                      } transition-colors`}
                     />
                   </div>
 
-                  <span className="text-[13px] font-[500] -ml-[10px]">Post Request</span>
+                  <span className="text-[13px] font-[500] -ml-[6px]">
+                    Post Request
+                  </span>
+
+                  {postRequests.length > 0 && (
+                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {postRequests.length}
+                    </span>
+                  )}
 
                   {activeTab === "postrequest" && (
                     <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-orange-600"></div>
                   )}
                 </button>
-              )
+
+                {/* Follow Request Button - Displayed for private pages */}
+                {(page?.pageType === "private" || page?.isPrivate) && (
+                  <button
+                    onClick={() => setFollowRequestsModal(true)}
+                    className="flex items-center gap-2 px-4 py-3 font-medium transition-all relative text-gray-500 hover:text-orange-600 cursor-pointer"
+                  >
+                    <div className="p-1 rounded">
+                      <UserCheck className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <span className="text-[13px] font-[500]">Follow Request</span>
+                    {followRequestsCount > 0 && (
+                      <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                        {followRequestsCount}
+                      </span>
+                    )}
+                  </button>
+                )}
+              </>
             )}
           </div>
 

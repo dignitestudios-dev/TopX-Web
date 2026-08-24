@@ -35,6 +35,7 @@ import ReportModal from "../../components/global/ReportModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast } from "../../components/global/Toaster";
 import DeletePostModal from "../../components/global/DeletePostModal";
+import EditKnowledgePostModal from "../../components/global/EditKnowledgePostModal";
 
 export default function Knowledge() {
   const [liked, setLiked] = useState({});
@@ -49,6 +50,7 @@ export default function Knowledge() {
 
   const [reportmodal, setReportmodal] = useState(false);
   const [sharepost, setSharepost] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
@@ -291,18 +293,29 @@ export default function Knowledge() {
                     </button>
 
                     {moreOpenId === post._id && (
-                      <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
+                      <div className="absolute right-0 mt-2 w-36 bg-white border rounded-xl shadow-lg z-50 overflow-hidden py-1">
                         {user?._id == post?.author?._id ? (
-                          <button
-                            onClick={() => {
-                              setSelectedPost(post?._id);
-                              setMoreOpenId(false);
-                              setDeleteModal(true);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                          >
-                            Delete
-                          </button>
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingPost(post);
+                                setMoreOpenId(null);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 font-medium text-gray-700 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedPost(post?._id);
+                                setMoreOpenId(false);
+                                setDeleteModal(true);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 font-medium transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => {
@@ -310,7 +323,7 @@ export default function Knowledge() {
                               setMoreOpenId(false);
                               setReportmodal(true);
                             }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors"
                           >
                             Report
                           </button>
@@ -464,6 +477,17 @@ export default function Knowledge() {
           onClose={() => setDeleteModal(false)}
           onConfirm={handleDelete}
           isLoading={isLoading}
+        />
+      )}
+
+      {editingPost && (
+        <EditKnowledgePostModal
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSuccess={() => {
+            setEditingPost(null);
+            dispatch(fetchKnowledgeFeed({ page: 1, limit: 10 }));
+          }}
         />
       )}
       {/* Right Sidebar - 1/4 width */}

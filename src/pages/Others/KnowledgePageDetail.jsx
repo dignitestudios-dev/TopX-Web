@@ -19,6 +19,7 @@ import {
   likePost as likeKnowledgePost,
   toggleKnowledgePageSubscription,
   deleteKnowledgePage,
+  deleteKnowledgePost,
 } from "../../redux/slices/knowledgepost.slice";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
@@ -27,6 +28,7 @@ import ShareToChatsModal from "../../components/global/ShareToChatsModal";
 import ReportModal from "../../components/global/ReportModal";
 import DeleteKnowledgePageModal from "../../components/global/DeleteKnowledgePageModal";
 import ManageKnowledgePostsModal from "../../components/global/ManageKnowledgePostsModal";
+import EditKnowledgePostModal from "../../components/global/EditKnowledgePostModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
 import { timeAgo } from "../../lib/helpers";
@@ -41,6 +43,7 @@ export default function KnowledgePageDetail() {
   const [moreOpenId, setMoreOpenId] = useState(null);
   const [reportmodal, setReportmodal] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [activeSubTopic, setActiveSubTopic] = useState("");
   const [showDeletePageModal, setShowDeletePageModal] = useState(false);
@@ -511,17 +514,40 @@ export default function KnowledgePageDetail() {
                     </button>
 
                     {moreOpenId === post._id && (
-                      <div className="absolute right-0 mt-2 w-32 bg-white border rounded-lg shadow-lg z-50">
-                        <button
-                          onClick={() => {
-                            setMoreOpenId(null);
-                            setSelectedPostId(post._id);
-                            setReportmodal(true);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                        >
-                          Report
-                        </button>
+                      <div className="absolute right-0 mt-2 w-36 bg-white border rounded-xl shadow-lg z-50 overflow-hidden py-1">
+                        {user?._id == post?.author?._id ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                setMoreOpenId(null);
+                                setEditingPost(post);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 hover:text-orange-600 font-medium text-gray-700 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setMoreOpenId(null);
+                                dispatch(deleteKnowledgePost(post._id));
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 font-medium transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setMoreOpenId(null);
+                              setSelectedPostId(post._id);
+                              setReportmodal(true);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors"
+                          >
+                            Report
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -699,6 +725,21 @@ export default function KnowledgePageDetail() {
         existingSubTopics={subTopicTabs}
         pageName={knowledgePageDetail?.name}
       />
+
+      {/* Edit Knowledge Post Modal */}
+      {editingPost && (
+        <EditKnowledgePostModal
+          post={editingPost}
+          selectedPageId={id}
+          onClose={() => setEditingPost(null)}
+          onSuccess={() => {
+            setEditingPost(null);
+            if (id) {
+              dispatch(getKnowledgePostDetail({ pageId: id, page: 1, limit: 10 }));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

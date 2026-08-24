@@ -92,6 +92,28 @@ export const createKnowledgePost = createAsyncThunk(
 );
 
 /* ===============================
+   UPDATE KNOWLEDGE POST
+   API → PUT /knowledgeposts/:postId
+   BODY → FormData
+================================*/
+export const updateKnowledgePost = createAsyncThunk(
+  "knowledgepost/updateKnowledgePost",
+  async ({ postId, formData }, thunkAPI) => {
+    try {
+      const res = await axios.put(`/knowledgeposts/${postId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      return res.data?.data; // updated post object
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update knowledge post",
+      );
+    }
+  },
+);
+
+/* ===============================
    SHARE KNOWLEDGE POST TO CATEGORY
    API → POST /knowledgeposts/share
    BODY → { originalKnowledgePost, pageId, sharedToCategory }
@@ -502,6 +524,29 @@ const knowledgeSlice = createSlice({
         // or manage separately depending on UI need
       })
       .addCase(createKnowledgePost.rejected, (state, action) => {
+        state.loadingCreate = false;
+        state.error = action.payload;
+      })
+      // Update Knowledge Post
+      .addCase(updateKnowledgePost.pending, (state) => {
+        state.loadingCreate = true;
+        state.error = null;
+      })
+      .addCase(updateKnowledgePost.fulfilled, (state, action) => {
+        state.loadingCreate = false;
+        state.success = true;
+
+        const updated = action.payload;
+        if (updated && updated._id) {
+          state.knowledgePagePosts = (state.knowledgePagePosts || []).map((post) =>
+            post._id === updated._id ? { ...post, ...updated } : post
+          );
+          state.knowledgeFeed = (state.knowledgeFeed || []).map((post) =>
+            post._id === updated._id ? { ...post, ...updated } : post
+          );
+        }
+      })
+      .addCase(updateKnowledgePost.rejected, (state, action) => {
         state.loadingCreate = false;
         state.error = action.payload;
       })

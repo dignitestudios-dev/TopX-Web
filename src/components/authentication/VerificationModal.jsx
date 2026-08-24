@@ -47,6 +47,15 @@ export default function VerificationModal({
 
   const code = useMemo(() => values.join("").trim(), [values]);
 
+  const maskedEmail = useMemo(() => {
+    if (!email || typeof email !== "string" || !email.includes("@")) return email || "";
+    const [user, domain] = email.split("@");
+    if (!domain) return email;
+    if (user.length <= 2) return `******${user}@${domain}`;
+    const visiblePart = user.slice(-2);
+    return `******${visiblePart}@${domain}`;
+  }, [email]);
+
   const handleChange = (i, v) => {
     const d = v.replace(/\D/g, "").slice(-1);
     const next = [...values];
@@ -130,7 +139,9 @@ export default function VerificationModal({
 
       <div className="px-8 pt-12 pb-8 text-center">
         <h2 className="text-[28px] font-bold">Verification</h2>
-        <p className="mt-2 text-[#565656]">Enter the OTP sent to {email}</p>
+        <p className="mt-2 text-[#565656]">
+          Enter the OTP code sent to <br /> {maskedEmail}
+        </p>
 
         <div className="mt-6 flex justify-center gap-3">
           {values.map((v, i) => (

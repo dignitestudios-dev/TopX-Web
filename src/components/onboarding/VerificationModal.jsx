@@ -49,13 +49,14 @@ export default function VerificationModal({
 
   const code = useMemo(() => values.join("").trim(), [values]);
 
-  const mask = useMemo(() => {
-    if (!email && !phone || typeof email !== "string" || typeof phone !== "string") return "";
+  const maskedEmail = useMemo(() => {
+    if (!email || typeof email !== "string" || !email.includes("@")) return email || "";
     const [user, domain] = email.split("@");
     if (!domain) return email;
-    const maskedUser = user.length <= 2 ? "**" : `${user[0]}${"*".repeat(Math.max(2, user.length - 2))}${user[user.length - 1]}`;
-    return `${maskedUser}@${domain}`;
-  }, [email, phone]);
+    if (user.length <= 2) return `******${user}@${domain}`;
+    const visiblePart = user.slice(-2);
+    return `******${visiblePart}@${domain}`;
+  }, [email]);
 
   const focusIndex = (i) => {
     const el = inputsRef.current[i];
@@ -118,7 +119,7 @@ export default function VerificationModal({
       <div className="px-8 pt-12 pb-8 text-center">
         <h2 className="text-[28px] md:text-[32px] font-bold">Verification</h2>
         <p className="mt-2 text-[#565656] leading-7">
-          Enter the OTP code sent to <br /> {isType === "email" ? email : `+1 ${phone}`}
+          Enter the OTP code sent to <br /> {isType === "email" ? maskedEmail : (phone ? `+1 ${phone}` : maskedEmail)}
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
