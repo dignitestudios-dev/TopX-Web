@@ -7,6 +7,7 @@ import { FaPlusCircle } from "react-icons/fa";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
+import { ErrorToast } from "./Toaster";
 
 const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const dispatch = useDispatch();
@@ -35,6 +36,11 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        ErrorToast("Image size must not exceed 5MB.");
+        e.target.value = "";
+        return;
+      }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }

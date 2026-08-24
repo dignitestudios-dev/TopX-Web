@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+ import React, { useState } from "react";
 import { useFormik } from "formik";
 import { NavLink, useNavigate } from "react-router";
 import { FiLoader } from "react-icons/fi";
@@ -9,7 +9,7 @@ import { signupValues } from "../../init/onboarding/signupValues";
 import Button from "../common/Button";
 import Input from "../common/Input";
 import { useDispatch, useSelector } from "react-redux";
-import { signUp, socialLogin } from "../../redux/slices/auth.slice";
+import { signUp, socialLogin, getAllUserData } from "../../redux/slices/auth.slice";
 import {
   auth,
   createUserWithEmailAndPassword,
@@ -20,6 +20,7 @@ import { authlogo } from "../../assets/export";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 import Cookies from "js-cookie";
 import { FcGoogle } from "react-icons/fc";
+import { getOnboardingStatus } from "../../lib/helpers";
 
 const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
   const dispatch = useDispatch();
@@ -53,7 +54,18 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
           sameSite: "lax",
         });
 
-        navigate("/Home");
+        try {
+          const userRes = await dispatch(getAllUserData()).unwrap();
+          const userData = userRes || response.payload.user;
+          const status = getOnboardingStatus(userData);
+          if (status.isCompleted) {
+            navigate("/Home");
+          } else {
+            navigate("/auth/signup", { state: { step: status.step } });
+          }
+        } catch (err) {
+          navigate("/Home");
+        }
       } else {
         ErrorToast(response?.payload || "Social Login Failed");
       }
@@ -344,6 +356,49 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
             />
           </div>
 
+          {/* Terms & Conditions Acceptance */}
+          <div className="w-full flex flex-col gap-1">
+            <div className="flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                id="acceptTerms"
+                name="acceptTerms"
+                checked={values.acceptTerms}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                className="w-4 h-4 mt-0.5 rounded border-gray-300 text-[#F85E00] focus:ring-[#F85E00] cursor-pointer accent-[#F85E00]"
+              />
+              <label
+                htmlFor="acceptTerms"
+                className="text-[14px] font-[500] text-[#181818] cursor-pointer select-none leading-tight"
+              >
+                I accept the{" "}
+                <NavLink
+                  to="/terms-conditons"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms & Conditions
+                </NavLink>{" "}
+                and{" "}
+                <NavLink
+                  to="/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </NavLink>
+              </label>
+            </div>
+            {touched.acceptTerms && errors.acceptTerms && (
+              <p className="text-red-500 text-xs mt-0.5">{errors.acceptTerms}</p>
+            )}
+          </div>
+
           {/* Submit Button */}
           <Button
             type="submit"
@@ -376,8 +431,6 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
                 Log In
               </NavLink>
             </span>
-
-
           </div>
 
           <div className="flex flex-col items-center w-full">
@@ -399,29 +452,6 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
                 <span className="text-[#000]">Continue with Google</span>
               </button>
             </div>
-          </div>
-
-
-
-
-
-          <div className="flex justify-center w-full">
-            <span className="text-[14px] font-[500] text-[#181818] flex gap-1">
-              I accept the
-              <NavLink
-
-                className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
-              >
-                Terms & Conditions
-              </NavLink>
-              and
-              <NavLink
-
-                className="font-semibold text-[#F85E00] hover:text-[#F85E00] hover:underline"
-              >
-                Privacy Policy
-              </NavLink>
-            </span>
           </div>
 
 

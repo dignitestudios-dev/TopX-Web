@@ -76,6 +76,11 @@ export default function PageCreateModal({
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        ErrorToast("Image size must not exceed 5MB.");
+        e.target.value = "";
+        return;
+      }
       setUploadedImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {

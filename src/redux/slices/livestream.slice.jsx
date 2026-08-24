@@ -73,7 +73,7 @@ export const joinStream = createAsyncThunk(
     try {
       // Use /start endpoint (same as host) to get stream credentials
       // Backend should return token/appId for audience to join
-      const res = await axios.get(`/stream/${pageId}/join`);
+      const res = await axios.post(`/stream/${pageId}/join`);
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(

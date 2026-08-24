@@ -98,13 +98,38 @@ export const useAgora = ({
       const numericUid = Number(uid);
       if (isNaN(numericUid)) throw new Error("Invalid UID");
 
+      // For host: create media tracks BEFORE publishing
+      let audioTrack = null;
+      let videoTrack = null;
+
+      if (role === "host") {
+        try {
+          [audioTrack, videoTrack] =
+            await AgoraRTC.createMicrophoneAndCameraTracks();
+        } catch (trackErr) {
+          console.error("❌ Failed to create Agora media tracks:", trackErr);
+          const isPermissionDenied =
+            trackErr?.code === "PERMISSION_DENIED" ||
+            trackErr?.name === "NotAllowedError" ||
+            trackErr?.name === "PermissionDeniedError" ||
+            trackErr?.message?.toLowerCase().includes("permission") ||
+            trackErr?.message?.toLowerCase().includes("notallowed");
+
+          const userMsg = isPermissionDenied
+            ? "Camera and microphone permissions were denied. Please allow access in your browser settings (click the lock icon in the address bar) and try again."
+            : trackErr?.message || "Failed to access camera and microphone.";
+
+          const permError = new Error(userMsg);
+          permError.isPermissionDenied = isPermissionDenied;
+          permError.code = trackErr?.code || trackErr?.name || "PERMISSION_DENIED";
+          throw permError;
+        }
+      }
+
       await client.join(appId, channelName, token, numericUid);
       setIsJoined(true);
 
-      if (role === "host") {
-        const [audioTrack, videoTrack] =
-          await AgoraRTC.createMicrophoneAndCameraTracks();
-
+      if (role === "host" && audioTrack && videoTrack) {
         localAudioTrackRef.current = audioTrack;
         localVideoTrackRef.current = videoTrack;
 
@@ -115,7 +140,22 @@ export const useAgora = ({
       }
     } catch (err) {
       console.error("❌ Join failed:", err);
-      setError(err.message);
+      // Clean up any partially created tracks
+      try {
+        localAudioTrackRef.current?.close();
+        localVideoTrackRef.current?.close();
+        localAudioTrackRef.current = null;
+        localVideoTrackRef.current = null;
+        setLocalAudio(null);
+        setLocalVideo(null);
+        if (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING") {
+          await client.leave();
+        }
+      } catch (cleanupErr) {
+        console.warn("Error during join failure cleanup:", cleanupErr);
+      }
+
+      setError(err.message || "Failed to join live stream");
       setIsJoined(false);
     } finally {
       setIsLoading(false);
@@ -158,5 +198,6 @@ export const useAgora = ({
     isJoined,
     isLoading,
     error,
+    setError,
   };
 };

@@ -342,6 +342,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
+        state.allUserData = action.payload.user;
         state.success = action.payload.message;
       })
       .addCase(login.rejected, (state, action) => {
@@ -358,6 +359,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
+        state.allUserData = action.payload.user;
         state.success = action.payload.message;
       })
       .addCase(signUp.rejected, (state, action) => {
@@ -372,6 +374,7 @@ const authSlice = createSlice({
       .addCase(getProfile.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
+        state.allUserData = action.payload;
       })
       .addCase(getProfile.rejected, (state, action) => {
         state.isLoading = false;
@@ -397,6 +400,7 @@ const authSlice = createSlice({
       .addCase(logout.fulfilled, (state) => {
         state.logoutLoading = false;
         state.user = null;
+        state.allUserData = null;
         state.accessToken = null;
         state.success = "Logout successful";
       })
@@ -405,6 +409,7 @@ const authSlice = createSlice({
 
         // even if API call fails → clear local session
         state.user = null;
+        state.allUserData = null;
         state.accessToken = null;
 
         state.error = action.payload;
@@ -465,6 +470,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
         state.user = action.payload.user;
+        state.allUserData = action.payload.user;
         state.success = action.payload.message;
       })
       .addCase(socialLogin.rejected, (state, action) => {
@@ -481,6 +487,7 @@ const authSlice = createSlice({
         state.updateProfileLoading = false;
         if (action.payload.user) {
           state.allUserData = action.payload.user;
+          state.user = action.payload.user;
         }
         state.updateProfileSuccess = action.payload.message;
       })
@@ -497,6 +504,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         // full user object ko state.me save
         state.allUserData = action.payload;
+        state.user = action.payload;
       })
       .addCase(getAllUserData.rejected, (state, action) => {
         state.isLoading = false;

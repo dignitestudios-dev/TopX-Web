@@ -9,15 +9,19 @@ import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
 import { nofound } from "../../assets/export";
+import { checkMediaPermissions } from "../../lib/helpers";
+import LivePermissionModal from "../../components/global/LivePermissionModal";
 
 export default function Golive() {
   const [liked, setLiked] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [loadingPageId, setLoadingPageId] = useState(null);
+  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
+  const [permissionErrorMessage, setPermissionErrorMessage] = useState("");
+  const [isCheckingPermission, setIsCheckingPermission] = useState(false);
+  const [pendingPageId, setPendingPageId] = useState(null);
 
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -43,6 +47,17 @@ export default function Golive() {
 
   const handleGoLive = async (pageId) => {
     setLoadingPageId(pageId);
+    setPendingPageId(pageId);
+
+    // Check camera & mic permissions first
+    const permissionResult = await checkMediaPermissions();
+    if (!permissionResult.success) {
+      setLoadingPageId(null);
+      setPermissionErrorMessage(permissionResult.error);
+      setPermissionModalOpen(true);
+      return;
+    }
+
     try {
       const res = await dispatch(startStream(pageId));
 
@@ -63,6 +78,22 @@ export default function Golive() {
     } catch (error) {
       ErrorToast(error.message || "Failed to start stream");
       setLoadingPageId(null);
+    }
+  };
+
+  const handleRetryPermission = async () => {
+    setIsCheckingPermission(true);
+    const permissionResult = await checkMediaPermissions();
+    setIsCheckingPermission(false);
+
+    if (permissionResult.success) {
+      setPermissionModalOpen(false);
+      if (pendingPageId) {
+        handleGoLive(pendingPageId);
+      }
+    } else {
+      setPermissionErrorMessage(permissionResult.error);
+      ErrorToast(permissionResult.error);
     }
   };
 
@@ -168,11 +199,17 @@ export default function Golive() {
 
           {/* Suggestions Section */}
           <SuggestionsPagesGlobal />
-
-          {open && <ChatWidget />}
-          <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>
       </div>
+
+      {/* Camera & Microphone Permission Modal */}
+      <LivePermissionModal
+        isOpen={permissionModalOpen}
+        onClose={() => setPermissionModalOpen(false)}
+        onRetry={handleRetryPermission}
+        errorMessage={permissionErrorMessage}
+        isChecking={isCheckingPermission}
+      />
     </div>
   );
 }

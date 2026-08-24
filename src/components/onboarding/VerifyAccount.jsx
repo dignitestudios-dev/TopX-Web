@@ -3,11 +3,9 @@ import { auth, emailimag, mobile } from "../../assets/export";
 import { IoIosArrowForward } from "react-icons/io";
 import VerificationModal from "./VerificationModal";
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router";
 import Card from "../common/Card";
 import Button from "../common/Button";
 import { BiArrowBack } from "react-icons/bi";
-
 import { useDispatch, useSelector } from "react-redux";
 import {
   sendPhoneOTP,
@@ -15,6 +13,7 @@ import {
   sendEmailOTP,
   verifyEmailOTP,
 } from "../../redux/slices/onboarding.slice";
+import { getAllUserData } from "../../redux/slices/auth.slice";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 
 export default function VerifyAccount({
@@ -31,15 +30,17 @@ export default function VerifyAccount({
   const { isLoading, emailOTPLoading, emailVerifyLoading, otpVerified, emailVerified } = useSelector(
     (state) => state.onboarding
   );
-  const { user } = useSelector((state) => state.auth);
-
-  console.log(user, "userdata");
-
+  const { user, allUserData } = useSelector((state) => state.auth);
+  const currentUser = allUserData || user;
+  const displayEmail = email || currentUser?.email || "";
+  const displayPhone = phone || currentUser?.phone || "";
+  
   // Check if both email and phone are verified
-  const isEmailVerified = user?.isEmailVerified || emailVerified;
-  const isPhoneVerified = user?.isPhoneVerified || otpVerified;
+  const isEmailVerified = currentUser?.isEmailVerified || emailVerified;
+  const isPhoneVerified = currentUser?.isPhoneVerified || otpVerified;
   const bothVerified = isEmailVerified && isPhoneVerified;
-
+  
+  console.log(isEmailVerified,"isEmailVerified===>")
   // ⭐ EMAIL CARD CLICK + SEND OTP
   const handleEmailClick = async () => {
     const res = await dispatch(sendEmailOTP());
@@ -142,6 +143,7 @@ export default function VerifyAccount({
           : "Phone Verified Successfully"
       );
       setIsModalOpen(false);
+      dispatch(getAllUserData());
       // Don't call handleNext here, let user verify both first
     } else {
       ErrorToast(res.payload || "Invalid OTP");
@@ -181,7 +183,7 @@ export default function VerifyAccount({
               <p className="flex flex-col text-[15px] font-[500] text-wrap">
                 Email address
                 <span className="text-[12px] text-wrap font-[400] text-[#717171CC]">
-                  {email}
+                  {displayEmail}
                 </span>
                 {isEmailVerified && (
                   <span className="text-[12px] text-green-600 font-medium mt-1">✓ Verified</span>
@@ -212,7 +214,7 @@ export default function VerifyAccount({
               <img src={mobile} alt="" className="w-[34px] h-[34px]" />
               <p className="flex flex-col text-[15px] font-[500]">
                 Phone number
-                <span className="text-[12px] text-[#717171CC]">+1 {phone}</span>
+                <span className="text-[12px] text-[#717171CC]">+1 {displayPhone}</span>
                 {isPhoneVerified && (
                   <span className="text-[12px] text-green-600 font-medium mt-1">✓ Verified</span>
                 )}
@@ -252,8 +254,8 @@ export default function VerifyAccount({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         isType={isType}
-        phone={phone}
-        email={email}
+        phone={displayPhone}
+        email={displayEmail}
         onVerify={handleVerifyOTP}
         onResend={handleResend}
         isVerifying={isLoading || emailOTPLoading || emailVerifyLoading}

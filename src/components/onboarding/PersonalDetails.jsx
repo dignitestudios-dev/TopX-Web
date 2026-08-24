@@ -9,14 +9,17 @@ import Input from "../common/Input";
 import { PersonalSchema } from "../../schema/onboarding/PersonalSchema";
 import { useDispatch, useSelector } from "react-redux";
 import { checkUsername, completeProfile } from "../../redux/slices/onboarding.slice";
+import { getAllUserData } from "../../redux/slices/auth.slice";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
-import { emojiUrlToFile } from "../../lib/helpers";
+import { emojiUrlToFile, validateUsername, sanitizeUsername, hasMaliciousInput } from "../../lib/helpers";
 
 export default function PersonalDetails({ name, email, handleNext, handlePrevious }) {
   const dispatch = useDispatch();
   const { isLoading } = useSelector((state) => state.onboarding);
+  const { user, allUserData } = useSelector((state) => state.auth);
+  const currentUser = allUserData || user;
 
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -32,6 +35,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
   const [usernameSuggestions, setUsernameSuggestions] = useState([]);
   const [usernameStatus, setUsernameStatus] = useState(null); // 'available', 'unavailable', null
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   const DISALLOWED_EXTENSIONS = [".svg", ".gif"];
 
@@ -49,6 +53,15 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
       !ALLOWED_IMAGE_TYPES.includes(fileType)
     ) {
       ErrorToast("Unsupported file format! Only JPG, JPEG, PNG, and WEBP are supported. SVG and GIF files are not allowed.");
+      e.target.value = "";
+      setImageFile(null);
+      setImagePreview(null);
+      setFieldValue("profileImage", null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      ErrorToast("Profile picture size must not exceed 5MB.");
       e.target.value = "";
       setImageFile(null);
       setImagePreview(null);
@@ -82,38 +95,9 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
 
   const handleCheckUsername = async () => {
     const rawUsername = values.username;
-    if (!rawUsername || rawUsername.trim() === "") {
-      ErrorToast("Please enter a username first");
-      return;
-    }
-
-    if (rawUsername.length < 3) {
-      ErrorToast("Username must be at least 3 characters long");
-      return;
-    }
-
-    if (rawUsername.length > 50) {
-      ErrorToast("Username cannot exceed 50 characters");
-      return;
-    }
-
-    if (/\s/.test(rawUsername)) {
-      ErrorToast("Username cannot contain spaces");
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_.]+$/.test(rawUsername)) {
-      ErrorToast("Username can only contain letters, numbers, underscores, and dots");
-      return;
-    }
-
-    if (/^[._]/.test(rawUsername) || /[._]$/.test(rawUsername)) {
-      ErrorToast("Username cannot start or end with a dot or underscore");
-      return;
-    }
-
-    if (/[_.]{2,}/.test(rawUsername)) {
-      ErrorToast("Username cannot contain consecutive dots or underscores");
+    const validation = validateUsername(rawUsername);
+    if (!validation.isValid) {
+      ErrorToast(validation.error);
       return;
     }
 
@@ -164,6 +148,13 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
     validateOnChange: true,
     validateOnBlur: true,
     onSubmit: async (values) => {
+      // Validate username for malicious input
+      const validation = validateUsername(values.username);
+      if (!validation.isValid) {
+        ErrorToast(validation.error);
+        return;
+      }
+
       // ---------- STEP 1: Check Username ----------
       // Only check if not already checked and available
       if (usernameStatus !== "available") {
@@ -186,16 +177,17 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
       // ---------- STEP 2: Complete Profile ----------
       const formData = new FormData();
       formData.append("username", values.username);
-      if (name) {
-        formData.append("name", name);
+      const fullName = name || currentUser?.name;
+      if (fullName) {
+        formData.append("name", fullName);
       }
       formData.append("dob", values.dateOfBirth);
-      formData.append("gender", values.gender);
+      formData.append("gender", values.gender === "other" && values.genderOther ? values.genderOther : values.gender);
       formData.append("bio", values.bio || "");
-      if (values.link && values.link.trim()) {
-        formData.append("link", values.link.trim());
-        formData.append("website", values.link.trim());
-      }
+      // if (values.link && values.link.trim()) {
+      //   formData.append("link", values.link.trim());
+      //   formData.append("website", values.link.trim());
+      // }
 
       let binaryFile = imageFile;
       if (!(binaryFile instanceof File) && imagePreview) {
@@ -213,6 +205,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
         return;
       }
 
+      await dispatch(getAllUserData());
       SuccessToast("Profile completed successfully");
 
       handleNext(); // GO TO NEXT STEP
@@ -237,7 +230,11 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
           <div className="flex flex-col justify-center items-center text-center gap-3">
             <div
               onClick={() => setIsOptionsModalOpen(true)}
-              className="w-[120px] h-[120px] flex items-center justify-center border-2 border-dashed border-orange-400 rounded-full bg-[#FFF5F2] cursor-pointer overflow-hidden relative group hover:border-orange-500 transition-all shadow-sm"
+              className={`w-[120px] h-[120px] flex items-center justify-center border-2 border-dashed ${
+                touched.profileImage && errors.profileImage
+                  ? "border-red-500 bg-red-50"
+                  : "border-orange-400 bg-[#FFF5F2]"
+              } rounded-full cursor-pointer overflow-hidden relative group hover:border-orange-500 transition-all shadow-sm`}
             >
               {imagePreview ? (
                 <img
@@ -289,6 +286,10 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                     name="username"
                     value={values.username}
                     onChange={(e) => {
+                      const rawVal = e.target.value;
+                      if (hasMaliciousInput(rawVal)) {
+                        ErrorToast("Malicious characters or script patterns are not allowed in username");
+                      }
                       handleChange(e);
                       setUsernameStatus(null);
                       setUsernameSuggestions([]);
@@ -367,6 +368,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                       handleChange(e);
                       setSelectedGender("male");
                     }}
+                    onBlur={handleBlur}
                     className="w-4 h-4 text-[#f85e00] border-gray-300 focus:ring-[#f85e00] focus:ring-2 cursor-pointer accent-[#f85e00]"
                   />
                   <span className="text-[14px] font-[400]">Male</span>
@@ -381,6 +383,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                       handleChange(e);
                       setSelectedGender("female");
                     }}
+                    onBlur={handleBlur}
                     className="w-4 h-4 text-[#f85e00] border-gray-300 focus:ring-[#f85e00] focus:ring-2 cursor-pointer accent-[#f85e00]"
                   />
                   <span className="text-[14px] font-[400]">Female</span>
@@ -395,11 +398,15 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
                       handleChange(e);
                       setSelectedGender("other");
                     }}
+                    onBlur={handleBlur}
                     className="w-4 h-4 text-[#f85e00] border-gray-300 focus:ring-[#f85e00] focus:ring-2 cursor-pointer accent-[#f85e00]"
                   />
                   <span className="text-[14px] font-[400]">Other</span>
                 </label>
               </div>
+              {touched.gender && errors.gender && (
+                <p className="text-red-600 text-sm font-medium mt-1">{errors.gender}</p>
+              )}
 
               {/* Conditionally show input if "Other" is selected */}
               {selectedGender === "other" && (
@@ -438,20 +445,20 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
             </div>
 
             {/* Link / Website */}
-            <div className="flex flex-col gap-1">
-              <Input
-                label="Website / Link (optional)"
-                type="text"
-                name="link"
-                value={values.link}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="https://example.com"
-                touched={touched.link}
-                error={errors.link}
-                size="md"
-              />
-            </div>
+              {/* <div className="flex flex-col gap-1">
+                <Input
+                  label="Website / Link (optional)"
+                  type="text"
+                  name="link"
+                  value={values.link}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="https://example.com"
+                  touched={touched.link}
+                  error={errors.link}
+                  size="md"
+                />
+              </div> */}
           </div>
 
           <Button

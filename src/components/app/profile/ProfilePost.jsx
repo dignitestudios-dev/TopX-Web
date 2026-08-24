@@ -60,6 +60,8 @@ import { startStream } from "../../../redux/slices/livestream.slice";
 import { FaPlus } from "react-icons/fa6";
 import { TbNotification } from "react-icons/tb";
 import toast from "react-hot-toast";
+import { checkMediaPermissions } from "../../../lib/helpers";
+import LivePermissionModal from "../../global/LivePermissionModal";
 
 export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }) {
   const [activeTab, setActiveTab] = useState("post");
@@ -125,13 +127,16 @@ useEffect(()=>{
   const [postRequestsError, setPostRequestsError] = useState(null);
   const [requestActionLoadingId, setRequestActionLoadingId] = useState(null);
   const [goLiveLoading, setGoLiveLoading] = useState(false);
+  const [livePermissionModalOpen, setLivePermissionModalOpen] = useState(false);
+  const [livePermissionErrorMessage, setLivePermissionErrorMessage] = useState("");
+  const [isCheckingLivePermission, setIsCheckingLivePermission] = useState(false);
   const [actionModal, setActionModal] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
   const { livestreamError } = useSelector((state) => state.livestream);
 
-  console.log(user, "userrrrrrrrrrrrrr");
+
 
   const dispatch = useDispatch();
   const {
@@ -164,7 +169,7 @@ useEffect(()=>{
     user?._id === page?.user ||
     user?._id === page?.user?._id?.toString() ||
     user?._id?.toString() === page?.user;
-
+console.log(pageDetail,"pageDetail==>")
   // ✅ Page owner should ALWAYS see content, regardless of privacy/subscription
   // Show content if: is page owner OR (not private OR subscribed OR request accepted)
   const shouldShowContent =
@@ -489,15 +494,28 @@ useEffect(()=>{
 
   // Handle image upload for edit
   const handleEditImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setEditImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setEditImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      ErrorToast("Only image files (JPG, PNG, WEBP) are allowed!");
+      e.target.value = "";
+      return;
     }
+
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_IMAGE_SIZE) {
+      ErrorToast("File size exceeds the 10MB limit! Please upload an image smaller than 10MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setEditImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEditImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle update page
@@ -527,40 +545,86 @@ useEffect(()=>{
 
   // Handle identity front upload
   const handleIdentityFrontUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setExpertForm((prev) => ({ ...prev, identityFront: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdentityFrontPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      ErrorToast("Only image files (JPG, PNG, WEBP) are allowed for identity document!");
+      e.target.value = "";
+      return;
     }
+
+    const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_DOC_SIZE) {
+      ErrorToast("File size exceeds the 10MB limit! Please upload a file smaller than 10MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setExpertForm((prev) => ({ ...prev, identityFront: file }));
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setIdentityFrontPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle identity back upload
   const handleIdentityBackUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setExpertForm((prev) => ({ ...prev, identityBack: file }));
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdentityBackPreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      ErrorToast("Only image files (JPG, PNG, WEBP) are allowed for identity document!");
+      e.target.value = "";
+      return;
     }
+
+    const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_DOC_SIZE) {
+      ErrorToast("File size exceeds the 10MB limit! Please upload a file smaller than 10MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setExpertForm((prev) => ({ ...prev, identityBack: file }));
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setIdentityBackPreview(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle expertise doc upload
   const handleExpertiseDocUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setExpertForm((prev) => ({ ...prev, expertiseDoc: file }));
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isImage && !isPdf) {
+      ErrorToast("Only PDF, JPG, PNG, and WEBP files are allowed for expertise documents!");
+      e.target.value = "";
+      return;
+    }
+
+    const MAX_DOC_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_DOC_SIZE) {
+      ErrorToast("File size exceeds the 10MB limit! Please upload a file smaller than 10MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setExpertForm((prev) => ({ ...prev, expertiseDoc: file }));
+    if (isImage) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setExpertDocPreview(reader.result);
       };
       reader.readAsDataURL(file);
+    } else {
+      setExpertDocPreview(file.name);
     }
   };
 
@@ -600,26 +664,49 @@ useEffect(()=>{
 
   // Handle story media upload
   const handleStoryMediaUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setStoryMedia(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setStoryMediaPreview(reader.result);
-        // Reset text overlay when new media is uploaded
-        setStoryTextOverlay({
-          text: "",
-          x: 50,
-          y: 50,
-          color: "#FFFFFF",
-          fontSize: 24,
-          fontFamily: "Arial",
-          isDragging: false,
-          isActive: false,
-        });
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+
+    if (!isImage && !isVideo) {
+      ErrorToast("Only images and videos are allowed!");
+      e.target.value = "";
+      return;
     }
+
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_VIDEO_SIZE = 30 * 1024 * 1024; // 30MB
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+    const maxSizeMB = isVideo ? "30MB" : "10MB";
+
+    if (file.size > maxSize) {
+      ErrorToast(`File size is too large! Maximum allowed size for ${isVideo ? "videos" : "images"} is ${maxSizeMB}.`);
+      e.target.value = "";
+      return;
+    }
+
+    if (storyMediaPreview && storyMediaPreview.startsWith("blob:")) {
+      URL.revokeObjectURL(storyMediaPreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setStoryMedia(file);
+    setStoryMediaPreview(previewUrl);
+
+    // Reset text overlay when new media is uploaded
+    setStoryTextOverlay({
+      text: "",
+      x: 50,
+      y: 50,
+      color: "#FFFFFF",
+      fontSize: 24,
+      fontFamily: "Arial",
+      isDragging: false,
+      isActive: false,
+    });
+    e.target.value = "";
   };
 
   // Handle text overlay drag
@@ -747,6 +834,16 @@ useEffect(()=>{
     }
 
     setGoLiveLoading(true);
+
+    // Check camera & mic permissions first
+    const permissionResult = await checkMediaPermissions();
+    if (!permissionResult.success) {
+      setGoLiveLoading(false);
+      setLivePermissionErrorMessage(permissionResult.error);
+      setLivePermissionModalOpen(true);
+      return;
+    }
+
     try {
       const res = await dispatch(startStream(pageId));
 
@@ -765,6 +862,20 @@ useEffect(()=>{
     } catch (error) {
       ErrorToast(error.message || "Failed to start stream");
       setGoLiveLoading(false);
+    }
+  };
+
+  const handleRetryLivePermission = async () => {
+    setIsCheckingLivePermission(true);
+    const permissionResult = await checkMediaPermissions();
+    setIsCheckingLivePermission(false);
+
+    if (permissionResult.success) {
+      setLivePermissionModalOpen(false);
+      handleGoLive();
+    } else {
+      setLivePermissionErrorMessage(permissionResult.error);
+      ErrorToast(permissionResult.error);
     }
   };
 
@@ -798,6 +909,9 @@ useEffect(()=>{
 
       await dispatch(createStory(formData)).unwrap();
       SuccessToast("Story created successfully");
+      if (storyMediaPreview && storyMediaPreview.startsWith("blob:")) {
+        URL.revokeObjectURL(storyMediaPreview);
+      }
       setStoryModal(false);
       setStoryMedia(null);
       setStoryMediaPreview(null);
@@ -1011,7 +1125,7 @@ useEffect(()=>{
                     >
                       <span>Start A Live Chat</span>
                       <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
-                         {page?.followersCount || page?.followers?.length || 0} 
+                         {page?.liveChatCount || page?.liveChatCount?.length || 0} 
                       </span>
                     </button>
                   )}
@@ -1780,7 +1894,7 @@ useEffect(()=>{
                       <label className="block">
                         <input
                           type="file"
-                          accept="image/jpeg,image/jpg,image/png"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
                           onChange={handleIdentityFrontUpload}
                           disabled={expertStatusLoading}
                           className="hidden"
@@ -1791,7 +1905,7 @@ useEffect(()=>{
                               <img
                                 src={identityFrontPreview}
                                 alt="Front Preview"
-                                className="max-h-24 mx-auto rounded"
+                                className="max-h-24 mx-auto rounded object-contain"
                               />
                               <p className="text-xs text-gray-700">
                                 Click to change
@@ -1800,10 +1914,10 @@ useEffect(()=>{
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs font-medium text-gray-900">
-                                Upload "document name"
+                                Upload Driver License Front
                               </p>
                               <p className="text-xs text-gray-500">
-                                Upto 20mb JPG, PNG
+                                Max 10MB (JPG, PNG, WEBP)
                               </p>
                             </div>
                           )}
@@ -1819,7 +1933,7 @@ useEffect(()=>{
                       <label className="block">
                         <input
                           type="file"
-                          accept="image/jpeg,image/jpg,image/png"
+                          accept="image/jpeg,image/jpg,image/png,image/webp"
                           onChange={handleIdentityBackUpload}
                           disabled={expertStatusLoading}
                           className="hidden"
@@ -1830,7 +1944,7 @@ useEffect(()=>{
                               <img
                                 src={identityBackPreview}
                                 alt="Back Preview"
-                                className="max-h-24 mx-auto rounded"
+                                className="max-h-24 mx-auto rounded object-contain"
                               />
                               <p className="text-xs text-gray-700">
                                 Click to change
@@ -1839,10 +1953,10 @@ useEffect(()=>{
                           ) : (
                             <div className="space-y-1">
                               <p className="text-xs font-medium text-gray-900">
-                                Upload "document name"
+                                Upload Driver License Back
                               </p>
                               <p className="text-xs text-gray-500">
-                                Upto 20mb JPG, PNG
+                                Max 10MB (JPG, PNG, WEBP)
                               </p>
                             </div>
                           )}
@@ -1866,7 +1980,7 @@ useEffect(()=>{
                     <label className="block">
                       <input
                         type="file"
-                        accept="image/jpeg,image/jpg,image/png,.pdf"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,.pdf"
                         onChange={handleExpertiseDocUpload}
                         disabled={expertStatusLoading}
                         className="hidden"
@@ -1874,11 +1988,21 @@ useEffect(()=>{
                       <div className="border-2 border-dashed border-orange-500 rounded-lg p-6 text-center cursor-pointer hover:bg-orange-50 transition-colors disabled:opacity-50">
                         {expertDocPreview ? (
                           <div className="space-y-2">
-                            <img
-                              src={expertDocPreview}
-                              alt="Preview"
-                              className="max-h-24 mx-auto rounded"
-                            />
+                            {expertForm.expertiseDoc?.type === "application/pdf" ||
+                            expertForm.expertiseDoc?.name?.toLowerCase().endsWith(".pdf") ? (
+                              <div className="flex items-center justify-center gap-2 text-xs text-gray-700 font-medium py-3">
+                                <BsFileEarmarkTextFill className="w-8 h-8 text-orange-500 shrink-0" />
+                                <span className="truncate max-w-[200px]">
+                                  {expertForm.expertiseDoc?.name}
+                                </span>
+                              </div>
+                            ) : (
+                              <img
+                                src={expertDocPreview}
+                                alt="Preview"
+                                className="max-h-24 mx-auto rounded object-contain"
+                              />
+                            )}
                             <p className="text-xs text-gray-700">
                               Click to change
                             </p>
@@ -1886,10 +2010,10 @@ useEffect(()=>{
                         ) : (
                           <div className="space-y-1">
                             <p className="text-xs font-medium text-gray-900">
-                              Upload "document name"
+                              Upload Supporting Document
                             </p>
                             <p className="text-xs text-gray-500">
-                              Upto 20mb JPG, PNG
+                              Max 10MB (PDF, JPG, PNG, WEBP)
                             </p>
                           </div>
                         )}
@@ -1998,6 +2122,9 @@ useEffect(()=>{
               </h2>
               <button
                 onClick={() => {
+                  if (storyMediaPreview && storyMediaPreview.startsWith("blob:")) {
+                    URL.revokeObjectURL(storyMediaPreview);
+                  }
                   setStoryModal(false);
                   setStoryMedia(null);
                   setStoryMediaPreview(null);
@@ -2312,6 +2439,15 @@ useEffect(()=>{
           fetchFollowRequestsCount();
           if (pageId) dispatch(getPageDetail(pageId));
         }}
+      />
+
+      {/* Live Permission Modal */}
+      <LivePermissionModal
+        isOpen={livePermissionModalOpen}
+        onClose={() => setLivePermissionModalOpen(false)}
+        onRetry={handleRetryLivePermission}
+        errorMessage={livePermissionErrorMessage}
+        isChecking={isCheckingLivePermission}
       />
     </div>
   );

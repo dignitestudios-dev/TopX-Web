@@ -497,11 +497,17 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
                   className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={chat.receiverInfo?.profilePicture || chat.receiverInfo?.image || "https://via.placeholder.com/40"}
-                      alt={chat.receiverInfo?.name || "User"}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {(chat.receiverInfo?.profilePicture || chat.receiverInfo?.image) ? (
+                      <img
+                        src={chat.receiverInfo?.profilePicture || chat.receiverInfo?.image}
+                        alt={chat.receiverInfo?.name || "User"}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm uppercase flex-shrink-0">
+                        {(chat.receiverInfo?.name || chat.receiverInfo?.username || "U").charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-[15px] font-medium text-gray-800">
                       {chat.receiverInfo?.name || chat.receiverInfo?.username || "Unknown"}
                     </span>
@@ -531,11 +537,17 @@ const ShareToChatsModal = ({ onClose, story, post }) => {
                   className="flex items-center justify-between py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={chat.image || chat.profilePicture || "https://via.placeholder.com/40"}
-                      alt={chat.name || "Group"}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
+                    {(chat.image || chat.profilePicture) ? (
+                      <img
+                        src={chat.image || chat.profilePicture}
+                        alt={chat.name || "Group"}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm uppercase flex-shrink-0">
+                        {(chat.name || "G").charAt(0).toUpperCase()}
+                      </div>
+                    )}
                     <span className="text-[15px] font-medium text-gray-800">
                       {chat.name || "Unknown Group"}
                     </span>

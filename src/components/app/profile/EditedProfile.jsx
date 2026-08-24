@@ -15,7 +15,7 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import { getInterests, checkUsername } from "../../../redux/slices/onboarding.slice";
 import ProfilePictureModal from "./ProfilePictureModal";
 import EmojiPickerModal from "./EmojiPickerModal";
-import { emojiUrlToFile, deduplicateInterestsList } from "../../../lib/helpers";
+import { emojiUrlToFile, deduplicateInterestsList, validateUsername, hasMaliciousInput, sanitizeUsername } from "../../../lib/helpers";
 
 export default function EditedProfile({ setIsEditProfile }) {
   const navigate = useNavigate();
@@ -116,45 +116,12 @@ export default function EditedProfile({ setIsEditProfile }) {
       return;
     }
 
-    if (usernameToCheck.length < 3) {
-      setUsernameError("Username must be at least 3 characters long");
+    const validation = validateUsername(usernameToCheck);
+    if (!validation.isValid) {
+      setUsernameError(validation.error);
       setIsUsernameValid(false);
       setUsernameStatus("unavailable");
-      return;
-    }
-
-    if (usernameToCheck.length > 50) {
-      setUsernameError("Username cannot exceed 50 characters");
-      setIsUsernameValid(false);
-      setUsernameStatus("unavailable");
-      return;
-    }
-
-    if (/\s/.test(usernameToCheck)) {
-      setUsernameError("Username cannot contain spaces");
-      setIsUsernameValid(false);
-      setUsernameStatus("unavailable");
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_.]+$/.test(usernameToCheck)) {
-      setUsernameError("Username can only contain letters, numbers, underscores, and dots");
-      setIsUsernameValid(false);
-      setUsernameStatus("unavailable");
-      return;
-    }
-
-    if (/^[._]/.test(usernameToCheck) || /[._]$/.test(usernameToCheck)) {
-      setUsernameError("Username cannot start or end with a dot or underscore");
-      setIsUsernameValid(false);
-      setUsernameStatus("unavailable");
-      return;
-    }
-
-    if (/[_.]{2,}/.test(usernameToCheck)) {
-      setUsernameError("Username cannot contain consecutive dots or underscores");
-      setIsUsernameValid(false);
-      setUsernameStatus("unavailable");
+      ErrorToast(validation.error);
       return;
     }
 
@@ -202,6 +169,7 @@ export default function EditedProfile({ setIsEditProfile }) {
     setIsUsernameValid(true);
   };
 
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
   const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
   const DISALLOWED_EXTENSIONS = [".svg", ".gif"];
 
@@ -219,6 +187,13 @@ export default function EditedProfile({ setIsEditProfile }) {
       !ALLOWED_IMAGE_TYPES.includes(fileType)
     ) {
       ErrorToast("Unsupported file format! Only JPG, JPEG, PNG, and WEBP are supported. SVG and GIF files are not allowed.");
+      e.target.value = "";
+      setProfileFile(null);
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      ErrorToast("Profile picture size must not exceed 5MB.");
       e.target.value = "";
       setProfileFile(null);
       return;
@@ -267,6 +242,14 @@ export default function EditedProfile({ setIsEditProfile }) {
 
     // Check username if it has changed
     if (username !== originalUsername && username.trim() !== "") {
+      const validation = validateUsername(username);
+      if (!validation.isValid) {
+        ErrorToast(validation.error);
+        setUsernameError(validation.error);
+        setIsUsernameValid(false);
+        return;
+      }
+
       // Check username availability before submitting
       const usernameRes = await dispatch(checkUsername(username));
 
@@ -429,9 +412,15 @@ export default function EditedProfile({ setIsEditProfile }) {
                   placeholder="Enter your username"
                   value={username}
                   onChange={(e) => {
-                    setUsername(e.target.value);
-                    setUsernameError("");
-                    setIsUsernameValid(true);
+                    const val = e.target.value;
+                    if (hasMaliciousInput(val)) {
+                      setUsernameError("Malicious characters or script patterns are not allowed in username");
+                      setIsUsernameValid(false);
+                    } else {
+                      setUsernameError("");
+                      setIsUsernameValid(true);
+                    }
+                    setUsername(val);
                     setUsernameStatus(null);
                     setUsernameSuggestions([]);
                   }}

@@ -14,6 +14,7 @@ import { fetchOtherPages } from "../../redux/slices/pages.slice";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
+import { ErrorToast } from "./Toaster";
 
 const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [subscriptionName, setSubscriptionName] = useState("");
@@ -106,6 +107,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        ErrorToast("Image size must not exceed 5MB.");
+        e.target.value = "";
+        return;
+      }
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
       setErrors((prev) => ({ ...prev, image: "" }));

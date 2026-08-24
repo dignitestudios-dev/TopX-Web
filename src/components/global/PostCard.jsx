@@ -937,7 +937,7 @@ const PostCard = ({
       )}
 
       {selectedOption === "Share to your Story" && (
-        <PostStoryModal onClose={setSelectedOption} />
+        <PostStoryModal post={post} onClose={setSelectedOption} />
       )}
       {selectedOption === "Share with Topic Page" && (
         <ShareRepostModal postId={post?._id} onClose={setSelectedOption} />

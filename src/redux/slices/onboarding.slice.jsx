@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 import Cookies from "js-cookie";
-import { deduplicateInterestsList } from "../../lib/helpers";
+import { deduplicateInterestsList, validateUsername } from "../../lib/helpers";
 
 const initialState = {
   isLoading: false,
@@ -133,12 +133,17 @@ export const checkUsername = createAsyncThunk(
   "onboarding/checkUsername",
   async (username, thunkAPI) => {
     try {
+      const validation = validateUsername(username);
+      if (!validation.isValid) {
+        return thunkAPI.rejectWithValue(validation.error);
+      }
+
       const token = Cookies.get("access_token");
       if (!token) return thunkAPI.rejectWithValue("No access token found");
 
       const res = await axios.post(
         "/users/username",
-        { username },
+        { username: username.trim() },
         {
           headers: {
             Authorization: `Bearer ${token}`,

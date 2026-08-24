@@ -1,26 +1,67 @@
-import React, { useState } from "react";
-import { IoMailOutline } from "react-icons/io5";
+import React, { useState, useEffect } from "react";
 import { LiaIdCard } from "react-icons/lia";
-import { MdOutlinePayment } from "react-icons/md";
-import { PiCertificateBold, PiClipboardText } from "react-icons/pi";
-import OnboardingStepper from "../../components/onboarding/OnboardingStepper";
-import { auth } from "../../assets/export";
 import { TbCheckbox } from "react-icons/tb";
+import { PiClipboardText } from "react-icons/pi";
+import OnboardingStepper from "../../components/onboarding/OnboardingStepper";
 import CreateAccount from "../../components/onboarding/CreateAccount";
 import VerifyAccount from "../../components/onboarding/VerifyAccount";
-
 import AddStore from "../../components/onboarding/AddStore";
 import PersonalDetails from "../../components/onboarding/PersonalDetails";
 import Interests from "../../components/onboarding/Interests";
 import AccountCreated from "../../components/onboarding/AccountCreated";
-import { useLocation, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import { getAllUserData } from "../../redux/slices/auth.slice";
+import { getOnboardingStatus } from "../../lib/helpers";
+import Cookies from "js-cookie";
+import { FiLoader } from "react-icons/fi";
+
 export default function SignUp() {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
   const ref = searchParams.get("ref");
+
+  const { allUserData, user } = useSelector((state) => state.auth);
+  const currentUser = allUserData || user;
+
+  const [currentStep, setCurrentStep] = useState(location.state?.step ?? 0);
+  const [name, setName] = useState(currentUser?.name || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
+  const [phone, setPhone] = useState(currentUser?.phone || "");
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    const token = Cookies.get("access_token");
+    if (token) {
+      dispatch(getAllUserData())
+        .unwrap()
+        .then((userData) => {
+          if (userData) {
+            setName(userData.name || "");
+            setEmail(userData.email || "");
+            setPhone(userData.phone || "");
+
+            const status = getOnboardingStatus(userData);
+            if (status.isCompleted) {
+              navigate("/home", { replace: true });
+            } else {
+              const targetStep = location.state?.step !== undefined ? location.state.step : status.step;
+              setCurrentStep(targetStep);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch user data in Signup:", err);
+        })
+        .finally(() => {
+          setIsChecking(false);
+        });
+    } else {
+      setIsChecking(false);
+    }
+  }, [dispatch, navigate]);
 
   const providerSteps = [
     { icon: LiaIdCard, title: "Your Details" },
@@ -48,6 +89,14 @@ export default function SignUp() {
     }
   };
 
+  if (isChecking && Cookies.get("access_token")) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#F8F8F8]">
+        <FiLoader className="w-8 h-8 animate-spin text-[#F85E00]" />
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-12 gap-6 h-screen w-full">
       <div className="bg-[#F8F8F8] col-span-12 lg:col-span-4">
@@ -66,22 +115,28 @@ export default function SignUp() {
           ) : currentStep === 1 ? (
             <VerifyAccount
               referalCode={ref}
-              email={email}
-              phone={phone}
-              handleNext={handleNext} 
+              email={email || currentUser?.email}
+              phone={phone || currentUser?.phone}
+              handleNext={handleNext}
               handlePrevious={handlePrevious}
             />
           ) : currentStep === 2 ? (
-            <PersonalDetails name={name} email={email} handleNext={handleNext} handlePrevious={handlePrevious}/>
+            <PersonalDetails
+              name={name || currentUser?.name}
+              email={email || currentUser?.email}
+              handleNext={handleNext}
+              handlePrevious={handlePrevious}
+            />
           ) : currentStep === 3 ? (
-            <Interests handleNext={handleNext} handlePrevious={handlePrevious}/>
+            <Interests handleNext={handleNext} handlePrevious={handlePrevious} />
           ) : currentStep === 4 ? (
-            <AddStore handleNext={handleNext} handlePrevious={handlePrevious}/>
+            <AddStore handleNext={handleNext} handlePrevious={handlePrevious} />
           ) : currentStep === 5 ? (
-            <AccountCreated/>
+            <AccountCreated />
           ) : null}
         </div>
       </div>
     </div>
   );
 }
+

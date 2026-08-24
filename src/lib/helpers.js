@@ -24,47 +24,107 @@ export function timeAgo(dateString) {
 }
 
 /**
- * Extracts URL and YouTube thumbnail from a text string.
+ * Validates whether a given string is a well-formed HTTP/HTTPS URL with a valid domain/TLD or IP.
+ */
+export function isValidUrl(urlString) {
+  if (!urlString || typeof urlString !== "string") return false;
+  const trimmed = urlString.trim();
+  if (!trimmed) return false;
+
+  let urlToTest = trimmed;
+  if (/^www\./i.test(urlToTest)) {
+    urlToTest = `https://${urlToTest}`;
+  }
+
+  try {
+    const parsed = new URL(urlToTest);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return false;
+    }
+
+    const hostname = parsed.hostname;
+    if (
+      !hostname ||
+      hostname.includes("..") ||
+      hostname.startsWith(".") ||
+      hostname.endsWith(".")
+    ) {
+      return false;
+    }
+
+    // Check if IPv4 address (e.g. 192.168.1.1)
+    const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (ipv4Regex.test(hostname)) {
+      const parts = hostname.split(".").map(Number);
+      return parts.every((p) => p >= 0 && p <= 255);
+    }
+
+    // Valid domain name regex (must have at least one label followed by dot and valid 2-63 letter TLD)
+    const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,63}$/;
+    return domainRegex.test(hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Extracts URL and YouTube thumbnail from a text string only if it is a valid, well-formed URL.
  */
 export function getLinkPreview(text) {
   if (!text || typeof text !== "string") return null;
 
-  // Match HTTP/HTTPS URL
-  const urlRegex = /(https?:\/\/[^\s]+)/i;
-  const match = text.match(urlRegex);
-  if (!match) return null;
+  // Match potential HTTP/HTTPS or www URL tokens
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  const matches = text.match(urlRegex);
+  if (!matches) return null;
 
-  const url = match[0];
-  let domain = "";
-  try {
-    const parsed = new URL(url);
-    domain = parsed.hostname.replace(/^www\./, "");
-  } catch (e) {
-    domain = "link";
-  }
+  for (const rawMatch of matches) {
+    // Strip trailing punctuation often attached at end of sentences or quotes
+    const cleanUrl = rawMatch.replace(/[.,;:!?)>"']+$/, "");
+    if (!cleanUrl || !isValidUrl(cleanUrl)) continue;
 
-  // Check for YouTube (Shorts, Watch, Embed, YouTu.be)
-  const ytMatch = url.match(
-    /(?:youtube\.com\/(?:shorts\/|watch\?(?:.*&)?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
-  );
+    const fullUrl =
+      cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")
+        ? cleanUrl
+        : `https://${cleanUrl}`;
 
-  if (ytMatch && ytMatch[1]) {
-    const videoId = ytMatch[1];
+    let domain = "";
+    try {
+      const parsed = new URL(fullUrl);
+      domain = parsed.hostname.replace(/^www\./, "");
+    } catch (e) {
+      domain = "link";
+    }
+
+    // Check for YouTube (Shorts, Watch, Embed, YouTu.be)
+    const ytMatch = fullUrl.match(
+      /(?:youtube\.com\/(?:shorts\/|watch\?(?:.*&)?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i
+    );
+
+    if (ytMatch && ytMatch[1]) {
+      const videoId = ytMatch[1];
+      return {
+        url: cleanUrl,
+        fullUrl,
+        rawUrl: rawMatch,
+        domain: "youtube.com",
+        thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+        isYoutube: true,
+        videoId,
+      };
+    }
+
     return {
-      url,
-      domain: "youtube.com",
-      thumbnail: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
-      isYoutube: true,
-      videoId,
+      url: cleanUrl,
+      fullUrl,
+      rawUrl: rawMatch,
+      domain,
+      thumbnail: null,
+      isYoutube: false,
     };
   }
 
-  return {
-    url,
-    domain,
-    thumbnail: null,
-    isYoutube: false,
-  };
+  return null;
 }
 
 /**
@@ -320,3 +380,166 @@ export function deduplicateInterestsList(rawList) {
   return result;
 }
 
+/**
+ * Determines the user's onboarding and profile completion status.
+ * Returns { isCompleted: boolean, step: number }
+ * Steps:
+ * 0: Create Account (not logged in / initial)
+ * 1: Verification (email & phone OTP verification)
+ * 2: Personal Details (username, dob, gender, etc.)
+ * 3: Interests (topic interests selection)
+ * 4: Recommendations (optional follow step)
+ * 5: Completed
+ */
+export function getOnboardingStatus(user) {
+  if (!user) {
+    return { isCompleted: false, step: 0 };
+  }
+
+  // 1. Mandatory Email & Phone Verification
+  if (!user.isEmailVerified || !user.isPhoneVerified) {
+    return { isCompleted: false, step: 1 };
+  }
+
+  // 2. Mandatory Personal Details (Username is required)
+  if (!user.username || typeof user.username !== "string" || user.username.trim() === "") {
+    return { isCompleted: false, step: 2 };
+  }
+
+  // 3. Mandatory Interests (At least 1 interest selected)
+  if (!user.interests || !Array.isArray(user.interests) || user.interests.length === 0) {
+    return { isCompleted: false, step: 3 };
+  }
+
+  return { isCompleted: true, step: 5 };
+}
+
+/**
+ * Checks and requests Camera & Microphone permissions before going live.
+ * Returns { success: boolean, error?: string, code?: string }
+ */
+export async function checkMediaPermissions() {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return {
+      success: false,
+      code: "UNSUPPORTED",
+      error: "Camera and microphone access is not supported on this browser.",
+    };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: true,
+    });
+    // Release tracks immediately so Agora RTC can acquire them cleanly
+    stream.getTracks().forEach((track) => track.stop());
+    return { success: true };
+  } catch (err) {
+    const errorName = err?.name || "";
+    let userFriendlyMessage = "Camera and microphone permissions are required to go live.";
+
+    if (errorName === "NotAllowedError" || errorName === "PermissionDeniedError") {
+      userFriendlyMessage =
+        "Camera and microphone permissions were denied. Please allow camera and microphone access in your browser settings .";
+    } else if (errorName === "NotFoundError" || errorName === "DevicesNotFoundError") {
+      userFriendlyMessage =
+        "No camera or microphone device was found on your computer. Please connect a camera and microphone to start streaming.";
+    } else if (errorName === "NotReadableError" || errorName === "TrackStartError") {
+      userFriendlyMessage =
+        "Camera or microphone is currently in use by another application. Please close other apps and try again.";
+    }
+
+    return {
+      success: false,
+      code: errorName || "PERMISSION_DENIED",
+      error: userFriendlyMessage,
+    };
+  }
+}
+
+/**
+ * Detects if an input string contains dangerous XSS, HTML tags, script, or SQL injection patterns.
+ */
+export function hasMaliciousInput(str) {
+  if (!str || typeof str !== "string") return false;
+
+  // Check for HTML/XSS tags & script patterns
+  const xssPattern =
+    /<[^>]*>|javascript:|data:|vbscript:|onload=|onerror=|onclick=|onmouseover=|<script|<\/script|<img|<iframe|<svg|eval\(|alert\(/i;
+  if (xssPattern.test(str)) return true;
+
+  // Check for common SQL injection keywords and special syntax
+  const sqlPattern =
+    /(--|\/\*|\*\/|;|'|"|`|=|union\s+select|select\s+.*\s+from|insert\s+into|drop\s+table|update\s+.*\s+set|delete\s+from|or\s+1\s*=\s*1|or\s+'1'\s*=\s*'1')/i;
+  if (sqlPattern.test(str)) return true;
+
+  return false;
+}
+
+/**
+ * Sanitizes username input: strips out dangerous characters, HTML tags, scripts, and non-allowed characters.
+ * Only allows lowercase/uppercase alphanumeric characters, dot, and underscore.
+ */
+export function sanitizeUsername(input) {
+  if (!input || typeof input !== "string") return "";
+  // Strip all HTML tags
+  let cleaned = input.replace(/<[^>]*>/g, "");
+  // Keep only alphanumeric characters, underscores, and dots
+  cleaned = cleaned.replace(/[^a-zA-Z0-9_.]/g, "");
+  return cleaned;
+}
+
+/**
+ * Validates a username string. Returns { isValid: boolean, error?: string }.
+ */
+export function validateUsername(username) {
+  if (!username || typeof username !== "string" || username.trim() === "") {
+    return { isValid: false, error: "Please enter your username." };
+  }
+
+  const trimmed = username.trim();
+
+  // Check for malicious XSS/SQL patterns first
+  if (hasMaliciousInput(username)) {
+    return {
+      isValid: false,
+      error: "Malicious characters or script patterns are not allowed in username.",
+    };
+  }
+
+  if (/\s/.test(username)) {
+    return { isValid: false, error: "Username cannot contain spaces." };
+  }
+
+  if (trimmed.length < 3) {
+    return { isValid: false, error: "Username must be at least 3 characters long." };
+  }
+
+  if (trimmed.length > 50) {
+    return { isValid: false, error: "Username cannot exceed 50 characters." };
+  }
+
+  if (!/^[a-zA-Z0-9_.]+$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "Username can only contain letters, numbers, underscores, and dots.",
+    };
+  }
+
+  if (/^[._]/.test(trimmed) || /[._]$/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "Username cannot start or end with a dot or underscore.",
+    };
+  }
+
+  if (/[_.]{2,}/.test(trimmed)) {
+    return {
+      isValid: false,
+      error: "Username cannot contain consecutive dots or underscores.",
+    };
+  }
+
+  return { isValid: true };
+}
