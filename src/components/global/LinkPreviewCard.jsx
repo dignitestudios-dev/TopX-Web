@@ -1,13 +1,58 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ExternalLink, Play, X } from "lucide-react";
 
 export default function LinkPreviewCard({ linkData }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [ogData, setOgData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Reset state immediately when the URL changes
+    setOgData(null);
+    setIsPlaying(false);
+
+    if (linkData && !linkData.isYoutube && !linkData.thumbnail) {
+      setIsLoading(true);
+      // Fetch OpenGraph metadata securely
+      fetch(`https://api.microlink.io/?url=${encodeURIComponent(linkData.fullUrl)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success' && data.data) {
+            setOgData({
+              image: data.data.image?.url || data.data.logo?.url,
+              title: data.data.title,
+              description: data.data.description
+            });
+          }
+        })
+        .catch(err => console.error("Error fetching OG data:", err))
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
+  }, [linkData?.fullUrl]);
 
   if (!linkData || !linkData.url) return null;
 
+  if (isLoading) {
+    return (
+      <div className="w-full my-3 border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm p-4 flex items-center gap-4">
+        <div className="w-16 h-16 bg-gray-200 rounded-xl animate-pulse shrink-0"></div>
+        <div className="flex-1 space-y-3">
+          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+          <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+        </div>
+      </div>
+    );
+  }
+
   const { url, fullUrl, domain, thumbnail, isYoutube, videoId } = linkData;
   const href = fullUrl || (url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`);
+  
+  // Fallback to high-res icon if site uses Cloudflare/anti-bot protection (like Outfitters)
+  const fallbackImage = `https://icon.horse/icon/${domain}`;
+  const displayThumbnail = thumbnail || ogData?.image || fallbackImage;
+  const displayTitle = ogData?.title || domain;
 
   const handlePlayClick = (e) => {
     e.stopPropagation();
@@ -40,14 +85,14 @@ export default function LinkPreviewCard({ linkData }) {
             <X className="w-4 h-4" />
           </button>
         </div>
-      ) : thumbnail ? (
+      ) : displayThumbnail ? (
         <div
           onClick={isYoutube && videoId ? handlePlayClick : undefined}
           className={`block relative group overflow-hidden bg-black max-h-[420px] ${isYoutube && videoId ? "cursor-pointer" : ""
             }`}
         >
           <img
-            src={thumbnail}
+            src={displayThumbnail}
             alt="Link thumbnail"
             className="w-full h-auto max-h-[420px] object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-300"
             onError={(e) => {
@@ -71,11 +116,19 @@ export default function LinkPreviewCard({ linkData }) {
             {domain}
             <ExternalLink className="w-3 h-3 text-gray-400 inline shrink-0" />
           </p>
+          <p className="text-sm font-semibold text-gray-900 mb-0.5 line-clamp-1">
+            {displayTitle}
+          </p>
+          {ogData?.description && (
+            <p className="text-xs text-gray-600 line-clamp-2 mb-1">
+              {ogData.description}
+            </p>
+          )}
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs sm:text-sm text-orange-600 hover:text-orange-700 font-normal break-all hover:underline leading-relaxed block truncate"
+            className="text-xs sm:text-sm text-orange-600 hover:text-orange-700 font-normal break-all hover:underline leading-relaxed block truncate mt-1"
             onClick={(e) => e.stopPropagation()}
           >
             {url}
