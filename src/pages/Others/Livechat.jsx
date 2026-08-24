@@ -25,13 +25,11 @@ export default function LiveChat() {
   const { state } = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { pageId, pageName, pageOwner,page } = state || {};
+  const { pageId, pageName, pageOwner, page } = state || {};
 
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [chatId, setChatId] = useState(null);
-  const [currentViewerCount, setCurrentViewerCount] = useState(0);
-  const [totalViewersCount, setTotalViewersCount] = useState(0);
   const chatIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -80,11 +78,10 @@ export default function LiveChat() {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className={`underline break-all transition font-medium ${
-                  isMe
+                className={`underline break-all transition font-medium ${isMe
                     ? "text-blue-100 hover:text-white"
                     : "text-blue-600 hover:text-blue-800"
-                }`}
+                  }`}
               >
                 {cleanUrl}
               </a>
@@ -105,9 +102,8 @@ export default function LiveChat() {
   // Giphy API Fetch
   const fetchGifs = async (query = "") => {
     try {
-      const url = `https://api.giphy.com/v1/gifs/${
-        query ? "search" : "trending"
-      }?api_key=${GIPHY_API_KEY}&q=${query}&limit=20`;
+      const url = `https://api.giphy.com/v1/gifs/${query ? "search" : "trending"
+        }?api_key=${GIPHY_API_KEY}&q=${query}&limit=20`;
       const res = await fetch(url);
       const data = await res.json();
       setGifs(data.data || []);
@@ -145,16 +141,16 @@ export default function LiveChat() {
     if (!socket || !pageId) return;
 
     const handleJoin = () => {
-      socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId }, async(response) => {
+      socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId }, async (response) => {
         const receivedId = response?.data;
 
         if (receivedId && response.success) {
           setChatId(receivedId);
           chatIdRef.current = receivedId;
-         await dispatch(
+          await dispatch(
             fetchLiveChatHistory({ chatId: pageId, page: 1, limit: 50 }),
           );
-         
+
         }
       });
     };
@@ -183,40 +179,10 @@ export default function LiveChat() {
       ]);
     });
 
-    const unsubscribeJoined = on(SOCKET_EVENTS.LIVE.USER_JOINED, (data) => {
-      console.log("Socket live:user:joined in LiveChat:", data);
-      if (data) {
-        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
-          setCurrentViewerCount(Number(data.currentViewerCount));
-        } else {
-          setCurrentViewerCount((prev) => prev + 1);
-        }
-        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
-          setTotalViewersCount(Number(data.totalViewersCount));
-        }
-      }
-    });
-
-    const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, (data) => {
-      console.log("Socket live:user:left in LiveChat:", data);
-      if (data) {
-        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
-          setCurrentViewerCount(Number(data.currentViewerCount));
-        } else {
-          setCurrentViewerCount((prev) => Math.max(0, prev - 1));
-        }
-        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
-          setTotalViewersCount(Number(data.totalViewersCount));
-        }
-      }
-    });
-
     return () => {
       if (chatIdRef.current)
         emit(SOCKET_EVENTS.LIVE.LEAVE, { chatId: chatIdRef.current });
       unsubscribe();
-      if (unsubscribeJoined) unsubscribeJoined();
-      if (unsubscribeLeft) unsubscribeLeft();
       socket.off("connect", handleJoin);
     };
   }, [pageId, socket, on, emit, dispatch, currentUser?._id]);
@@ -252,16 +218,16 @@ export default function LiveChat() {
     setMessage("");
   };
 
-const ALLOWED_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-  "video/mp4",
-  "video/webm",
-  "video/ogg",
-  "video/quicktime" // for .mov (iPhone videos)
-];
+  const ALLOWED_TYPES = [
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+    "video/mp4",
+    "video/webm",
+    "video/ogg",
+    "video/quicktime" // for .mov (iPhone videos)
+  ];
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -405,13 +371,8 @@ const ALLOWED_TYPES = [
             <span className="font-bold text-lg">
               {page?.user?.name ? `${page.user.name} ` : ""}{pageName || "Live Room"} Chat
             </span>
-            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-200 flex items-center gap-1.5">
-              👥 {currentViewerCount > 0 ? currentViewerCount : (page?.followersCount || page?.followers?.length || 1)} {currentViewerCount === 1 ? "Viewer" : "Viewers"}
-              {totalViewersCount > 0 && (
-                <span className="text-[10px] text-orange-600/80 font-normal">
-                  ({totalViewersCount} total)
-                </span>
-              )}
+            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-200">
+              👥 {page?.followersCount || page?.followers?.length || 1} Participants
             </span>
           </div>
           {pageOwner ? (
@@ -436,24 +397,21 @@ const ALLOWED_TYPES = [
           {messages.map((msg, index) => (
             <div
               key={msg.id || index}
-              className={`flex items-start gap-3 ${
-                msg.isMe ? "flex-row-reverse" : "flex-row"
-              }`}
+              className={`flex items-start gap-3 ${msg.isMe ? "flex-row-reverse" : "flex-row"
+                }`}
             >
               <Avatar name={msg.senderName} src={msg?.senderPic} />
 
               <div
-                className={`max-w-[70%] flex flex-col ${
-                  msg.isMe ? "items-end" : "items-start"
-                }`}
+                className={`max-w-[70%] flex flex-col ${msg.isMe ? "items-end" : "items-start"
+                  }`}
               >
                 <span className="text-[10px] font-bold text-gray-400 mb-1 uppercase">
                   {msg.senderName}
                 </span>
                 <div
-                  className={`px-4 py-2 rounded-2xl ${
-                    msg.isMe ? "bg-orange-500 text-white" : "bg-white border"
-                  }`}
+                  className={`px-4 py-2 rounded-2xl ${msg.isMe ? "bg-orange-500 text-white" : "bg-white border"
+                    }`}
                 >
                   {msg.text && (
                     <p className="text-sm break-words whitespace-pre-wrap">
@@ -544,7 +502,7 @@ const ALLOWED_TYPES = [
               type="file"
               ref={fileInputRef}
               className="hidden"
-            accept="image/jpeg,image/png,image/webp,image/jpg,video/mp4,video/webm,video/ogg"
+              accept="image/jpeg,image/png,image/webp,image/jpg,video/mp4,video/webm,video/ogg"
               onChange={handleFileChange}
             />
 

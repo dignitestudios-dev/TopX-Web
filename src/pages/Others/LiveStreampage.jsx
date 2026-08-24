@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useAgora } from "../../hooks/useAgora";
 import { useRTM } from "../../hooks/useRTM";
-import { startStream, joinStream, endStream, resetLivestreamState } from "../../redux/slices/livestream.slice";
+import { startStream, joinStream, endStream } from "../../redux/slices/livestream.slice";
 import { getPageDetail } from "../../redux/slices/pages.slice";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import LiveCommentsLikes from "../../components/livestream/LiveCommentsLikes";
@@ -19,8 +19,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { checkMediaPermissions } from "../../lib/helpers";
-import useSocket from "../../socket/useSocket";
-import { SOCKET_EVENTS } from "../../constants/socketEvents";
 
 const LiveStreampage = () => {
   const { pageId } = useParams();
@@ -39,23 +37,13 @@ const LiveStreampage = () => {
   const [role, setRole] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [viewerCount, setViewerCount] = useState(0);
-  const [currentViewerCount, setCurrentViewerCount] = useState(0);
-  const [totalViewersCount, setTotalViewersCount] = useState(0);
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
-  const initializedPageIdRef = useRef(null);
-
-  const { on, socket } = useSocket();
 
   // Determine if user is page owner (host) or viewer (audience)
   useEffect(() => {
     const fromGoLive = location.state?.fromGoLive === true;
-
-    // Prevent duplicate role determination / API calls for the same page session
-    if (initializedPageIdRef.current === pageId) {
-      return;
-    }
 
     const determineRole = async () => {
       try {
@@ -64,10 +52,9 @@ const LiveStreampage = () => {
           fromGoLive &&
           streamData &&
           streamData.channelName &&
-          (streamData.rtcToken || streamData.token)
+          streamData.rtcToken
         ) {
           console.log("StreamData already exists from GoLive, user is host");
-          initializedPageIdRef.current = pageId;
           setRole("host");
           setIsInitializing(false);
           return;
@@ -79,9 +66,9 @@ const LiveStreampage = () => {
         if (pageRes.meta.requestStatus === "fulfilled") {
           const page = pageRes.payload;
           const isOwner =
-            page?.owner?._id === user?._id ||
-            page?.ownerId === user?._id ||
-            page?.userId === user?._id;
+            page.owner?._id === user?._id ||
+            page.ownerId === user?._id ||
+            page.userId === user?._id;
 
           if (isOwner) {
             // Owner (host) - call startStream API
@@ -90,7 +77,6 @@ const LiveStreampage = () => {
             const startRes = await dispatch(startStream(pageId));
 
             if (startRes.meta.requestStatus === "fulfilled") {
-              initializedPageIdRef.current = pageId;
               setTimeout(() => {
                 setIsInitializing(false);
               }, 100);
@@ -106,7 +92,6 @@ const LiveStreampage = () => {
             const joinRes = await dispatch(joinStream(pageId));
 
             if (joinRes.meta.requestStatus === "fulfilled") {
-              initializedPageIdRef.current = pageId;
               setIsInitializing(false);
             } else {
               ErrorToast(
@@ -122,7 +107,6 @@ const LiveStreampage = () => {
           const joinRes = await dispatch(joinStream(pageId));
 
           if (joinRes.meta.requestStatus === "fulfilled") {
-            initializedPageIdRef.current = pageId;
             setIsInitializing(false);
           } else {
             ErrorToast(
@@ -138,7 +122,6 @@ const LiveStreampage = () => {
         const joinRes = await dispatch(joinStream(pageId));
 
         if (joinRes.meta.requestStatus === "fulfilled") {
-          initializedPageIdRef.current = pageId;
           setIsInitializing(false);
         } else {
           ErrorToast(error.message || "Failed to initialize stream");
@@ -150,7 +133,7 @@ const LiveStreampage = () => {
     if (user && pageId) {
       determineRole();
     }
-  }, [pageId, user?._id, dispatch, navigate, location.state]);
+  }, [pageId, user, dispatch, navigate, streamData, location.state]);
 
   // Get Agora credentials from streamData - use EXACT values from backend
   const appId =
@@ -160,18 +143,13 @@ const LiveStreampage = () => {
     "d2049131656f4ef389a7e743effcbeec";
 
   // Backend returns rtcToken - use EXACT value
-  const token = streamData?.rtcToken || streamData?.token || null;
+  const token = streamData?.rtcToken || null;
 
   // Backend returns rtmToken for RTM messaging
   const rtmToken = streamData?.rtmToken || null;
 
   // Backend returns accountNumber as UID - convert to Number
-  const uid =
-    streamData?.accountNumber !== undefined && streamData?.accountNumber !== null
-      ? Number(streamData.accountNumber)
-      : streamData?.uid !== undefined && streamData?.uid !== null
-      ? Number(streamData.uid)
-      : null;
+  const uid = streamData?.accountNumber ? Number(streamData.accountNumber) : null;
 
   // Backend returns channelName - use EXACT value (no fallback)
   const channelName = streamData?.channelName || null;
@@ -481,48 +459,7 @@ const LiveStreampage = () => {
     });
   }, [remoteUsers, role]);
 
-  // Listen to socket live viewer events (USER_JOINED / USER_LEFT)
-  useEffect(() => {
-    if (!socket || !pageId) return;
-
-    const handleUserJoined = (data) => {
-      console.log("Socket live:user:joined in LiveStreampage:", data);
-      if (data) {
-        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
-          setCurrentViewerCount(Number(data.currentViewerCount));
-        } else {
-          setCurrentViewerCount((prev) => prev + 1);
-        }
-        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
-          setTotalViewersCount(Number(data.totalViewersCount));
-        }
-      }
-    };
-
-    const handleUserLeft = (data) => {
-      console.log("Socket live:user:left in LiveStreampage:", data);
-      if (data) {
-        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
-          setCurrentViewerCount(Number(data.currentViewerCount));
-        } else {
-          setCurrentViewerCount((prev) => Math.max(0, prev - 1));
-        }
-        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
-          setTotalViewersCount(Number(data.totalViewersCount));
-        }
-      }
-    };
-
-    const unsubscribeJoined = on(SOCKET_EVENTS.LIVE.USER_JOINED, handleUserJoined);
-    const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, handleUserLeft);
-
-    return () => {
-      if (unsubscribeJoined) unsubscribeJoined();
-      if (unsubscribeLeft) unsubscribeLeft();
-    };
-  }, [socket, pageId, on]);
-
-  // Update fallback viewer count when Agora remote users change
+  // Update viewer count (simplified - in production, get from Agora stats)
   useEffect(() => {
     if (isJoined) {
       setViewerCount(remoteUsers.length + (role === "host" ? 1 : 0));
@@ -562,10 +499,8 @@ const LiveStreampage = () => {
       if (isJoined) {
         leave().catch(console.error);
       }
-
-      dispatch(resetLivestreamState());
     };
-  }, [isJoined, leave, dispatch]);
+  }, [isJoined, leave]);
 
   // Show loading state
   if (isInitializing || pageDetailLoading || livestreamLoading) {
@@ -722,22 +657,15 @@ const LiveStreampage = () => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full shadow-lg">
-            <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
-            <span className="text-xs md:text-sm font-bold tracking-wider">LIVE</span>
-            <span className="text-xs md:text-sm ml-1 flex items-center gap-1.5 bg-black/30 px-2.5 py-0.5 rounded-full">
-              <Users className="w-3.5 h-3.5" />
-              <span className="font-semibold">
-                {currentViewerCount > 0
-                  ? currentViewerCount
-                  : (viewerCount > 0 ? viewerCount : 1)}
+          <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
+            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <span className="text-sm font-semibold">LIVE</span>
+            {viewerCount > 0 && (
+              <span className="text-sm ml-2 flex items-center gap-1">
+                <Users className="w-4 h-4" />
+                {viewerCount}
               </span>
-              {totalViewersCount > 0 && (
-                <span className="text-[11px] text-gray-200 font-normal">
-                  ({totalViewersCount} total)
-                </span>
-              )}
-            </span>
+            )}
           </div>
         </div>
       </div>
@@ -810,8 +738,8 @@ const LiveStreampage = () => {
               <button
                 onClick={toggleVideo}
                 className={`p-4 rounded-full ${localVideo?.isPlaying !== false
-                    ? "bg-gray-700 hover:bg-gray-600"
-                    : "bg-red-600 hover:bg-red-700"
+                  ? "bg-gray-700 hover:bg-gray-600"
+                  : "bg-red-600 hover:bg-red-700"
                   } transition-colors`}
               >
                 {localVideo?.isPlaying !== false ? (
@@ -824,8 +752,8 @@ const LiveStreampage = () => {
               <button
                 onClick={toggleAudio}
                 className={`p-4 rounded-full ${localAudio?.isPlaying !== false
-                    ? "bg-gray-700 hover:bg-gray-600"
-                    : "bg-red-600 hover:bg-red-700"
+                  ? "bg-gray-700 hover:bg-gray-600"
+                  : "bg-red-600 hover:bg-red-700"
                   } transition-colors`}
               >
                 {localAudio?.isPlaying !== false ? (
