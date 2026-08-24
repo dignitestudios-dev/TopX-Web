@@ -16,6 +16,8 @@ export const useAgora = ({
 
   const [localVideo, setLocalVideo] = useState(null);
   const [localAudio, setLocalAudio] = useState(null);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [remoteUsers, setRemoteUsers] = useState([]);
   const [isJoined, setIsJoined] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +72,7 @@ export const useAgora = ({
     const handleUserUnpublished = (user, mediaType) => {
       if (mediaType === "video") user.videoTrack?.stop();
       if (mediaType === "audio") user.audioTrack?.stop();
-      
+
       // Force UI update
       setRemoteUsers((prev) => prev.map((u) => (u.uid === user.uid ? user : u)));
     };
@@ -98,7 +100,7 @@ export const useAgora = ({
       localAudioTrackRef.current?.close();
       localVideoTrackRef.current?.stop();
       localVideoTrackRef.current?.close();
-      
+
       const client = clientRef.current;
       if (client && (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING")) {
         client.leave().catch(console.error);
@@ -132,12 +134,14 @@ export const useAgora = ({
         try {
           [audioTrack, videoTrack] =
             await AgoraRTC.createMicrophoneAndCameraTracks();
-            
+
           // Store tracks immediately so they are properly cleaned up if client.join fails
           localAudioTrackRef.current = audioTrack;
           localVideoTrackRef.current = videoTrack;
           setLocalAudio(audioTrack);
           setLocalVideo(videoTrack);
+          setIsAudioMuted(false);
+          setIsVideoMuted(false);
         } catch (trackErr) {
           console.error("❌ Failed to create Agora media tracks:", trackErr);
           const isPermissionDenied =
@@ -212,14 +216,37 @@ export const useAgora = ({
       setRemoteUsers([]);
       setLocalAudio(null);
       setLocalVideo(null);
+      setIsAudioMuted(false);
+      setIsVideoMuted(false);
     } catch (err) {
       console.error("❌ Leave failed:", err);
     }
   }, [isJoined]);
 
+  // ✅ Toggle Media
+  const toggleAudio = useCallback(async () => {
+    if (localAudio) {
+      const newMutedState = !isAudioMuted;
+      await localAudio.setMuted(newMutedState);
+      setIsAudioMuted(newMutedState);
+    }
+  }, [localAudio, isAudioMuted]);
+
+  const toggleVideo = useCallback(async () => {
+    if (localVideo) {
+      const newMutedState = !isVideoMuted;
+      await localVideo.setMuted(newMutedState);
+      setIsVideoMuted(newMutedState);
+    }
+  }, [localVideo, isVideoMuted]);
+
   return {
     join,
     leave,
+    toggleVideo,
+    toggleAudio,
+    isVideoMuted,
+    isAudioMuted,
     localVideo,
     localAudio,
     remoteUsers,

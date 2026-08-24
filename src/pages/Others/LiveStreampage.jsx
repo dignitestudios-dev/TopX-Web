@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useAgora } from "../../hooks/useAgora";
 import { useRTM } from "../../hooks/useRTM";
+import useSocket from "../../socket/useSocket";
+import { SOCKET_EVENTS } from "../../constants/socketEvents";
 import { startStream, joinStream, endStream } from "../../redux/slices/livestream.slice";
 import { getPageDetail } from "../../redux/slices/pages.slice";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
@@ -37,6 +39,7 @@ const LiveStreampage = () => {
   const [role, setRole] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
+  const [viewerCount, setViewerCount] = useState(0); // Renamed from RTM fallback, now used by Socket
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
@@ -192,6 +195,8 @@ const LiveStreampage = () => {
     leave,
     toggleVideo,
     toggleAudio,
+    isVideoMuted,
+    isAudioMuted,
     localVideo,
     localAudio,
     remoteUsers,
@@ -237,7 +242,7 @@ const LiveStreampage = () => {
     error: rtmError,
     sendComment,
     sendLike,
-    viewerCount,
+    viewerCount: rtmViewerCount, // Get RTM count, but we will prefer socket count
   } = useRTM(
     hasRTMParams
       ? {
@@ -279,9 +284,39 @@ const LiveStreampage = () => {
   useEffect(() => {
     if (rtmError) {
       console.error("RTM Error:", rtmError);
-      // Don't show error toast for RTM - it's not critical for stream
     }
   }, [rtmError]);
+
+  // ✅ Socket.io Viewer Count Integration
+  const { socket, on } = useSocket();
+
+  useEffect(() => {
+    if (!socket || !pageId) return;
+
+    const handleUserJoined = (data) => {
+      if (data.pageId === pageId && data.currentViewerCount !== undefined) {
+        setViewerCount(data.currentViewerCount);
+      }
+    };
+
+    const handleUserLeft = (data) => {
+      if (data.pageId === pageId && data.currentViewerCount !== undefined) {
+        setViewerCount(data.currentViewerCount);
+      }
+    };
+
+    // Listen to backend socket events for viewer count
+    const unsubscribeJoin = on(SOCKET_EVENTS.LIVE.USER_JOINED, handleUserJoined);
+    const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, handleUserLeft);
+
+    return () => {
+      unsubscribeJoin();
+      unsubscribeLeft();
+    };
+  }, [socket, pageId, on]);
+
+  // Fallback to RTM viewer count if socket viewer count is 0
+  const displayViewerCount = viewerCount > 0 ? viewerCount : rtmViewerCount;
 
   // Join Agora channel when role is determined and streamData is ready
   useEffect(() => {
@@ -325,23 +360,23 @@ const LiveStreampage = () => {
 
         try {
           const playPromise = localVideo.play(localVideoRef.current);
-        // Handle promise if it exists
-        if (playPromise && typeof playPromise.then === "function") {
-          playPromise
-            .then(() => {
-              console.log("✅ Local video playing successfully");
-            })
-            .catch((err) => {
-              console.error("❌ Error playing local video:", err);
-            });
-        } else {
-          // If play() doesn't return a promise, it's still okay
-          console.log("✅ Local video play() called (no promise returned)");
+          // Handle promise if it exists
+          if (playPromise && typeof playPromise.then === "function") {
+            playPromise
+              .then(() => {
+                console.log("✅ Local video playing successfully");
+              })
+              .catch((err) => {
+                console.error("❌ Error playing local video:", err);
+              });
+          } else {
+            // If play() doesn't return a promise, it's still okay
+            console.log("✅ Local video play() called (no promise returned)");
+          }
+        } catch (err) {
+          console.error("❌ Error calling localVideo.play():", err);
         }
-      } catch (err) {
-        console.error("❌ Error calling localVideo.play():", err);
       }
-    }
     } else if (role === "host" && !localVideo) {
       console.log("⏳ Host: Waiting for local video track...");
     }
@@ -648,29 +683,15 @@ const LiveStreampage = () => {
       )}
 
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleEndStream}
-              className="text-white hover:text-gray-300"
-            >
-              ← Back
-            </button>
-            {pageDetail && (
-              <div>
-                <h1 className="text-lg font-semibold">{pageDetail.name}</h1>
-                <p className="text-sm text-gray-400">Live Now</p>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
+      <div className="absolute top-18 left-0 right-0 z-40 bg-gradient-to-b from-black/80 to-transparent p-4">
+        <div className="flex items-center justify-start">
+          <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full shadow-lg">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold">LIVE</span>
-            {viewerCount > 0 && (
-              <span className="text-sm ml-2 flex items-center gap-1">
+            <span className="text-sm font-semibold tracking-wider">LIVE</span>
+            {displayViewerCount > 0 && (
+              <span className="text-sm ml-2 flex items-center gap-1 font-medium border-l border-red-500 pl-2">
                 <Users className="w-4 h-4" />
-                {viewerCount}
+                {displayViewerCount}
               </span>
             )}
           </div>
@@ -728,11 +749,11 @@ const LiveStreampage = () => {
                 </div>
               </div>
             )}
-            {remoteUsers.length > 0 && (
+            {/* {remoteUsers.length > 0 && (
               <div className="text-white text-sm absolute top-4 left-4 bg-black/50 px-2 py-1 rounded z-10">
                 {remoteUsers.length} user(s) streaming
               </div>
-            )}
+            )} */}
             {/* Remote videos will be rendered here by the useEffect */}
           </div>
         )}
@@ -744,12 +765,12 @@ const LiveStreampage = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={toggleVideo}
-                className={`p-4 rounded-full ${localVideo?.isPlaying !== false
+                className={`p-4 rounded-full ${!isVideoMuted
                   ? "bg-gray-700 hover:bg-gray-600"
                   : "bg-red-600 hover:bg-red-700"
                   } transition-colors`}
               >
-                {localVideo?.isPlaying !== false ? (
+                {!isVideoMuted ? (
                   <Video className="w-6 h-6" />
                 ) : (
                   <VideoOff className="w-6 h-6" />
@@ -758,12 +779,12 @@ const LiveStreampage = () => {
 
               <button
                 onClick={toggleAudio}
-                className={`p-4 rounded-full ${localAudio?.isPlaying !== false
+                className={`p-4 rounded-full ${!isAudioMuted
                   ? "bg-gray-700 hover:bg-gray-600"
                   : "bg-red-600 hover:bg-red-700"
                   } transition-colors`}
               >
-                {localAudio?.isPlaying !== false ? (
+                {!isAudioMuted ? (
                   <Mic className="w-6 h-6" />
                 ) : (
                   <MicOff className="w-6 h-6" />
@@ -780,7 +801,22 @@ const LiveStreampage = () => {
           </div>
         )}
 
-        {/* Audience View - Show message */}
+        {/* Audience Controls - Leave Stream Button */}
+        {role === "audience" && remoteUsers.length > 0 && isJoined && (
+          <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-6 pointer-events-none">
+            <div className="flex justify-center pointer-events-auto">
+              <button
+                onClick={handleEndStream}
+                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-semibold shadow-lg flex items-center gap-2"
+              >
+                <PhoneOff className="w-4 h-4" />
+                Leave Stream
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Audience View - Show message when host hasn't joined */}
         {role === "audience" && remoteUsers.length === 0 && (
           <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-6">
             <div className="text-center">
