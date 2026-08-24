@@ -1,14 +1,45 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "../../axios";
 
+try {
+  localStorage.removeItem("topx_read_chat_ids");
+  localStorage.removeItem("topx_user_read_chat_ids");
+} catch (e) {}
+
+const loadUserLastRead = (userId) => {
+  if (!userId) return {};
+  try {
+    const all = JSON.parse(localStorage.getItem("topx_user_last_read_map") || "{}");
+    return all[userId] || {};
+  } catch (e) {
+    return {};
+  }
+};
+
+const saveUserLastRead = (userId, chatId, messageId, timestamp) => {
+  if (!userId || !chatId) return;
+  try {
+    const all = JSON.parse(localStorage.getItem("topx_user_last_read_map") || "{}");
+    if (!all[userId]) all[userId] = {};
+    all[userId][chatId] = {
+      messageId: messageId ? String(messageId) : null,
+      timestamp: timestamp || Date.now(),
+    };
+    localStorage.setItem("topx_user_last_read_map", JSON.stringify(all));
+  } catch (e) {}
+};
+
 const initialState = {
   chats: [],
+  requestChats: [],
   groupChats: [],
+  readChatIds: {},
   chatDetail: null,
   chatDetailMessages: [],
   chatDetailPagination: null,
   currentChatId: null,
   pagination: null,
+  requestPagination: null,
   groupChatsPagination: null,
   chatsLoading: false,
   groupChatsLoading: false,
@@ -32,15 +63,16 @@ const initialState = {
 
 export const fetchIndividualChats = createAsyncThunk(
   "chat/fetchIndividualChats",
-  async ({ page = 1, limit = 5, type = "active" }, thunkAPI) => {
+  async ({ page = 1, limit = 10, type = "active" }, thunkAPI) => {
     try {
       const res = await axios.get(
         `/chats/individual/recent?page=${page}&limit=${limit}&type=${type}`,
       );
 
       return {
-        data: res.data?.data,
+        data: res.data?.data || [],
         pagination: res.data?.pagination,
+        type,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -395,44 +427,113 @@ const chatSlice = createSlice({
     },
 
     addMessage(state, action) {
-      const { chatId, message, unreadCount } = action.payload;
+      const { chatId, message, unreadCount = 1, currentUserId } = action.payload;
       // Add to chatDetailMessages if it's the current chat
       if (state.currentChatId === chatId) {
         // Check if message already exists to prevent duplicates
         const messageExists = state.chatDetailMessages.some(
-          (msg) => msg._id === message._id,
+          (msg) => msg._id === message?._id,
         );
-        if (!messageExists) {
+        if (!messageExists && message) {
           state.chatDetailMessages = [...state.chatDetailMessages, message];
         }
       }
-      // Update the chat list lastMessage
+
+      const isCurrentChat = state.currentChatId === chatId;
+      const msgSenderId =
+        message?.sender?._id || message?.sender || action.payload.sender?._id;
+      const isSender =
+        currentUserId && msgSenderId && String(currentUserId) === String(msgSenderId);
+
+      if (isCurrentChat && currentUserId) {
+        saveUserLastRead(currentUserId, chatId, message?._id, Date.now());
+      }
+
+      // Update the individual active chat list lastMessage
+      let foundInActive = false;
       const chatIndex = state.chats.findIndex((chat) => chat._id === chatId);
       if (chatIndex !== -1) {
+        foundInActive = true;
         state.chats[chatIndex].lastMessage = message;
-        if (state.currentChatId !== chatId) {
+        if (!isCurrentChat && !isSender) {
           state.chats[chatIndex].unreadCount =
             (state.chats[chatIndex].unreadCount || 0) + unreadCount;
+        } else if (isCurrentChat) {
+          state.chats[chatIndex].unreadCount = 0;
+        }
+        // Move to top of active list
+        const [movedChat] = state.chats.splice(chatIndex, 1);
+        state.chats.unshift(movedChat);
+      }
+
+      // Also check request chats
+      if (state.requestChats) {
+        const reqIndex = state.requestChats.findIndex(
+          (chat) => chat._id === chatId,
+        );
+        if (reqIndex !== -1) {
+          state.requestChats[reqIndex].lastMessage = message;
+          if (!isCurrentChat && !isSender) {
+            state.requestChats[reqIndex].unreadCount =
+              (state.requestChats[reqIndex].unreadCount || 0) + unreadCount;
+          } else if (isCurrentChat) {
+            state.requestChats[reqIndex].unreadCount = 0;
+          }
+          const [movedReq] = state.requestChats.splice(reqIndex, 1);
+          state.requestChats.unshift(movedReq);
         }
       }
+
       // Also check group chats
       const groupChatIndex = state.groupChats.findIndex(
         (chat) => chat._id === chatId,
       );
       if (groupChatIndex !== -1) {
         state.groupChats[groupChatIndex].lastMessage = message;
-        if (state.currentChatId !== chatId) {
+        if (!isCurrentChat && !isSender) {
           state.groupChats[groupChatIndex].unreadCount =
             (state.groupChats[groupChatIndex].unreadCount || 0) + unreadCount;
+        } else if (isCurrentChat) {
+          state.groupChats[groupChatIndex].unreadCount = 0;
         }
+        const [movedGroup] = state.groupChats.splice(groupChatIndex, 1);
+        state.groupChats.unshift(movedGroup);
+      }
+
+      // If this is an individual message and not yet found in active list or request list
+      if (!foundInActive && !message?.groupId && chatId) {
+        const newEntry = {
+          _id: chatId,
+          receiverInfo: message?.sender,
+          lastMessage: message,
+          unreadCount: isCurrentChat || isSender ? 0 : unreadCount,
+          createdAt: message?.createdAt || new Date().toISOString(),
+          isActive: true,
+        };
+        state.chats.unshift(newEntry);
       }
     },
 
     markChatAsRead(state, action) {
-      const { chatId } = action.payload;
+      const { chatId, userId, lastMessageId, timestamp } = action.payload || {};
+      if (!chatId) return;
+
+      const now = timestamp || Date.now();
+      if (userId) {
+        saveUserLastRead(userId, chatId, lastMessageId, now);
+      }
+
       const chatIndex = state.chats.findIndex((chat) => chat._id === chatId);
       if (chatIndex !== -1) {
         state.chats[chatIndex].unreadCount = 0;
+      }
+      if (state.requestChats) {
+        const reqIndex = state.requestChats.findIndex(
+          (chat) => chat._id === chatId,
+        );
+        if (reqIndex !== -1) {
+          state.requestChats[reqIndex].unreadCount = 0;
+        }
       }
       const groupChatIndex = state.groupChats.findIndex(
         (chat) => chat._id === chatId,
@@ -449,6 +550,15 @@ const chatSlice = createSlice({
         state.chats[chatIndex].unreadCount =
           (state.chats[chatIndex].unreadCount || 0) + 1;
       }
+      if (state.requestChats) {
+        const reqIndex = state.requestChats.findIndex(
+          (chat) => chat._id === chatId,
+        );
+        if (reqIndex !== -1) {
+          state.requestChats[reqIndex].unreadCount =
+            (state.requestChats[reqIndex].unreadCount || 0) + 1;
+        }
+      }
       const groupChatIndex = state.groupChats.findIndex(
         (chat) => chat._id === chatId,
       );
@@ -461,6 +571,11 @@ const chatSlice = createSlice({
     removeChat(state, action) {
       const { chatId } = action.payload;
       state.chats = state.chats.filter((chat) => chat._id !== chatId);
+      if (state.requestChats) {
+        state.requestChats = state.requestChats.filter(
+          (chat) => chat._id !== chatId,
+        );
+      }
       state.groupChats = state.groupChats.filter((chat) => chat._id !== chatId);
       if (state.currentChatId === chatId) {
         state.chatDetail = null;
@@ -488,8 +603,48 @@ const chatSlice = createSlice({
       })
       .addCase(fetchIndividualChats.fulfilled, (state, action) => {
         state.chatsLoading = false;
-        state.chats = action.payload.data;
-        state.pagination = action.payload.pagination;
+        const type = action.meta?.arg?.type || action.payload.type || "active";
+        const userId = action.meta?.arg?.userId;
+        const lastReadMap = userId ? loadUserLastRead(userId) : {};
+
+        const rawData = Array.isArray(action.payload.data) ? action.payload.data : [];
+        const normalized = rawData.map((chat) => {
+          if (state.currentChatId === chat._id) {
+            return { ...chat, unreadCount: 0 };
+          }
+
+          const lastReadEntry = lastReadMap[chat._id];
+          if (lastReadEntry) {
+            const currentLastMsgId =
+              chat.lastMessage?._id || chat.lastMessage;
+            const currentLastMsgTime = chat.lastMessage?.createdAt
+              ? new Date(chat.lastMessage.createdAt).getTime()
+              : 0;
+
+            if (
+              (currentLastMsgId &&
+                lastReadEntry.messageId &&
+                String(currentLastMsgId) === String(lastReadEntry.messageId)) ||
+              (currentLastMsgTime &&
+                lastReadEntry.timestamp &&
+                currentLastMsgTime <= lastReadEntry.timestamp)
+            ) {
+              return { ...chat, unreadCount: 0 };
+            }
+            // User had read previous messages; only the new message since read time is unread!
+            return { ...chat, unreadCount: 1 };
+          }
+
+          return chat;
+        });
+
+        if (type === "inactive") {
+          state.requestChats = normalized;
+          state.requestPagination = action.payload.pagination;
+        } else {
+          state.chats = normalized;
+          state.pagination = action.payload.pagination;
+        }
       })
       .addCase(fetchIndividualChats.rejected, (state, action) => {
         state.chatsLoading = false;
@@ -521,6 +676,11 @@ const chatSlice = createSlice({
         state.chats = state.chats.filter(
           (chat) => chat._id !== action.payload.chatId,
         );
+        if (state.requestChats) {
+          state.requestChats = state.requestChats.filter(
+            (chat) => chat._id !== action.payload.chatId,
+          );
+        }
       })
       .addCase(acceptChatRequest.rejected, (state, action) => {
         state.chatsLoading = false;
@@ -537,6 +697,11 @@ const chatSlice = createSlice({
         state.chats = state.chats.filter(
           (chat) => chat._id !== action.payload.chatId,
         );
+        if (state.requestChats) {
+          state.requestChats = state.requestChats.filter(
+            (chat) => chat._id !== action.payload.chatId,
+          );
+        }
       })
       .addCase(rejectChatRequest.rejected, (state, action) => {
         state.chatsLoading = false;
@@ -621,12 +786,63 @@ const chatSlice = createSlice({
       })
       .addCase(fetchGroupChats.fulfilled, (state, action) => {
         state.groupChatsLoading = false;
-        state.groupChats = action.payload.data;
+        const userId = action.meta?.arg?.userId;
+        const lastReadMap = userId ? loadUserLastRead(userId) : {};
+
+        const rawData = Array.isArray(action.payload.data) ? action.payload.data : [];
+        state.groupChats = rawData.map((chat) => {
+          const gId = chat._id || chat.groupId;
+          if (state.currentChatId === gId) {
+            return { ...chat, unreadCount: 0 };
+          }
+
+          const lastReadEntry = lastReadMap[gId];
+          if (lastReadEntry) {
+            const currentLastMsgId =
+              chat.lastMessage?._id || chat.lastMessage;
+            const currentLastMsgTime = chat.lastMessage?.createdAt
+              ? new Date(chat.lastMessage.createdAt).getTime()
+              : 0;
+
+            if (
+              (currentLastMsgId &&
+                lastReadEntry.messageId &&
+                String(currentLastMsgId) === String(lastReadEntry.messageId)) ||
+              (currentLastMsgTime &&
+                lastReadEntry.timestamp &&
+                currentLastMsgTime <= lastReadEntry.timestamp)
+            ) {
+              return { ...chat, unreadCount: 0 };
+            }
+            // User had read previous messages; only the new message since read time is unread!
+            return { ...chat, unreadCount: 1 };
+          }
+
+          return chat;
+        });
         state.groupChatsPagination = action.payload.pagination;
       })
       .addCase(fetchGroupChats.rejected, (state, action) => {
         state.groupChatsLoading = false;
         state.error = action.payload;
+      })
+
+      /* ===== LOGOUT RESET ===== */
+      .addCase("auth/logout/fulfilled", (state) => {
+        state.chats = [];
+        state.requestChats = [];
+        state.groupChats = [];
+        state.readChatIds = {};
+        state.currentChatId = null;
+        state.chatDetailMessages = [];
+      })
+      .addCase("auth/logout/rejected", (state) => {
+        state.chats = [];
+        state.requestChats = [];
+        state.groupChats = [];
+        state.readChatIds = {};
+        state.currentChatId = null;
+        state.chatDetailMessages = [];
       })
 
       /* ===== FETCH GROUP CHAT HISTORY ===== */

@@ -48,6 +48,8 @@ import { blockUser } from "../../redux/slices/profileSetting.slice";
 import ReportModal from "./ReportModal";
 import { sendReport } from "../../redux/slices/reports.slice";
 import AcceptMessageModal from "./AcceptMessageModal";
+import { toast } from "react-hot-toast";
+import { isValidUrl } from "../../lib/helpers";
 
 // Helper to auto-detect links in chat messages and render clickable hyperlinks
 const renderMessageWithLinks = (content, isMe = false) => {
@@ -59,25 +61,39 @@ const renderMessageWithLinks = (content, isMe = false) => {
 
   return parts.map((part, index) => {
     if (urlRegex.test(part)) {
-      const href = part.startsWith("http://") || part.startsWith("https://")
-        ? part
-        : `https://${part}`;
-      return (
-        <a
-          key={index}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className={`underline break-all transition font-medium ${
-            isMe
-              ? "text-blue-100 hover:text-white"
-              : "text-blue-600 hover:text-blue-800"
-          }`}
-        >
-          {part}
-        </a>
-      );
+      const trailingPunctuationMatch = part.match(/[.,;:!?)>"']+$/);
+      const trailingPunctuation = trailingPunctuationMatch
+        ? trailingPunctuationMatch[0]
+        : "";
+      const cleanUrl = trailingPunctuation
+        ? part.slice(0, -trailingPunctuation.length)
+        : part;
+
+      if (isValidUrl(cleanUrl)) {
+        const href =
+          cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")
+            ? cleanUrl
+            : `https://${cleanUrl}`;
+        return (
+          <React.Fragment key={index}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className={`underline break-all transition font-medium ${
+                isMe
+                  ? "text-blue-100 hover:text-white"
+                  : "text-blue-600 hover:text-blue-800"
+              }`}
+            >
+              {cleanUrl}
+            </a>
+            {trailingPunctuation}
+          </React.Fragment>
+        );
+      }
+      return part;
     }
     return part;
   });
@@ -101,6 +117,37 @@ const isBoilerplateContent = (content) => {
   );
 };
 
+// Helper to render user or group avatar with first letter initial fallback
+const ChatAvatar = ({
+  src,
+  name,
+  size = "w-10 h-10",
+  textSize = "text-sm",
+  className = "",
+}) => {
+  const [imgError, setImgError] = useState(false);
+  const initial = (name || "U").trim().charAt(0).toUpperCase() || "U";
+
+  if (src && !imgError && !src.includes("randomuser.me")) {
+    return (
+      <img
+        src={src}
+        alt={name || "User"}
+        onError={() => setImgError(true)}
+        className={`${size} rounded-full object-cover flex-shrink-0 ${className}`}
+      />
+    );
+  }
+
+  return (
+    <div
+      className={`${size} rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold ${textSize} uppercase flex-shrink-0 select-none shadow-sm ${className}`}
+    >
+      {initial}
+    </div>
+  );
+};
+
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -117,6 +164,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   ];
   const {
     chats,
+    requestChats,
     groupChats,
     chatsLoading,
     groupChatsLoading,
@@ -173,9 +221,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [onlineUsers, setOnlineUsers] = useState({});
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+  const chatPopupRef = useRef(null);
   const isLoadingOlderRef = useRef(false);
   const preserveScrollRef = useRef(null); // { scrollTop, scrollHeight }
   const fileInputRef = useRef(null);
+
+  // Track latest state values for socket callbacks
+  const openRef = useRef(open);
+  const screenRef = useRef(screen);
+  const selectedChatRef = useRef(selectedChat);
+  const currentUserIdRef = useRef(user?._id || allUserData?._id);
+
+  useEffect(() => {
+    openRef.current = open;
+    screenRef.current = screen;
+    selectedChatRef.current = selectedChat;
+    currentUserIdRef.current = user?._id || allUserData?._id;
+  });
+
   // Group info screen states
   const [editGroupName, setEditGroupName] = useState("");
   const [editGroupBio, setEditGroupBio] = useState("");
@@ -204,11 +267,83 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   const giphyApiKey = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI";
 
+  // Web Audio chime for incoming messages
+  const playNotificationSound = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08); // A5
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {
+      // Audio playback might fail if user has not interacted with page yet
+    }
+  };
+
+  const showInAppMessageAlert = ({
+    senderName,
+    senderAvatar,
+    content,
+    isGroup,
+    groupName,
+    onOpen,
+  }) => {
+    toast.custom(
+      (t) => (
+        <div
+          onClick={() => {
+            toast.dismiss(t.id);
+            if (onOpen) onOpen();
+          }}
+          className={`${t.visible ? "animate-enter" : "animate-leave"
+            } max-w-sm w-full bg-white shadow-2xl rounded-xl p-3 border border-orange-300 cursor-pointer hover:bg-orange-50/80 transition-all flex items-center gap-3 z-50`}
+        >
+          <div className="relative flex-shrink-0">
+            <ChatAvatar
+              src={senderAvatar}
+              name={senderName}
+              size="w-10 h-10"
+              textSize="text-xs"
+            />
+            <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white">
+              <MessageCircle className="w-2 h-2 text-white" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-xs font-bold text-gray-900 truncate">
+                {isGroup ? `${senderName} in ${groupName || "Group"}` : senderName}
+              </p>
+              <span className="text-[10px] text-orange-500 font-semibold uppercase">
+                New
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 truncate mt-0.5">
+              {content || "Sent a message"}
+            </p>
+          </div>
+        </div>
+      ),
+      {
+        duration: 4000,
+        position: "bottom-right",
+      },
+    );
+  };
+
   const fetchGifs = async (query = "") => {
     try {
-      const url = `https://api.giphy.com/v1/gifs/${
-        query ? "search" : "trending"
-      }?api_key=${giphyApiKey}&q=${query}&limit=20`;
+      const url = `https://api.giphy.com/v1/gifs/${query ? "search" : "trending"
+        }?api_key=${giphyApiKey}&q=${query}&limit=20`;
       const res = await fetch(url);
       const data = await res.json();
       setGifs(data.data || []);
@@ -237,18 +372,29 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     setShowMediaOptions(false);
   }, [screen]);
 
-  // Fetch chats based on active tab
+  // Initial fetch for all tabs so unread counts are loaded immediately on mount
   useEffect(() => {
+    const authId = user?._id || allUserData?._id;
+    if (authId) {
+      dispatch(fetchIndividualChats({ page: 1, limit: 20, type: "active", userId: authId }));
+      dispatch(fetchGroupChats({ page: 1, limit: 20, userId: authId }));
+      dispatch(fetchIndividualChats({ page: 1, limit: 20, type: "inactive", userId: authId }));
+    }
+  }, [dispatch, user?._id, allUserData?._id]);
+
+  // Fetch chats based on active tab when widget is opened or tab switches
+  useEffect(() => {
+    const authId = user?._id || allUserData?._id;
     if (open) {
       if (activeTab === "Chat") {
-        dispatch(fetchIndividualChats({ page, limit, type: "active" }));
+        dispatch(fetchIndividualChats({ page, limit, type: "active", userId: authId }));
       } else if (activeTab === "Request") {
-        dispatch(fetchIndividualChats({ page, limit, type: "inactive" }));
+        dispatch(fetchIndividualChats({ page, limit, type: "inactive", userId: authId }));
       } else if (activeTab === "Group Chat") {
-        dispatch(fetchGroupChats({ page, limit }));
+        dispatch(fetchGroupChats({ page, limit, userId: authId }));
       }
     }
-  }, [open, activeTab, page, limit, dispatch]);
+  }, [open, activeTab, page, limit, dispatch, user?._id, allUserData?._id]);
 
   const handleLeaveGroup = () => {
     setShowLeaveGroupModal(true);
@@ -273,7 +419,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   };
 
   const handleStartChat = (user) => {
-    socket.requestIndividualChat({ receiverId: user._id }, async (res) => {
+    socket.requestIndividualChat({ receiverId: user._id }, (res) => {
       console.log("requestIndividualChat response:", res);
 
       const chatId =
@@ -284,26 +430,22 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         return;
       }
 
-      // ✅ SET STATE
+      // ✅ INSTANT STATE & MARK READ
       setSelectedChat({
         _id: chatId,
         receiverInfo: user,
         isGroup: false,
       });
 
+      const authId = user?._id || allUserData?._id;
       dispatch(setCurrentChatId(chatId));
+      dispatch(markChatAsRead({ chatId, userId: authId }));
       setScreen("chat");
 
-      // ✅ FETCH MESSAGES
-      await dispatch(fetchIndividualChatDetail({ chatId, page: 1, limit: 50 }));
+      socket.readChats({ chatId, unreadCount: 0 }, () => {});
 
-      // ✅ MARK READ
-      socket.readChats({ chatId, unreadCount: 0 }, () => {
-        dispatch(markChatAsRead({ chatId }));
-      });
-
-      // ✅ REFRESH CHAT LIST
-      dispatch(fetchIndividualChats({ page: 1, limit, type: "active" }));
+      // ✅ FETCH MESSAGES IN BACKGROUND
+      dispatch(fetchIndividualChatDetail({ chatId, page: 1, limit: 50 }));
     });
   };
 
@@ -322,13 +464,58 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       // ❌ agar group message hai to yahan ignore karo
       if (data.groupId) return;
 
+      const currentUserId = currentUserIdRef.current;
+      const msgSenderId =
+        data.message?.sender?._id || data.sender?._id || data.message?.sender;
+      const isMe =
+        msgSenderId && currentUserId && String(msgSenderId) === String(currentUserId);
+
       dispatch(
         addMessage({
           chatId: data.chatId,
           message: data.message,
-          unreadCount: data.unreadCount || 1,
+          unreadCount: 1,
+          currentUserId,
         }),
       );
+
+      const isOpen = openRef.current;
+      const currentScreen = screenRef.current;
+      const activeChat = selectedChatRef.current;
+
+      if (isOpen && currentScreen === "chat" && activeChat?._id === data.chatId) {
+        dispatch(markChatAsRead({ chatId: data.chatId, userId: currentUserId }));
+        socket.readChats({ chatId: data.chatId, unreadCount: 0 }, () => {});
+      } else if (!isMe) {
+        playNotificationSound();
+        const senderName =
+          data.message?.sender?.name || data.sender?.name || "New Message";
+        const senderAvatar =
+          data.message?.sender?.profilePicture || data.sender?.profilePicture;
+        const previewContent =
+          data.message?.content ||
+          (data.message?.type === "media"
+            ? "📷 Sent media"
+            : data.message?.type === "gif"
+              ? "GIF"
+              : "Sent a message");
+
+        showInAppMessageAlert({
+          senderName,
+          senderAvatar,
+          content: previewContent,
+          isGroup: false,
+          onOpen: () => {
+            setOpen(true);
+            const targetChat = {
+              _id: data.chatId,
+              receiverInfo: data.message?.sender || data.sender,
+              isGroup: false,
+            };
+            handleChatClick(targetChat);
+          },
+        });
+      }
     };
 
     const handleChatDeleted = (data) => {
@@ -343,18 +530,85 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     const handleGroupMessageReceived = (data) => {
       console.log("Group message received:", data);
+      const currentUserId = currentUserIdRef.current;
+      const msgSenderId =
+        data.message?.sender?._id || data.sender?._id || data.message?.sender;
+      const isMe =
+        msgSenderId && currentUserId && String(msgSenderId) === String(currentUserId);
+
       dispatch(
         addMessage({
           chatId: data.groupId,
           message: data.message,
-          unreadCount: data.unreadCount || 1,
+          unreadCount: 1,
+          currentUserId,
         }),
       );
+
+      const isOpen = openRef.current;
+      const currentScreen = screenRef.current;
+      const activeChat = selectedChatRef.current;
+
+      if (
+        isOpen &&
+        currentScreen === "chat" &&
+        (activeChat?.groupId === data.groupId || activeChat?._id === data.groupId)
+      ) {
+        dispatch(markChatAsRead({ chatId: data.groupId, userId: currentUserId }));
+        socket.joinGroup({ groupId: data.groupId, unreadCount: 0 }, () => {});
+      } else if (!isMe) {
+        playNotificationSound();
+        const senderName =
+          data.message?.sender?.name || data.sender?.name || "Member";
+        const groupName = data.groupName || data.group?.name || "Group Chat";
+        const senderAvatar =
+          data.message?.sender?.profilePicture || data.sender?.profilePicture;
+        const previewContent =
+          data.message?.content ||
+          (data.message?.type === "media"
+            ? "📷 Sent media"
+            : data.message?.type === "gif"
+              ? "GIF"
+              : "Sent a message");
+
+        showInAppMessageAlert({
+          senderName,
+          senderAvatar,
+          content: previewContent,
+          isGroup: true,
+          groupName,
+          onOpen: () => {
+            setOpen(true);
+            const targetChat = {
+              _id: data.groupId,
+              groupId: data.groupId,
+              name: groupName,
+              isGroup: true,
+            };
+            handleChatClick(targetChat);
+          },
+        });
+      }
     };
 
     const handleGroupDeleted = (data) => {
       console.log("Group deleted:", data);
       dispatch(removeChat({ chatId: data.groupId }));
+    };
+
+    const handleReadChats = (data) => {
+      console.log("individual:read:chats received from socket:", data);
+      const currentUserId = currentUserIdRef.current;
+      const targetChatId = data?.chatId || data?._id;
+      if (targetChatId) {
+        dispatch(
+          markChatAsRead({
+            chatId: targetChatId,
+            userId: currentUserId,
+            timestamp: Date.now(),
+          }),
+        );
+      }
     };
 
     const handleUserStatus = (data) => {
@@ -369,6 +623,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       SOCKET_EVENTS.INDIVIDUAL.MESSAGE_RECEIVED,
       handleMessageReceived,
     );
+    socket.socket.on(
+      SOCKET_EVENTS.INDIVIDUAL.READ_CHATS,
+      handleReadChats,
+    );
     socket.socket.on(SOCKET_EVENTS.INDIVIDUAL.CHAT_DELETED, handleChatDeleted);
     socket.socket.on(SOCKET_EVENTS.INDIVIDUAL.CHAT_BLOCKED, handleChatBlocked);
     socket.socket.on(
@@ -382,6 +640,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       socket.socket.off(
         SOCKET_EVENTS.INDIVIDUAL.MESSAGE_RECEIVED,
         handleMessageReceived,
+      );
+      socket.socket.off(
+        SOCKET_EVENTS.INDIVIDUAL.READ_CHATS,
+        handleReadChats,
       );
       socket.socket.off(
         SOCKET_EVENTS.INDIVIDUAL.CHAT_DELETED,
@@ -476,7 +738,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     setScreen("list");
   };
 
-  const chatPopupRef = useRef(null);
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -499,63 +761,48 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     };
   }, []);
 
-  // Handle chat click
-  const handleChatClick = async (chat) => {
+  // Handle chat click - instant & responsive
+  const handleChatClick = (chat) => {
     setShowMediaOptions(false);
     setSelectedChat(chat);
     setScreen("chat");
-    // Fetch chat detail based on chat type
-    // Check if it's a group chat - use groupId if available, otherwise use _id
+
     const groupId =
       chat.groupId || chat.group || (chat.isGroup ? chat._id : null);
+    const activeId = chat.isGroup || groupId ? groupId || chat._id : chat._id;
+
+    const authId = user?._id || allUserData?._id;
+    const lastMsgId = chat.lastMessage?._id || chat.lastMessage;
+    // ✅ INSTANT STATE & MARK READ
+    dispatch(setCurrentChatId(activeId));
+    dispatch(
+      markChatAsRead({
+        chatId: activeId,
+        userId: authId,
+        lastMessageId: lastMsgId,
+        timestamp: Date.now(),
+      }),
+    );
 
     if (chat.isGroup || groupId) {
-      await dispatch(
+      socket?.joinGroup?.({ groupId: activeId, unreadCount: 0 }, () => {});
+      dispatch(
         fetchGroupChatHistory({
-          groupId: groupId || chat._id,
+          groupId: activeId,
           page: 1,
           limit: 50,
         }),
       );
-      dispatch(
-        setCurrentChatId(
-          chat.isGroup || groupId ? groupId || chat._id : chat._id,
-        ),
-      );
-
-      // socket.joinGroup({ groupId: groupId || chat._id }, (response) => {
-      //   console.log("Joined group:", response);
-      // });
-      socket.joinGroup(
-        {
-          groupId: groupId || chat._id,
-          unreadCount: chat.unreadCount || 0,
-        },
-        () => {
-          dispatch(markChatAsRead({ chatId: groupId || chat._id }));
-        },
-      );
     } else {
-      await dispatch(
+      socket?.readChats?.({ chatId: chat._id, unreadCount: 0 }, () => {});
+      if (chat.receiverInfo?._id) {
+        socket?.requestIndividualChat?.(
+          { receiverId: chat.receiverInfo._id },
+          () => {},
+        );
+      }
+      dispatch(
         fetchIndividualChatDetail({ chatId: chat._id, page: 1, limit: 50 }),
-      );
-      dispatch(setCurrentChatId(chat._id));
-      // Request to join the chat room
-      socket.requestIndividualChat(
-        { receiverId: chat.receiverInfo._id },
-        (response) => {
-          console.log("Joined chat:", response);
-        },
-      );
-      // Mark as read
-      socket.readChats(
-        {
-          chatId: chat._id,
-          unreadCount: chat.unreadCount || 0,
-        },
-        () => {
-          dispatch(markChatAsRead({ chatId: chat._id }));
-        },
       );
     }
   };
@@ -628,7 +875,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         chat.receiverInfo?.profilePicture ||
         chat.image ||
         chat.profilePicture ||
-        "https://randomuser.me/api/portraits/men/1.jpg",
+        null,
       unread: chat.unreadCount || 0,
       _id: chat._id,
       isBlocked: chat?.blockedBy,
@@ -652,7 +899,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       avatar:
         groupChat.image ||
         groupChat.profilePicture ||
-        "https://randomuser.me/api/portraits/men/1.jpg",
+        null,
       unread: groupChat.unreadCount || 0,
       _id: groupChat._id,
       lastMessage: groupChat.lastMessage,
@@ -687,17 +934,32 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     return uniqueGroups;
   };
 
-  const chatsData = {
-    Chat:
-      activeTab === "Chat"
-        ? getChatsData().filter((chat) => !chat.isGroup)
-        : [],
-    "Group Chat": activeTab === "Group Chat" ? getGroupChatsData() : [],
-    Request:
-      activeTab === "Request"
-        ? getChatsData().filter((chat) => !chat.isGroup)
-        : [],
+  // Get request chats data
+  const getRequestChatsData = () => {
+    return (requestChats || []).map(transformChatData);
   };
+
+  const chatsData = {
+    Chat: getChatsData().filter((chat) => !chat.isGroup),
+    "Group Chat": getGroupChatsData(),
+    Request: getRequestChatsData().filter((chat) => !chat.isGroup),
+  };
+
+  const chatUnreadCount = (chats || [])
+    .filter((c) => !c.isGroup && !(c.groupId && !c.receiverInfo))
+    .reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+
+  const groupUnreadCount = (groupChats || []).reduce(
+    (acc, g) => acc + (g.unreadCount || 0),
+    0,
+  );
+
+  const requestUnreadCount = (requestChats || [])
+    .filter((c) => !c.isGroup && !(c.groupId && !c.receiverInfo))
+    .reduce((acc, r) => acc + (r.unreadCount || 0), 0);
+
+  const totalUnreadCount =
+    chatUnreadCount + groupUnreadCount + requestUnreadCount;
 
   const handleSendMessage = async () => {
     let mediaUrls = [];
@@ -732,17 +994,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     const payload = isGroup
       ? {
-          groupId: selectedChat.groupId || selectedChat._id,
-          type,
-          content,
-          mediaUrls,
-        }
+        groupId: selectedChat.groupId || selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      }
       : {
-          chatId: selectedChat._id,
-          type,
-          content,
-          mediaUrls,
-        };
+        chatId: selectedChat._id,
+        type,
+        content,
+        mediaUrls,
+      };
 
     if (isGroup) {
       socket.sendGroupMessage(payload, (response) => {
@@ -951,13 +1213,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     return (
       <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded mb-1">
         <div className="flex items-center gap-2">
-          <img
-            src={
-              memberUser.profilePicture ||
-              "https://randomuser.me/api/portraits/men/1.jpg"
-            }
-            alt={memberUser.name}
-            className="w-8 h-8 rounded-full object-cover"
+          <ChatAvatar
+            src={memberUser.profilePicture}
+            name={memberUser.name}
+            size="w-8 h-8"
+            textSize="text-xs"
           />
           <span className="text-sm text-gray-900">{memberUser.name}</span>
         </div>
@@ -1040,42 +1300,61 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       <>
         <button
           onClick={() => setOpen(!open)}
-          className="fixed bottom-6 right-6 flex items-center justify-between w-72 bg-white rounded-[10px] shadow-lg px-4 py-3 hover:shadow-xl z-40"
+          className="fixed bottom-6 right-6 flex items-center justify-between w-72 bg-white rounded-[10px] shadow-lg px-4 py-3 hover:shadow-xl z-40 transition-all cursor-pointer"
         >
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-orange-500" />
+            <div className="relative">
+              <MessageCircle className="w-5 h-5 text-orange-500" />
+              {totalUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full animate-ping" />
+              )}
+              {totalUnreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full" />
+              )}
+            </div>
             <span className="text-orange-500 font-semibold text-sm">New</span>
             <span className="text-gray-800 font-medium text-sm">Message</span>
           </div>
-          <ChevronUp
-            className={`w-5 h-5 text-orange-500 transition-transform ${
-              open ? "rotate-180" : ""
-            }`}
-          />
+          <div className="flex items-center gap-2">
+            {totalUnreadCount > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full min-w-[20px] text-center shadow-sm">
+                {totalUnreadCount > 99 ? "99+" : totalUnreadCount}
+              </span>
+            )}
+            <ChevronUp
+              className={`w-5 h-5 text-orange-500 transition-transform ${open ? "rotate-180" : ""
+                }`}
+            />
+          </div>
         </button>
 
         <div
           ref={chatPopupRef}
-          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${
-            open
+          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-5 pointer-events-none"
-          } z-40`}
+            } z-40`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center gap-2">
               <MessageCircle className="w-5 h-5 text-orange-500" />
               <h3 className="font-semibold text-gray-900 text-sm">Message</h3>
             </div>
-            <Plus
-              className="w-5 h-5 text-gray-700 cursor-pointer"
-              onClick={() => {
-                setScreen("newChat");
-                handleClose();
-                setSearchTerm("");
-                setUserSearchPage(1);
-              }}
-            />
+            <div className="flex items-center gap-2">
+              <Plus
+                className="w-5 h-5 text-gray-700 cursor-pointer hover:text-orange-500"
+                onClick={() => {
+                  setScreen("newChat");
+                  handleClose();
+                  setSearchTerm("");
+                  setUserSearchPage(1);
+                }}
+              />
+              <X
+                className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-800"
+                onClick={handleClose}
+              />
+            </div>
           </div>
 
           {/* <div className="px-4 py-2 border-b border-gray-200">
@@ -1087,24 +1366,32 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           </div> */}
 
           <div className="flex border-b border-gray-200 text-sm font-medium">
-            {["Chat", "Group Chat", "Request"].map((tab) => (
+            {[
+              { id: "Chat", label: "Chat", count: chatUnreadCount },
+              { id: "Group Chat", label: "Group Chat", count: groupUnreadCount },
+              { id: "Request", label: "Request", count: requestUnreadCount },
+            ].map(({ id, label, count }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-2 ${
-                  activeTab === tab
-                    ? "text-orange-500 border-b-2 border-orange-500"
-                    : "text-gray-500"
-                }`}
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition-colors ${activeTab === id
+                    ? "text-orange-500 border-b-2 border-orange-500 font-semibold"
+                    : "text-gray-500 hover:text-gray-700"
+                  }`}
               >
-                {tab}
+                <span>{label}</span>
+                {count > 0 && (
+                  <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center leading-none">
+                    {count > 99 ? "99+" : count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
           <div className="h-[50vh] overflow-y-auto">
             {chatsLoading ||
-            (activeTab === "Group Chat" && groupChatsLoading) ? (
+              (activeTab === "Group Chat" && groupChatsLoading) ? (
               <p className="text-sm text-gray-500 text-center py-6 flex justify-center items-center">
                 <img
                   src="https://assets-v2.lottiefiles.com/a/90a4c0f2-1152-11ee-bda3-830a7a1975f2/iBALXy6uaH.gif"
@@ -1127,11 +1414,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   className="flex items-center justify-between px-5 py-5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="relative">
-                      <img
+                    <div className="relative flex-shrink-0">
+                      <ChatAvatar
                         src={chat.avatar}
-                        alt={chat.name}
-                        className="w-10 h-10 rounded-full object-cover"
+                        name={chat.name}
+                        size="w-10 h-10"
+                        textSize="text-sm"
                       />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -1139,12 +1427,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {chat.name}
                       </p>
                       <p
-                        className={`text-xs text-gray-500 truncate ${
-                          chat.unread > 0 ? "font-semibold" : ""
-                        }`}
+                        className={`text-xs text-gray-500 truncate ${chat.unread > 0 ? "font-semibold" : ""
+                          }`}
                       >
                         {chat.lastMessage?.mediaUrls &&
-                        chat.lastMessage.mediaUrls.length > 0 ? (
+                          chat.lastMessage.mediaUrls.length > 0 ? (
                           <span className="flex items-center gap-1">
                             <FaCamera className="w-3 h-3" />
                             Media
@@ -1234,10 +1521,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     if (selectedChat?.isGroup) {
                       socket.leaveGroupRoom(
                         { groupId: selectedChat.groupId || selectedChat._id },
-                        () => {},
+                        () => { },
                       );
                     } else {
-                      socket.leaveChats({ chatId: selectedChat._id }, () => {});
+                      socket.leaveChats({ chatId: selectedChat._id }, () => { });
                     }
                     setShowMediaOptions(false);
                     dispatch(resetChatDetail());
@@ -1249,26 +1536,21 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </button>
 
                 {/* Avatar */}
-                {selectedChat?.avatar ? (
-                  <img
-                    src={
-                      selectedChat?.avatar ||
-                      selectedChat?.receiverInfo?.avatar ||
-                      selectedChat?.image
-                    }
-                    alt={
-                      selectedChat?.name ||
-                      selectedChat?.receiverInfo?.name ||
-                      "Chat"
-                    }
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-semibold">
-                    {selectedChat?.name ||
-                      selectedChat?.receiverInfo?.name.charAt(0)?.toUpperCase()}
-                  </div>
-                )}
+                <ChatAvatar
+                  src={
+                    selectedChat?.receiverInfo?.profilePicture ||
+                    selectedChat?.avatar ||
+                    selectedChat?.image ||
+                    selectedChat?.receiverInfo?.avatar
+                  }
+                  name={
+                    selectedChat?.name ||
+                    selectedChat?.receiverInfo?.name ||
+                    "Chat"
+                  }
+                  size="w-10 h-10"
+                  textSize="text-sm"
+                />
 
                 {/* Name + Status */}
                 <div className="flex flex-col leading-tight">
@@ -1303,13 +1585,20 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </div>
               </div>
 
-              <div className="relative">
+              <div className="relative flex items-center gap-1">
                 {/* Right Section: Menu */}
                 <button
                   onClick={() => setShowChatMenu((prev) => !prev)}
-                  className="text-gray-600 hover:text-gray-900"
+                  className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100"
                 >
                   <HiDotsVertical className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="text-gray-500 hover:text-gray-800 p-1 rounded hover:bg-gray-100"
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
                 </button>
 
                 {showChatMenu && (
@@ -1349,16 +1638,16 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         {(groupInfo?.info?.admin?._id ||
                           groupInfo?.admin?._id) ===
                           (user?._id || allUserData?._id) && (
-                          <button
-                            onClick={() => {
-                              setShowChatMenu(false);
-                              setShowDeleteGroupModal(true);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
-                          >
-                            Delete Group
-                          </button>
-                        )}
+                            <button
+                              onClick={() => {
+                                setShowChatMenu(false);
+                                setShowDeleteGroupModal(true);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-red-600"
+                            >
+                              Delete Group
+                            </button>
+                          )}
 
                         {/* Leave Group */}
                         <button
@@ -1452,235 +1741,232 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               chatDetailMessages.map((msg, i) => {
                 const currentUserId = user?._id || allUserData?._id;
                 const isCurrentUser = msg.sender?._id === currentUserId;
-                console.log(msg,"sharedType")
+                console.log(msg, "sharedType")
                 return (
                   <div
                     key={msg._id}
-                    className={`flex ${
-                      isCurrentUser ? "justify-end" : "justify-start"
-                    }`}
+                    className={`flex ${isCurrentUser ? "justify-end" : "justify-start"
+                      }`}
                   >
                     {!isCurrentUser && (
-                      <img
-                        src={
-                          msg.sender?.profilePicture ||
-                          "https://randomuser.me/api/portraits/men/1.jpg"
-                        }
-                        alt={msg.sender?.name || "User"}
-                        className="w-8 h-8 rounded-full object-cover mr-2 self-end mb-1"
+                      <ChatAvatar
+                        src={msg.sender?.profilePicture}
+                        name={msg.sender?.name || "User"}
+                        size="w-8 h-8"
+                        textSize="text-xs"
+                        className="mr-2 self-end mb-1"
                       />
                     )}
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                        isCurrentUser
-                          ? "bg-orange-500 text-white rounded-br-none"
-                          : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
-                      }`}
+                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
+                        ? "bg-orange-500 text-white rounded-br-none"
+                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                        }`}
                     >
-                    {msg.type === "shared" && msg.shared ? (
-  msg.shared.sharedType === "knowledge" ? (
-    // KNOWLEDGE UI
-    <div className="space-y-2">
-      {msg.shared.name && (
-        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {msg.shared.pageImage && (
-              <img
-                src={msg.shared.pageImage}
-                alt="Page"
-                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <p className="text-xs font-semibold truncate">
-              {msg.shared.name}
-            </p>
-          </div>
-          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
-            Knowledge
-          </span>
-        </div>
-      )}
+                      {msg.type === "shared" && msg.shared ? (
+                        msg.shared.sharedType === "knowledge" ? (
+                          // KNOWLEDGE UI
+                          <div className="space-y-2">
+                            {msg.shared.name && (
+                              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold truncate">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+                                  Knowledge
+                                </span>
+                              </div>
+                            )}
 
-      <div
-        className="rounded-xl overflow-hidden min-h-[100px] flex items-center justify-center p-4 relative shadow-sm"
-        style={{
-          background:
-            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        }}
-      >
-        <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
+                            <div
+                              className="rounded-xl overflow-hidden min-h-[100px] flex items-center justify-center p-4 relative shadow-sm"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-black/5 rounded-xl"></div>
 
-        {(msg.shared.textOnImage || (!isBoilerplateContent(msg.content) && msg.content)) && (
-          <p className="text-center relative z-10 text-white font-medium text-sm">
-            {msg.shared.textOnImage || msg.content}
-          </p>
-        )}
-      </div>
-    </div>
-  ) : msg.shared.sharedType === "story" ? (
-    // STORY UI
-    <div className="space-y-2">
-      {msg.shared.name && (
-        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {msg.shared.pageImage && (
-              <img
-                src={msg.shared.pageImage}
-                alt="Page"
-                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <p className="text-xs font-semibold truncate">
-              {msg.shared.name}
-            </p>
-          </div>
-          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
-            Story
-          </span>
-        </div>
-      )}
+                              {(msg.shared.textOnImage || (!isBoilerplateContent(msg.content) && msg.content)) && (
+                                <p className="text-center relative z-10 text-white font-medium text-sm">
+                                  {msg.shared.textOnImage || msg.content}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ) : msg.shared.sharedType === "story" ? (
+                          // STORY UI
+                          <div className="space-y-2">
+                            {msg.shared.name && (
+                              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold truncate">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+                                  Story
+                                </span>
+                              </div>
+                            )}
 
-      <div
-        className="relative rounded-lg overflow-hidden cursor-pointer"
-        onClick={() => {
-          // open story viewer
-          openStoryViewer(msg.shared.contextId);
-        }}
-      >
-        <img
-          src={msg.shared.media}
-          alt="Story"
-          className="w-full h-40 object-cover rounded-lg"
-        />
+                            <div
+                              className="relative rounded-lg overflow-hidden cursor-pointer"
+                              onClick={() => {
+                                // open story viewer
+                                openStoryViewer(msg.shared.contextId);
+                              }}
+                            >
+                              <img
+                                src={msg.shared.media}
+                                alt="Story"
+                                className="w-full h-40 object-cover rounded-lg"
+                              />
 
-        {/* Story badge */}
-        <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-medium">
-          STORY
-        </div>
-      </div>
-    </div>
-  ) : msg.shared.sharedType === "live" ? (
-    // LIVE UI
-    <div className="space-y-2">
-      {msg.shared.name && (
-        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {msg.shared.pageImage && (
-              <img
-                src={msg.shared.pageImage}
-                alt="Page"
-                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <p className="text-xs font-semibold truncate">
-              {msg.shared.name}
-            </p>
-          </div>
-          <span className="text-[10px] font-medium opacity-90 uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-600/80 text-white flex-shrink-0">
-            Live
-          </span>
-        </div>
-      )}
+                              {/* Story badge */}
+                              <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-medium">
+                                STORY
+                              </div>
+                            </div>
+                          </div>
+                        ) : msg.shared.sharedType === "live" ? (
+                          // LIVE UI
+                          <div className="space-y-2">
+                            {msg.shared.name && (
+                              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold truncate">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-medium opacity-90 uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-600/80 text-white flex-shrink-0">
+                                  Live
+                                </span>
+                              </div>
+                            )}
 
-      <div
-        className="relative rounded-lg overflow-hidden cursor-pointer"
-        onClick={() => {
-          // open live screen
-          openLive(msg.shared.contextId);
-        }}
-      >
-        <img
-          src={msg.shared.media}
-          alt="Live"
-          className="w-full h-40 object-cover rounded-lg"
-        />
+                            <div
+                              className="relative rounded-lg overflow-hidden cursor-pointer"
+                              onClick={() => {
+                                // open live screen
+                                openLive(msg.shared.contextId);
+                              }}
+                            >
+                              <img
+                                src={msg.shared.media}
+                                alt="Live"
+                                className="w-full h-40 object-cover rounded-lg"
+                              />
 
-        {/* LIVE badge */}
-        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold animate-pulse">
-          LIVE
-        </div>
-      </div>
-    </div>
-  ) : (
-    // NORMAL / TEXT POST UI
-    <div className="space-y-2">
-      {msg.shared.name ? (
-        <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
-          <div className="flex items-center gap-1.5 min-w-0">
-            {msg.shared.pageImage && (
-              <img
-                src={msg.shared.pageImage}
-                alt="Page"
-                className="w-5 h-5 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <p className="text-xs font-semibold truncate">
-              {msg.shared.name}
-            </p>
-          </div>
-          <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
-            Post
-          </span>
-        </div>
-      ) : null}
+                              {/* LIVE badge */}
+                              <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-2 py-0.5 rounded font-bold animate-pulse">
+                                LIVE
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          // NORMAL / TEXT POST UI
+                          <div className="space-y-2">
+                            {msg.shared.name ? (
+                              <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-current/10">
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                  {msg.shared.pageImage && (
+                                    <img
+                                      src={msg.shared.pageImage}
+                                      alt="Page"
+                                      className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                    />
+                                  )}
+                                  <p className="text-xs font-semibold truncate">
+                                    {msg.shared.name}
+                                  </p>
+                                </div>
+                                <span className="text-[10px] font-medium opacity-80 uppercase tracking-wide px-1.5 py-0.5 rounded bg-black/10 flex-shrink-0">
+                                  Post
+                                </span>
+                              </div>
+                            ) : null}
 
-      {msg.shared.media && (
-        <div className="rounded-lg overflow-hidden">
-          {msg.shared.media.includes(".mp4") ? (
-            <video
-              src={msg.shared.media}
-              controls
-              className="w-full max-h-64 object-contain rounded-lg"
-            />
-          ) : (
-            <img
-              src={msg.shared.media}
-              alt="Shared post"
-              className="w-full max-h-64 object-contain rounded-lg"
-            />
-          )}
-        </div>
-      )}
+                            {msg.shared.media && (
+                              <div className="rounded-lg overflow-hidden">
+                                {msg.shared.media.includes(".mp4") ? (
+                                  <video
+                                    src={msg.shared.media}
+                                    controls
+                                    className="w-full max-h-64 object-contain rounded-lg"
+                                  />
+                                ) : (
+                                  <img
+                                    src={msg.shared.media}
+                                    alt="Shared post"
+                                    className="w-full max-h-64 object-contain rounded-lg"
+                                  />
+                                )}
+                              </div>
+                            )}
 
-      {/* Post Text content (either from textOnImage or content if not boilerplate) */}
-      {(() => {
-        const textContent =
-          msg.shared.textOnImage ||
-          (!isBoilerplateContent(msg.content) ? msg.content : "");
-        if (!textContent) return null;
-        return (
-          <p className="text-sm mt-1 break-words whitespace-pre-wrap">
-            {renderMessageWithLinks(
-              textContent,
-              (msg.sender?._id || msg.sender) === (user?._id || user?.id),
-            )}
-          </p>
-        );
-      })()}
+                            {/* Post Text content (either from textOnImage or content if not boilerplate) */}
+                            {(() => {
+                              const textContent =
+                                msg.shared.textOnImage ||
+                                (!isBoilerplateContent(msg.content) ? msg.content : "");
+                              if (!textContent) return null;
+                              return (
+                                <p className="text-sm mt-1 break-words whitespace-pre-wrap">
+                                  {renderMessageWithLinks(
+                                    textContent,
+                                    (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+                                  )}
+                                </p>
+                              );
+                            })()}
 
-      {msg.content &&
-        !isBoilerplateContent(msg.content) &&
-        msg.content !== msg.shared.textOnImage && (
-          <p className="text-sm mt-1 break-words whitespace-pre-wrap opacity-95">
-            {renderMessageWithLinks(
-              msg.content,
-              (msg.sender?._id || msg.sender) === (user?._id || user?.id),
-            )}
-          </p>
-        )}
-    </div>
-  )
-) : (
-  <p className="text-sm break-words whitespace-pre-wrap">
-    {renderMessageWithLinks(
-      isBoilerplateContent(msg.content) ? "" : msg.content,
-      (msg.sender?._id || msg.sender) === (user?._id || user?.id),
-    )}
-  </p>
-)}
-                      
-                     
-                       
+                            {msg.content &&
+                              !isBoilerplateContent(msg.content) &&
+                              msg.content !== msg.shared.textOnImage && (
+                                <p className="text-sm mt-1 break-words whitespace-pre-wrap opacity-95">
+                                  {renderMessageWithLinks(
+                                    msg.content,
+                                    (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+                                  )}
+                                </p>
+                              )}
+                          </div>
+                        )
+                      ) : (
+                        <p className="text-sm break-words whitespace-pre-wrap">
+                          {renderMessageWithLinks(
+                            isBoilerplateContent(msg.content) ? "" : msg.content,
+                            (msg.sender?._id || msg.sender) === (user?._id || user?.id),
+                          )}
+                        </p>
+                      )}
+
+
+
                       {msg.mediaUrls &&
                         msg.mediaUrls.length > 0 &&
                         (() => {
@@ -1769,9 +2055,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           }
                         })()}
                       <p
-                        className={`text-[10px] mt-1 ${
-                          isCurrentUser ? "text-orange-100" : "text-gray-400"
-                        }`}
+                        className={`text-[10px] mt-1 ${isCurrentUser ? "text-orange-100" : "text-gray-400"
+                          }`}
                       >
                         {new Date(msg.createdAt).toLocaleTimeString("en-US", {
                           hour: "2-digit",
@@ -1780,14 +2065,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       </p>
                     </div>
                     {isCurrentUser && (
-                      <img
+                      <ChatAvatar
                         src={
                           user?.profilePicture ||
-                          allUserData?.profilePicture ||
-                          "https://randomuser.me/api/portraits/men/1.jpg"
+                          allUserData?.profilePicture
                         }
-                        alt="You"
-                        className="w-8 h-8 rounded-full object-cover ml-2 self-end mb-1"
+                        name={user?.name || allUserData?.name || "You"}
+                        size="w-8 h-8"
+                        textSize="text-xs"
+                        className="ml-2 self-end mb-1"
                       />
                     )}
                   </div>
@@ -1804,7 +2090,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
           <div className="border-t border-gray-200 px-4 py-3 bg-white flex flex-col">
             {/* Group Leave Check - Hide input if user left the group */}
             {selectedChat?.isGroup &&
-            (isRemoved === true || selfRemoved === true) ? (
+              (isRemoved === true || selfRemoved === true) ? (
               <div className="text-center text-sm text-gray-500 py-3">
                 You left this group
               </div>
@@ -2218,13 +2504,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     key={user._id}
                     className="flex items-center gap-1 bg-orange-100 px-2 py-1 rounded-full"
                   >
-                    <img
-                      src={
-                        user.profilePicture ||
-                        "https://randomuser.me/api/portraits/men/1.jpg"
-                      }
-                      alt={user.name}
-                      className="w-6 h-6 rounded-full object-cover"
+                    <ChatAvatar
+                      src={user.profilePicture}
+                      name={user.name}
+                      size="w-6 h-6"
+                      textSize="text-[10px]"
                     />
                     <span className="text-xs text-gray-900">{user.name}</span>
                     <button
@@ -2253,20 +2537,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-gray-50 cursor-pointer"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
-                    <img
-                      src={
-                        user.profilePicture ||
-                        "https://randomuser.me/api/portraits/men/1.jpg"
-                      }
-                      alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover"
+                    <ChatAvatar
+                      src={user.profilePicture}
+                      name={user.name}
+                      size="w-8 h-8"
+                      textSize="text-xs"
                     />
                     <div>
                       <span className="text-sm text-gray-900 block">
@@ -2278,11 +2559,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
-                        ? "bg-orange-500 border-orange-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-300"
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2486,11 +2766,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 <div
                   key={user._id}
                   onClick={() => handleSelectUser(user)}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${
-                    isDisabled
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-gray-50 cursor-pointer"
-                  }`}
+                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-gray-50 cursor-pointer"
+                    }`}
                 >
                   <div className="flex items-center gap-2">
                     <img
@@ -2511,11 +2790,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     </div>
                   </div>
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      isSelected
-                        ? "bg-orange-500 border-orange-500"
-                        : "border-gray-300"
-                    }`}
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-300"
+                      }`}
                   >
                     {isSelected && <Check className="w-3 h-3 text-white" />}
                   </div>
@@ -2680,14 +2958,12 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     {isMuted ? "Unmute Notifications" : "Mute Notifications"}
                   </span>
                   <div
-                    className={`w-10 h-6 rounded-full ${
-                      isMuted ? "bg-orange-500" : "bg-gray-300"
-                    } transition-colors`}
+                    className={`w-10 h-6 rounded-full ${isMuted ? "bg-orange-500" : "bg-gray-300"
+                      } transition-colors`}
                   >
                     <div
-                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${
-                        isMuted ? "translate-x-4" : "translate-x-0"
-                      }`}
+                      className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform ${isMuted ? "translate-x-4" : "translate-x-0"
+                        }`}
                     />
                   </div>
                 </button>
@@ -2753,13 +3029,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         key={memberData._id || member._id}
                         className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg"
                       >
-                        <img
-                          src={
-                            member.profilePicture ||
-                            "https://randomuser.me/api/portraits/men/1.jpg"
-                          }
-                          alt={member.name}
-                          className="w-10 h-10 rounded-full object-cover"
+                        <ChatAvatar
+                          src={member.profilePicture}
+                          name={member.name}
+                          size="w-10 h-10"
+                          textSize="text-sm"
                         />
                         <div className="flex-1">
                           <p className="text-sm font-medium text-gray-900">
@@ -2917,12 +3191,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         {selectedNewChatUser && (
           <div className="px-4 py-2 border-b bg-gray-50">
             <div className="inline-flex items-center gap-2 bg-orange-100 px-3 py-1 rounded-full">
-              <img
-                src={
-                  selectedNewChatUser.profilePicture ||
-                  "https://randomuser.me/api/portraits/men/1.jpg"
-                }
-                className="w-6 h-6 rounded-full"
+              <ChatAvatar
+                src={selectedNewChatUser.profilePicture}
+                name={selectedNewChatUser.name}
+                size="w-6 h-6"
+                textSize="text-[10px]"
               />
               <span className="text-sm font-medium text-gray-800">
                 {selectedNewChatUser.name}
@@ -2949,12 +3222,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 className="flex items-center justify-between px-3 py-2 hover:bg-gray-50 cursor-pointer rounded"
               >
                 <div className="flex items-center gap-3">
-                  <img
-                    src={
-                      u.profilePicture ||
-                      "https://randomuser.me/api/portraits/men/1.jpg"
-                    }
-                    className="w-9 h-9 rounded-full"
+                  <ChatAvatar
+                    src={u.profilePicture}
+                    name={u.name}
+                    size="w-9 h-9"
+                    textSize="text-xs"
                   />
                   <div>
                     <p className="text-sm font-medium">{u.name}</p>
@@ -2965,11 +3237,10 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 {/* Checkbox */}
                 <div
                   className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-      ${
-        selectedNewChatUser?._id === u._id
-          ? "bg-orange-500 border-orange-500"
-          : "border-gray-300"
-      }`}
+      ${selectedNewChatUser?._id === u._id
+                      ? "bg-orange-500 border-orange-500"
+                      : "border-gray-300"
+                    }`}
                 >
                   {selectedNewChatUser?._id === u._id && (
                     <Check className="w-3 h-3 text-white" />

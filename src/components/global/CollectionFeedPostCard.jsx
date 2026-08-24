@@ -804,7 +804,7 @@ export default function CollectionFeedPostCard({
       )}
 
       {selectedOption === "Share to your Story" && (
-        <PostStoryModal onClose={setSelectedOption} />
+        <PostStoryModal post={fullPost || post} onClose={setSelectedOption} />
       )}
       {selectedOption === "Share with Topic Page" && (
         <ShareRepostModal postId={fullPost._id} onClose={setSelectedOption} />

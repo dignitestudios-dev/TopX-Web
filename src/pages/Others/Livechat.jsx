@@ -17,6 +17,7 @@ import { fetchLiveChatHistory } from "../../redux/slices/chat.slice";
 import axios from "../../axios";
 import { SuccessToast } from "../../components/global/Toaster";
 import { getPageDetail } from "../../redux/slices/pages.slice";
+import { isValidUrl } from "../../lib/helpers";
 
 const GIPHY_API_KEY = "NGuGyGgjXdVH04wSX5pxvSlwvB7cXbeI"; // Replace with your actual key
 
@@ -29,6 +30,8 @@ export default function LiveChat() {
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState("");
   const [chatId, setChatId] = useState(null);
+  const [currentViewerCount, setCurrentViewerCount] = useState(0);
+  const [totalViewersCount, setTotalViewersCount] = useState(0);
   const chatIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -56,25 +59,40 @@ export default function LiveChat() {
 
     return parts.map((part, index) => {
       if (urlRegex.test(part)) {
-        const href = part.startsWith("http://") || part.startsWith("https://")
-          ? part
-          : `https://${part}`;
-        return (
-          <a
-            key={index}
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className={`underline break-all transition font-medium ${
-              isMe
-                ? "text-blue-100 hover:text-white"
-                : "text-blue-600 hover:text-blue-800"
-            }`}
-          >
-            {part}
-          </a>
-        );
+        const trailingPunctuationMatch = part.match(/[.,;:!?)>"']+$/);
+        const trailingPunctuation = trailingPunctuationMatch
+          ? trailingPunctuationMatch[0]
+          : "";
+        const cleanUrl = trailingPunctuation
+          ? part.slice(0, -trailingPunctuation.length)
+          : part;
+
+        if (isValidUrl(cleanUrl)) {
+          const href =
+            cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://")
+              ? cleanUrl
+              : `https://${cleanUrl}`;
+          return (
+            <React.Fragment key={index}>
+              <a
+                key={index}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className={`underline break-all transition font-medium ${
+                  isMe
+                    ? "text-blue-100 hover:text-white"
+                    : "text-blue-600 hover:text-blue-800"
+                }`}
+              >
+                {cleanUrl}
+              </a>
+              {trailingPunctuation}
+            </React.Fragment>
+          );
+        }
+        return part;
       }
       return part;
     });
@@ -165,10 +183,40 @@ export default function LiveChat() {
       ]);
     });
 
+    const unsubscribeJoined = on(SOCKET_EVENTS.LIVE.USER_JOINED, (data) => {
+      console.log("Socket live:user:joined in LiveChat:", data);
+      if (data) {
+        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
+          setCurrentViewerCount(Number(data.currentViewerCount));
+        } else {
+          setCurrentViewerCount((prev) => prev + 1);
+        }
+        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
+          setTotalViewersCount(Number(data.totalViewersCount));
+        }
+      }
+    });
+
+    const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, (data) => {
+      console.log("Socket live:user:left in LiveChat:", data);
+      if (data) {
+        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
+          setCurrentViewerCount(Number(data.currentViewerCount));
+        } else {
+          setCurrentViewerCount((prev) => Math.max(0, prev - 1));
+        }
+        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
+          setTotalViewersCount(Number(data.totalViewersCount));
+        }
+      }
+    });
+
     return () => {
       if (chatIdRef.current)
         emit(SOCKET_EVENTS.LIVE.LEAVE, { chatId: chatIdRef.current });
       unsubscribe();
+      if (unsubscribeJoined) unsubscribeJoined();
+      if (unsubscribeLeft) unsubscribeLeft();
       socket.off("connect", handleJoin);
     };
   }, [pageId, socket, on, emit, dispatch, currentUser?._id]);
@@ -357,8 +405,13 @@ const ALLOWED_TYPES = [
             <span className="font-bold text-lg">
               {page?.user?.name ? `${page.user.name} ` : ""}{pageName || "Live Room"} Chat
             </span>
-            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-200">
-              👥 {page?.followersCount || page?.followers?.length || 1} Participants
+            <span className="bg-orange-100 text-orange-700 text-xs font-semibold px-2.5 py-1 rounded-full border border-orange-200 flex items-center gap-1.5">
+              👥 {currentViewerCount > 0 ? currentViewerCount : (page?.followersCount || page?.followers?.length || 1)} {currentViewerCount === 1 ? "Viewer" : "Viewers"}
+              {totalViewersCount > 0 && (
+                <span className="text-[10px] text-orange-600/80 font-normal">
+                  ({totalViewersCount} total)
+                </span>
+              )}
             </span>
           </div>
           {pageOwner ? (

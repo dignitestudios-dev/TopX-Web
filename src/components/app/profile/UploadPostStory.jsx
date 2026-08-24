@@ -27,6 +27,11 @@ export default function UploadPostStory({
   const linkData = getLinkPreview(bodyText);
 
   const handleCloseModal = () => {
+    images.forEach((img) => {
+      if (img.url && img.url.startsWith("blob:")) {
+        URL.revokeObjectURL(img.url);
+      }
+    });
     setBodyText("");
     setImages([]);
     if (typeof setIsOpen === "function") {
@@ -38,53 +43,68 @@ export default function UploadPostStory({
   };
 
   const handleImageUpload = (e) => {
-    const files = Array.from(e.target.files);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     const invalidFiles = files.filter((f) => {
       if (f.type.startsWith("video/")) return false;
-      return f.type !== "image/jpeg" && f.type !== "image/png";
+      return !f.type.startsWith("image/");
     });
 
     if (invalidFiles.length > 0) {
-      ErrorToast("Only JPG, PNG images and videos are allowed!");
+      ErrorToast("Only images (JPEG, PNG, WEBP) and videos are allowed!");
+      e.target.value = "";
       return;
     }
 
-    const oversizedImages = files.filter(
-      (f) => f.type.startsWith("image/") && f.size > 5 * 1024 * 1024
-    );
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+    const MAX_VIDEO_SIZE = 30 * 1024 * 1024; // 30MB
 
-    if (oversizedImages.length > 0) {
-      ErrorToast("Image size must be less than 5MB!");
+    const oversizedFiles = files.filter((f) => {
+      if (f.type.startsWith("video/")) {
+        return f.size > MAX_VIDEO_SIZE;
+      }
+      return f.size > MAX_IMAGE_SIZE;
+    });
+
+    if (oversizedFiles.length > 0) {
+      const hasVideo = oversizedFiles.some((f) => f.type.startsWith("video/"));
+      if (hasVideo) {
+        ErrorToast("Video size exceeds the 30MB limit!");
+      } else {
+        ErrorToast("Image size exceeds the 10MB limit!");
+      }
+      e.target.value = "";
       return;
     }
 
     const remainingSlots = MAX_IMAGES - images.length;
     if (remainingSlots <= 0) {
       ErrorToast(`Maximum ${MAX_IMAGES} media allowed!`);
+      e.target.value = "";
       return;
     }
 
     const filesToAdd = files.slice(0, remainingSlots);
 
-    filesToAdd.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImages((prev) => [
-          ...prev,
-          {
-            id: Date.now() + Math.random(),
-            url: reader.result,
-            fileObject: file,
-          },
-        ]);
-      };
-      reader.readAsDataURL(file);
-    });
+    const newMediaItems = filesToAdd.map((file) => ({
+      id: Date.now() + Math.random(),
+      url: URL.createObjectURL(file),
+      fileObject: file,
+    }));
+
+    setImages((prev) => [...prev, ...newMediaItems]);
+    e.target.value = "";
   };
 
   const removeImage = (id) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+    setImages((prev) => {
+      const target = prev.find((img) => img.id === id);
+      if (target?.url && target.url.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url);
+      }
+      return prev.filter((img) => img.id !== id);
+    });
   };
 
   const handlePostNow = async () => {
@@ -235,7 +255,7 @@ export default function UploadPostStory({
                     {images.length < MAX_IMAGES && (
                       <Input
                         type="file"
-                        accept="image/jpeg,image/png,video/*"
+                        accept="image/jpeg,image/png,image/webp,video/*"
                         multiple
                         onChange={handleImageUpload}
                         fileClassName="w-[120px] h-[120px] rounded-xl"
@@ -244,7 +264,7 @@ export default function UploadPostStory({
                   </div>
 
                   <p className="text-xs text-gray-500 mt-2">
-                    {images.length}/{MAX_IMAGES} media uploaded
+                    {images.length}/{MAX_IMAGES} media uploaded (Max: 10MB image, 30MB video)
                   </p>
                 </div>
 

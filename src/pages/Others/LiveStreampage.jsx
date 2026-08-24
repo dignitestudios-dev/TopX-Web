@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useAgora } from "../../hooks/useAgora";
 import { useRTM } from "../../hooks/useRTM";
-import { startStream, joinStream, endStream } from "../../redux/slices/livestream.slice";
+import { startStream, joinStream, endStream, resetLivestreamState } from "../../redux/slices/livestream.slice";
 import { getPageDetail } from "../../redux/slices/pages.slice";
 import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import LiveCommentsLikes from "../../components/livestream/LiveCommentsLikes";
@@ -15,7 +15,12 @@ import {
   PhoneOff,
   Users,
   Loader2,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
+import { checkMediaPermissions } from "../../lib/helpers";
+import useSocket from "../../socket/useSocket";
+import { SOCKET_EVENTS } from "../../constants/socketEvents";
 
 const LiveStreampage = () => {
   const { pageId } = useParams();
@@ -34,13 +39,23 @@ const LiveStreampage = () => {
   const [role, setRole] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [viewerCount, setViewerCount] = useState(0);
+  const [currentViewerCount, setCurrentViewerCount] = useState(0);
+  const [totalViewersCount, setTotalViewersCount] = useState(0);
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
+  const initializedPageIdRef = useRef(null);
+
+  const { on, socket } = useSocket();
 
   // Determine if user is page owner (host) or viewer (audience)
   useEffect(() => {
     const fromGoLive = location.state?.fromGoLive === true;
+
+    // Prevent duplicate role determination / API calls for the same page session
+    if (initializedPageIdRef.current === pageId) {
+      return;
+    }
 
     const determineRole = async () => {
       try {
@@ -49,9 +64,10 @@ const LiveStreampage = () => {
           fromGoLive &&
           streamData &&
           streamData.channelName &&
-          streamData.rtcToken
+          (streamData.rtcToken || streamData.token)
         ) {
           console.log("StreamData already exists from GoLive, user is host");
+          initializedPageIdRef.current = pageId;
           setRole("host");
           setIsInitializing(false);
           return;
@@ -63,17 +79,18 @@ const LiveStreampage = () => {
         if (pageRes.meta.requestStatus === "fulfilled") {
           const page = pageRes.payload;
           const isOwner =
-            page.owner?._id === user?._id ||
-            page.ownerId === user?._id ||
-            page.userId === user?._id;
+            page?.owner?._id === user?._id ||
+            page?.ownerId === user?._id ||
+            page?.userId === user?._id;
 
           if (isOwner) {
             // Owner (host) - call startStream API
             setRole("host");
-            
+
             const startRes = await dispatch(startStream(pageId));
 
             if (startRes.meta.requestStatus === "fulfilled") {
+              initializedPageIdRef.current = pageId;
               setTimeout(() => {
                 setIsInitializing(false);
               }, 100);
@@ -89,6 +106,7 @@ const LiveStreampage = () => {
             const joinRes = await dispatch(joinStream(pageId));
 
             if (joinRes.meta.requestStatus === "fulfilled") {
+              initializedPageIdRef.current = pageId;
               setIsInitializing(false);
             } else {
               ErrorToast(
@@ -104,6 +122,7 @@ const LiveStreampage = () => {
           const joinRes = await dispatch(joinStream(pageId));
 
           if (joinRes.meta.requestStatus === "fulfilled") {
+            initializedPageIdRef.current = pageId;
             setIsInitializing(false);
           } else {
             ErrorToast(
@@ -117,8 +136,9 @@ const LiveStreampage = () => {
         // On error, default to audience
         setRole("audience");
         const joinRes = await dispatch(joinStream(pageId));
-        
+
         if (joinRes.meta.requestStatus === "fulfilled") {
+          initializedPageIdRef.current = pageId;
           setIsInitializing(false);
         } else {
           ErrorToast(error.message || "Failed to initialize stream");
@@ -130,24 +150,29 @@ const LiveStreampage = () => {
     if (user && pageId) {
       determineRole();
     }
-  }, [pageId, user, dispatch, navigate, streamData, location.state]);
+  }, [pageId, user?._id, dispatch, navigate, location.state]);
 
   // Get Agora credentials from streamData - use EXACT values from backend
   const appId =
-    streamData?.appId || 
-    streamData?.app_id || 
-    import.meta.env.VITE_AGORA_APP_ID || 
+    streamData?.appId ||
+    streamData?.app_id ||
+    import.meta.env.VITE_AGORA_APP_ID ||
     "d2049131656f4ef389a7e743effcbeec";
-  
+
   // Backend returns rtcToken - use EXACT value
-  const token = streamData?.rtcToken || null;
-  
+  const token = streamData?.rtcToken || streamData?.token || null;
+
   // Backend returns rtmToken for RTM messaging
   const rtmToken = streamData?.rtmToken || null;
-  
+
   // Backend returns accountNumber as UID - convert to Number
-  const uid = streamData?.accountNumber ? Number(streamData.accountNumber) : null;
-  
+  const uid =
+    streamData?.accountNumber !== undefined && streamData?.accountNumber !== null
+      ? Number(streamData.accountNumber)
+      : streamData?.uid !== undefined && streamData?.uid !== null
+      ? Number(streamData.uid)
+      : null;
+
   // Backend returns channelName - use EXACT value (no fallback)
   const channelName = streamData?.channelName || null;
 
@@ -177,6 +202,8 @@ const LiveStreampage = () => {
     });
   }, [role]);
 
+  const [isRetryingPermissions, setIsRetryingPermissions] = useState(false);
+
   const {
     join,
     leave,
@@ -188,6 +215,7 @@ const LiveStreampage = () => {
     isJoined,
     isLoading: agoraLoading,
     error: agoraError,
+    setError: setAgoraError,
   } = useAgora({
     pageId,
     role: role || "audience", // Default to audience if role not set
@@ -197,10 +225,27 @@ const LiveStreampage = () => {
     backendChannelName: channelName, // Use EXACT channelName from backend
   });
 
+  const handleRetryPermissionsAndJoin = async () => {
+    setIsRetryingPermissions(true);
+    const permResult = await checkMediaPermissions();
+    if (permResult.success) {
+      if (typeof setAgoraError === "function") {
+        setAgoraError(null);
+      }
+      await join();
+    } else {
+      if (typeof setAgoraError === "function") {
+        setAgoraError(permResult.error);
+      }
+      ErrorToast(permResult.error);
+    }
+    setIsRetryingPermissions(false);
+  };
+
   // Initialize RTM for live comments and likes
   // Only initialize if we have all required RTM credentials
   const hasRTMParams = rtmToken && channelName && uid && appId;
-  
+
   const {
     isConnected: rtmConnected,
     comments,
@@ -212,11 +257,11 @@ const LiveStreampage = () => {
   } = useRTM(
     hasRTMParams
       ? {
-          appId,
-          uid: String(uid), // RTM requires string UID
-          token: rtmToken,
-          channelName, // Same channelName as RTC
-        }
+        appId,
+        uid: String(uid), // RTM requires string UID
+        token: rtmToken,
+        channelName, // Same channelName as RTC
+      }
       : { appId: "", uid: "", token: "", channelName: "" }
   );
 
@@ -262,12 +307,12 @@ const LiveStreampage = () => {
     // 3. Not already joined
     // 4. Agora not loading
     // 5. All required data: streamData, channelName, token, uid
-    const canJoin = 
-      role && 
-      !isInitializing && 
-      !isJoined && 
+    const canJoin =
+      role &&
+      !isInitializing &&
+      !isJoined &&
       !agoraLoading &&
-      streamData && 
+      streamData &&
       channelName && // Must have channelName from backend
       token && // Must have rtcToken from backend
       uid !== null && // Must have accountNumber (UID) from backend
@@ -288,7 +333,7 @@ const LiveStreampage = () => {
         hasRef: !!localVideoRef.current,
         isPlaying: localVideo.isPlaying,
       });
-      
+
       try {
         const playPromise = localVideo.play(localVideoRef.current);
         // Handle promise if it exists
@@ -436,7 +481,48 @@ const LiveStreampage = () => {
     });
   }, [remoteUsers, role]);
 
-  // Update viewer count (simplified - in production, get from Agora stats)
+  // Listen to socket live viewer events (USER_JOINED / USER_LEFT)
+  useEffect(() => {
+    if (!socket || !pageId) return;
+
+    const handleUserJoined = (data) => {
+      console.log("Socket live:user:joined in LiveStreampage:", data);
+      if (data) {
+        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
+          setCurrentViewerCount(Number(data.currentViewerCount));
+        } else {
+          setCurrentViewerCount((prev) => prev + 1);
+        }
+        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
+          setTotalViewersCount(Number(data.totalViewersCount));
+        }
+      }
+    };
+
+    const handleUserLeft = (data) => {
+      console.log("Socket live:user:left in LiveStreampage:", data);
+      if (data) {
+        if (data.currentViewerCount !== undefined && data.currentViewerCount !== null) {
+          setCurrentViewerCount(Number(data.currentViewerCount));
+        } else {
+          setCurrentViewerCount((prev) => Math.max(0, prev - 1));
+        }
+        if (data.totalViewersCount !== undefined && data.totalViewersCount !== null) {
+          setTotalViewersCount(Number(data.totalViewersCount));
+        }
+      }
+    };
+
+    const unsubscribeJoined = on(SOCKET_EVENTS.LIVE.USER_JOINED, handleUserJoined);
+    const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, handleUserLeft);
+
+    return () => {
+      if (unsubscribeJoined) unsubscribeJoined();
+      if (unsubscribeLeft) unsubscribeLeft();
+    };
+  }, [socket, pageId, on]);
+
+  // Update fallback viewer count when Agora remote users change
   useEffect(() => {
     if (isJoined) {
       setViewerCount(remoteUsers.length + (role === "host" ? 1 : 0));
@@ -476,8 +562,10 @@ const LiveStreampage = () => {
       if (isJoined) {
         leave().catch(console.error);
       }
+
+      dispatch(resetLivestreamState());
     };
-  }, [isJoined, leave]);
+  }, [isJoined, leave, dispatch]);
 
   // Show loading state
   if (isInitializing || pageDetailLoading || livestreamLoading) {
@@ -495,19 +583,90 @@ const LiveStreampage = () => {
     );
   }
 
-  // Show error state
+  // Show error / permission denied state
   if (agoraError) {
+    const isPermissionError =
+      agoraError.toLowerCase().includes("permission") ||
+      agoraError.toLowerCase().includes("notallowed") ||
+      agoraError.toLowerCase().includes("camera") ||
+      agoraError.toLowerCase().includes("microphone") ||
+      agoraError.toLowerCase().includes("device");
+
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center text-white max-w-md">
-          <p className="text-xl mb-4">Stream Error</p>
-          <p className="text-gray-400 mb-6">{agoraError}</p>
-          <button
-            onClick={() => navigate("/home")}
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-lg"
-          >
-            Go Back
-          </button>
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
+        <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl animate-scaleUp">
+          <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-orange-500/10 border border-orange-500/20 text-orange-500 flex items-center justify-center">
+            {isPermissionError ? (
+              <div className="flex items-center gap-1">
+                <VideoOff className="w-6 h-6" />
+                <MicOff className="w-5 h-5" />
+              </div>
+            ) : (
+              <AlertCircle className="w-8 h-8" />
+            )}
+          </div>
+
+          <h2 className="text-xl font-bold text-white mb-2">
+            {isPermissionError
+              ? "Camera & Microphone Access Required"
+              : "Live Stream Error"}
+          </h2>
+
+          <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+            {agoraError}
+          </p>
+
+          {isPermissionError && (
+            <div className="bg-neutral-800/80 border border-neutral-700/60 rounded-2xl p-4 mb-6 text-left">
+              <p className="text-xs font-semibold text-neutral-300 mb-2">
+                🔒 How to enable permissions:
+              </p>
+              <ol className="text-xs text-neutral-400 space-y-1.5 list-decimal pl-4">
+                <li>
+                  Click the <strong>Lock (🔒) icon</strong> in your browser address bar.
+                </li>
+                <li>
+                  Turn ON <strong>Camera</strong> and <strong>Microphone</strong> access.
+                </li>
+                <li>
+                  Click <strong>"Try Again"</strong> below to reconnect your stream.
+                </li>
+              </ol>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (role === "host") {
+                  handleEndStream();
+                } else {
+                  navigate("/home");
+                }
+              }}
+              disabled={isRetryingPermissions}
+              className="flex-1 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              Exit Live Stream
+            </button>
+            <button
+              onClick={handleRetryPermissionsAndJoin}
+              disabled={isRetryingPermissions}
+              className="flex-1 py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold transition-colors flex items-center justify-center gap-2 shadow-lg shadow-orange-600/20 disabled:opacity-50"
+            >
+              {isRetryingPermissions ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Try Again</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -563,15 +722,22 @@ const LiveStreampage = () => {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2 bg-red-600 px-3 py-1 rounded-full">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span className="text-sm font-semibold">LIVE</span>
-            {viewerCount > 0 && (
-              <span className="text-sm ml-2 flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {viewerCount}
+          <div className="flex items-center gap-2 bg-red-600 px-3 py-1.5 rounded-full shadow-lg">
+            <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
+            <span className="text-xs md:text-sm font-bold tracking-wider">LIVE</span>
+            <span className="text-xs md:text-sm ml-1 flex items-center gap-1.5 bg-black/30 px-2.5 py-0.5 rounded-full">
+              <Users className="w-3.5 h-3.5" />
+              <span className="font-semibold">
+                {currentViewerCount > 0
+                  ? currentViewerCount
+                  : (viewerCount > 0 ? viewerCount : 1)}
               </span>
-            )}
+              {totalViewersCount > 0 && (
+                <span className="text-[11px] text-gray-200 font-normal">
+                  ({totalViewersCount} total)
+                </span>
+              )}
+            </span>
           </div>
         </div>
       </div>
@@ -643,11 +809,10 @@ const LiveStreampage = () => {
             <div className="flex items-center justify-center gap-4">
               <button
                 onClick={toggleVideo}
-                className={`p-4 rounded-full ${
-                  localVideo?.isPlaying !== false
+                className={`p-4 rounded-full ${localVideo?.isPlaying !== false
                     ? "bg-gray-700 hover:bg-gray-600"
                     : "bg-red-600 hover:bg-red-700"
-                } transition-colors`}
+                  } transition-colors`}
               >
                 {localVideo?.isPlaying !== false ? (
                   <Video className="w-6 h-6" />
@@ -658,11 +823,10 @@ const LiveStreampage = () => {
 
               <button
                 onClick={toggleAudio}
-                className={`p-4 rounded-full ${
-                  localAudio?.isPlaying !== false
+                className={`p-4 rounded-full ${localAudio?.isPlaying !== false
                     ? "bg-gray-700 hover:bg-gray-600"
                     : "bg-red-600 hover:bg-red-700"
-                } transition-colors`}
+                  } transition-colors`}
               >
                 {localAudio?.isPlaying !== false ? (
                   <Mic className="w-6 h-6" />

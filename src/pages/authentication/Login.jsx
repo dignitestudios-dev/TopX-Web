@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { login, resetAuth, socialLogin } from "../../redux/slices/auth.slice";
+import { login, resetAuth, socialLogin, getAllUserData } from "../../redux/slices/auth.slice";
 import { useFormik } from "formik";
 import { loginValues } from "../../init/authentication/dummyLoginValues";
 import { signInSchema } from "../../schema/authentication/dummyLoginSchema";
@@ -15,17 +15,34 @@ import { ErrorToast, SuccessToast } from "../../components/global/Toaster";
 import Cookies from "js-cookie";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, appleProvider } from "../../firebase/firebase";
+import { getOnboardingStatus } from "../../lib/helpers";
 
 const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const { isLoading, error, success, accessToken, user } = useSelector((state) => state.auth);
+  const { isLoading, error, success, accessToken, user, allUserData } = useSelector((state) => state.auth);
 
-  console.log(accessToken, "accessToken")
-
-  console.log(user, "useralldata")
+  const handlePostAuthRedirect = async (fallbackUser) => {
+    try {
+      const userRes = await dispatch(getAllUserData()).unwrap();
+      const userData = userRes || fallbackUser;
+      const status = getOnboardingStatus(userData);
+      if (status.isCompleted) {
+        navigate("/Home");
+      } else {
+        navigate("/auth/signup", { state: { step: status.step } });
+      }
+    } catch (err) {
+      const status = getOnboardingStatus(fallbackUser);
+      if (status.isCompleted) {
+        navigate("/Home");
+      } else {
+        navigate("/auth/signup", { state: { step: status.step } });
+      }
+    }
+  };
 
   const { values, handleBlur, handleChange, handleSubmit, errors, touched } =
     useFormik({
@@ -47,7 +64,7 @@ const Login = () => {
             sameSite: "lax",
           });
 
-          navigate("/Home");
+          await handlePostAuthRedirect(result.payload.user);
         }
       },
     });
@@ -85,7 +102,7 @@ const Login = () => {
           sameSite: "lax",
         });
 
-        navigate("/Home");
+        await handlePostAuthRedirect(response.payload.user);
       } else {
         ErrorToast(response?.payload || "Social Login Failed");
       }
@@ -122,7 +139,7 @@ const Login = () => {
           sameSite: "lax",
         });
 
-        navigate("/Home");
+        await handlePostAuthRedirect(response.payload.user);
       } else {
         ErrorToast(response?.payload || "Social Login Failed");
       }

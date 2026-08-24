@@ -20,9 +20,6 @@ import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
 import CreateKnowledgePostModal from "../../components/global/CreateKnowledgePostModal";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -477,9 +474,6 @@ export default function Knowledge() {
 
           {/* Suggestions Section */}
           <SuggestionsPagesGlobal />
-
-          {open && <ChatWidget />}
-          <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>
       </div>
     </div>

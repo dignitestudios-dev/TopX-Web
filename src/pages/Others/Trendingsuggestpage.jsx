@@ -22,9 +22,6 @@ import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
 import { TbNotes } from "react-icons/tb";
 import { FaAngleRight, FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
 import PostCard from "../../components/global/PostCard";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -351,10 +348,6 @@ export default function Trendingsuggestpage() {
             onSave={handleSaveToCollection}
           />
         )}
-
-        {/* Chat Widget */}
-        {open && <ChatWidget />}
-        <FloatingChatButton onClick={() => setOpen(!open)} />
       </div>
     </div>
   );

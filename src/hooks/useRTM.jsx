@@ -48,8 +48,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
         if (!RTMClass || typeof RTMClass !== "function") {
           throw new Error(
-            `RTM class not found. Available: ${
-              RTMClass ? Object.keys(RTMClass).join(", ") : "null"
+            `RTM class not found. Available: ${RTMClass ? Object.keys(RTMClass).join(", ") : "null"
             }`
           );
         }
@@ -217,12 +216,12 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
           }
 
           if (channelRef.current?.name) {
-            client.unsubscribe(channelRef.current.name).catch(() => {});
+            client.unsubscribe(channelRef.current.name).catch(() => { });
           }
 
           // ❗ ONLY logout if ACTUALLY logged in
           if (isLoggedInRef.current) {
-            client.logout().catch(() => {});
+            client.logout().catch(() => { });
             isLoggedInRef.current = false;
           }
         } catch (e) {

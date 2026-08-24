@@ -6,7 +6,8 @@ export default function LinkPreviewCard({ linkData }) {
 
   if (!linkData || !linkData.url) return null;
 
-  const { url, domain, thumbnail, isYoutube, videoId } = linkData;
+  const { url, fullUrl, domain, thumbnail, isYoutube, videoId } = linkData;
+  const href = fullUrl || (url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`);
 
   const handlePlayClick = (e) => {
     e.stopPropagation();
@@ -42,9 +43,8 @@ export default function LinkPreviewCard({ linkData }) {
       ) : thumbnail ? (
         <div
           onClick={isYoutube && videoId ? handlePlayClick : undefined}
-          className={`block relative group overflow-hidden bg-black max-h-[420px] ${
-            isYoutube && videoId ? "cursor-pointer" : ""
-          }`}
+          className={`block relative group overflow-hidden bg-black max-h-[420px] ${isYoutube && videoId ? "cursor-pointer" : ""
+            }`}
         >
           <img
             src={thumbnail}
@@ -72,7 +72,7 @@ export default function LinkPreviewCard({ linkData }) {
             <ExternalLink className="w-3 h-3 text-gray-400 inline shrink-0" />
           </p>
           <a
-            href={url}
+            href={href}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs sm:text-sm text-orange-600 hover:text-orange-700 font-normal break-all hover:underline leading-relaxed block truncate"

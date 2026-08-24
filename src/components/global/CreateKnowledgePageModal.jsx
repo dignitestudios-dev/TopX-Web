@@ -68,8 +68,14 @@ export default function CreateKnowledgePageModal({ onClose }) {
   // IMAGE UPLOAD
   const handleFileUpload = (e) => {
     if (e.target.files && e.target.files[0]) {
-      setImageFile(e.target.files[0]);
-      setPreviewImage(URL.createObjectURL(e.target.files[0]));
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        ErrorToast("Image size must not exceed 5MB.");
+        e.target.value = "";
+        return;
+      }
+      setImageFile(file);
+      setPreviewImage(URL.createObjectURL(file));
       setErrors((prev) => ({ ...prev, image: "" }));
     }
   };

@@ -1,16 +1,18 @@
 export const signupValues = {
     name: "",
     email: "",
+    phone: "",
     number: "",
     password: "",
     cPassword: "",
-   
+    acceptTerms: false,
 };
 
 export const PersonalValues = {
     username: "",
-    dateOfBirth: "2013-01-01",
+    dateOfBirth: "",
     gender: "",
+    genderOther: "",
     profileImage: "",
     bio: "",
     link: "",

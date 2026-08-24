@@ -11,6 +11,7 @@ import {
   getInterests,
   updateInterests,
 } from "../../redux/slices/onboarding.slice";
+import { getAllUserData } from "../../redux/slices/auth.slice";
 import { deduplicateInterestsList } from "../../lib/helpers";
 
 export default function Interests({ handleNext, handlePrevious }) {
@@ -93,6 +94,7 @@ export default function Interests({ handleNext, handlePrevious }) {
       return;
     }
 
+    await dispatch(getAllUserData());
     SuccessToast("Interests saved successfully!");
     handleNext();
   };

@@ -15,7 +15,6 @@ import Suggestpage from "../pages/Others/Suggestpage";
 import Searchitem from "../pages/Others/Searchitem";
 import { useState } from "react";
 import ChatWidget from '../components/global/ChatWidget';
-import FloatingChatButton from '../components/global/ChatWidget';
 import ProtectedRoute from "./ProtectedRoute";
 import Trendingsuggestpage from "../pages/Others/Trendingsuggestpage";
 import Trendingpagedetail from "../pages/Others/Trendingpagedetail";
@@ -25,7 +24,6 @@ import Livechat from "../pages/Others/Livechat";
 import BoostSuccess from "../pages/Others/BoostSuccess";
 
 const MainRoutes = () => {
-    const [open, setOpen] = useState(false);
 
     return (
         <>
@@ -189,8 +187,7 @@ const MainRoutes = () => {
                     />
                 </Routes>
 
-                {open && <ChatWidget />}
-                <FloatingChatButton onClick={() => setOpen(!open)} />
+                <ChatWidget />
 
             </main>
         </>

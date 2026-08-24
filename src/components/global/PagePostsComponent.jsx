@@ -652,8 +652,8 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
       )}
 
       {selectedOption === "Share to your Story" && selectedPostForShare && (
-        <ShareToPagesModal
-          postId={selectedPostForShare}
+        <PostStoryModal
+          post={pagePosts?.find(p => p._id === selectedPostForShare) || { _id: selectedPostForShare }}
           onClose={(value) => {
             setSelectedOption(value);
             setSelectedPostForShare(null);

@@ -52,6 +52,7 @@ export const signupSchema = Yup.object().shape({
     .matches(/^\S*$/, "Password should not contain spaces.")
     .oneOf([Yup.ref("password")], "Passwords must match"),
 
-
-
+  acceptTerms: Yup.boolean()
+    .oneOf([true], "You must accept the Terms & Conditions and Privacy Policy")
+    .required("You must accept the Terms & Conditions and Privacy Policy"),
 });

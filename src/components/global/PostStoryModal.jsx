@@ -19,23 +19,31 @@ const PostStoryModal = ({ onClose, post }) => {
     dispatch(fetchMyPages({}));
   }, []);
 
-  // Normalize media (images + videos) from either post.media or post.postimage
+  // Normalize media (images + videos) from post.media, post.postimage, or post.image/imageUrl
   const allMedia = useMemo(() => {
     if (!post) return [];
 
     // Case 1: post.media (new structure)
     if (Array.isArray(post.media) && post.media.length > 0) {
       return post.media
-        .filter((m) => m?.fileUrl)
-        .map((m) => ({
-          url: m.fileUrl,
-          type:
-            m.type ||
-            (typeof m.fileUrl === "string" &&
-            m.fileUrl.match(/\.(mp4|webm|ogg)$/i)
-              ? "video"
-              : "image"),
-        }));
+        .filter((m) => m?.fileUrl || m?.url || (typeof m === "string" && m))
+        .map((m) => {
+          if (typeof m === "string") {
+            return {
+              url: m,
+              type: m.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image",
+            };
+          }
+          const url = m.fileUrl || m.url;
+          return {
+            url,
+            type:
+              m.type ||
+              (typeof url === "string" && url.match(/\.(mp4|webm|ogg)$/i)
+                ? "video"
+                : "image"),
+          };
+        });
     }
 
     // Case 2: post.postimage (old structure)
@@ -43,7 +51,6 @@ const PostStoryModal = ({ onClose, post }) => {
       return post.postimage
         .filter(Boolean)
         .map((item) => {
-          // If string
           if (typeof item === "string") {
             return {
               url: item,
@@ -51,19 +58,38 @@ const PostStoryModal = ({ onClose, post }) => {
             };
           }
 
-          // If object
           if (typeof item === "object") {
+            const url = item.fileUrl || item.url;
             return {
-              url: item.fileUrl || item.url,
+              url,
               type:
                 item.type ||
-                (item.fileUrl?.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
+                (typeof url === "string" && url.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
             };
           }
 
           return null;
         })
         .filter(Boolean);
+    }
+
+    // Case 3: post.mediaUrls
+    if (Array.isArray(post.mediaUrls) && post.mediaUrls.length > 0) {
+      return post.mediaUrls
+        .filter(Boolean)
+        .map((url) => ({
+          url,
+          type: typeof url === "string" && url.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image",
+        }));
+    }
+
+    // Case 4: single image or video string field
+    const singleMediaUrl = post.fileUrl || post.image || post.imageUrl || post.video || post.videoUrl;
+    if (typeof singleMediaUrl === "string" && singleMediaUrl.trim()) {
+      return [{
+        url: singleMediaUrl,
+        type: singleMediaUrl.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image",
+      }];
     }
 
     return [];
@@ -104,7 +130,6 @@ const PostStoryModal = ({ onClose, post }) => {
       if (postId) formData.append("postId", postId);
 
       const text = post.bodyText || post.text || "";
-
       formData.append("text", text);
 
       // Author info (optional but useful)
@@ -118,12 +143,11 @@ const PostStoryModal = ({ onClose, post }) => {
       }
 
       // Media URLs (images/videos) - send all
-      let mediaIndex = 0;
       allMedia.forEach((m, index) => {
         if (m.url) {
           formData.append(`mediaUrls[${index}]`, m.url);
           formData.append(`mediaTypes[${index}]`, m.type);
-          mediaIndex += 1;
+       
         }
       });
 
@@ -187,7 +211,7 @@ const PostStoryModal = ({ onClose, post }) => {
                       <p className="text-sm font-semibold">
                         {post.author?.name}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 break-all">
                         @{post.author?.username}
                       </p>
                     </div>
@@ -315,7 +339,7 @@ const PostStoryModal = ({ onClose, post }) => {
     <p className="text-sm font-semibold">
       {post.author?.name}
     </p>
-    <p className="text-xs text-gray-500">
+    <p className="text-xs text-gray-500 break-all">
       @{post.author?.username}
     </p>
   </div>

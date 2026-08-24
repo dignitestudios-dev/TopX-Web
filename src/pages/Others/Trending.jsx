@@ -11,8 +11,6 @@ import { notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
 import { FaAngleRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
 import TrendingPostCard from "../../components/global/TrendingPostCard";
 import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -555,9 +553,6 @@ export default function Trending() {
             onSave={handleSaveToCollection}
           />
         )}
-
-        {open && <ChatWidget />}
-        <FloatingChatButton onClick={() => setOpen(!open)} />
       </div>
     </div>
   );

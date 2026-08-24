@@ -70,11 +70,10 @@ const LiveCommentsLikes = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleLike}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${
-              userLiked
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${userLiked
                 ? "bg-red-600 text-white"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Heart
               className={`w-5 h-5 ${userLiked ? "fill-current" : ""}`}
@@ -161,8 +160,8 @@ const LiveCommentsLikes = ({
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={
-                  isConnected 
-                    ? "Type a comment..." 
+                  isConnected
+                    ? "Type a comment..."
                     : "Connecting to chat... (you can still type)"
                 }
                 disabled={false}

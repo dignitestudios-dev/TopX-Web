@@ -4,8 +4,6 @@ import { nofound, notes, postone, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import { TbNotes } from "react-icons/tb";
 import { FaChevronRight } from "react-icons/fa6";
-import ChatWidget from "../../components/global/ChatWidget";
-import FloatingChatButton from "../../components/global/ChatWidget";
 import SubscriptionStories from "../../components/global/SubscriptionStories";
 import { useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -508,8 +506,6 @@ export default function SubscriptionsCategory() {
           <TrendingPagesGlobal />
           {/* Suggestions Section */}
           <SuggestionsPagesGlobal />
-          {open && <ChatWidget />} {/* Your actual chat panel */}
-          <FloatingChatButton onClick={() => setOpen(!open)} />
         </div>
       </div>
 
