@@ -4,9 +4,6 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
   const clientRef = useRef(null);
   const channelRef = useRef(null);
   const messageHandlerRef = useRef(null); // Store message handler for cleanup
-  const isLoggingInRef = useRef(false);
-  const isLoggedInRef = useRef(false);
-  let singletonRTMClient = null;
 
   const [isConnected, setIsConnected] = useState(false);
   const [comments, setComments] = useState([]);
@@ -25,6 +22,8 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
       return;
     }
 
+    let isMounted = true;
+
     const initRTM = async () => {
       try {
         console.log("✅ RTM: Initializing...", { appId, uid, channelName });
@@ -34,33 +33,21 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         try {
           const rtmModule = await import("agora-rtm");
           const RTMExport = rtmModule.default || rtmModule;
-          // agora-rtm 2.x exports RTM class in default.RTM
           RTMClass = RTMExport.RTM || RTMExport;
-          console.log("🔍 RTM: Imported module", {
-            hasDefault: !!rtmModule.default,
-            hasRTM: !!RTMClass,
-            moduleKeys: Object.keys(rtmModule),
-            rtmKeys: RTMExport ? Object.keys(RTMExport) : [],
-          });
         } catch (importError) {
           throw new Error(`Failed to import agora-rtm: ${importError.message}`);
         }
 
         if (!RTMClass || typeof RTMClass !== "function") {
-          throw new Error(
-            `RTM class not found. Available: ${RTMClass ? Object.keys(RTMClass).join(", ") : "null"
-            }`
-          );
+          throw new Error(`RTM class not found`);
         }
 
-        // Create RTM client instance (agora-rtm 2.x uses constructor, not createClient)
-        if (!singletonRTMClient) {
-          singletonRTMClient = new RTMClass(appId, String(uid));
-        }
-        clientRef.current = singletonRTMClient;
-        const client = clientRef.current;
-        // Listen for connection state changes
+        // Create fresh RTM client instance per mount
+        const client = new RTMClass(appId, String(uid));
+        clientRef.current = client;
+        
         client.addEventListener("status", (event) => {
+          if (!isMounted) return;
           console.log("📡 RTM: Connection status changed", event);
           if (event.state === "CONNECTED") {
             setIsConnected(true);
@@ -72,17 +59,13 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
           }
         });
 
-        if (isLoggingInRef.current || isLoggedInRef.current) {
-          console.log("⚠️ RTM: Login already in progress or completed");
+        await client.login({ token });
+        
+        // If unmounted while logging in, instantly log out
+        if (!isMounted) {
+          client.logout().catch(() => {});
           return;
         }
-
-        isLoggingInRef.current = true;
-
-        await client.login({ token });
-
-        isLoggedInRef.current = true;
-        isLoggingInRef.current = false;
 
         console.log("✅ RTM: Logged in successfully");
 
@@ -206,6 +189,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
     initRTM();
 
     return () => {
+      isMounted = false;
       if (clientRef.current) {
         const client = clientRef.current;
 
@@ -219,11 +203,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             client.unsubscribe(channelRef.current.name).catch(() => { });
           }
 
-          // ❗ ONLY logout if ACTUALLY logged in
-          if (isLoggedInRef.current) {
-            client.logout().catch(() => { });
-            isLoggedInRef.current = false;
-          }
+          client.logout().catch(() => { });
         } catch (e) {
           console.warn("RTM cleanup warning:", e);
         }
@@ -233,7 +213,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
 
       setIsConnected(false);
     };
-  }, [appId, channelName]);
+  }, [appId, channelName, token, uid]);
 
   // Send comment function
   const sendComment = useCallback(
@@ -298,12 +278,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
         // agora-rtm 2.x uses publish method
         await client.publish(
           channelName,
-          JSON.stringify({
-            msg: text.trim(),
-            userId: String(uid),
-            userName: userInfo?.username || "Anonymous",
-            profilePicture: userInfo?.profilePicture || null,
-          }),
+          JSON.stringify(payload),
           { customType: "msg" }
         ); // <- this is important
 

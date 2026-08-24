@@ -36,13 +36,18 @@ const LiveStreampage = () => {
 
   const [role, setRole] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
+  const initializedPageIdRef = useRef(null);
 
   // Determine if user is page owner (host) or viewer (audience)
   useEffect(() => {
+    // Prevent infinite loops: only initialize once per pageId
+    if (initializedPageIdRef.current === pageId) return;
+
     const fromGoLive = location.state?.fromGoLive === true;
 
     const determineRole = async () => {
@@ -131,9 +136,10 @@ const LiveStreampage = () => {
     };
 
     if (user && pageId) {
+      initializedPageIdRef.current = pageId;
       determineRole();
     }
-  }, [pageId, user, dispatch, navigate, streamData, location.state]);
+  }, [pageId, user, dispatch, navigate, location.state]);
 
   // Get Agora credentials from streamData - use EXACT values from backend
   const appId =
@@ -290,6 +296,7 @@ const LiveStreampage = () => {
       !isInitializing &&
       !isJoined &&
       !agoraLoading &&
+      !hasAttemptedJoin &&
       streamData &&
       channelName && // Must have channelName from backend
       token && // Must have rtcToken from backend
@@ -298,9 +305,10 @@ const LiveStreampage = () => {
 
     if (canJoin) {
       console.log("Joining Agora channel:", { role, channelName, uid, hasToken: !!token });
+      setHasAttemptedJoin(true);
       join();
     }
-  }, [role, isInitializing, isJoined, agoraLoading, streamData, channelName, token, uid, appId, join]);
+  }, [role, isInitializing, isJoined, agoraLoading, hasAttemptedJoin, streamData, channelName, token, uid, appId, join]);
 
   // Handle local video display (HOST ONLY - no camera access for audience)
   useEffect(() => {

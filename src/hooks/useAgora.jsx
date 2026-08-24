@@ -10,7 +10,6 @@ export const useAgora = ({
   backendChannelName = null,
 }) => {
   const clientRef = useRef(null);
-  const hasInitializedRef = useRef(false);
 
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
@@ -24,21 +23,21 @@ export const useAgora = ({
 
   const channelName = backendChannelName;
 
-  // ✅ Initialize Agora client ONCE
-  useEffect(() => {
-    if (!appId || hasInitializedRef.current) return;
-
-    hasInitializedRef.current = true;
-
-    const client = AgoraRTC.createClient({
+  // ✅ Initialize Agora client
+  if (!clientRef.current && appId) {
+    clientRef.current = AgoraRTC.createClient({
       mode: "live",
       codec: "vp8",
     });
+  }
 
-    clientRef.current = client;
+  // ✅ Attach event listeners reliably
+  useEffect(() => {
+    const client = clientRef.current;
+    if (!client || !appId) return;
 
     // 🔹 User published
-    client.on("user-published", async (user, mediaType) => {
+    const handleUserPublished = async (user, mediaType) => {
       try {
         console.log(`📡 User ${user.uid} published ${mediaType}`);
 
@@ -50,7 +49,6 @@ export const useAgora = ({
           return exists ? prev : [...prev, user];
         });
 
-        // ✅ FIXED audio play
         if (mediaType === "audio" && user.audioTrack) {
           try {
             user.audioTrack.play();
@@ -62,23 +60,44 @@ export const useAgora = ({
         console.error("❌ Error subscribing to user:", err);
         setError(err.message || "Failed to subscribe");
       }
-    });
+    };
 
     // 🔹 User unpublished
-    client.on("user-unpublished", (user, mediaType) => {
+    const handleUserUnpublished = (user, mediaType) => {
       if (mediaType === "video") user.videoTrack?.stop();
       if (mediaType === "audio") user.audioTrack?.stop();
-    });
+    };
 
     // 🔹 User left
-    client.on("user-left", (user) => {
+    const handleUserLeft = (user) => {
       setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
-    });
+    };
+
+    client.on("user-published", handleUserPublished);
+    client.on("user-unpublished", handleUserUnpublished);
+    client.on("user-left", handleUserLeft);
 
     return () => {
-      client.removeAllListeners();
+      client.off("user-published", handleUserPublished);
+      client.off("user-unpublished", handleUserUnpublished);
+      client.off("user-left", handleUserLeft);
     };
   }, [appId]);
+
+  // ✅ Unmount cleanup
+  useEffect(() => {
+    return () => {
+      localAudioTrackRef.current?.stop();
+      localAudioTrackRef.current?.close();
+      localVideoTrackRef.current?.stop();
+      localVideoTrackRef.current?.close();
+      
+      const client = clientRef.current;
+      if (client && (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING")) {
+        client.leave().catch(console.error);
+      }
+    };
+  }, []);
 
   // ✅ Join channel
   const join = useCallback(async () => {
@@ -106,6 +125,12 @@ export const useAgora = ({
         try {
           [audioTrack, videoTrack] =
             await AgoraRTC.createMicrophoneAndCameraTracks();
+            
+          // Store tracks immediately so they are properly cleaned up if client.join fails
+          localAudioTrackRef.current = audioTrack;
+          localVideoTrackRef.current = videoTrack;
+          setLocalAudio(audioTrack);
+          setLocalVideo(videoTrack);
         } catch (trackErr) {
           console.error("❌ Failed to create Agora media tracks:", trackErr);
           const isPermissionDenied =
@@ -130,19 +155,15 @@ export const useAgora = ({
       setIsJoined(true);
 
       if (role === "host" && audioTrack && videoTrack) {
-        localAudioTrackRef.current = audioTrack;
-        localVideoTrackRef.current = videoTrack;
-
-        setLocalAudio(audioTrack);
-        setLocalVideo(videoTrack);
-
         await client.publish([audioTrack, videoTrack]);
       }
     } catch (err) {
       console.error("❌ Join failed:", err);
       // Clean up any partially created tracks
       try {
+        localAudioTrackRef.current?.stop();
         localAudioTrackRef.current?.close();
+        localVideoTrackRef.current?.stop();
         localVideoTrackRef.current?.close();
         localAudioTrackRef.current = null;
         localVideoTrackRef.current = null;
