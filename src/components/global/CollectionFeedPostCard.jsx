@@ -458,62 +458,6 @@ export default function CollectionFeedPostCard({
         targetPost?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
       }`}
     >
-      {/* Repost Header Attribution at TOP */}
-      {(fullPost?.sharedBy || post?.sharedBy || fullPost?.originalPost || post?.originalPost || fullPost?.isRepost || post?.isRepost) && (
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            const origPostObj = fullPost?.originalPost || post?.originalPost;
-            const origPageId =
-              origPostObj?.page?._id ||
-              origPostObj?.page ||
-              fullPost?.page?._id ||
-              post?.page?._id ||
-              page?._id ||
-              page;
-            const origPostId =
-              origPostObj?._id ||
-              origPostObj?.id ||
-              origPostObj ||
-              isPostId ||
-              fullPost?._id ||
-              post?._id;
-            if (origPageId) {
-              navigate(`/trending-page-detail/${origPageId}`, {
-                state: { postId: origPostId },
-              });
-            } else if (origPostId) {
-              navigate(`/home`, { state: { postId: origPostId } });
-            }
-          }}
-          className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
-            {(fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture) ? (
-              <img
-                src={fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture}
-                alt="Shared by"
-                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-              />
-            ) : (
-              <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                {(fullPost?.sharedBy?.name || post?.sharedBy?.name || "U")[0]}
-              </div>
-            )}
-            <span className="truncate">
-              <span className="font-semibold text-gray-900">
-                {fullPost?.sharedBy?.name || post?.sharedBy?.name || "User"}
-              </span>{" "}
-              reposted
-            </span>
-          </div>
-          <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
-            Go to original post →
-          </span>
-        </div>
-      )}
-
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -674,6 +618,55 @@ export default function CollectionFeedPostCard({
         </div>
       )}
 
+      {/* Repost Tag Pill (Figma style) */}
+      {(fullPost?.sharedBy || post?.sharedBy || fullPost?.originalPost || post?.originalPost || fullPost?.isRepost || post?.isRepost) && (
+        <div className="px-4 pt-3 pb-1">
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              const origPostObj = fullPost?.originalPost || post?.originalPost;
+              const origPageId =
+                origPostObj?.page?._id ||
+                origPostObj?.page ||
+                fullPost?.page?._id ||
+                post?.page?._id ||
+                page?._id ||
+                page;
+              const origPostId =
+                origPostObj?._id ||
+                origPostObj?.id ||
+                origPostObj ||
+                isPostId ||
+                fullPost?._id ||
+                post?._id;
+              if (origPageId) {
+                navigate(`/trending-page-detail/${origPageId}`, {
+                  state: { postId: origPostId },
+                });
+              } else if (origPostId) {
+                navigate(`/home`, { state: { postId: origPostId } });
+              }
+            }}
+            className="inline-flex items-center gap-2 bg-[#EBEBEB] text-gray-800 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 transition"
+          >
+            {(fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture) ? (
+              <img
+                src={fullPost?.sharedBy?.profilePicture || post?.sharedBy?.profilePicture}
+                alt="Shared by"
+                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                {((fullPost?.sharedBy?.name || post?.sharedBy?.name || fullPost?.author?.name || post?.author?.name || "U")[0])?.toUpperCase()}
+              </div>
+            )}
+            <span>
+              {fullPost?.sharedBy?.name || post?.sharedBy?.name || fullPost?.page?.name || post?.page?.name || "User"} Reposted
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       {!isUnderReview &&
         (() => {
@@ -690,8 +683,8 @@ export default function CollectionFeedPostCard({
             </div>
           );
         })()}
-
-      {fullPost?.page?.pageType == "private" && (
+{console.log(fullPost?.page,"fullPost?.page?.pageType")}
+      {/* {fullPost?.page?.pageType === "private" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">
             <div className="w-12 h-12 flex items-center justify-center rounded-full bg-orange-100 mx-auto mb-4">
@@ -707,7 +700,7 @@ export default function CollectionFeedPostCard({
             </p>
           </div>
         </div>
-      )}
+      )} */}
       <div className="px-4 py-3">
         {!isUnderReview ? (
           <p className="text-sm text-gray-700 leading-relaxed">{post.text}</p>

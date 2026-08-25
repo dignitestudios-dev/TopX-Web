@@ -563,7 +563,7 @@ export default function CommentsSection({
               </>
             ) : (
               <span className="font-[600] text-sm uppercase">
-                {comment?.user?.username ? comment.user.username[0] : "?"}
+                {comment?.user?.name ? comment.user.name[0] : "?"}
               </span>
             )}
           </div>
@@ -709,7 +709,7 @@ export default function CommentsSection({
     if (!Array.isArray(comments)) return [];
     const normalized = getNormalizedCommentFilter(filterType);
     if (!normalized || normalized === "all-comments") {
-      return comments;
+      return [...comments];
     }
 
     return comments
@@ -803,10 +803,9 @@ export default function CommentsSection({
 
       {/* Top-level comments: filtered and elevated first */}
       {(() => {
-        const filteredComments = filterCommentTree(
-          postComments,
-          commentFilter
-        ).sort((a, b) => {
+        const filteredComments = [
+          ...filterCommentTree(postComments, commentFilter),
+        ].sort((a, b) => {
           const aElevated = a?.isElevated ? 1 : 0;
           const bElevated = b?.isElevated ? 1 : 0;
           // Elevated comments first; keep relative order otherwise

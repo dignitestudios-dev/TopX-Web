@@ -345,9 +345,9 @@ export default function PageCreateModal({
                           ) : (
                             <ImageIcon className="w-9 h-9 text-orange-400" />
                           )}
-                          <div className="absolute bottom-0 right-0 z-40 w-7 h-7 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-md">
-                            <Plus className="w-4 h-4 " />
-                          </div>
+                        </div>
+                        <div className="absolute bottom-0 right-0 z-10 w-7 h-7 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                          <Plus className="w-4 h-4" />
                         </div>
                         <input
                           ref={fileInputRef}

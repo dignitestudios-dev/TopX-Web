@@ -41,17 +41,22 @@ const TopicPageCard = ({
         {img ? (
           <img
             src={img}
-            alt={formattedTitle || "Topic"}
+            alt={title || formattedTitle || "Topic"}
             className="w-[40px] h-[40px] rounded-full object-cover bg-white border border-gray-100 flex-shrink-0"
             onError={(e) => {
               e.target.style.display = "none";
+              if (e.target.nextSibling) {
+                e.target.nextSibling.style.display = "flex";
+              }
             }}
           />
-        ) : (
-          <div className="w-[40px] h-[40px] rounded-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {formattedTitle?.charAt(0)?.toUpperCase() || "T"}
-          </div>
-        )}
+        ) : null}
+        <div
+          style={{ display: img ? "none" : "flex" }}
+          className="w-[40px] h-[40px] rounded-full bg-gradient-to-r from-orange-400 to-orange-600 items-center justify-center text-white font-bold text-sm flex-shrink-0 select-none"
+        >
+          {(title || formattedTitle || "T")?.charAt(0)?.toUpperCase()}
+        </div>
         <div className="flex justify-between items-center gap-3 min-w-0 flex-1">
           <h2 className="text-[14px] font-medium text-gray-900 cursor-pointer truncate">
             {formattedTitle}

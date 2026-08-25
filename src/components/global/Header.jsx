@@ -253,17 +253,25 @@ const Header = () => {
                   loading="lazy"
                   alt="profile"
                   className="h-8 w-8 object-cover rounded-full"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    if (e.target.nextSibling) {
+                      e.target.nextSibling.style.display = "flex";
+                    }
+                  }}
                 />
-              ) : dummyprofile ? (
-                <img
-                  src={dummyprofile}
-                  loading="lazy"
-                  alt="profile"
-                  className="h-8 w-8 object-cover rounded-full"
-                />
-              ) : (
-                <span>No Data</span>
-              )}
+              ) : null}
+              <div
+                style={{
+                  display: allUserData?.profilePicture ? "none" : "flex",
+                }}
+                className="h-8 w-8 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold text-sm items-center justify-center select-none"
+              >
+                {(allUserData?.name || allUserData?.username || user?.name || user?.username || "U")
+                  ?.trim()
+                  ?.charAt(0)
+                  ?.toUpperCase() || "U"}
+              </div>
             </div>
             <span
               className="text-black font-[500] text-sm truncate max-w-[90px] sm:max-w-[130px]"

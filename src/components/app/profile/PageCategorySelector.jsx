@@ -110,11 +110,10 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
             return (
               <div
                 key={page._id}
-                className={`space-y-2 p-3 rounded-xl border transition ${
-                  isSelected
+                className={`space-y-2 p-3 rounded-xl border transition ${isSelected
                     ? "border-orange-400 bg-orange-50/20"
                     : "border-gray-100 hover:border-gray-200"
-                }`}
+                  }`}
               >
                 {/* ROW — Page */}
                 <button
@@ -165,9 +164,8 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                       className="sr-only"
                     />
                     <span
-                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? "border-orange-500" : "border-gray-400"
-                      }`}
+                      className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${isSelected ? "border-orange-500" : "border-gray-400"
+                        }`}
                     >
                       {isSelected && (
                         <span className="h-2.5 w-2.5 bg-orange-500 rounded-full" />
@@ -192,11 +190,10 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                               key={idx}
                               type="button"
                               onClick={() => toggleSubTopic(topic)}
-                              className={`px-3 py-1 text-xs rounded-full cursor-pointer transition font-medium border ${
-                                isSubSelected
+                              className={`px-3 py-1 text-xs rounded-full cursor-pointer transition font-medium border ${isSubSelected
                                   ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                                   : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600"
-                              }`}
+                                }`}
                             >
                               {isSubSelected ? `✓ ${topic}` : topic}
                             </button>
@@ -206,7 +203,7 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                     )}
 
                     {/* Inline Create Subcategory Input */}
-                    <div className="flex items-center gap-2 pt-1">
+                    {/* <div className="flex items-center gap-2 pt-1">
                       <input
                         type="text"
                         placeholder="+ Create new subcategory"
@@ -227,7 +224,7 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
                       >
                         <Plus size={12} /> Add
                       </button>
-                    </div>
+                    </div> */}
                   </div>
                 )}
               </div>

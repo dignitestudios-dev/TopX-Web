@@ -27,7 +27,7 @@ export default function Avatar({
   alt = "",
   size = "md",
   className = "",
-  fallbackSrc = DEFAULT_FALLBACK_IMG,
+  fallbackSrc = null,
   fallbackText = "",
   onClick,
 }) {

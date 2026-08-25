@@ -240,14 +240,35 @@ export const deleteKnowledgePost = createAsyncThunk(
 );
 
 /* ===============================
+   UPDATE KNOWLEDGE PAGE
+   API → PATCH /pages/:pageId
+   BODY → FormData
+================================*/
+export const updateKnowledgePage = createAsyncThunk(
+  "knowledgepost/updateKnowledgePage",
+  async ({ pageId, formData }, thunkAPI) => {
+    try {
+      const res = await axios.patch(`/pages/knowledge/${pageId}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return res.data?.data || res.data;
+    } catch (error) {
+      return thunkAPI.rejectWithValue(
+        error.response?.data?.message || "Failed to update knowledge page",
+      );
+    }
+  },
+);
+
+/* ===============================
    DELETE KNOWLEDGE PAGE
-   API → DELETE /pages/:pageId
+   API → DELETE /pages/:pageId?type=knowledge
 ================================*/
 export const deleteKnowledgePage = createAsyncThunk(
   "knowledgepost/deleteKnowledgePage",
   async (pageId, thunkAPI) => {
     try {
-      const res = await axios.delete(`/pages/${pageId}`);
+      const res = await axios.delete(`/pages/${pageId}?type=knowledge`);
       return { pageId, data: res.data?.data || res.data };
     } catch (error) {
       return thunkAPI.rejectWithValue(
@@ -507,6 +528,30 @@ const knowledgeSlice = createSlice({
         state.knowledgePages.unshift(action.payload);
       })
       .addCase(createKnowledgePage.rejected, (state, action) => {
+        state.loadingCreate = false;
+        state.error = action.payload;
+      })
+
+      // Update Knowledge Page
+      .addCase(updateKnowledgePage.pending, (state) => {
+        state.loadingCreate = true;
+        state.error = null;
+      })
+      .addCase(updateKnowledgePage.fulfilled, (state, action) => {
+        state.loadingCreate = false;
+        state.success = true;
+        const updated = action.payload;
+        if (updated && state.knowledgePageDetail) {
+          state.knowledgePageDetail = {
+            ...state.knowledgePageDetail,
+            ...updated,
+          };
+        }
+        state.knowledgePages = (state.knowledgePages || []).map((page) =>
+          page._id === updated?._id ? { ...page, ...updated } : page
+        );
+      })
+      .addCase(updateKnowledgePage.rejected, (state, action) => {
         state.loadingCreate = false;
         state.error = action.payload;
       })

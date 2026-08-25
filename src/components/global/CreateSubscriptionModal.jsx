@@ -24,7 +24,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [creating, setCreating] = useState(false);
   const [collectionName, setCollectionName] = useState("");
   const [selectedCollections, setSelectedCollections] = useState([]);
-  console.log(selectedCollections, "selectedSelections");
+  
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -238,7 +238,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     recommendationPages?.filter((col) =>
       col.name?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
-
+console.log(filteredPages, "filteredPages");
   return (
     <>
       {/* Main Create Modal */}

@@ -501,7 +501,7 @@ const Trendingpagedetail = () => {
                     <MessageSquareText size={20} />
                     <span>Start A Live Chat</span>
                     <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
-                       {pageDetail?.followersCount || pageDetail?.followers?.length || 0} 
+                       {pageDetail?.liveChatCount || pageDetail?.liveChatCount?.length || 0} 
                     </span>
                   </button>
                 )}

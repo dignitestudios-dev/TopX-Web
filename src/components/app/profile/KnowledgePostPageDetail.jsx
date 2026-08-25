@@ -9,7 +9,9 @@ import {
   Trash2,
   Layers,
   Repeat2,
+  Pencil,
 } from "lucide-react";
+import { BsThreeDotsVertical } from "react-icons/bs";
 import {
   getKnowledgePostDetail,
   deleteKnowledgePost,
@@ -17,6 +19,7 @@ import {
   likePost,
   deleteKnowledgePage,
   fetchMyKnowledgePages,
+  updateKnowledgePage,
 } from "../../../redux/slices/knowledgepost.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import ReportModal from "../../global/ReportModal";
@@ -29,6 +32,7 @@ import ShareToChatsModal from "../../global/ShareToChatsModal";
 import DeleteKnowledgePageModal from "../../global/DeleteKnowledgePageModal";
 import ManageKnowledgePostsModal from "../../global/ManageKnowledgePostsModal";
 import EditKnowledgePostModal from "../../global/EditKnowledgePostModal";
+import EditKnowledgePageModal from "../../global/EditKnowledgePageModal";
 import { sendReport } from "../../../redux/slices/reports.slice";
 
 export default function KnowledgePostPageDetail({
@@ -49,8 +53,11 @@ export default function KnowledgePostPageDetail({
   const [reportmodal, setReportmodal] = useState(false);
   const [openCommentsPostId, setOpenCommentsPostId] = useState(null);
   const [showDeletePageModal, setShowDeletePageModal] = useState(false);
+  const [showEditPageModal, setShowEditPageModal] = useState(false);
+  const [showPageOptionsDropdown, setShowPageOptionsDropdown] = useState(false);
   const [showManagePostsModal, setShowManagePostsModal] = useState(false);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const pageOptionsRef = useRef(null);
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
     { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
@@ -156,15 +163,21 @@ export default function KnowledgePostPageDetail({
     }
   }, [knowledgePagePosts, user?._id]);
 
-  // Close the delete menu when clicked outside
+  // Close the delete menu or page options menu when clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Check if click is outside any open menu
+      // Check if click is outside any open post delete menu
       if (showDeleteMenu) {
         const menuRef = deleteMenuRefs.current[showDeleteMenu];
         if (menuRef && !menuRef.contains(event.target)) {
           setShowDeleteMenu(null);
         }
+      }
+      if (
+        pageOptionsRef.current &&
+        !pageOptionsRef.current.contains(event.target)
+      ) {
+        setShowPageOptionsDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -192,15 +205,15 @@ export default function KnowledgePostPageDetail({
 
   const isPageOwner = Boolean(
     user?._id &&
-      knowledgePageDetail &&
-      (user._id === knowledgePageDetail?.user?._id ||
-        user._id === knowledgePageDetail?.user ||
-        user._id === knowledgePageDetail?.creator?._id ||
-        user._id === knowledgePageDetail?.creator ||
-        user._id === knowledgePageDetail?.author?._id ||
-        user._id === knowledgePageDetail?.author ||
-        knowledgePageDetail?.isOwner ||
-        !knowledgePageDetail?.user)
+    knowledgePageDetail &&
+    (user._id === knowledgePageDetail?.user?._id ||
+      user._id === knowledgePageDetail?.user ||
+      user._id === knowledgePageDetail?.creator?._id ||
+      user._id === knowledgePageDetail?.creator ||
+      user._id === knowledgePageDetail?.author?._id ||
+      user._id === knowledgePageDetail?.author ||
+      knowledgePageDetail?.isOwner ||
+      !knowledgePageDetail?.user)
   );
 
   const handleDeleteKnowledgePage = async () => {
@@ -221,6 +234,67 @@ export default function KnowledgePostPageDetail({
       );
     } finally {
       setIsDeletingPage(false);
+    }
+  };
+
+  const handleDeleteSubCategory = async (subNameToDelete) => {
+    if (!pageId || !isPageOwner) return;
+    try {
+      const existingSubs = Array.isArray(knowledgePageDetail?.subTopic)
+        ? knowledgePageDetail.subTopic
+        : [];
+      const updatedSubs = existingSubs.filter(
+        (s) =>
+          (typeof s === "string" ? s : s?.name || "").toLowerCase() !==
+          subNameToDelete.toLowerCase(),
+      );
+
+      const fd = new FormData();
+      fd.append("name", (knowledgePageDetail?.name || "").trim());
+      fd.append("about", (knowledgePageDetail?.about || "").trim());
+      fd.append("topic", (knowledgePageDetail?.topic || "").trim());
+      fd.append("pageType", knowledgePageDetail?.pageType || "public");
+      fd.append("contentType", "knowledge");
+
+      const formattedKeywords = (knowledgePageDetail?.keywords || []).map((kw) =>
+        kw.startsWith("#") ? kw : `#${kw}`
+      );
+      fd.append("keywords", JSON.stringify(formattedKeywords));
+      formattedKeywords.forEach((kw, i) => fd.append(`keywords[${i}]`, kw));
+
+      const cleanSubs = updatedSubs.map((sub) =>
+        typeof sub === "string" ? sub : sub?.name || ""
+      );
+      fd.append("subTopic", JSON.stringify(cleanSubs));
+      cleanSubs.forEach((sub, i) => fd.append(`subTopic[${i}]`, sub));
+
+      // Explicitly send deletedSubTopics to trigger automatic backend migration
+      fd.append("deletedSubTopics", JSON.stringify([subNameToDelete]));
+      fd.append("deletedSubTopics[0]", subNameToDelete);
+
+      await dispatch(
+        updateKnowledgePage({ pageId, formData: fd }),
+      ).unwrap();
+      SuccessToast(
+        `Subcategory "${subNameToDelete}" deleted. Posts are now under "All".`,
+      );
+      if (activeSubTopic.toLowerCase() === subNameToDelete.toLowerCase()) {
+        setActiveSubTopic("All");
+      }
+      dispatch(
+        getKnowledgePostDetail({
+          pageId,
+          page: 1,
+          limit: 10,
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to delete subcategory:", err);
+      ErrorToast(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to delete subcategory",
+      );
     }
   };
 
@@ -248,8 +322,14 @@ export default function KnowledgePostPageDetail({
     );
   }
 
-  // Build unique subTopic tabs from posts (split by comma, trim)
+  // Build unique subTopic tabs from page subTopic and posts
   const subTopicSet = new Set();
+  if (Array.isArray(knowledgePageDetail?.subTopic)) {
+    knowledgePageDetail.subTopic
+      .map((s) => s && (typeof s === "string" ? s.trim() : s?.name?.trim()))
+      .filter(Boolean)
+      .forEach((topic) => subTopicSet.add(topic));
+  }
   (knowledgePagePosts || []).forEach((post) => {
     if (post?.subTopic) {
       post.subTopic
@@ -295,13 +375,13 @@ export default function KnowledgePostPageDetail({
     activeSubTopic === "All"
       ? knowledgePagePosts
       : knowledgePagePosts?.filter((post) => {
-          if (!post?.subTopic) return false;
-          return post.subTopic
-            .split(",")
-            .map((p) => p.trim())
-            .filter(Boolean)
-            .some((topic) => topic === activeSubTopic);
-        });
+        if (!post?.subTopic) return false;
+        return post.subTopic
+          .split(",")
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .some((topic) => topic.toLowerCase() === activeSubTopic.toLowerCase());
+      });
 
   return (
     <div className="bg-transparent min-h-screen max-w-2xl">
@@ -311,29 +391,64 @@ export default function KnowledgePostPageDetail({
         <div className="flex items-center justify-between">
           <button
             onClick={() => setIsKnowledgePageOpen(false)}
-            className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold"
+            className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold cursor-pointer"
           >
             <IoChevronBackOutline size={24} /> Back
           </button>
 
           {isPageOwner && (
             <div className="flex items-center gap-2">
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setShowManagePostsModal(true)}
                 className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200"
               >
                 <Layers size={14} />
                 Manage Posts
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowDeletePageModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition border border-red-200"
-              >
-                <Trash2 size={14} />
-                Delete Page
-              </button>
+              </button> */}
+
+              {/* 3 Dots Menu: Edit Page, Delete Page */}
+              <div className="relative" ref={pageOptionsRef}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPageOptionsDropdown((prev) => !prev);
+                  }}
+                  className="p-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 transition cursor-pointer flex items-center justify-center shadow-xs"
+                  title="Page Options"
+                >
+                  <BsThreeDotsVertical size={18} />
+                </button>
+
+                {showPageOptionsDropdown && (
+                  <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPageOptionsDropdown(false);
+                        setShowEditPageModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer"
+                    >
+                      <Pencil size={15} className="text-orange-500" />
+                      <span>Edit Page</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPageOptionsDropdown(false);
+                        setShowDeletePageModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                    >
+                      <Trash2 size={15} className="text-red-500" />
+                      <span>Delete Page</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -388,35 +503,47 @@ export default function KnowledgePostPageDetail({
         </div>
 
         {/* SubTopic Tabs */}
-        {subTopicTabs.length > 0 && (
-          <div className="mt-4">
-            <div className="flex flex-wrap gap-2 bg-white/40 rounded-2xl p-2 backdrop-blur-sm">
-              <button
-                onClick={() => setActiveSubTopic("All")}
-                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                  activeSubTopic === "All"
-                    ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
+        <div className="mt-4">
+          <div className="flex flex-wrap gap-2 bg-white/40 rounded-2xl p-2 backdrop-blur-sm items-center">
+            <button
+              onClick={() => setActiveSubTopic("All")}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${activeSubTopic === "All"
+                  ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
                 }`}
-              >
-                All
-              </button>
-              {subTopicTabs.map((topic) => (
+            >
+              All
+            </button>
+            {subTopicTabs.map((topic) => (
+              <div key={topic} className="flex items-center">
                 <button
-                  key={topic}
                   onClick={() => setActiveSubTopic(topic)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
-                    activeSubTopic === topic
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer flex items-center gap-1.5 ${activeSubTopic === topic
                       ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                       : "bg-white text-gray-700 border-gray-200 hover:bg-orange-50 hover:border-orange-200"
-                  }`}
+                    }`}
                 >
-                  {topic}
+                  <span>{topic}</span>
+                  {isPageOwner && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSubCategory(topic);
+                      }}
+                      title={`Delete ${topic} subcategory`}
+                      className={`hover:bg-black/10 rounded-full w-4 h-4 flex items-center justify-center text-xs ml-0.5 cursor-pointer font-bold ${activeSubTopic === topic
+                          ? "text-white hover:bg-white/20"
+                          : "text-gray-400 hover:text-red-500"
+                        }`}
+                    >
+
+                    </span>
+                  )}
                 </button>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Posts Feed */}
@@ -427,30 +554,6 @@ export default function KnowledgePostPageDetail({
               key={post._id}
               className="rounded-3xl overflow-hidden bg-white"
             >
-              {/* Repost Header Attribution at TOP */}
-              {post.sharedBy && (
-                <div className="px-6 py-2 bg-orange-50/80 border-b border-orange-100/70 flex items-center gap-2 text-xs font-medium text-gray-700">
-                  <Repeat2 className="w-3.5 h-3.5 text-orange-500 flex-shrink-0" />
-                  {post.sharedBy.profilePicture ? (
-                    <img
-                      src={post.sharedBy.profilePicture}
-                      alt="Shared by"
-                      className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                      {(post.sharedBy.username || post.sharedBy.name || "U")[0]}
-                    </div>
-                  )}
-                  <span className="truncate">
-                    <span className="font-semibold text-gray-900">
-                      {post.sharedBy.username || post.sharedBy.name}
-                    </span>{" "}
-                    reposted
-                  </span>
-                </div>
-              )}
-
               {/* Post Header */}
               <div className="px-6 py-4 flex items-center justify-between bg-white relative">
                 <div className="flex items-center gap-3 flex-1">
@@ -531,6 +634,28 @@ export default function KnowledgePostPageDetail({
                 </div>
               </div>
 
+              {/* Repost Tag Pill (Figma style) */}
+              {post.sharedBy && (
+                <div className="px-6 pt-2 pb-1">
+                  <div className="inline-flex items-center gap-2 bg-[#EBEBEB] text-gray-800 px-3 py-1.5 rounded-full text-xs font-medium">
+                    {post.sharedBy?.profilePicture ? (
+                      <img
+                        src={post.sharedBy.profilePicture}
+                        alt="Shared by"
+                        className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                        {(post.sharedBy?.username || post.sharedBy?.name || "U")[0]?.toUpperCase()}
+                      </div>
+                    )}
+                    <span>
+                      {post.sharedBy.username || post.sharedBy.name || "User"} Reposted
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Post Card with Background */}
               <div className="px-6 py-4">
                 <div
@@ -539,26 +664,25 @@ export default function KnowledgePostPageDetail({
                     // Check if the post has a background image URL
                     post.background
                       ? {
-                          backgroundImage: `url(${post.background})`,
+                        backgroundImage: `url(${post.background})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
+                      : // If there's a backgroundCode, match it with presetBackgrounds
+                      post.backgroundCode
+                        ? {
+                          backgroundImage: `url(${presetBackgrounds.find(
+                            (bg) => bg.name === post.backgroundCode,
+                          )?.imagePath
+                            })`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }
-                      : // If there's a backgroundCode, match it with presetBackgrounds
-                        post.backgroundCode
-                        ? {
-                            backgroundImage: `url(${
-                              presetBackgrounds.find(
-                                (bg) => bg.name === post.backgroundCode,
-                              )?.imagePath
-                            })`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                          }
                         : // Default gradient background if no background or code is found
-                          {
-                            background:
-                              "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                          }
+                        {
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        }
                   }
                 >
                   {/* Overlay for better text readability */}
@@ -598,16 +722,14 @@ export default function KnowledgePostPageDetail({
                   className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
                 >
                   <Heart
-                    className={`w-5 h-5 transition ${
-                      post?.isLiked
+                    className={`w-5 h-5 transition ${post?.isLiked
                         ? "fill-orange-500 text-orange-500"
                         : "text-gray-600"
-                    }`}
+                      }`}
                   />
                   <span
-                    className={`text-sm font-medium ${
-                      post?.isLiked ? "text-orange-500" : "text-gray-600"
-                    }`}
+                    className={`text-sm font-medium ${post?.isLiked ? "text-orange-500" : "text-gray-600"
+                      }`}
                   >
                     {post?.likesCount}
                   </span>
@@ -662,10 +784,10 @@ export default function KnowledgePostPageDetail({
           <div className="bg-white rounded-3xl p-12 text-center shadow-sm">
             <p className="text-gray-500 font-semibold">No posts yet</p>
             <p className="text-gray-400 text-sm mt-1">
-              Be the first to create a post!       
+              Be the first to create a post!
 
 
-              
+
             </p>
           </div>
         )}
@@ -730,6 +852,23 @@ export default function KnowledgePostPageDetail({
               dispatch(
                 getKnowledgePostDetail({ pageId, page: 1, limit: 10 })
               );
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Knowledge Page Modal */}
+      {showEditPageModal && (
+        <EditKnowledgePageModal
+          isOpen={showEditPageModal}
+          onClose={() => setShowEditPageModal(false)}
+          pageData={knowledgePageDetail}
+          onUpdated={() => {
+            if (pageId) {
+              dispatch(
+                getKnowledgePostDetail({ pageId, page: 1, limit: 10 })
+              );
+              dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
             }
           }}
         />

@@ -203,57 +203,6 @@ export default function Knowledge() {
                 key={post._id}
                 className="bg-white pb-10 rounded-2xl shadow-sm overflow-hidden border border-gray-100"
               >
-                {/* Repost Header Attribution at TOP */}
-                {(post.sharedBy || post.originalPost || post.isRepost) && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const origPageId =
-                        post?.originalPost?.page?._id ||
-                        post?.originalPost?.page ||
-                        post?.page?._id ||
-                        post?.page;
-                      const origPostId =
-                        post?.originalPost?._id ||
-                        post?.originalPost?.id ||
-                        post?.originalPost ||
-                        post?._id;
-                      if (origPageId) {
-                        navigate(`/knowledge-page-detail/${origPageId}`, {
-                          state: { postId: origPostId },
-                        });
-                      } else if (origPostId) {
-                        navigate(`/knowledge`, { state: { postId: origPostId } });
-                      }
-                    }}
-                    className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
-                      {post.sharedBy?.profilePicture ? (
-                        <img
-                          src={post.sharedBy.profilePicture}
-                          alt="Shared by"
-                          className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                          {(post.sharedBy?.name || post.sharedBy?.username || "U")[0]}
-                        </div>
-                      )}
-                      <span className="truncate">
-                        <span className="font-semibold text-gray-900">
-                          {post.sharedBy.username || post.sharedBy.name}
-                        </span>{" "}
-                        reposted
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
-                      Go to original post →
-                    </span>
-                  </div>
-                )}
-
                 {/* Header */}
                 <div className="p-4 flex items-start justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3 flex-1">
@@ -332,6 +281,50 @@ export default function Knowledge() {
                     )}
                   </div>
                 </div>
+
+                {/* Repost Tag Pill (Figma style) */}
+                {(post.sharedBy || post.originalPost || post.isRepost) && (
+                  <div className="px-4 pt-3 pb-1">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const origPageId =
+                          post?.originalPost?.page?._id ||
+                          post?.originalPost?.page ||
+                          post?.page?._id ||
+                          post?.page;
+                        const origPostId =
+                          post?.originalPost?._id ||
+                          post?.originalPost?.id ||
+                          post?.originalPost ||
+                          post?._id;
+                        if (origPageId) {
+                          navigate(`/knowledge-page-detail/${origPageId}`, {
+                            state: { postId: origPostId },
+                          });
+                        } else if (origPostId) {
+                          navigate(`/knowledge`, { state: { postId: origPostId } });
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 bg-[#EBEBEB] text-gray-800 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 transition"
+                    >
+                      {post.sharedBy?.profilePicture ? (
+                        <img
+                          src={post.sharedBy.profilePicture}
+                          alt="Shared by"
+                          className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                          {(post.sharedBy?.name || post.sharedBy?.username || "U")[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <span>
+                        {post.sharedBy.username || post.sharedBy.name || "User"} Reposted
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Post Content */}
                 <div

@@ -201,7 +201,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
   ];
   return (
     <div className="min-h-screen py-6 bg-gray-50">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
+      <div className=" gap-6 max-w-7xl mx-auto px-4">
         {/* Posts Column - Left Side */}
         <div className="lg:col-span-2">
           {/* Comment Filter Button */}
@@ -241,57 +241,6 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                     key={post._id}
                     className="bg-white rounded-lg shadow-md overflow-hidden"
                   >
-                    {/* Repost Attribution Header at TOP */}
-                    {(post.sharedBy || post.originalPost || post.isRepost) && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const origPageId =
-                            post?.originalPost?.page?._id ||
-                            post?.originalPost?.page ||
-                            post?.page?._id ||
-                            pageId;
-                          const origPostId =
-                            post?.originalPost?._id ||
-                            post?.originalPost?.id ||
-                            post?.originalPost ||
-                            post?._id;
-                          if (origPageId) {
-                            navigate(`/trending-page-detail/${origPageId}`, {
-                              state: { postId: origPostId },
-                            });
-                          } else if (origPostId) {
-                            navigate(`/home`, { state: { postId: origPostId } });
-                          }
-                        }}
-                        className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
-                          {post.sharedBy?.profilePicture ? (
-                            <img
-                              src={post.sharedBy.profilePicture}
-                              alt={post.sharedBy.name}
-                              className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                              {(post.sharedBy?.name || "U")[0]}
-                            </div>
-                          )}
-                          <span className="truncate">
-                            <span className="font-semibold text-gray-900">
-                              {post.sharedBy?.name || "User"}
-                            </span>{" "}
-                            reposted
-                          </span>
-                        </div>
-                        <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
-                          Go to original post →
-                        </span>
-                      </div>
-                    )}
-
                     {/* Header */}
                     <div className="p-4 border-b border-gray-200">
                       <div className="flex items-center justify-between">
@@ -437,6 +386,56 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                         <LinkPreviewCard linkData={linkData} />
                       )}
 
+                      {/* Repost Tag Pill (Figma style) */}
+                      {(post.sharedBy || post.originalPost || post.isRepost) && (
+                        <div className="mb-3">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const origPageId =
+                                post?.originalPost?.page?._id ||
+                                post?.originalPost?.page ||
+                                post?.page?._id ||
+                                pageId;
+                              const origPostId =
+                                post?.originalPost?._id ||
+                                post?.originalPost?.id ||
+                                post?.originalPost ||
+                                post?._id;
+                              if (origPageId) {
+                                navigate(`/trending-page-detail/${origPageId}`, {
+                                  state: { postId: origPostId },
+                                });
+                              } else if (origPostId) {
+                                navigate(`/home`, { state: { postId: origPostId } });
+                              }
+                            }}
+                            className="inline-flex items-center gap-2 bg-[#EBEBEB] text-gray-800 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 transition"
+                          >
+                            {post.sharedBy?.profilePicture ? (
+                              <img
+                                src={post.sharedBy.profilePicture}
+                                alt={post.sharedBy.name || "User"}
+                                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : post?.author?.profilePicture ? (
+                              <img
+                                src={post.author.profilePicture}
+                                alt={post.author.name || "User"}
+                                className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                                {(post.sharedBy?.name || post.page?.name || post.author?.name || "U")[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <span>
+                              {post.sharedBy?.name || post.page?.name || post.author?.name || "User"} Reposted
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
                       {(() => {
                         const rawText = post?.bodyText || post?.text || "";
                         const cleanText = linkData
@@ -550,10 +549,10 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
         </div>
 
         {/* Sidebar - Right Side (Hidden on Mobile) */}
-        <div className="hidden lg:block">
+        {/* <div className="hidden lg:block">
           {pagePosts && pagePosts.length > 0 && (
             <div className="bg-white rounded-lg shadow-md p-6 sticky top-6 space-y-6">
-              {/* Page Header */}
+          
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">
                   {pagePosts[0]?.page?.name}
@@ -565,7 +564,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                 )}
               </div>
 
-              {/* Topic */}
+            
               {pagePosts[0]?.page?.topic && (
                 <div>
                   <p className="text-xs text-gray-500 uppercase tracking-wider">
@@ -577,7 +576,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                 </div>
               )}
 
-              {/* Stats */}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-xs text-gray-500 uppercase">Followers</p>
@@ -593,7 +592,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                 </div>
               </div>
 
-              {/* Interests */}
+              
               {pagePosts[0]?.author?.interests &&
                 pagePosts[0].author.interests.length > 0 && (
                   <div>
@@ -613,7 +612,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                   </div>
                 )}
 
-              {/* Keywords */}
+             
               {pagePosts[0]?.page?.keywords &&
                 pagePosts[0].page.keywords.length > 0 && (
                   <div>
@@ -634,7 +633,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                 )}
             </div>
           )}
-        </div>
+        </div> */}
       </div>
       {sharepost && (
         <SharePostModal

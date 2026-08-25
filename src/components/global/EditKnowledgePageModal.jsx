@@ -3,9 +3,8 @@ import { X, Upload } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { gettopics } from "../../redux/slices/topics.slice";
 import {
-  createKnowledgePage,
-  fetchMyKnowledgePages,
-  resetKnowledge,
+  updateKnowledgePage,
+  getKnowledgePostDetail,
 } from "../../redux/slices/knowledgepost.slice";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import CustomSelect from "./CustomeSelect";
@@ -14,13 +13,20 @@ import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
 import { SuccessToast, ErrorToast } from "./Toaster";
 
-export default function CreateKnowledgePageModal({ onClose }) {
+export default function EditKnowledgePageModal({
+  isOpen,
+  onClose,
+  pageData,
+  onUpdated,
+}) {
+  if (!isOpen || !pageData) return null;
+
   // FORM DATA
   const [formData, setFormData] = useState({
-    name: "",
-    about: "",
-    topic: "",
-    pageType: "public",
+    name: pageData?.name || "",
+    about: pageData?.about || "",
+    topic: pageData?.topic || "",
+    pageType: pageData?.pageType || "public",
     contentType: "knowledge",
   });
 
@@ -29,7 +35,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
   // IMAGE UPLOAD
   const [imageFile, setImageFile] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
+  const [previewImage, setPreviewImage] = useState(pageData?.image || null);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
   const fileInputRef = useRef(null);
@@ -43,20 +49,82 @@ export default function CreateKnowledgePageModal({ onClose }) {
   const [keywordInput, setKeywordInput] = useState("");
 
   const dispatch = useDispatch();
-  const { alltopics, isLoading } = useSelector((state) => state.topics);
+  const { alltopics, isLoading } = useSelector((state) => state.topics || {});
   const { loadingCreate, knowledgePages } = useSelector(
-    (state) => state.knowledgepost,
+    (state) => state.knowledgepost || {},
   );
-  const { myPages } = useSelector((state) => state.pages);
+  const { myPages } = useSelector((state) => state.pages || {});
 
   const isBusy = loadingCreate || isSubmitting;
 
   useEffect(() => {
-    dispatch(resetKnowledge());
     dispatch(gettopics());
-    dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
     dispatch(fetchMyPages({ page: 1, limit: 100 }));
   }, [dispatch]);
+
+  // INITIALIZE DATA FROM pageData and alltopics
+  useEffect(() => {
+    if (pageData) {
+      const topicName = pageData.topic || "";
+      setFormData({
+        name: pageData.name || "",
+        about: pageData.about || "",
+        topic: topicName,
+        pageType: pageData.pageType || "public",
+        contentType: "knowledge",
+      });
+      setPreviewImage(pageData.image || null);
+      setImageFile(null);
+
+      // Keywords
+      const rawKeywords = Array.isArray(pageData.keywords)
+        ? pageData.keywords
+            .map((k) => String(k).replace(/^#+/, "").trim())
+            .filter(Boolean)
+        : [];
+      setKeywords(rawKeywords);
+
+      // SubCategories
+      const rawSubs = Array.isArray(pageData.subTopic)
+        ? pageData.subTopic
+            .map((s) => (typeof s === "string" ? s.trim() : s?.name?.trim() || ""))
+            .filter(Boolean)
+        : [];
+
+      // Find available suggested subcategories for this topic
+      const selectedCategory = (alltopics || []).find(
+        (item) => item.name === topicName || item._id === topicName,
+      );
+      const availableSubCategories = (
+        selectedCategory?.subCategories ||
+        selectedCategory?.subTopics ||
+        []
+      )
+        .map((s) => (typeof s === "string" ? s.trim() : s?.name?.trim() || ""))
+        .filter(Boolean);
+
+      // Check if any subcategory in rawSubs matches one of the suggested subcategories
+      let matchedSuggested = "";
+      const customSubs = [];
+
+      rawSubs.forEach((sub) => {
+        const isSuggested = availableSubCategories.some(
+          (avail) => avail.toLowerCase() === sub.toLowerCase(),
+        );
+        if (isSuggested && !matchedSuggested) {
+          const exactMatch = availableSubCategories.find(
+            (avail) => avail.toLowerCase() === sub.toLowerCase(),
+          );
+          matchedSuggested = exactMatch || sub;
+        } else {
+          customSubs.push(sub);
+        }
+      });
+
+      setSelectedSuggestedSubCategory(matchedSuggested);
+      setSubCategories(customSubs);
+    }
+  }, [pageData, alltopics]);
 
   // INPUT HANDLER
   const handleInputChange = (field, value) => {
@@ -136,7 +204,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
       const updated = [...prev];
       items.forEach((item) => {
         if (
-          updated.length < 5 &&
+          updated.length < 15 &&
           !updated.some((s) => s.toLowerCase() === item.toLowerCase())
         ) {
           updated.push(item);
@@ -178,7 +246,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
       const updated = [...prev];
       items.forEach((item) => {
         if (
-          updated.length < 5 &&
+          updated.length < 15 &&
           !updated.some((k) => k.toLowerCase() === item.toLowerCase())
         ) {
           updated.push(item);
@@ -236,6 +304,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
       ];
 
       const isDuplicate = allExistingPages.some((page) => {
+        if (page._id === pageData._id) return false;
         const nameStr = getPageNameStr(page);
         return (
           nameStr.length > 0 &&
@@ -270,8 +339,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
   };
 
   // SUBMIT
-  const handleCreatePage = async () => {
-    if (isBusy) return;
+  const handleUpdatePage = async () => {
+    if (isBusy || !pageData?._id) return;
 
     // Auto-commit any typed text in keywords before validation
     let finalKeywords = [...keywords];
@@ -283,7 +352,6 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
       items.forEach((item) => {
         if (
-          finalKeywords.length < 5 &&
           !finalKeywords.some((k) => k.toLowerCase() === item.toLowerCase())
         ) {
           finalKeywords.push(item);
@@ -303,7 +371,6 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
       items.forEach((item) => {
         if (
-          finalSubCategories.length < 5 &&
           !finalSubCategories.some((s) => s.toLowerCase() === item.toLowerCase())
         ) {
           finalSubCategories.push(item);
@@ -319,7 +386,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
     try {
       let binaryFile = imageFile;
-      if (!(binaryFile instanceof File) && previewImage) {
+      if (!(binaryFile instanceof File) && previewImage && previewImage !== pageData.image) {
         binaryFile = await emojiUrlToFile(
           previewImage,
           "knowledge_page_emoji.png",
@@ -337,15 +404,24 @@ export default function CreateKnowledgePageModal({ onClose }) {
       fd.append("topic", topicValue);
 
       fd.append("pageType", formData.pageType || "public");
-      fd.append("contentType", "knowledge");
+      // fd.append("contentType", "knowledge");
+
+      // Handle Image
       if (binaryFile instanceof File) {
         fd.append("image", binaryFile, binaryFile.name || "knowledge_page.png");
+      } else if (!previewImage && pageData.image) {
+        fd.append("removeImage", "true");
       }
 
-      finalKeywords.forEach((kw, i) =>
-        fd.append(`keywords[${i}]`, kw.startsWith("#") ? kw : `#${kw}`),
+      // Keywords (JSON string as per documentation)
+      const formattedKeywords = finalKeywords.map((kw) =>
+        kw.startsWith("#") ? kw : `#${kw}`
       );
+      if (formattedKeywords.length > 0) {
+        fd.append("keywords", JSON.stringify(formattedKeywords));
+      }
 
+      // Subcategories & Deleted Subcategories calculation
       const allFinalSubs = [];
       if (selectedSuggestedSubCategory) {
         allFinalSubs.push(selectedSuggestedSubCategory);
@@ -355,15 +431,29 @@ export default function CreateKnowledgePageModal({ onClose }) {
           allFinalSubs.push(sub);
         }
       });
-      allFinalSubs.forEach((sub, i) => fd.append(`subTopic[${i}]`, sub));
 
-      await dispatch(createKnowledgePage(fd)).unwrap();
-      SuccessToast("Knowledge page created successfully!");
-      dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
-      dispatch(fetchMyPages({ page: 1, limit: 100 }));
+      // Calculate deleted subcategories to trigger post migration in backend
+      const originalSubs = (Array.isArray(pageData?.subTopic) ? pageData.subTopic : [])
+        .map((s) => (typeof s === "string" ? s.trim() : s?.name?.trim() || ""))
+        .filter(Boolean);
+      const deletedSubTopics = originalSubs.filter(
+        (orig) => !allFinalSubs.some((s) => s.toLowerCase() === orig.toLowerCase())
+      );
+
+      // Send subTopic as JSON string
+      fd.append("subTopic", JSON.stringify(allFinalSubs));
+
+      if (deletedSubTopics.length > 0) {
+        fd.append("deletedSubTopics", JSON.stringify(deletedSubTopics));
+      }
+
+      await dispatch(updateKnowledgePage({ pageId: pageData._id, formData: fd })).unwrap();
+      SuccessToast("Knowledge page updated successfully!");
+      dispatch(getKnowledgePostDetail({ pageId: pageData._id, page: 1, limit: 10 }));
+      if (onUpdated) onUpdated();
       onClose();
     } catch (err) {
-      console.error("Create Knowledge Page error:", err);
+      console.error("Update Knowledge Page error:", err);
       const errMsg =
         typeof err === "string" ? err : err?.message || err?.data?.message || "";
       const lower = errMsg.toLowerCase();
@@ -382,7 +472,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
             "A page with this name already exists. Please choose a different page name.",
         }));
       } else {
-        ErrorToast(errMsg || "Failed to create knowledge page");
+        ErrorToast(errMsg || "Failed to update knowledge page");
       }
     } finally {
       setIsSubmitting(false);
@@ -402,7 +492,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
         </button>
 
         <h2 className="text-[20px] font-[700] text-black text-center mb-6">
-          Create Knowledge Page
+          Edit Knowledge Page
         </h2>
 
         {/* IMAGE UPLOAD */}
@@ -571,8 +661,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
                 disabled={isBusy}
                 type="text"
                 placeholder={
-                  keywords.length >= 5
-                    ? "Max 5 keywords added"
+                  keywords.length >= 15
+                    ? "Max keywords added"
                     : "Type keyword and press Enter or comma"
                 }
                 value={keywordInput}
@@ -595,11 +685,14 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
           {/* SUB CATEGORIES */}
           <div>
-            <label className="text-sm font-semibold text-black">
-              Sub Categories
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold text-black">
+                Sub Categories
+              </label>
+            
+            </div>
             <div
-              className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 ${errors.subCategories ? "border-red-500" : "border-gray-300"
+              className={`w-full min-h-[48px] border rounded-xl px-4 py-2 flex flex-wrap gap-2 mt-1 ${errors.subCategories ? "border-red-500" : "border-gray-300"
                 } ${isBusy ? "bg-gray-50" : ""}`}
             >
               {subCategories.map((tag, i) => (
@@ -609,9 +702,11 @@ export default function CreateKnowledgePageModal({ onClose }) {
                 >
                   {tag}
                   <button
+                    type="button"
                     disabled={isBusy}
                     onClick={() => removeSubCategory(i)}
-                    className="font-bold hover:text-orange-900"
+                    className="font-bold hover:text-orange-900 cursor-pointer"
+                    title={`Delete subcategory "${tag}"`}
                   >
                     ×
                   </button>
@@ -622,8 +717,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
                 disabled={isBusy}
                 type="text"
                 placeholder={
-                  subCategories.length >= 5
-                    ? "Max 5 subcategories added"
+                  subCategories.length >= 15
+                    ? "Max subcategories added"
                     : "Type subcategory and press Enter or comma"
                 }
                 value={subInput}
@@ -655,15 +750,15 @@ export default function CreateKnowledgePageModal({ onClose }) {
               ? "opacity-50 cursor-not-allowed pointer-events-none"
               : "hover:bg-orange-700"
             }`}
-          onClick={handleCreatePage}
+          onClick={handleUpdatePage}
         >
           {isBusy ? (
             <>
               <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-              <span>Creating Knowledge Page...</span>
+              <span>Updating Knowledge Page...</span>
             </>
           ) : (
-            "Create Knowledge Page"
+            "Save Changes"
           )}
         </button>
       </div>

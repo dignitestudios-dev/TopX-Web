@@ -131,7 +131,7 @@ export default function Home() {
       })
     : [];
 
-  console.log(transformedPosts, "allfeedposts");
+  console.log(myPages, "myPages===??");
 
   return (
     <div className="flex h-screen max-w-7xl mx-auto overflow-hidden">
@@ -190,11 +190,25 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-10 h-10 flex-shrink-0">
-                      <img
-                        src={item?.image}
-                        className="w-full h-full object-cover rounded-full"
-                        alt=""
-                      />
+                      {item?.image ? (
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt={item?.name || "Topic"}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = "flex";
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        style={{ display: item?.image ? "none" : "flex" }}
+                        className="w-full h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-600 items-center justify-center text-white font-bold text-sm select-none"
+                      >
+                        {item?.name?.charAt(0)?.toUpperCase() || "T"}
+                      </div>
                     </div>
 
                     <div className="flex gap-2 items-center min-w-0 flex-1">

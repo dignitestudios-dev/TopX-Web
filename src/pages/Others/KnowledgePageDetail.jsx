@@ -9,7 +9,9 @@ import {
   Trash2,
   Layers,
   Repeat2,
+  Pencil,
 } from "lucide-react";
+import { BsThreeDotsVertical } from "react-icons/bs";
 import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -20,6 +22,7 @@ import {
   toggleKnowledgePageSubscription,
   deleteKnowledgePage,
   deleteKnowledgePost,
+  updateKnowledgePage,
 } from "../../redux/slices/knowledgepost.slice";
 import TrendingPagesGlobal from "../../components/global/TrendingPagesGlobal";
 import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlobal";
@@ -29,6 +32,7 @@ import ReportModal from "../../components/global/ReportModal";
 import DeleteKnowledgePageModal from "../../components/global/DeleteKnowledgePageModal";
 import ManageKnowledgePostsModal from "../../components/global/ManageKnowledgePostsModal";
 import EditKnowledgePostModal from "../../components/global/EditKnowledgePostModal";
+import EditKnowledgePageModal from "../../components/global/EditKnowledgePageModal";
 import { resetReportState, sendReport } from "../../redux/slices/reports.slice";
 import { SuccessToast, ErrorToast } from "../../components/global/Toaster";
 import { timeAgo } from "../../lib/helpers";
@@ -47,9 +51,12 @@ export default function KnowledgePageDetail() {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [activeSubTopic, setActiveSubTopic] = useState("");
   const [showDeletePageModal, setShowDeletePageModal] = useState(false);
+  const [showEditPageModal, setShowEditPageModal] = useState(false);
+  const [showPageOptionsDropdown, setShowPageOptionsDropdown] = useState(false);
   const [showManagePostsModal, setShowManagePostsModal] = useState(false);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
   const dropdownRef = useRef(null);
+  const pageOptionsRef = useRef(null);
   const { user } = useSelector((state) => state.auth);
   const currentUserId = user?._id;
 
@@ -62,10 +69,6 @@ export default function KnowledgePageDetail() {
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
-
-
-  console.log(knowledgePageDetail,"knowledgePageDetail")
-  console.log(knowledgePagePosts,"knowledgePagePosts")
 
   // Fetch page detail and posts
   useEffect(() => {
@@ -91,8 +94,11 @@ export default function KnowledgePageDetail() {
 
   // Close dropdown on outside click
   useEffect(() => {
-    const handleClickOutside = () => {
+    const handleClickOutside = (e) => {
       setMoreOpenId(null);
+      if (pageOptionsRef.current && !pageOptionsRef.current.contains(e.target)) {
+        setShowPageOptionsDropdown(false);
+      }
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
@@ -173,6 +179,66 @@ export default function KnowledgePageDetail() {
       );
     } finally {
       setIsDeletingPage(false);
+    }
+  };
+
+  const handleDeleteSubCategory = async (subNameToDelete) => {
+    if (!knowledgePageDetail?._id || !isPageOwner) return;
+    try {
+      const existingSubs = Array.isArray(knowledgePageDetail.subTopic)
+        ? knowledgePageDetail.subTopic
+        : [];
+      const updatedSubs = existingSubs.filter(
+        (s) =>
+          (typeof s === "string" ? s : s?.name || "").toLowerCase() !==
+          subNameToDelete.toLowerCase(),
+      );
+
+      const fd = new FormData();
+      fd.append("name", (knowledgePageDetail.name || "").trim());
+      fd.append("about", (knowledgePageDetail.about || "").trim());
+      fd.append("topic", (knowledgePageDetail.topic || "").trim());
+      fd.append("pageType", knowledgePageDetail.pageType || "public");
+      fd.append("contentType", "knowledge");
+
+      const formattedKeywords = (knowledgePageDetail?.keywords || []).map((kw) =>
+        kw.startsWith("#") ? kw : `#${kw}`
+      );
+      if (formattedKeywords.length > 0) {
+        fd.append("keywords", JSON.stringify(formattedKeywords));
+      }
+
+      const cleanSubs = updatedSubs.map((sub) =>
+        typeof sub === "string" ? sub : sub?.name || ""
+      );
+      fd.append("subTopic", JSON.stringify(cleanSubs));
+
+      // Explicitly send deletedSubTopics to trigger automatic backend migration
+      fd.append("deletedSubTopics", JSON.stringify([subNameToDelete]));
+
+      await dispatch(
+        updateKnowledgePage({ pageId: knowledgePageDetail._id, formData: fd }),
+      ).unwrap();
+      SuccessToast(
+        `Subcategory "${subNameToDelete}" deleted. Posts are now under "All".`,
+      );
+      if (activeSubTopic.toLowerCase() === subNameToDelete.toLowerCase()) {
+        setActiveSubTopic("");
+      }
+      dispatch(
+        getKnowledgePostDetail({
+          pageId: knowledgePageDetail._id,
+          page: 1,
+          limit: 10,
+        }),
+      );
+    } catch (err) {
+      console.error("Failed to delete subcategory:", err);
+      ErrorToast(
+        typeof err === "string"
+          ? err
+          : err?.message || "Failed to delete subcategory",
+      );
     }
   };
 
@@ -307,7 +373,7 @@ export default function KnowledgePageDetail() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold"
+              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               Back
@@ -318,19 +384,54 @@ export default function KnowledgePageDetail() {
                 <button
                   type="button"
                   onClick={() => setShowManagePostsModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200 cursor-pointer"
                 >
                   <Layers size={14} />
                   Manage Posts
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDeletePageModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-semibold transition border border-red-200"
-                >
-                  <Trash2 size={14} />
-                  Delete Page
-                </button>
+
+                {/* 3 Dots Menu: Edit Page, Delete Page */}
+                <div className="relative" ref={pageOptionsRef}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPageOptionsDropdown((prev) => !prev);
+                    }}
+                    className="p-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 transition cursor-pointer flex items-center justify-center shadow-xs"
+                    title="Page Options"
+                  >
+                    <BsThreeDotsVertical size={18} />
+                  </button>
+
+                  {showPageOptionsDropdown && (
+                    <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPageOptionsDropdown(false);
+                          setShowEditPageModal(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer"
+                      >
+                        <Pencil size={15} className="text-orange-500" />
+                        <span>Edit Page</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPageOptionsDropdown(false);
+                          setShowDeletePageModal(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                      >
+                        <Trash2 size={15} className="text-red-500" />
+                        <span>Delete Page</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -363,7 +464,7 @@ export default function KnowledgePageDetail() {
                       className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
                         isSubscribed
                           ? "bg-gray-100 text-gray-600 cursor-default"
-                          : "bg-orange-500 text-white hover:bg-orange-600 shadow-sm"
+                          : "bg-orange-500 text-white hover:bg-orange-600 shadow-sm cursor-pointer"
                       }`}
                     >
                       {isSubscribed ? "Subscribed" : "Subscribe"}
@@ -401,24 +502,51 @@ export default function KnowledgePageDetail() {
           </div>
 
           {/* SubTopic Tabs */}
-          {subTopicTabs.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {subTopicTabs.map((topic) => (
+          <div className="flex flex-wrap gap-2 mb-2 items-center">
+            <button
+              type="button"
+              onClick={() => setActiveSubTopic("")}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
+                activeSubTopic === ""
+                  ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                  : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              All
+            </button>
+
+            {subTopicTabs.map((topic) => (
+              <div key={topic} className="flex items-center">
                 <button
-                  key={topic}
                   type="button"
                   onClick={() => setActiveSubTopic(topic)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer flex items-center gap-1.5 ${
                     activeSubTopic === topic
-                      ? "bg-orange-500 text-white border-orange-500"
+                      ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                       : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                   }`}
                 >
-                  {topic}
+                  <span>{topic}</span>
+                  {isPageOwner && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSubCategory(topic);
+                      }}
+                      title={`Delete ${topic} subcategory`}
+                      className={`hover:bg-black/10 rounded-full w-4 h-4 flex items-center justify-center text-xs ml-0.5 cursor-pointer font-bold ${
+                        activeSubTopic === topic
+                          ? "text-white hover:bg-white/20"
+                          : "text-gray-400 hover:text-red-500"
+                      }`}
+                    >
+                      ×
+                    </span>
+                  )}
                 </button>
-              ))}
-            </div>
-          )}
+              </div>
+            ))}
+          </div>
 
 
           {/* Posts */}
@@ -428,57 +556,6 @@ export default function KnowledgePageDetail() {
                 key={post._id}
                 className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100"
               >
-                {/* Repost Attribution Header at TOP */}
-                {(post.sharedBy || post.originalPost || post.isRepost) && (
-                  <div
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const origPageId =
-                        post?.originalPost?.page?._id ||
-                        post?.originalPost?.page ||
-                        post?.page?._id ||
-                        id;
-                      const origPostId =
-                        post?.originalPost?._id ||
-                        post?.originalPost?.id ||
-                        post?.originalPost ||
-                        post?._id;
-                      if (origPageId) {
-                        navigate(`/knowledge-page-detail/${origPageId}`, {
-                          state: { postId: origPostId },
-                        });
-                      } else if (origPostId) {
-                        navigate(`/knowledge`, { state: { postId: origPostId } });
-                      }
-                    }}
-                    className="px-4 py-2 bg-orange-50/90 border-b border-orange-100/80 flex items-center justify-between gap-2 text-xs font-medium text-gray-700 cursor-pointer hover:bg-orange-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Repeat2 className="w-3.5 h-3.5 text-orange-600 flex-shrink-0" />
-                      {post.sharedBy?.profilePicture ? (
-                        <img
-                          src={post.sharedBy.profilePicture}
-                          alt={post.sharedBy.name}
-                          className="w-4 h-4 rounded-full object-cover flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-4 h-4 object-cover text-[9px] bg-orange-100 text-orange-600 font-bold flex justify-center items-center rounded-full capitalize flex-shrink-0">
-                          {(post.sharedBy?.username || post.sharedBy?.name || "U")[0]}
-                        </div>
-                      )}
-                      <span className="truncate">
-                        <span className="font-semibold text-gray-900">
-                          {post.sharedBy?.name || post.sharedBy?.username || "User"}
-                        </span>{" "}
-                        reposted
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-orange-600 font-bold underline flex items-center gap-1 flex-shrink-0">
-                      Go to original post →
-                    </span>
-                  </div>
-                )}
-
                 {/* Header */}
                 <div className="p-4 flex items-start justify-between border-b border-gray-100">
                   <div className="flex items-center gap-3 flex-1">
@@ -552,6 +629,50 @@ export default function KnowledgePageDetail() {
                     )}
                   </div>
                 </div>
+
+                {/* Repost Tag Pill (Figma style) */}
+                {(post.sharedBy || post.originalPost || post.isRepost) && (
+                  <div className="px-4 pt-3 pb-1">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const origPageId =
+                          post?.originalPost?.page?._id ||
+                          post?.originalPost?.page ||
+                          post?.page?._id ||
+                          id;
+                        const origPostId =
+                          post?.originalPost?._id ||
+                          post?.originalPost?.id ||
+                          post?.originalPost ||
+                          post?._id;
+                        if (origPageId) {
+                          navigate(`/knowledge-page-detail/${origPageId}`, {
+                            state: { postId: origPostId },
+                          });
+                        } else if (origPostId) {
+                          navigate(`/knowledge`, { state: { postId: origPostId } });
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 bg-[#EBEBEB] text-gray-800 px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer hover:bg-gray-200 transition"
+                    >
+                      {post.sharedBy?.profilePicture ? (
+                        <img
+                          src={post.sharedBy.profilePicture}
+                          alt="Shared by"
+                          className="w-4 h-4 rounded-full object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-orange-500 text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                          {(post.sharedBy?.username || post.sharedBy?.name || "U")[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <span>
+                        {post.sharedBy?.name || post.sharedBy?.username || "User"} Reposted
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Post Content */}
                 <div
@@ -734,6 +855,20 @@ export default function KnowledgePageDetail() {
           onClose={() => setEditingPost(null)}
           onSuccess={() => {
             setEditingPost(null);
+            if (id) {
+              dispatch(getKnowledgePostDetail({ pageId: id, page: 1, limit: 10 }));
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Knowledge Page Modal */}
+      {showEditPageModal && (
+        <EditKnowledgePageModal
+          isOpen={showEditPageModal}
+          onClose={() => setShowEditPageModal(false)}
+          pageData={knowledgePageDetail}
+          onUpdated={() => {
             if (id) {
               dispatch(getKnowledgePostDetail({ pageId: id, page: 1, limit: 10 }));
             }
