@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "react-modal";
 import { useSelector } from "react-redux";
+import { formatPhoneNumber } from "../../lib/helpers";
 
 export default function VerificationModal({
   isOpen = false,
@@ -18,9 +19,9 @@ export default function VerificationModal({
 }) {
   const [values, setValues] = useState(Array.from({ length }, () => ""));
 
-  const{user} = useSelector((state)=>state.auth);
+  const { user } = useSelector((state) => state.auth);
 
-  console.log(user,"user")
+  console.log(user, "user")
 
   const inputsRef = useRef([]);
 
@@ -32,13 +33,13 @@ export default function VerificationModal({
   const handleResendClick = async () => {
     if (onResend) onResend();
 
-    setValues(Array.from({length},()=>""));
+    setValues(Array.from({ length }, () => ""));
 
     setTimer(30); // Reset timer to 30 seconds
 
-    setTimeout(()=>{
+    setTimeout(() => {
       focusIndex(0);
-    },0)
+    }, 0)
   };
 
 
@@ -119,7 +120,7 @@ export default function VerificationModal({
       <div className="px-8 pt-12 pb-8 text-center">
         <h2 className="text-[28px] md:text-[32px] font-bold">Verification</h2>
         <p className="mt-2 text-[#565656] leading-7">
-          Enter the OTP code sent to <br /> {isType === "email" ? maskedEmail : (phone ? `+1 ${phone}` : maskedEmail)}
+          Enter the OTP code sent to <br /> {isType === "email" ? maskedEmail : (phone ? `+1 ${formatPhoneNumber(phone)}` : maskedEmail)}
         </p>
 
         <div className="mt-6 flex items-center justify-center gap-3">
@@ -137,8 +138,8 @@ export default function VerificationModal({
                   onKeyDown={(e) => handleKeyDown(i, e)}
                   onPaste={(e) => handlePaste(i, e)}
                   className={`w-full h-full text-center text-xl md:text-2xl font-semibold rounded-[16px] border transition focus:outline-none ${v
-                      ? "bg-[#FFF2EB] border-transparent text-[#F85E00]"
-                      : "bg-[#F9FAFA] border-[#E5E7EB] text-[#111]"
+                    ? "bg-[#FFF2EB] border-transparent text-[#F85E00]"
+                    : "bg-[#F9FAFA] border-[#E5E7EB] text-[#111]"
                     } ${isFocused ? "ring-2 ring-[#F85E00]" : ""}`}
                 />
               </div>

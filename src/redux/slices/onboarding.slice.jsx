@@ -25,7 +25,7 @@ const initialState = {
 // =============================
 export const sendPhoneOTP = createAsyncThunk(
   "onboarding/sendPhoneOTP",
-  async (_, thunkAPI) => {
+  async (payload, thunkAPI) => {
     try {
       // token cookies se uthao
       const token = Cookies.get("access_token");
@@ -34,9 +34,38 @@ export const sendPhoneOTP = createAsyncThunk(
         return thunkAPI.rejectWithValue("No access token found");
       }
 
-      const res = await axios.post("/auth/phoneVerificationOTP", {
-        token: token,
-      });
+      let phone = null;
+      if (typeof payload === "string") {
+        phone = payload;
+      } else if (payload && typeof payload === "object" && payload.phone) {
+        phone = payload.phone;
+      }
+
+      const body = { token };
+      if (phone) {
+        let rawDigits = String(phone).replace(/\D/g, "");
+        if (rawDigits.length === 11 && rawDigits.startsWith("1")) {
+          rawDigits = rawDigits.slice(1);
+        }
+        const formattedPhone = `+1${rawDigits}`;
+        body.phone = formattedPhone;
+
+        // Save phone to DB for social login users before sending OTP
+        try {
+          const formData = new FormData();
+          formData.append("phone", formattedPhone);
+          await axios.patch("/users/phone", formData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        } catch (updateErr) {
+          console.log("PUT /users update phone error:", updateErr);
+        }
+      }
+
+      const res = await axios.post("/auth/phoneVerificationOTP", body);
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
@@ -58,7 +87,7 @@ export const verifyPhoneOTP = createAsyncThunk(
   "onboarding/verifyPhoneOTP",
   async (otp, thunkAPI) => {
     try {
-      const res = await axios.post("/auth/verifyPhone",otp);
+      const res = await axios.post("/auth/verifyPhone", otp);
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(

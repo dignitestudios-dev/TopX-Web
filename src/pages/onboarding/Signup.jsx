@@ -117,6 +117,7 @@ export default function SignUp() {
               referalCode={ref}
               email={email || currentUser?.email}
               phone={phone || currentUser?.phone}
+              setPhone={setPhone}
               handleNext={handleNext}
               handlePrevious={handlePrevious}
             />

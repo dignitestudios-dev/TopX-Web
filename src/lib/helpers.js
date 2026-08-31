@@ -543,3 +543,29 @@ export function validateUsername(username) {
 
   return { isValid: true };
 }
+
+/**
+ * Formats a raw or international phone number into standard US format (XXX) XXX-XXXX.
+ */
+export function formatPhoneNumber(value) {
+  if (!value) return "";
+  let digits = String(value).replace(/\D/g, "");
+
+  // If starts with 1 (US country code prefix), strip it to format standard 10-digit US number
+  if (digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+
+  if (digits.length > 10) {
+    digits = digits.slice(0, 10);
+  }
+
+  if (digits.length > 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  } else if (digits.length > 3) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  } else if (digits.length > 0) {
+    return `(${digits}`;
+  }
+  return "";
+}

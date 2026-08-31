@@ -115,8 +115,8 @@ export default function CreateKnowledgePageModal({ onClose }) {
       setSelectedSuggestedSubCategory(name);
     }
 
-    if (errors.subCategories) {
-      setErrors((prev) => ({ ...prev, subCategories: "" }));
+    if (errors.subCategories || errors.suggestedSubCategory) {
+      setErrors((prev) => ({ ...prev, subCategories: "", suggestedSubCategory: "" }));
     }
   };
 
@@ -257,8 +257,19 @@ export default function CreateKnowledgePageModal({ onClose }) {
       newErrors.topic = "Topic is required";
     }
 
-    if (!suggestedSub && currentSubCategories.length === 0) {
-      newErrors.subCategories = "At least 1 sub category required";
+    const selectedCategory = (alltopics || []).find(
+      (item) =>
+        item.name === formData.topic || item._id === formData.topic,
+    );
+    const availableSubCategories =
+      selectedCategory?.subCategories ||
+      selectedCategory?.subTopics ||
+      [];
+
+    if (availableSubCategories.length > 0 && !suggestedSub) {
+      newErrors.suggestedSubCategory = "Please select a suggested subcategory";
+    } else if (!suggestedSub && currentSubCategories.length === 0) {
+      newErrors.suggestedSubCategory = "At least 1 subcategory is required";
     }
 
     if (currentKeywords.length === 0) {
@@ -511,35 +522,51 @@ export default function CreateKnowledgePageModal({ onClose }) {
             if (!formData.topic || availableSubCategories.length === 0)
               return null;
 
+            const subCategoryError =
+              errors.suggestedSubCategory || errors.subCategories;
+
             return (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                  Suggested Subcategories (click to select):
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {availableSubCategories.map((sub, idx) => {
-                    const subName =
-                      typeof sub === "string" ? sub : sub?.name || "";
-                    if (!subName) return null;
-                    const isSelected =
-                      selectedSuggestedSubCategory.toLowerCase() ===
-                      subName.toLowerCase();
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        disabled={isBusy}
-                        onClick={() => handleSelectSuggestedSubCategory(subName)}
-                        className={`text-xs px-2.5 py-1 rounded-full border transition cursor-pointer font-medium ${isSelected
-                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-                            : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600"
+              <div className="flex flex-col gap-1">
+                <div
+                  className={`p-3 bg-gray-50 border rounded-xl transition-all ${
+                    subCategoryError
+                      ? "border-red-500 bg-red-50/30"
+                      : "border-gray-200"
+                  }`}
+                >
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    Suggested Subcategories (click to select):{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {availableSubCategories.map((sub, idx) => {
+                      const subName =
+                        typeof sub === "string" ? sub : sub?.name || "";
+                      if (!subName) return null;
+                      const isSelected =
+                        selectedSuggestedSubCategory.toLowerCase() ===
+                        subName.toLowerCase();
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          disabled={isBusy}
+                          onClick={() => handleSelectSuggestedSubCategory(subName)}
+                          className={`text-xs px-2.5 py-1 rounded-full border transition cursor-pointer font-medium ${
+                            isSelected
+                              ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                              : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600"
                           }`}
-                      >
-                        {isSelected ? `✓ ${subName}` : `+ ${subName}`}
-                      </button>
-                    );
-                  })}
+                        >
+                          {isSelected ? `✓ ${subName}` : `+ ${subName}`}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+                {subCategoryError && (
+                  <p className="text-red-500 text-xs mt-0.5">{subCategoryError}</p>
+                )}
               </div>
             );
           })()}

@@ -1,6 +1,6 @@
 import { useEffect, useState, useContext, useMemo } from "react";
 import { Heart, Share2, X, Send, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
-import { timeAgo } from "../../../lib/helpers";
+import { timeAgo, getLinkPreview } from "../../../lib/helpers";
 import { LikeOtherStories } from "../../../redux/slices/Subscription.slice";
 import { useDispatch, useSelector } from "react-redux";
 import SocketContext from "../../../context/SocketContext";
@@ -9,6 +9,7 @@ import { deleteStory } from "../../../redux/slices/posts.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import StoryViewersModal from "./StoryViewersModal";
 import StoryPostDetailModal from "./StoryPostDetailModal";
+import LinkPreviewCard from "../../global/LinkPreviewCard";
 
 export default function ActiveStoryModal({
   activeStory, // ARRAY of stories
@@ -30,7 +31,7 @@ export default function ActiveStoryModal({
   const { comment } = useContext(SocketContext);
   const { user } = useSelector((state) => state.auth);
   const currentStory = stories?.[currentIndex];
-  console.log(stories,"stories")
+  console.log(stories, "stories")
   // Check if current user is the story owner
   const isStoryOwner = user?._id === currentStory?.page?.user?._id || user?._id === currentStory?.page?.user;
 
@@ -54,6 +55,18 @@ export default function ActiveStoryModal({
 
   // Use post.bodyText if available, otherwise fallback to post.originalPost.bodyText
   const postBodyText = post?.bodyText || post?.originalPost?.bodyText || null;
+
+  // Extract link preview if story / post contains a link URL
+  const postLinkData = useMemo(() => {
+    const text =
+      postBodyText ||
+      post?.link ||
+      post?.linkUrl ||
+      currentStory?.text ||
+      currentStory?.story?.text ||
+      "";
+    return getLinkPreview(text);
+  }, [postBodyText, post?.link, post?.linkUrl, currentStory?.text, currentStory?.story?.text]);
 
   const hasPostMedia = postMedia.length > 0;
   const currentPostMedia = hasPostMedia ? postMedia[postMediaIndex] : null;
@@ -120,7 +133,7 @@ export default function ActiveStoryModal({
 
   const handleDeleteStory = async () => {
     if (!currentStory?._id) return;
-    
+
     if (!window.confirm("Are you sure you want to delete this story?")) {
       return;
     }
@@ -129,11 +142,11 @@ export default function ActiveStoryModal({
     try {
       await dispatch(deleteStory(currentStory._id)).unwrap();
       SuccessToast("Story deleted successfully");
-      
+
       // Remove deleted story from local state
       const updatedStories = stories.filter((story) => story._id !== currentStory._id);
       setStories(updatedStories);
-      
+
       // If no stories left, close modal
       if (updatedStories.length === 0) {
         closeStory();
@@ -146,7 +159,7 @@ export default function ActiveStoryModal({
         }
         setProgress(0);
       }
-      
+
       // Call refresh callback if provided
       if (onStoryDeleted) {
         onStoryDeleted();
@@ -226,7 +239,7 @@ export default function ActiveStoryModal({
     setProgress(0);
     setIsPaused(false);
   };
-  console.log(currentStory,"currentStory")
+  console.log(currentStory, "currentStory")
   if (!currentStory) return null;
   return (
     <div
@@ -246,28 +259,28 @@ export default function ActiveStoryModal({
 
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-40 pt-6 px-4 pb-6 bg-gradient-to-b from-black/60 to-transparent">
-       <div className="flex items-center gap-3 mb-4">
-  {currentStory?.page?.image ? (
-    <img
-      src={currentStory.page.image}
-      className="w-10 h-10 rounded-full border-2 border-white object-cover"
-    />
-  ) : (
-    <div className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-bold border-2 border-white">
-      {currentStory?.page?.name?.charAt(0)?.toUpperCase() || "P"}
-    </div>
-  )}
+        <div className="flex items-center gap-3 mb-4">
+          {currentStory?.page?.image ? (
+            <img
+              src={currentStory.page.image}
+              className="w-10 h-10 rounded-full border-2 border-white object-cover"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center font-bold border-2 border-white">
+              {currentStory?.page?.name?.charAt(0)?.toUpperCase() || "P"}
+            </div>
+          )}
 
-  <div className="flex-1 min-w-0">
-    <p className="text-white text-sm font-bold truncate">
-      {currentStory?.page?.user?.username + " " + currentStory?.page?.name}
-    </p>
-    <p className="text-gray-300 text-xs truncate">
-      {currentStory?.page?.user?.username} •{" "}
-      {timeAgo(currentStory?.createdAt)}
-    </p>
-  </div>
-</div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-bold truncate">
+              {currentStory?.page?.user?.username + " " + currentStory?.page?.name}
+            </p>
+            <p className="text-gray-300 text-xs truncate">
+              {currentStory?.page?.user?.username} •{" "}
+              {timeAgo(currentStory?.createdAt)}
+            </p>
+          </div>
+        </div>
 
         {/* Progress Bars */}
         <div className="flex gap-1">
@@ -294,7 +307,7 @@ export default function ActiveStoryModal({
 
       {/* Story / Post content */}
       <div className="w-full h-full flex items-center justify-center px-4">
-        <div 
+        <div
           className={`w-full max-w-[620px] bg-black/60 rounded-3xl overflow-hidden border border-white/10 shadow-2xl ${post ? 'cursor-pointer hover:bg-black/70 transition-colors z-35' : ''}`}
           onClick={(e) => {
             if (post) {
@@ -316,28 +329,28 @@ export default function ActiveStoryModal({
         >
           {/* Post author / meta (from post) */}
           {post && (
-           <div className="flex items-center gap-3 px-4 pt-4 pb-3">
-  {post.author?.profilePicture ? (
-    <img
-      src={post.author.profilePicture}
-      alt={post.author?.name}
-      className="w-9 h-9 rounded-full object-cover border border-white/40"
-    />
-  ) : (
-    <div className="w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center font-semibold border border-white/40">
-      {post.author?.name?.charAt(0)?.toUpperCase() || "U"}
-    </div>
-  )}
+            <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+              {post.author?.profilePicture ? (
+                <img
+                  src={post.author.profilePicture}
+                  alt={post.author?.name}
+                  className="w-9 h-9 rounded-full object-cover border border-white/40"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-white/20 text-white flex items-center justify-center font-semibold border border-white/40">
+                  {post.author?.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+              )}
 
-  <div className="min-w-0">
-    <p className="text-white text-sm font-semibold truncate">
-      {post.author?.name}
-    </p>
-    <p className="text-xs text-gray-300 truncate">
-      @{post.author?.username} • {timeAgo(post?.createdAt)}
-    </p>
-  </div>
-</div>
+              <div className="min-w-0">
+                <p className="text-white text-sm font-semibold truncate">
+                  {post.author?.name}
+                </p>
+                <p className="text-xs text-gray-300 truncate">
+                  @{post.author?.username} • {timeAgo(post?.createdAt)}
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Media area – prefer post.media, fallback to post.originalPost.media, then story.media */}
@@ -397,11 +410,10 @@ export default function ActiveStoryModal({
                             e.stopPropagation();
                             setPostMediaIndex(idx);
                           }}
-                          className={`h-1.5 rounded-full transition-all ${
-                            idx === postMediaIndex
+                          className={`h-1.5 rounded-full transition-all ${idx === postMediaIndex
                               ? "w-5 bg-white"
                               : "w-1.5 bg-white/60"
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -424,6 +436,18 @@ export default function ActiveStoryModal({
               />
             ) : null}
           </div>
+
+          {/* Link Preview if no uploaded post media */}
+          {!hasPostMedia && postLinkData && (
+            <div
+              className="p-3 bg-black/40"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <LinkPreviewCard linkData={postLinkData} />
+            </div>
+          )}
 
           {/* Post text/body - fallback to originalPost.bodyText */}
           {postBodyText && (
@@ -553,7 +577,7 @@ export default function ActiveStoryModal({
           isOpen={postDetailModalOpen}
           onClose={() => {
             setPostDetailModalOpen(false);
-              setIsPaused(false)
+            setIsPaused(false)
           }}
         />
       )}

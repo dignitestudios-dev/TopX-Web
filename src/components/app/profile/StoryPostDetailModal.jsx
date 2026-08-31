@@ -242,9 +242,8 @@ export default function StoryPostDetailModal({ post, isOpen, onClose }) {
             className="flex items-center gap-1"
           >
             <Heart
-              className={`w-5 h-5 ${
-                localLikeState.isLiked ? "fill-orange-500 text-orange-500" : ""
-              }`}
+              className={`w-5 h-5 ${localLikeState.isLiked ? "fill-orange-500 text-orange-500" : ""
+                }`}
             />
             {localLikeState.likesCount}
           </button>

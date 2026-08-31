@@ -683,7 +683,7 @@ export default function CollectionFeedPostCard({
             </div>
           );
         })()}
-{console.log(fullPost?.page,"fullPost?.page?.pageType")}
+
       {/* {fullPost?.page?.pageType === "private" && (
         <div className="flex items-center absolute inset-1 justify-center bg-white/90 backdrop-blur-sm">
           <div className="text-center px-6">

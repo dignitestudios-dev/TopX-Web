@@ -118,9 +118,19 @@ const ShareRepostModal = ({ onClose, postId }) => {
                     </div>
                   </div>
 
-                  <span className="font-medium text-sm text-gray-900 truncate">
-                    {page.name}
-                  </span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-sm text-gray-900 truncate">
+                      {page.name}
+                    </span>
+                    {(page?.ownerName || page?.owner?.name || page?.userId?.name) && (
+                      <span className="text-xs text-gray-500 truncate">
+                        by{" "}
+                        <span className="font-medium text-gray-700">
+                          {page?.ownerName || page?.owner?.name || page?.userId?.name}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <span
