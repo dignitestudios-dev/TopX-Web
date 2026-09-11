@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Edit, MessageCircle } from "lucide-react";
+import { Edit, MessageCircle, GraduationCap } from "lucide-react";
 import { profilehigh } from "../../../assets/export";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../../redux/slices/auth.slice";
@@ -145,6 +145,12 @@ export default function LargeProfile({
               ) : null}
             </div>
           </div>
+          {userRecord.school && (
+            <div className="flex items-center gap-1.5 text-[14px] text-gray-700 font-medium pt-1">
+              <GraduationCap className="w-4 h-4 text-[#DE4B12] flex-shrink-0" />
+              <span>{userRecord.school}</span>
+            </div>
+          )}
           <p className="text-[14px] font-[400] text-[#413b3b] pt-1">
             {userRecord.bio || "No Bio Available"}
           </p>

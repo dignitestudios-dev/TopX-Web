@@ -86,6 +86,15 @@ const PostCard = ({
   activeTab = "feed",
 }) => {
   const [showComments, setShowComments] = useState(false);
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
+  const postId = post._id || post.id;
+  const displayCommentCount =
+    commentsCountByPostId?.[postId] !== undefined
+      ? commentsCountByPostId[postId]
+      : (post?.stats?.comments ?? post?.commentsCount ?? 0);
+
   const [commentInput, setCommentInput] = useState("");
   const [commentLikes, setCommentLikes] = useState({});
   const [showImageModal, setShowImageModal] = useState(false);
@@ -818,7 +827,7 @@ const PostCard = ({
                 className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
               >
                 <MessageCircle className="w-5 h-5" />
-                <span>{post?.stats?.comments || 0}</span>
+                <span>{displayCommentCount}</span>
               </button>
 
               <button

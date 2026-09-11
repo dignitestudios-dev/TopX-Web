@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../redux/slices/auth.slice";
 import FollowersFollowingModal from "../global/FollowersFollowingModal";
+import { GraduationCap } from "lucide-react";
 
 const Profilecard = () => {
   const dispatch = useDispatch();
@@ -156,6 +157,12 @@ const Profilecard = () => {
           >
             {cleanUsername}
           </p>
+          {allUserData?.school && (
+            <div className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium mt-2">
+              <GraduationCap className="w-3.5 h-3.5 text-[#DE4B12] flex-shrink-0" />
+              <span className="truncate">{allUserData.school}</span>
+            </div>
+          )}
           <p className="text-[13px] text-gray-600 leading-relaxed mt-2.5 break-words">
             {allUserData?.bio || "No Bio"}
           </p>

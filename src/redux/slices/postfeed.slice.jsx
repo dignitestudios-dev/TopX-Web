@@ -11,6 +11,7 @@ const initialState = {
   getCommentsLoading: false,
   deleteCommentLoading: false,
   postComments: [],
+  commentsCountByPostId: {},
   error: null,
 };
 
@@ -87,11 +88,14 @@ export const createComment = createAsyncThunk(
     try {
       const res = await axios.post("/comments/post", data);
 
-      return res.data.data;
+      return {
+        ...(res.data?.data || {}),
+        postId: data?.post,
+      };
     } catch (error) {
       ErrorToast(error.response?.data?.message);
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to like/unlike post",
+        error.response?.data?.message || "Failed to post comment",
       );
     }
   },
@@ -186,8 +190,23 @@ export const getComments = createAsyncThunk(
       }
 
       const res = await axios.get(url);
+      const apiData = res.data?.data;
+      const comments = Array.isArray(apiData)
+        ? apiData
+        : apiData?.comments || [];
+      const commentCount =
+        typeof apiData?.commentCount === "number"
+          ? apiData.commentCount
+          : (typeof res.data?.pagination?.totalItems === "number"
+            ? res.data.pagination.totalItems
+            : comments.length);
 
-      return res.data.data;
+      return {
+        postId,
+        commentCount,
+        comments,
+        raw: apiData,
+      };
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to fetch comments",
@@ -232,6 +251,27 @@ const postFeedSlice = createSlice({
       state.pagination = null;
       state.error = null;
     },
+    setPostCommentCount(state, action) {
+      const { postId, count } = action.payload || {};
+      if (postId && typeof count === "number") {
+        state.commentsCountByPostId[postId] = count;
+        if (Array.isArray(state.allfeedposts)) {
+          state.allfeedposts = state.allfeedposts.map((p) => {
+            if (p._id === postId || p.id === postId) {
+              return {
+                ...p,
+                commentsCount: count,
+                stats: {
+                  ...(p.stats || {}),
+                  comments: String(count),
+                },
+              };
+            }
+            return p;
+          });
+        }
+      }
+    },
   },
   extraReducers: (builder) => {
     // Fetch Posts
@@ -240,7 +280,7 @@ const postFeedSlice = createSlice({
         state.postsLoading = true;
       })
       .addCase(fetchpostfeed.fulfilled, (state, action) => {
-        const postsFromAPI = action.payload.posts;
+        const postsFromAPI = action.payload.posts || [];
 
         state.postsLoading = false;
         state.allfeedposts = postsFromAPI.map((post) => {
@@ -248,6 +288,10 @@ const postFeedSlice = createSlice({
             localStorage.getItem("postLikes") || "{}",
           );
           const local = localLikes[post._id];
+
+          if (post._id && typeof post.commentsCount === "number") {
+            state.commentsCountByPostId[post._id] = post.commentsCount;
+          }
 
           return {
             ...post,
@@ -267,6 +311,38 @@ const postFeedSlice = createSlice({
       })
       .addCase(createComment.fulfilled, (state, action) => {
         state.commentLoading = false;
+        const postId =
+          action.payload?.postId ||
+          action.payload?.post ||
+          action.meta.arg?.post;
+
+        if (postId) {
+          const currentCount = state.commentsCountByPostId[postId];
+          const newCount =
+            typeof currentCount === "number"
+              ? currentCount + 1
+              : 1;
+
+          state.commentsCountByPostId[postId] = newCount;
+
+          if (Array.isArray(state.allfeedposts)) {
+            state.allfeedposts = state.allfeedposts.map((p) => {
+              if (p._id === postId || p.id === postId) {
+                const nextCount = (p.commentsCount ?? 0) + 1;
+                state.commentsCountByPostId[postId] = nextCount;
+                return {
+                  ...p,
+                  commentsCount: nextCount,
+                  stats: {
+                    ...(p.stats || {}),
+                    comments: String(nextCount),
+                  },
+                };
+              }
+              return p;
+            });
+          }
+        }
       })
       .addCase(createComment.rejected, (state, action) => {
         state.commentLoading = false;
@@ -287,11 +363,42 @@ const postFeedSlice = createSlice({
       })
       .addCase(getComment.fulfilled, (state, action) => {
         state.getCommentsLoading = false;
-        // API returns an object: { commentCount, comments: [...] }
-        // Store only the comments array for UI rendering
-        state.postComments = Array.isArray(action.payload)
-          ? action.payload
-          : action.payload?.comments || [];
+        const payload = action.payload;
+        const comments = Array.isArray(payload)
+          ? payload
+          : payload?.comments || [];
+        state.postComments = comments;
+
+        const postId =
+          payload?.postId ||
+          (typeof action.meta.arg === "object"
+            ? action.meta.arg?.postId
+            : action.meta.arg);
+
+        const count =
+          typeof payload?.commentCount === "number"
+            ? payload.commentCount
+            : (Array.isArray(payload) ? payload.length : comments.length);
+
+        if (postId) {
+          state.commentsCountByPostId[postId] = count;
+
+          if (Array.isArray(state.allfeedposts)) {
+            state.allfeedposts = state.allfeedposts.map((p) => {
+              if (p._id === postId || p.id === postId) {
+                return {
+                  ...p,
+                  commentsCount: count,
+                  stats: {
+                    ...(p.stats || {}),
+                    comments: String(count),
+                  },
+                };
+              }
+              return p;
+            });
+          }
+        }
       })
       .addCase(getComment.rejected, (state, action) => {
         state.getCommentsLoading = false;
@@ -478,5 +585,5 @@ const postFeedSlice = createSlice({
   },
 });
 
-export const { resetPosts } = postFeedSlice.actions;
+export const { resetPosts, setPostCommentCount } = postFeedSlice.actions;
 export default postFeedSlice.reducer;

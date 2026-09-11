@@ -126,55 +126,98 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
   const [suggestedKeywords, setSuggestedKeywords] = useState(DEFAULT_SUGGESTED_KEYWORDS);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
-  // Derive page category / topic name for Datamuse query
-  const pageCategoryName = useMemo(() => {
-    return (
-      post?.page?.topic ||
-      post?.tag ||
-      post?.page?.name ||
-      (Array.isArray(post?.keywords) && post?.keywords[0]) ||
-      "Trending"
-    );
-  }, [post]);
+  // Derive active query term from the field above (input or latest keyword)
+  const activeKeywordQuery = useMemo(() => {
+    if (keywordInput.trim()) {
+      return keywordInput.trim();
+    }
+    if (keywords.length > 0) {
+      return keywords[keywords.length - 1];
+    }
+    return "";
+  }, [keywordInput, keywords]);
 
-  // Fetch words from Datamuse API: https://api.datamuse.com/words?ml=page category name&max=8
+  // Fetch words from Datamuse API based on the field above
   useEffect(() => {
     if (!isOpen) return;
 
+    const term = activeKeywordQuery.replace(/[#@]/g, "").trim();
+    if (!term) {
+      setSuggestedKeywords(DEFAULT_SUGGESTED_KEYWORDS);
+      return;
+    }
+
     let isMounted = true;
-    const fetchDatamuseWords = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
         setLoadingSuggestions(true);
-        const cleanTerm = pageCategoryName
-          .replace(/[#@]/g, "")
-          .replace(/[_-]/g, " ")
-          .trim();
-        const encoded = encodeURIComponent(cleanTerm || "Trending");
-        const res = await fetch(
-          `https://api.datamuse.com/words?ml=${encoded}&max=8`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          if (isMounted && Array.isArray(data) && data.length > 0) {
-            const formatted = data.map((item) => {
-              const w = item.word || "";
-              return w.charAt(0).toUpperCase() + w.slice(1);
+        const encoded = encodeURIComponent(term);
+
+        // Fetch autocomplete suggestions and semantic related words
+        const [sugRes, mlRes] = await Promise.allSettled([
+          fetch(`https://api.datamuse.com/sug?s=${encoded}&max=6`),
+          fetch(`https://api.datamuse.com/words?ml=${encoded}&max=8`),
+        ]);
+
+        const combinedWords = [];
+
+        if (sugRes.status === "fulfilled" && sugRes.value.ok) {
+          const sugData = await sugRes.value.json();
+          if (Array.isArray(sugData)) {
+            sugData.forEach((item) => {
+              if (item?.word) combinedWords.push(item.word);
             });
-            setSuggestedKeywords(formatted);
+          }
+        }
+
+        if (mlRes.status === "fulfilled" && mlRes.value.ok) {
+          const mlData = await mlRes.value.json();
+          if (Array.isArray(mlData)) {
+            mlData.forEach((item) => {
+              if (item?.word) combinedWords.push(item.word);
+            });
+          }
+        }
+
+        if (isMounted) {
+          if (combinedWords.length > 0) {
+            const unique = [];
+            combinedWords.forEach((rawWord) => {
+              const clean = rawWord.trim();
+              if (!clean) return;
+              const formatted =
+                clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+              if (
+                !unique.some((u) => u.toLowerCase() === formatted.toLowerCase()) &&
+                formatted.length > 1
+              ) {
+                unique.push(formatted);
+              }
+            });
+            if (unique.length > 0) {
+              setSuggestedKeywords(unique.slice(0, 8));
+            } else {
+              setSuggestedKeywords(DEFAULT_SUGGESTED_KEYWORDS);
+            }
+          } else {
+            setSuggestedKeywords(DEFAULT_SUGGESTED_KEYWORDS);
           }
         }
       } catch (err) {
         console.debug("Datamuse API error:", err);
+        if (isMounted) {
+          setSuggestedKeywords(DEFAULT_SUGGESTED_KEYWORDS);
+        }
       } finally {
         if (isMounted) setLoadingSuggestions(false);
       }
-    };
+    }, 250);
 
-    fetchDatamuseWords();
     return () => {
       isMounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [isOpen, pageCategoryName]);
+  }, [isOpen, activeKeywordQuery]);
 
   // =========================================================
   // STEP 2 STATE: Categories & Interests from Backend API
@@ -606,7 +649,11 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold text-gray-800 flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5 text-[#DE4B12]" />
-                    <span>AI Suggested for "{pageCategoryName}"</span>
+                    <span>
+                      {activeKeywordQuery
+                        ? `AI Suggested for "${activeKeywordQuery}"`
+                        : "AI Suggested Keywords"}
+                    </span>
                   </p>
                   {loadingSuggestions && (
                     <Loader2 className="w-3.5 h-3.5 text-[#DE4B12] animate-spin" />

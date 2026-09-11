@@ -183,6 +183,9 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
       }
       formData.append("dob", values.dateOfBirth);
       formData.append("gender", values.gender === "other" && values.genderOther ? values.genderOther : values.gender);
+      if (values.school && values.school.trim()) {
+        formData.append("school", values.school.trim());
+      }
       formData.append("bio", values.bio || "");
       // if (values.link && values.link.trim()) {
       //   formData.append("link", values.link.trim());
@@ -427,6 +430,21 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
               )}
             </div>
 
+            {/* School / College */}
+            <div className="flex flex-col gap-1">
+              <Input
+                label="School/College (optional)"
+                type="text"
+                name="school"
+                value={values.school}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                placeholder="Enter your school or college"
+                touched={touched.school}
+                error={errors.school}
+                size="md"
+              />
+            </div>
 
             {/* Bio */}
             <div className="flex flex-col gap-1">

@@ -660,6 +660,56 @@ const postsSlice = createSlice({
       .addCase(deleteComment.rejected, (state, action) => {
         state.commentsLoading = false;
         state.commentsError = action.payload;
+      })
+      .addCase("posts/commentsGet/fulfilled", (state, action) => {
+        const payload = action.payload;
+        const postId =
+          payload?.postId ||
+          (typeof action.meta.arg === "object"
+            ? action.meta.arg?.postId
+            : action.meta.arg);
+        const count =
+          typeof payload?.commentCount === "number"
+            ? payload.commentCount
+            : undefined;
+
+        if (postId && typeof count === "number") {
+          const updateCount = (p) => {
+            if (p._id === postId || p.id === postId) {
+              return {
+                ...p,
+                commentsCount: count,
+                stats: { ...(p.stats || {}), comments: count },
+              };
+            }
+            return p;
+          };
+          if (Array.isArray(state.posts)) state.posts = state.posts.map(updateCount);
+          if (Array.isArray(state.pagepost)) state.pagepost = state.pagepost.map(updateCount);
+        }
+      })
+      .addCase("posts/commentPost/fulfilled", (state, action) => {
+        const postId =
+          action.payload?.postId ||
+          action.payload?.post ||
+          action.meta.arg?.post;
+
+        if (postId) {
+          const incCount = (p) => {
+            if (p._id === postId || p.id === postId) {
+              const current = p.commentsCount ?? p.stats?.comments ?? 0;
+              const next = (Number(current) || 0) + 1;
+              return {
+                ...p,
+                commentsCount: next,
+                stats: { ...(p.stats || {}), comments: next },
+              };
+            }
+            return p;
+          };
+          if (Array.isArray(state.posts)) state.posts = state.posts.map(incCount);
+          if (Array.isArray(state.pagepost)) state.pagepost = state.pagepost.map(incCount);
+        }
       });
   },
 });

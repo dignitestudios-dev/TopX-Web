@@ -29,6 +29,7 @@ export default function EditedProfile({ setIsEditProfile }) {
   const [name, setName] = useState(allUserData?.name || "");
   const [username, setUsername] = useState(allUserData?.username || "");
   const [email, setEmail] = useState(allUserData?.email || "");
+  const [school, setSchool] = useState(allUserData?.school || "");
   const [bio, setBio] = useState(allUserData?.bio || "");
   const [link, setLink] = useState(allUserData?.link || allUserData?.website || "");
   const [preview, setPreview] = useState(allUserData?.profilePicture || "");
@@ -285,6 +286,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       formData.append("username", username);
     }
 
+    formData.append("school", school ? school.trim() : "");
     formData.append("bio", bio);
     if (link && link.trim()) {
       formData.append("link", link.trim());
@@ -324,6 +326,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       setUsername(allUserData.username || "");
       setOriginalUsername(allUserData.username || "");
       setEmail(allUserData.email || "");
+      setSchool(allUserData.school || "");
       setBio(allUserData.bio || "");
       setLink(allUserData.link || allUserData.website || "");
       setPreview(allUserData.profilePicture || "");
@@ -498,6 +501,18 @@ export default function EditedProfile({ setIsEditProfile }) {
           placeholder="Text goes here"
           maxLength={400}
           className="w-full h-[200px] border border-gray-300 rounded-[12px] p-2"
+        />
+      </div>
+
+      {/* School / College */}
+      <div className="w-full flex flex-col gap-2 py-2">
+        <label className="text-[14px] font-[500] text-gray-700">School/College (optional)</label>
+        <Input
+          type="text"
+          value={school}
+          onChange={(e) => setSchool(e.target.value)}
+          placeholder="Enter your school or college"
+          size="md"
         />
       </div>
 

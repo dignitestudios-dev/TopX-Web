@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "react-modal";
 import { useNavigate } from "react-router";
+import { BiArrowBack } from "react-icons/bi";
 
 export default function VerificationModal({
   isOpen = false,
@@ -129,6 +130,15 @@ export default function VerificationModal({
       overlayClassName="fixed inset-0 bg-black/40 flex items-center justify-center p-4"
       className="bg-white w-full max-w-[520px] rounded-[28px] outline-none relative"
     >
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Go back"
+        className="absolute left-5 top-5 p-1.5 text-gray-600 hover:text-black hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+      >
+        <BiArrowBack className="w-6 h-6" />
+      </button>
+
       <button
         onClick={onClose}
         aria-label="Close"

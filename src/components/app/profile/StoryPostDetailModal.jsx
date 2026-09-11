@@ -19,6 +19,14 @@ export default function StoryPostDetailModal({ post, isOpen, onClose }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const dispatch = useDispatch();
   const { likeLoading } = useSelector((state) => state.posts);
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
+  const postId = post?._id || post?.id;
+  const displayCommentCount =
+    commentsCountByPostId?.[postId] !== undefined
+      ? commentsCountByPostId[postId]
+      : (post?.stats?.comments || post?.commentsCount || 0);
   const dropdownRef = useRef(null);
 
   // =========================
@@ -253,7 +261,7 @@ export default function StoryPostDetailModal({ post, isOpen, onClose }) {
             className="flex items-center gap-1"
           >
             <MessageCircle className="w-5 h-5" />
-            {post.stats?.comments || post.commentsCount || 0}
+            {displayCommentCount}
           </button>
 
           <button className="flex items-center gap-1">

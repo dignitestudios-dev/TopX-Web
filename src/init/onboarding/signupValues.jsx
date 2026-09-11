@@ -14,7 +14,9 @@ export const PersonalValues = {
     gender: "",
     genderOther: "",
     profileImage: "",
+    school: "",
     bio: "",
     link: "",
 };
+
 

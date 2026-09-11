@@ -57,6 +57,14 @@ export default function TrendingPostCard({
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
+  const postId = post.id || post._id;
+  const displayCommentCount =
+    commentsCountByPostId?.[postId] !== undefined
+      ? commentsCountByPostId[postId]
+      : (post.commentsCount ?? post.stats?.comments ?? 0);
 
   const dropdownRef = useRef(null);
   const dispatch = useDispatch();
@@ -539,7 +547,7 @@ export default function TrendingPostCard({
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-medium">
-            {post.commentsCount ?? post.stats?.comments ?? 0}
+            {displayCommentCount}
           </span>
         </button>
 

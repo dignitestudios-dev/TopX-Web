@@ -49,6 +49,9 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports
   );
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
 
   const [moreOpenPostId, setMoreOpenPostId] = useState(null);
   const [boostModalOpen, setBoostModalOpen] = useState(false);
@@ -491,7 +494,9 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                       >
                         <MessageCircle className="w-5 h-5" />
                         <span className="text-sm font-medium">
-                          {post?.commentsCount}
+                          {commentsCountByPostId?.[post._id] !== undefined
+                            ? commentsCountByPostId[post._id]
+                            : (post?.commentsCount ?? 0)}
                         </span>
                       </button>
 

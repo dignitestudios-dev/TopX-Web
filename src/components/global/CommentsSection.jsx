@@ -27,6 +27,7 @@ export default function CommentsSection({
   collectionId = null,
   applyFilter = false,
   commentFilter = "all-comments",
+  onCommentCountChange,
 }) {
   const { user } = useSelector((state) => state.auth);
   const { commentLoading, postComments, getCommentsLoading } = useSelector(
@@ -87,14 +88,27 @@ export default function CommentsSection({
 
     const normalizedFilter = getNormalizedCommentFilter(commentFilter);
 
+    let res;
     if (collectionId && applyFilter) {
-      await dispatch(getComment({ postId, collectionId, applyFilter: true, filterType: normalizedFilter }));
+      res = await dispatch(getComment({ postId, collectionId, applyFilter: true, filterType: normalizedFilter }));
     } else if (pageId && applyFilter) {
-      await dispatch(getComment({ postId, pageId, applyFilter: true, filterType: normalizedFilter }));
+      res = await dispatch(getComment({ postId, pageId, applyFilter: true, filterType: normalizedFilter }));
     } else if (normalizedFilter) {
-      await dispatch(getComment({ postId, applyFilter: true, filterType: normalizedFilter }));
+      res = await dispatch(getComment({ postId, applyFilter: true, filterType: normalizedFilter }));
     } else {
-      await dispatch(getComment(postId));
+      res = await dispatch(getComment(postId));
+    }
+
+    if (res?.payload) {
+      const count =
+        typeof res.payload?.commentCount === "number"
+          ? res.payload.commentCount
+          : (Array.isArray(res.payload)
+              ? res.payload.length
+              : res.payload?.comments?.length);
+      if (typeof count === "number" && typeof onCommentCountChange === "function") {
+        onCommentCountChange(count);
+      }
     }
   };
 

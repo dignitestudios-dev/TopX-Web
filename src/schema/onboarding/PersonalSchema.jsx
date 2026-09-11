@@ -92,6 +92,8 @@ export const PersonalSchema = Yup.object().shape({
       }
     ),
 
+  school: Yup.string().max(100, "School/College cannot exceed 100 characters.").optional(),
+
   bio: Yup.string().max(250, "Bio cannot exceed 250 characters."),
 
   link: Yup.string()

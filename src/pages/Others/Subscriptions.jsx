@@ -7,6 +7,8 @@ import {
   MoreVertical,
   Bookmark,
   Layers,
+  FolderPlus,
+  FilePlus,
 } from "lucide-react";
 import { nofound, notes } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
@@ -14,6 +16,7 @@ import { TbNotes } from "react-icons/tb";
 import Avatar from "../../components/common/Avatar";
 
 import CreateSubscriptionModal from "../../components/global/CreateSubscriptionModal";
+import AddPageToExistingCollectionModal from "../../components/global/AddPageToExistingCollectionModal";
 import { useDispatch, useSelector } from "react-redux";
 import { getMySubsctiptions } from "../../redux/slices/Subscription.slice";
 import UpdateSubscriptionModal from "../../components/global/updateSubscriptionModal";
@@ -52,6 +55,10 @@ export default function Subscriptions() {
   const [liked, setLiked] = useState({});
   const [activeTab, setActiveTab] = useState("my");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [addPageTargetCollection, setAddPageTargetCollection] = useState(null);
+  const plusMenuRef = useRef(null);
   const dispatch = useDispatch();
   const { mySubscriptions } = useSelector((state) => state.subscriptions);
   const { savedCollections, isLoading } = useSelector(
@@ -126,16 +133,19 @@ export default function Subscriptions() {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenDropdownId(null);
       }
+      if (plusMenuRef.current && !plusMenuRef.current.contains(event.target)) {
+        setShowPlusMenu(false);
+      }
     };
 
-    if (openDropdownId) {
+    if (openDropdownId || showPlusMenu) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [openDropdownId]);
+  }, [openDropdownId, showPlusMenu]);
 
   const toggleDropdown = (id) => {
     setOpenDropdownId((prev) => (prev === id ? null : id));
@@ -151,6 +161,12 @@ export default function Subscriptions() {
     setOpenDropdownId(null);
     setDeleteTarget(item); // collection info
     setShowDeleteModal(true);
+  };
+
+  const handleAddPage = (item) => {
+    setOpenDropdownId(null);
+    setAddPageTargetCollection(item);
+    setShowAddPageModal(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -316,14 +332,49 @@ export default function Subscriptions() {
           </h2>
           <div className="flex items-center gap-3">
             {activeTab === "my" && (
-              <button onClick={() => setActiveTab("my")}>
-                <div
-                  className="bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600"
-                  onClick={() => setShowCreateModal(true)}
+              <div className="relative" ref={plusMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowPlusMenu((prev) => !prev)}
+                  className="bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors flex items-center justify-center cursor-pointer shadow-sm"
+                  title="Create or Add"
                 >
-                  <Plus size={20} className="cursor-pointer" />
-                </div>
-              </button>
+                  <Plus size={20} />
+                </button>
+
+                {showPlusMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-30 animate-fadeIn">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPlusMenu(false);
+                        setShowCreateModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
+                        <FolderPlus size={16} />
+                      </div>
+                      <span className="font-medium">Create New Collection</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPlusMenu(false);
+                        setAddPageTargetCollection(null);
+                        setShowAddPageModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 flex items-center gap-2.5 transition-colors cursor-pointer"
+                    >
+                      <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
+                        <FilePlus size={16} />
+                      </div>
+                      <span className="font-medium">Add Page to Existing</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="flex bg-white p-1 rounded-full overflow-hidden">
@@ -437,6 +488,12 @@ export default function Subscriptions() {
                           >
                             Delete
                           </button>
+                          <button
+                            onClick={() => handleAddPage(item)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                          >
+                            Add Page
+                          </button>
                         </div>
                       )}
                     </div>
@@ -501,6 +558,16 @@ export default function Subscriptions() {
             <DeleteCollectionPageModal
               onClose={() => setShowDeleteModal(false)}
               onConfirm={handleConfirmDelete}
+            />
+          )}
+          {showAddPageModal && (
+            <AddPageToExistingCollectionModal
+              isOpen={showAddPageModal}
+              onClose={() => {
+                setShowAddPageModal(false);
+                setAddPageTargetCollection(null);
+              }}
+              initialCollection={addPageTargetCollection}
             />
           )}
         </div>

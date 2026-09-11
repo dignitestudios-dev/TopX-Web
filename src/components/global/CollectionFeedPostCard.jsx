@@ -67,8 +67,16 @@ export default function CollectionFeedPostCard({
   const { currentCollectionFilter } = useSelector(
     (state) => state.collections || {}
   );
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
+  const targetPostId = isPostId || fullPost?._id || fullPost?.id;
   const isCommentsHidden = currentCollectionFilter?.filterType === "none-comments";
-  const displayCommentCount = isCommentsHidden ? 0 : (commentCount || 0);
+  const displayCommentCount = isCommentsHidden
+    ? 0
+    : (commentsCountByPostId?.[targetPostId] !== undefined
+        ? commentsCountByPostId[targetPostId]
+        : (commentCount || fullPost?.commentsCount || 0));
 
   const isCommentsOpen = typeof setActiveCommentPostId === "function"
     ? activeCommentPostId === isPostId

@@ -58,6 +58,15 @@ export default function HomePostFeed({
     ? activeCommentPostId === post.id
     : commentsOpen;
 
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
+  const postId = post.id || post._id;
+  const displayCommentCount =
+    commentsCountByPostId?.[postId] !== undefined
+      ? commentsCountByPostId[postId]
+      : (post.stats?.comments ?? post.commentsCount ?? 0);
+
   const handleToggleComments = () => {
     if (typeof setActiveCommentPostId === "function") {
       setActiveCommentPostId(isCommentsOpen ? null : post.id);
@@ -734,7 +743,7 @@ export default function HomePostFeed({
               className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition"
             >
               <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">{post.stats.comments}</span>
+              <span className="text-sm font-medium">{displayCommentCount}</span>
             </button>
 
             <button
@@ -785,7 +794,7 @@ export default function HomePostFeed({
       />
 
       {/* Comments Section */}
-      {isCommentsOpen && <CommentsSection postId={post.id} />}
+      {isCommentsOpen && <CommentsSection postId={postId} />}
 
       {/* Share Post Modal */}
       {sharepost && (

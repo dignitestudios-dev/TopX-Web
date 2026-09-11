@@ -55,6 +55,9 @@ const PagePosts = ({
     pageposterror,
     isLoading: postsUpdating,
   } = useSelector((state) => state.posts);
+  const { commentsCountByPostId } = useSelector(
+    (state) => state.postsfeed || {},
+  );
   const { user } = useSelector((state) => state.auth);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [moreOpenPostId, setMoreOpenPostId] = useState(null);
@@ -944,7 +947,11 @@ const PagePosts = ({
                       className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
                     >
                       <MessageCircle className="w-5 h-5" />
-                      <span>{post.commentsCount || 0}</span>
+                      <span>
+                        {commentsCountByPostId?.[post._id] !== undefined
+                          ? commentsCountByPostId[post._id]
+                          : (post.commentsCount || 0)}
+                      </span>
                     </button>
 
                     <button
