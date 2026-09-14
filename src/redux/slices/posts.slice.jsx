@@ -28,9 +28,15 @@ export const createPost = createAsyncThunk(
     try {
       const res = await axios.post("/posts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       });
       return res.data?.data;
     } catch (error) {
+      if (error.response?.status === 413) {
+        return thunkAPI.rejectWithValue(
+          "Total media size exceeds the 30MB server limit. Please reduce file size."
+        );
+      }
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to create post",
       );
@@ -43,9 +49,15 @@ export const createStory = createAsyncThunk(
     try {
       const res = await axios.post("/stories", formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       });
       return res.data?.data;
     } catch (error) {
+      if (error.response?.status === 413) {
+        return thunkAPI.rejectWithValue(
+          "Total media size exceeds the 30MB server limit. Please reduce file size."
+        );
+      }
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to create post",
       );

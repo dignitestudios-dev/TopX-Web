@@ -110,8 +110,8 @@ export default function EditedProfile({ setIsEditProfile }) {
 
   const checkUsernameAvailability = async (usernameToCheck) => {
     if (!usernameToCheck || usernameToCheck.trim() === "") {
-      setUsernameError("");
-      setIsUsernameValid(true);
+      setUsernameError("Username is required");
+      setIsUsernameValid(false);
       setUsernameStatus(null);
       setUsernameSuggestions([]);
       return;
@@ -241,8 +241,16 @@ export default function EditedProfile({ setIsEditProfile }) {
       return;
     }
 
+    // Validate username (required field)
+    if (!username || username.trim() === "") {
+      setUsernameError("Username is required");
+      setIsUsernameValid(false);
+      ErrorToast("Username is required");
+      return;
+    }
+
     // Check username if it has changed
-    if (username !== originalUsername && username.trim() !== "") {
+    if (username !== originalUsername) {
       const validation = validateUsername(username);
       if (!validation.isValid) {
         ErrorToast(validation.error);
@@ -252,12 +260,15 @@ export default function EditedProfile({ setIsEditProfile }) {
       }
 
       // Check username availability before submitting
-      const usernameRes = await dispatch(checkUsername(username));
+      const usernameRes = await dispatch(checkUsername(username.trim()));
 
       if (usernameRes.meta.requestStatus !== "fulfilled") {
-        ErrorToast(usernameRes.payload || "Username not available");
+        const errorMsg =
+          usernameRes.payload?.message ||
+          (typeof usernameRes.payload === "string" ? usernameRes.payload : "Username not available");
+        ErrorToast(errorMsg);
         setIsUsernameValid(false);
-        setUsernameError(usernameRes.payload || "Username not available");
+        setUsernameError(errorMsg);
         return;
       }
 
@@ -407,7 +418,8 @@ export default function EditedProfile({ setIsEditProfile }) {
 
         <div className="w-full">
           <div className="flex flex-col gap-1 flex-1">
-            <div className="flex gap-2 items-end">
+            <label className="text-[14px] font-[500] text-gray-800">Username</label>
+            <div className="flex gap-2 items-start">
               <div className="flex-1">
                 <Input
                   size="md"
@@ -416,7 +428,10 @@ export default function EditedProfile({ setIsEditProfile }) {
                   value={username}
                   onChange={(e) => {
                     const val = e.target.value;
-                    if (hasMaliciousInput(val)) {
+                    if (!val || val.trim() === "") {
+                      setUsernameError("Username is required");
+                      setIsUsernameValid(false);
+                    } else if (hasMaliciousInput(val)) {
                       setUsernameError("Malicious characters or script patterns are not allowed in username");
                       setIsUsernameValid(false);
                     } else {
@@ -427,7 +442,12 @@ export default function EditedProfile({ setIsEditProfile }) {
                     setUsernameStatus(null);
                     setUsernameSuggestions([]);
                   }}
-                  label="Username"
+                  onBlur={() => {
+                    if (!username || username.trim() === "") {
+                      setUsernameError("Username is required");
+                      setIsUsernameValid(false);
+                    }
+                  }}
                   error={usernameError}
                   touched={!!usernameError}
                 />
@@ -436,19 +456,21 @@ export default function EditedProfile({ setIsEditProfile }) {
                 size="md"
                 variant="orange"
                 onClick={() => {
-                  if (username !== originalUsername && username.trim() !== "") {
+                  if (!username || username.trim() === "") {
+                    setUsernameError("Username is required");
+                    setIsUsernameValid(false);
+                    ErrorToast("Username is required");
+                  } else if (username !== originalUsername) {
                     checkUsernameAvailability(username);
                   } else if (username === originalUsername) {
                     setUsernameError("");
                     setIsUsernameValid(true);
                     setUsernameStatus(null);
                     setUsernameSuggestions([]);
-                  } else {
-                    ErrorToast("Please enter a username");
                   }
                 }}
                 disabled={isCheckingUsername || !username || username.trim() === "" || usernameStatus === "available"}
-                className="h-[42px] whitespace-nowrap"
+                className="h-[43px] whitespace-nowrap"
               >
                 {isCheckingUsername ? "Checking..." : "Check"}
               </Button>
@@ -457,7 +479,7 @@ export default function EditedProfile({ setIsEditProfile }) {
             {usernameStatus === "available" && (
               <p className="text-[12px] text-green-600 font-medium">✓ Username is available</p>
             )}
-           
+
             {/* Username Suggestions */}
             {usernameSuggestions.length > 0 && (
               <div className="flex flex-col gap-2 mt-2">
@@ -569,11 +591,10 @@ export default function EditedProfile({ setIsEditProfile }) {
                         e.stopPropagation();
                         toggleCategory(catName);
                       }}
-                      className={`px-4 py-1.5 rounded-full font-semibold text-xs transition-all duration-200 flex items-center gap-2 ${
-                        isCatSelected
+                      className={`px-4 py-1.5 rounded-full font-semibold text-xs transition-all duration-200 flex items-center gap-2 ${isCatSelected
                           ? "bg-orange-600 text-white shadow-sm hover:bg-orange-700"
                           : "bg-white text-gray-800 border border-gray-300 hover:bg-orange-50 hover:text-orange-600"
-                      }`}
+                        }`}
                     >
                       <span>{catName}</span>
                     </button>
@@ -602,11 +623,10 @@ export default function EditedProfile({ setIsEditProfile }) {
                               e.stopPropagation();
                               toggleCategory(subName);
                             }}
-                            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                              isSubSelected
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${isSubSelected
                                 ? "bg-orange-600 text-white shadow-sm hover:bg-orange-700"
                                 : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                            }`}
+                              }`}
                           >
                             {subName}
                           </button>

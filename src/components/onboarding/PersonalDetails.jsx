@@ -266,13 +266,28 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
               className="hidden"
             />
 
-            <button
-              type="button"
-              onClick={() => setIsOptionsModalOpen(true)}
-              className="text-[14px] font-[500] text-[#f85e00] hover:underline cursor-pointer"
-            >
-              Upload Profile Photo
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsOptionsModalOpen(true)}
+                className="text-[14px] font-[500] text-[#f85e00] hover:underline cursor-pointer"
+              >
+                Upload Profile Photo <span className="text-gray-400 text-xs font-normal">(Optional)</span>
+              </button>
+              {imagePreview && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImagePreview(null);
+                    setImageFile(null);
+                    setFieldValue("profileImage", "");
+                  }}
+                  className="text-xs text-red-500 hover:text-red-700 hover:underline cursor-pointer ml-1"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
             {touched.profileImage && errors.profileImage && (
               <p className="text-red-600 text-sm font-medium">{errors.profileImage}</p>
             )}
@@ -346,6 +361,7 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
               label="Date Of Birth"
               type="date"
               name="dateOfBirth"
+              max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split("T")[0]}
               value={values.dateOfBirth}
               onChange={handleChange}
               onBlur={handleBlur}

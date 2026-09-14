@@ -100,6 +100,7 @@ export default function DOBGender() {
             size="md"
             id="dob"
             name="dob"
+            max={new Date(new Date().setFullYear(new Date().getFullYear() - 13)).toISOString().split("T")[0]}
             onChange={handleChange}
             onBlur={handleBlur}
             value={values.dob}

@@ -2122,6 +2122,22 @@ console.log(pageDetail,"pageDetail==>")
                 </div>
               </button>
 
+              {/* Create Story Option */}
+              <button
+                onClick={() => {
+                  setActionModal(false);
+                  setStoryModal(true);
+                }}
+                className="w-full flex items-center gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-orange-500 hover:bg-orange-50 transition-all text-left"
+              >
+                <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                  <FaPlus className="text-orange-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Create Story</p>
+                </div>
+              </button>
+
               {/* Go Live Option */}
               <button
                 onClick={() => {

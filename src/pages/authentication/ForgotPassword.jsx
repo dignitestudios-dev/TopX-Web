@@ -126,7 +126,7 @@ export default function ForgotPassword() {
             <div className="bg-white flex flex-col justify-center items-center rounded-[19px] p-6">
                 <h1 className="text-[32px] font-bold leading-[48px]">Forgot Password</h1>
                 <p className="text-[16px] font-normal text-center leading-[27px] text-[#3C3C43D9] w-[27em]">
-                    Please enter your email address and we'll send you a link to reset your password.
+                    Please enter your email address and we'll send you an OTP verification code to reset your password.
                 </p>
                 <form onSubmit={handleSubmit}>
                     <div className="w-full md:w-[393px] mt-5 flex flex-col justify-start items-start gap-2">

@@ -569,3 +569,84 @@ export function formatPhoneNumber(value) {
   }
   return "";
 }
+
+/**
+ * Compresses an image file client-side using HTML5 Canvas.
+ * Reduces 5MB-15MB phone/camera photos down to ~300KB-700KB without visible quality loss.
+ */
+export async function compressImageFile(
+  file,
+  maxWidth = 1920,
+  maxHeight = 1920,
+  quality = 0.8
+) {
+  if (!file || !file.type || !file.type.startsWith("image/")) {
+    return file;
+  }
+
+  // Already lightweight (under 350KB) - no compression needed
+  if (file.size <= 350 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        // Background white to handle any transparency when exporting to JPEG
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = "image/jpeg";
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+
+            // Only use compressed if it actually reduced the size
+            if (blob.size >= file.size) {
+              resolve(file);
+              return;
+            }
+
+            const cleanName = (file.name || "image").replace(/\.[^/.]+$/, "");
+            const compressedFile = new File([blob], `${cleanName}.jpg`, {
+              type: mimeType,
+              lastModified: Date.now(),
+            });
+
+            resolve(compressedFile);
+          },
+          mimeType,
+          quality
+        );
+      };
+      img.onerror = () => resolve(file);
+    };
+    reader.onerror = () => resolve(file);
+  });
+}

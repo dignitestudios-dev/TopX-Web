@@ -7,6 +7,7 @@ import {
   getKnowledgePostDetail,
 } from "../../redux/slices/knowledgepost.slice";
 import { ErrorToast, SuccessToast } from "./Toaster";
+import { compressImageFile } from "../../lib/helpers";
 
 const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }) => {
   const [text, setText] = useState("");
@@ -67,7 +68,7 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
     { value: "right", label: "➡" },
   ];
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -77,14 +78,21 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
       return;
     }
 
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit (consistent with normal post)
     if (file.size > MAX_SIZE) {
-      ErrorToast("Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.");
+      ErrorToast("Image size exceeds the 10MB limit. Please upload an image smaller than 10MB.");
       e.target.value = "";
       return;
     }
 
-    setImageFile(file);
+    let processedFile = file;
+    try {
+      processedFile = await compressImageFile(file);
+    } catch (err) {
+      console.error("Compression error:", err);
+    }
+
+    setImageFile(processedFile);
     setBackgroundType("upload");
     setSelectedBg(null);
 
@@ -92,7 +100,7 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
     reader.onload = (event) => {
       setImagePreview(event.target.result);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   };
 
   const handlePost = async () => {
@@ -103,8 +111,8 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
       return;
     }
 
-    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
-      ErrorToast("Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.");
+    if (imageFile && imageFile.size > 10 * 1024 * 1024) {
+      ErrorToast("Image size exceeds the 10MB limit. Please upload an image smaller than 10MB.");
       return;
     }
 
@@ -235,7 +243,7 @@ const CreateKnowledgePostModal = ({ onClose, selectedPageId, selectedSubTopics }
                     <div className="text-center">
                       <Upload className="text-orange-500 mx-auto mb-2 group-hover:scale-110 transition-transform" size={24} />
                       <span className="text-sm font-semibold text-gray-700">Upload Image</span>
-                      <span className="text-xs text-gray-500 block mt-1">PNG, JPG up to 5MB</span>
+                      <span className="text-xs text-gray-500 block mt-1">PNG, JPG up to 10MB</span>
                     </div>
                     <input
                       type="file"

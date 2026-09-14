@@ -18,7 +18,7 @@ import {
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import {
   fetchIndividualChats,
   fetchIndividualChatDetail,
@@ -151,6 +151,10 @@ const ChatAvatar = ({
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isLiveChat = location.pathname.startsWith("/live-chat");
+  const bottomClass = isLiveChat ? "bottom-28" : "bottom-6";
+  const popupBottomClass = isLiveChat ? "bottom-44" : "bottom-20";
   const socket = useContext(SocketContext);
   const [isAcceptMsg, setIsAcceptMsg] = useState(false);
   const [requestChat, setRequestChat] = useState(null);
@@ -1308,7 +1312,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       <>
         <button
           onClick={() => setOpen(!open)}
-          className="fixed bottom-6 right-6 flex items-center justify-between w-72 bg-white rounded-[10px] shadow-lg px-4 py-3 hover:shadow-xl z-40 transition-all cursor-pointer"
+          className={`fixed ${bottomClass} right-6 flex items-center justify-between w-72 bg-white rounded-[10px] shadow-lg px-4 py-3 hover:shadow-xl z-40 transition-all cursor-pointer`}
         >
           <div className="flex items-center gap-2">
             <div className="relative">
@@ -1338,7 +1342,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
         <div
           ref={chatPopupRef}
-          className={`fixed bottom-20 right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
+          className={`fixed ${popupBottomClass} right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
               ? "opacity-100 translate-y-0 pointer-events-auto"
               : "opacity-0 translate-y-5 pointer-events-none"
             } z-40`}
@@ -1382,7 +1386,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex-1 py-2 flex items-center justify-center gap-1.5 transition-colors ${activeTab === id
+                className={`flex-1 py-2 text-[14px] text-nowrap flex items-center justify-center gap-1.5 transition-colors ${activeTab === id
                     ? "text-orange-500 border-b-2 border-orange-500 font-semibold"
                     : "text-gray-500 hover:text-gray-700"
                   }`}
@@ -1397,7 +1401,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             ))}
           </div>
 
-          <div className="h-[50vh] overflow-y-auto">
+          <div className="h-[50vh] overflow-y-auto overflow-x-hidden">
             {chatsLoading ||
               (activeTab === "Group Chat" && groupChatsLoading) ? (
               <p className="text-sm text-gray-500 text-center py-6 flex justify-center items-center">
@@ -1419,9 +1423,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       handleChatClick(chat);
                     }
                   }}
-                  className="flex items-center justify-between px-5 py-5 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
+                  className="flex items-center justify-between px-4 py-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 gap-2 min-w-0 w-full"
                 >
-                  <div className="flex items-center gap-3 flex-1">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="relative flex-shrink-0">
                       <ChatAvatar
                         src={chat.avatar}
@@ -1431,11 +1435,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm text-gray-900">
+                      <p className="font-semibold text-sm text-gray-900 truncate">
                         {chat.name}
                       </p>
                       <p
-                        className={`text-xs text-gray-500 truncate ${chat.unread > 0 ? "font-semibold" : ""
+                        className={`text-xs text-gray-500 truncate block max-w-full ${chat.unread > 0 ? "font-semibold" : ""
                           }`}
                       >
                         {chat.lastMessage?.mediaUrls &&
@@ -1450,9 +1454,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
                     <div className="relative">
-                      <p className="text-xs text-gray-400">{chat.date}</p>
+                      <p className="text-xs text-gray-400 whitespace-nowrap">{chat.date}</p>
                       {chat.unread > 0 && (
                         <div className="absolute top-5 right-1 w-4 h-4 bg-orange-500 text-white text-[10px] flex items-center justify-center rounded-full">
                           {chat.unread}
@@ -1517,7 +1521,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       <>
         <div
           ref={chatPopupRef}
-          className="fixed bottom-20 right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]"
+          className={`fixed ${popupBottomClass} right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center w-full justify-between gap-3">
@@ -2473,7 +2477,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   // Create Group Screen
   if (screen === "createGroup") {
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
+      <div className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96`}>
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
           <button
             onClick={() => {
@@ -2600,7 +2604,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   // View All Group Members Screen
   if (screen === "viewAllMembers") {
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
+      <div className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96`}>
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
           <button
             onClick={() => {
@@ -2700,7 +2704,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     );
 
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96">
+      <div className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-96`}>
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
           <button
             onClick={() => {
@@ -2889,7 +2893,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     };
 
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[500px]">
+      <div className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[500px]`}>
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
           <button
             onClick={() => setScreen("chat")}
@@ -3075,7 +3079,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     return (
       <div
         ref={chatPopupRef}
-        className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96"
+        className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96`}
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200">
           <button
@@ -3169,7 +3173,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       : availableUsers;
 
     return (
-      <div className="fixed bottom-6 right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96">
+      <div className={`fixed ${bottomClass} right-6 w-96 bg-white rounded-[12px] shadow-2xl border border-gray-200 z-40 flex flex-col h-96`}>
         {/* Header */}
         <div className="flex items-center gap-3 px-4 py-3 border-b">
           <button

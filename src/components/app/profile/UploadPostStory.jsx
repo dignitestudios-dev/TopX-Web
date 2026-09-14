@@ -9,7 +9,7 @@ import {
   getPostsByPageId,
 } from "../../../redux/slices/posts.slice";
 import { ErrorToast, SuccessToast } from "../../global/Toaster";
-import { getLinkPreview } from "../../../lib/helpers";
+import { getLinkPreview, compressImageFile } from "../../../lib/helpers";
 import LinkPreviewCard from "../../global/LinkPreviewCard";
 
 export default function UploadPostStory({
@@ -23,8 +23,19 @@ export default function UploadPostStory({
   const { postsLoading } = useSelector((state) => state.posts);
   const [bodyText, setBodyText] = useState("");
   const [images, setImages] = useState([]);
+  const [isCompressing, setIsCompressing] = useState(false);
   const MAX_IMAGES = 9;
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB per image
+  const MAX_VIDEO_SIZE = 30 * 1024 * 1024; // 30MB per video
+  const MAX_TOTAL_MEDIA_SIZE = 30 * 1024 * 1024; // 30MB total allowed media payload
   const linkData = getLinkPreview(bodyText);
+
+  const currentTotalBytes = images.reduce(
+    (sum, img) => sum + (img.fileObject?.size || 0),
+    0
+  );
+  const currentTotalMB = (currentTotalBytes / (1024 * 1024)).toFixed(1);
+  const isOverSizeLimit = currentTotalBytes > MAX_TOTAL_MEDIA_SIZE;
 
   const handleCloseModal = () => {
     images.forEach((img) => {
@@ -42,7 +53,7 @@ export default function UploadPostStory({
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
@@ -57,27 +68,6 @@ export default function UploadPostStory({
       return;
     }
 
-    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-    const MAX_VIDEO_SIZE = 30 * 1024 * 1024; // 30MB
-
-    const oversizedFiles = files.filter((f) => {
-      if (f.type.startsWith("video/")) {
-        return f.size > MAX_VIDEO_SIZE;
-      }
-      return f.size > MAX_IMAGE_SIZE;
-    });
-
-    if (oversizedFiles.length > 0) {
-      const hasVideo = oversizedFiles.some((f) => f.type.startsWith("video/"));
-      if (hasVideo) {
-        ErrorToast("Video size exceeds the 30MB limit!");
-      } else {
-        ErrorToast("Image size exceeds the 10MB limit!");
-      }
-      e.target.value = "";
-      return;
-    }
-
     const remainingSlots = MAX_IMAGES - images.length;
     if (remainingSlots <= 0) {
       ErrorToast(`Maximum ${MAX_IMAGES} media allowed!`);
@@ -85,9 +75,67 @@ export default function UploadPostStory({
       return;
     }
 
-    const filesToAdd = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      ErrorToast(
+        `You can only add ${remainingSlots} more media item${remainingSlots > 1 ? "s" : ""}. Maximum is ${MAX_IMAGES}.`
+      );
+      e.target.value = "";
+      return;
+    }
 
-    const newMediaItems = filesToAdd.map((file) => ({
+    // Check individual video limit (30MB)
+    const oversizedVideos = files.filter(
+      (f) => f.type.startsWith("video/") && f.size > MAX_VIDEO_SIZE
+    );
+    if (oversizedVideos.length > 0) {
+      ErrorToast("Video size exceeds the 30MB limit!");
+      e.target.value = "";
+      return;
+    }
+
+    // Auto-compress large images client-side
+    setIsCompressing(true);
+    let processedFiles = [];
+    try {
+      processedFiles = await Promise.all(
+        files.map(async (file) => {
+          if (file.type.startsWith("image/")) {
+            return await compressImageFile(file);
+          }
+          return file;
+        })
+      );
+    } catch (err) {
+      console.error("Image compression error:", err);
+      processedFiles = files;
+    } finally {
+      setIsCompressing(false);
+    }
+
+    // Check individual image size (after compression, must not exceed 10MB)
+    const oversizedImages = processedFiles.filter(
+      (f) => f.type.startsWith("image/") && f.size > MAX_IMAGE_SIZE
+    );
+    if (oversizedImages.length > 0) {
+      ErrorToast("Individual image size exceeds the 10MB limit!");
+      e.target.value = "";
+      return;
+    }
+
+    // Check total media payload against 30MB limit
+    const incomingBatchSize = processedFiles.reduce((sum, f) => sum + f.size, 0);
+    const combinedTotalSize = currentTotalBytes + incomingBatchSize;
+
+    if (combinedTotalSize > MAX_TOTAL_MEDIA_SIZE) {
+      const combinedMB = (combinedTotalSize / (1024 * 1024)).toFixed(1);
+      ErrorToast(
+        `Total media size exceeds the 30MB limit (${combinedMB}MB selected). Allowed total media size is 30MB.`
+      );
+      e.target.value = "";
+      return;
+    }
+
+    const newMediaItems = processedFiles.map((file) => ({
       id: Date.now() + Math.random(),
       url: URL.createObjectURL(file),
       fileObject: file,
@@ -115,6 +163,23 @@ export default function UploadPostStory({
 
     if (!selectedPages || selectedPages.length === 0) {
       ErrorToast("No page selected!");
+      return;
+    }
+
+    if (images.length > MAX_IMAGES) {
+      ErrorToast(`Maximum ${MAX_IMAGES} media allowed!`);
+      return;
+    }
+
+    const totalMediaSize = images.reduce(
+      (sum, img) => sum + (img.fileObject?.size || 0),
+      0
+    );
+    if (totalMediaSize > MAX_TOTAL_MEDIA_SIZE) {
+      const totalMB = (totalMediaSize / (1024 * 1024)).toFixed(1);
+      ErrorToast(
+        `Total media size (${totalMB}MB) exceeds the 30MB limit! Please remove some files to proceed.`
+      );
       return;
     }
 
@@ -159,12 +224,19 @@ export default function UploadPostStory({
       handleCloseModal();
     } catch (err) {
       console.error("Post creation error:", err);
-      const errorMessage =
-        (typeof err === "string" && err) ||
-        err?.response?.data?.message ||
-        err?.data?.message ||
-        err?.message ||
-        "Failed to create post";
+      const isPayloadTooLarge =
+        err?.response?.status === 413 ||
+        err?.status === 413 ||
+        (typeof err === "string" && err.toLowerCase().includes("payload too large")) ||
+        (typeof err === "string" && err.toLowerCase().includes("size exceeds"));
+
+      const errorMessage = isPayloadTooLarge
+        ? "Total media size exceeds the 30MB server limit. Please reduce the number or size of files."
+        : (typeof err === "string" && err) ||
+          err?.response?.data?.message ||
+          err?.data?.message ||
+          err?.message ||
+          "Failed to create post";
       ErrorToast(errorMessage);
     }
   };
@@ -263,15 +335,26 @@ export default function UploadPostStory({
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-500 mt-2">
-                    {images.length}/{MAX_IMAGES} media uploaded (Max: 10MB image, 30MB video)
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-xs mt-2">
+                    <span
+                      className={
+                        isOverSizeLimit
+                          ? "text-red-600 font-semibold"
+                          : "text-gray-600 font-medium"
+                      }
+                    >
+                      {images.length}/{MAX_IMAGES} media ({currentTotalMB}MB / 30MB total)
+                    </span>
+                    <span className="text-gray-400">
+                      (Max: 10MB/image, 30MB total)
+                    </span>
+                  </div>
                 </div>
 
                 {/* CTA */}
                 <Button
                   onClick={handlePostNow}
-                  disabled={postsLoading}
+                  disabled={postsLoading || isCompressing}
                   className="w-full flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   size="lg"
                   variant="orange"

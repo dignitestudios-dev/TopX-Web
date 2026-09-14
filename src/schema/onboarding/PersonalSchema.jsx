@@ -36,7 +36,18 @@ export const PersonalSchema = Yup.object().shape({
     .transform((curr, orig) => (orig === "" || orig === null || orig === undefined ? null : curr))
     .typeError("Please select a valid date of birth.")
     .required("Please select your date of birth.")
-    .max(new Date(), "Future dates are not allowed."),
+    .test("min-age", "You must be at least 13 years old to create an account.", (value) => {
+      if (!value) return false;
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - 13);
+      return value <= cutoff;
+    })
+    .test("valid-age", "Please enter a valid date of birth.", (value) => {
+      if (!value) return false;
+      const minDate = new Date();
+      minDate.setFullYear(minDate.getFullYear() - 120);
+      return value >= minDate;
+    }),
 
   gender: Yup.string().required("Please select your gender."),
 
@@ -47,22 +58,14 @@ export const PersonalSchema = Yup.object().shape({
   }),
 
   profileImage: Yup.mixed()
-    .test(
-      "required",
-      "Please upload a profile picture.",
-      (value) => {
-        if (!value) return false;
-        if (typeof value === "string") return value.trim().length > 0;
-        if (value instanceof File) return true;
-        return false;
-      }
-    )
+    .nullable()
+    .optional()
     .test(
       "fileType",
       "Only JPG, JPEG, PNG, or WEBP image formats are supported. SVG and GIF files are not allowed.",
       (value) => {
-        if (!value) return false;
-        if (typeof value === "string") return true; // emoji URL
+        if (!value) return true;
+        if (typeof value === "string") return true; // emoji URL or empty
         if (value instanceof File) {
           const fileName = (value.name || "").toLowerCase();
           const fileType = (value.type || "").toLowerCase();

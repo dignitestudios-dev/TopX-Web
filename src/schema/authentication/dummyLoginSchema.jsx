@@ -56,6 +56,17 @@ export const changeDOBGenderSchema = Yup.object({
   // NOTE: This must match the form field name (`dob`) used in `DOBGender.jsx`
   dob: Yup.date()
     .required("Please select your date of birth.")
-    .max(new Date(), "Future dates are not allowed."),
+    .test("min-age", "You must be at least 13 years old.", (value) => {
+      if (!value) return false;
+      const cutoff = new Date();
+      cutoff.setFullYear(cutoff.getFullYear() - 13);
+      return value <= cutoff;
+    })
+    .test("valid-age", "Please enter a valid date of birth.", (value) => {
+      if (!value) return false;
+      const minDate = new Date();
+      minDate.setFullYear(minDate.getFullYear() - 120);
+      return value >= minDate;
+    }),
   gender: Yup.string().required("Please select your gender."),
 });

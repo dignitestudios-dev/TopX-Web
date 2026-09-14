@@ -479,7 +479,7 @@ export default function LiveChat() {
         )}
 
         {/* Input Footer */}
-        <div className="bg-white border-t p-6">
+        <div className="bg-white border-t p-4 sm:p-6 relative z-30">
           {uploading && (
             <p className="text-xs text-orange-500 mb-2 animate-pulse">
               Uploading media...
@@ -517,7 +517,7 @@ export default function LiveChat() {
             <button
               onClick={handleSendText}
               disabled={!message.trim() || uploading}
-              className="bg-orange-500 text-white p-3 rounded-xl disabled:bg-gray-200"
+              className="bg-orange-500 text-white p-3 rounded-xl disabled:bg-gray-200 flex-shrink-0 cursor-pointer hover:bg-orange-600 transition-colors"
             >
               <Send size={20} />
             </button>

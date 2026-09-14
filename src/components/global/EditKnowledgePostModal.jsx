@@ -7,6 +7,7 @@ import {
   getKnowledgePostDetail,
 } from "../../redux/slices/knowledgepost.slice";
 import { ErrorToast, SuccessToast } from "./Toaster";
+import { compressImageFile } from "../../lib/helpers";
 
 const EditKnowledgePostModal = ({
   post,
@@ -95,7 +96,7 @@ const EditKnowledgePostModal = ({
     return fontMap[fontFamily] || "font-sans";
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -105,16 +106,23 @@ const EditKnowledgePostModal = ({
       return;
     }
 
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB limit
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit
     if (file.size > MAX_SIZE) {
       ErrorToast(
-        "Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.",
+        "Image size exceeds the 10MB limit. Please upload an image smaller than 10MB.",
       );
       e.target.value = "";
       return;
     }
 
-    setImageFile(file);
+    let processedFile = file;
+    try {
+      processedFile = await compressImageFile(file);
+    } catch (err) {
+      console.error("Compression error:", err);
+    }
+
+    setImageFile(processedFile);
     setBackgroundType("upload");
     setSelectedBg(null);
 
@@ -122,7 +130,7 @@ const EditKnowledgePostModal = ({
     reader.onload = (event) => {
       setImagePreview(event.target.result);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(processedFile);
   };
 
   const handleSave = async () => {
@@ -133,9 +141,9 @@ const EditKnowledgePostModal = ({
       return;
     }
 
-    if (imageFile && imageFile.size > 5 * 1024 * 1024) {
+    if (imageFile && imageFile.size > 10 * 1024 * 1024) {
       ErrorToast(
-        "Image size exceeds the 5MB limit. Please upload an image smaller than 5MB.",
+        "Image size exceeds the 10MB limit. Please upload an image smaller than 10MB.",
       );
       return;
     }
@@ -281,7 +289,7 @@ const EditKnowledgePostModal = ({
                         {imagePreview ? "Change Image" : "Upload Image"}
                       </span>
                       <span className="text-xs text-gray-500 block mt-1">
-                        PNG, JPG up to 5MB
+                        PNG, JPG up to 10MB
                       </span>
                     </div>
                     <input
