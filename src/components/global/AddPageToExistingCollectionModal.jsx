@@ -101,7 +101,9 @@ export default function AddPageToExistingCollectionModal({
 
   const filteredPages =
     recommendationPages?.filter((page) =>
-      (page.name || "").toLowerCase().includes(search.toLowerCase())
+      (page?.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (page?.topic || "").toLowerCase().includes(search.toLowerCase()) ||
+      (page?.ownerName || "").toLowerCase().includes(search.toLowerCase())
     ) || [];
 
   const handleSave = async () => {
@@ -196,9 +198,8 @@ export default function AddPageToExistingCollectionModal({
                 )}
                 <ChevronDown
                   size={18}
-                  className={`text-gray-500 transition-transform ${
-                    isDropdownOpen ? "rotate-180" : ""
-                  }`}
+                  className={`text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
@@ -216,11 +217,10 @@ export default function AddPageToExistingCollectionModal({
                             }
                             setIsDropdownOpen(false);
                           }}
-                          className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${
-                            isSelected
-                              ? "bg-orange-50 text-orange-700"
-                              : "hover:bg-gray-100 text-gray-800"
-                          }`}
+                          className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${isSelected
+                            ? "bg-orange-50 text-orange-700"
+                            : "hover:bg-gray-100 text-gray-800"
+                            }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
                             <Avatar
@@ -293,13 +293,12 @@ export default function AddPageToExistingCollectionModal({
                         toggleSelectPage(page._id);
                       }
                     }}
-                    className={`flex items-center justify-between p-2.5 border rounded-xl transition-all ${
-                      isAlreadyInCollection
-                        ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
-                        : isSelected
+                    className={`flex items-center justify-between p-2.5 border rounded-xl transition-all ${isAlreadyInCollection
+                      ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
+                      : isSelected
                         ? "border-orange-500 bg-orange-50/50 cursor-pointer"
                         : "border-gray-200 hover:bg-gray-50 cursor-pointer"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar
@@ -319,11 +318,10 @@ export default function AddPageToExistingCollectionModal({
                             {page.name}
                           </p>
                           <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${
-                              isPrivate
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            }`}
+                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${isPrivate
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}
                           >
                             {isPrivate ? (
                               <>
@@ -344,20 +342,19 @@ export default function AddPageToExistingCollectionModal({
                           </p>
                         ) : page.topic ? (
                           <p className="text-xs text-gray-400 truncate">
-                            {page.topic}
+                            {page.topic} {' - '} {page?.ownerName}
                           </p>
                         ) : null}
                       </div>
                     </div>
 
                     <div
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ml-2 ${
-                        isAlreadyInCollection
-                          ? "border-gray-300 bg-gray-200 text-gray-500"
-                          : isSelected
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ml-2 ${isAlreadyInCollection
+                        ? "border-gray-300 bg-gray-200 text-gray-500"
+                        : isSelected
                           ? "bg-orange-500 border-orange-500 text-white"
                           : "border-gray-300 bg-white"
-                      }`}
+                        }`}
                     >
                       {(isSelected || isAlreadyInCollection) && <Check size={14} />}
                     </div>

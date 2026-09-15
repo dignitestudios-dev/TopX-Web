@@ -194,6 +194,12 @@ console.log(pageDetail,"pageDetail==>")
       ? `${pageOwnerName}'s ${page.name}`
       : page?.name || pageOwnerName;
 
+  const pageTopic =
+    (typeof page?.topic === "object" ? page?.topic?.name : page?.topic) ||
+    (typeof pageDetail?.topic === "object" ? pageDetail?.topic?.name : pageDetail?.topic) ||
+    page?.interest ||
+    pageDetail?.interest;
+
   // Fetch page details and stories on mount
   useEffect(() => {
     if (pageId) {
@@ -1060,7 +1066,13 @@ console.log(pageDetail,"pageDetail==>")
                       : page?.about}
                   </p>
 
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {pageTopic && (
+                      <span className="bg-orange-50 text-[#DE4B12] border border-orange-200 text-xs font-semibold px-3 py-0.5 rounded-full shadow-xs inline-flex items-center gap-1">
+                        <span className="text-gray-400 font-normal">Topic:</span>
+                        <span>{pageTopic}</span>
+                      </span>
+                    )}
                     <span className="bg-orange-50 text-orange-600 border border-orange-200 text-xs font-semibold px-3 py-0.5 rounded-full shadow-xs">
                       {page?.postsCount ?? pageDetail?.postsCount ?? (Array.isArray(page?.posts) ? page.posts.length : (Array.isArray(pagepost) ? pagepost.length : 0))} Posts
                     </span>

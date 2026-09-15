@@ -38,7 +38,7 @@ export default function ForgotPassword() {
                     SuccessToast(res.payload || "OTP sent successfully");
                     setEmail(values.email);
                     setOpenModal(true);
-                    setResendTimer(30); // Start 30 second timer
+                    setResendTimer(60); // Start 1 minute timer
                 } else {
                     ErrorToast(res.payload || "Failed to send OTP");
                 }
@@ -89,7 +89,7 @@ export default function ForgotPassword() {
 
         if (res.meta.requestStatus === "fulfilled") {
             SuccessToast("OTP resent successfully");
-            setResendTimer(30); // Reset timer to 30 seconds
+            setResendTimer(60); // Reset timer to 1 minute
         } else {
             ErrorToast(res.payload || "Failed to resend OTP");
         }

@@ -62,7 +62,7 @@ export default function VerifyAccount({
       SuccessToast(res.payload || "OTP sent to email successfully");
       setIsType("email");
       setIsModalOpen(true);
-      setResendTimer(30); // Start 30 second timer
+      setResendTimer(60); // Start 1 minute timer
     } else {
       ErrorToast(res.payload || "Unable to send email OTP");
     }
@@ -99,7 +99,7 @@ export default function VerifyAccount({
         SuccessToast(res.payload || "OTP sent to your phone successfully");
         setIsType("phone");
         setIsModalOpen(true);
-        setResendTimer(30); // Start 30 second timer
+        setResendTimer(60); // Start 1 minute timer
       } else {
         ErrorToast(res.payload || "Unable to send OTP. Please check your phone number.");
       }
@@ -116,7 +116,7 @@ export default function VerifyAccount({
       const res = await dispatch(sendEmailOTP());
       if (res.meta.requestStatus === "fulfilled") {
         SuccessToast(res.payload || "Email OTP sent again");
-        setResendTimer(30); // Reset timer to 30 seconds
+        setResendTimer(60); // Reset timer to 1 minute
       } else {
         ErrorToast(res.payload || "Unable to send email OTP");
       }
@@ -124,7 +124,7 @@ export default function VerifyAccount({
       const res = await dispatch(sendPhoneOTP({ phone: phoneNumber }));
       if (res.meta.requestStatus === "fulfilled") {
         SuccessToast(res.payload || "Phone OTP sent again");
-        setResendTimer(30); // Reset timer to 30 seconds
+        setResendTimer(60); // Reset timer to 1 minute
       } else {
         ErrorToast(res.payload || "Unable to send OTP");
       }

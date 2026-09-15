@@ -25,6 +25,7 @@ import {
 import { SuccessToast, ErrorToast } from "./Toaster";
 
 const MAX_KEYWORDS = 5;
+const MAX_INTERESTS = 5;
 
 const DEFAULT_SUGGESTED_KEYWORDS = [
   "League",
@@ -341,11 +342,15 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
   const toggleCategory = (cat) => {
     if (selectedCategories.includes(cat)) {
       if (selectedCategories.length === 1) {
-        ErrorToast("Please keep at least one target category selected.");
+        ErrorToast("Please keep at least one target interest selected.");
         return;
       }
       setSelectedCategories(selectedCategories.filter((c) => c !== cat));
     } else {
+      if (selectedCategories.length >= MAX_INTERESTS) {
+        ErrorToast(`You can only select up to ${MAX_INTERESTS} interests.`);
+        return;
+      }
       setSelectedCategories([...selectedCategories, cat]);
     }
   };
@@ -519,7 +524,17 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
   };
 
   const handleNext = () => {
-    if (step === 3) {
+    if (step === 2) {
+      if (selectedCategories.length === 0) {
+        ErrorToast("Please select at least one interest.");
+        return;
+      }
+      if (selectedCategories.length > MAX_INTERESTS) {
+        ErrorToast(`You can only select up to ${MAX_INTERESTS} interests.`);
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
       handleContinueWithLocation();
     } else if (step < 4) {
       setStep(step + 1);
@@ -686,10 +701,16 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
             <div className="space-y-3.5 animate-fadeIn">
               <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-700 font-medium">
-                  Select target interests matching page topics.
+                  Select target interests matching page topics (Max {MAX_INTERESTS}).
                 </p>
-                <span className="text-xs font-bold text-[#DE4B12] bg-orange-50 px-2.5 py-0.5 rounded-full">
-                  {selectedCategories.length} Selected
+                <span
+                  className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                    selectedCategories.length >= MAX_INTERESTS
+                      ? "text-red-600 bg-red-50"
+                      : "text-[#DE4B12] bg-orange-50"
+                  }`}
+                >
+                  {selectedCategories.length}/{MAX_INTERESTS} Selected
                 </span>
               </div>
 
@@ -724,15 +745,20 @@ export default function BoostPostModal({ isOpen, onClose, post, onBoostSuccess }
                 <div className="flex flex-wrap gap-2 pt-1 max-h-64 overflow-y-auto pr-1 custom-orange-scrollbar">
                   {filteredCategories.map((cat) => {
                     const isSelected = selectedCategories.includes(cat);
+                    const isMaxReached =
+                      !isSelected && selectedCategories.length >= MAX_INTERESTS;
                     return (
                       <button
                         key={cat}
                         type="button"
                         onClick={() => toggleCategory(cat)}
-                        className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer select-none ${
+                        disabled={isMaxReached}
+                        className={`px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-200 select-none ${
                           isSelected
-                            ? "bg-[#DE4B12] text-white shadow-sm shadow-orange-500/20 scale-[1.02]"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-[#DE4B12] text-white shadow-sm shadow-orange-500/20 scale-[1.02] cursor-pointer"
+                            : isMaxReached
+                            ? "bg-gray-100 text-gray-400 opacity-50 cursor-not-allowed"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer"
                         }`}
                       >
                         {cat}

@@ -141,6 +141,7 @@ export default function Profile() {
                               img={page.image}
                               title={page.name}
                               description={page.about}
+                              topic={page?.topic}
                               tags={page.keywords}
                               Follows={page.followersCount}
                               className="bg-white"

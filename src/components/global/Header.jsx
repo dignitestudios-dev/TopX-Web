@@ -145,16 +145,31 @@ const Header = () => {
         <div className="hidden md:flex flex-1 max-w-md pt-3">
           <div
             onClick={() => navigate("/search-items")}
-            className="relative w-full"
+            className="relative w-fit"
           >
-            <Search className="absolute left-3 top-3 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-3 text-gray-400 pointer-events-none" size={18} />
             <input
               type="text"
               placeholder="Search"
-              className="w-[22em] pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
+              className="w-[22em] pl-10 pr-9 py-2 bg-white border border-gray-200 rounded-[10px] text-sm focus:outline-none focus:bg-white focus:border-orange-500"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSearchQuery("");
+                  dispatch(resetSearch());
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
             {/* Optional: Show search results */}
             {globalSearch?.length > 0 && (
               <div className="absolute top-full left-0 w-full bg-white border border-gray-200 rounded-md mt-1 shadow-lg z-50">
@@ -332,14 +347,31 @@ const Header = () => {
           <div className="px-4 py-3 border-b border-gray-200">
             <div className="relative">
               <Search
-                className="absolute left-3 top-3 text-gray-400"
+                className="absolute left-3 top-3 text-gray-400 pointer-events-none"
                 size={18}
               />
               <input
                 type="text"
                 placeholder="Search"
-                className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-gray-200 rounded-full text-sm focus:outline-none focus:bg-white focus:border-orange-500"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-9 py-2 bg-gray-100 border border-gray-200 rounded-full text-sm focus:outline-none focus:bg-white focus:border-orange-500"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSearchQuery("");
+                    dispatch(resetSearch());
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200 transition-colors cursor-pointer"
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
           </div>
 

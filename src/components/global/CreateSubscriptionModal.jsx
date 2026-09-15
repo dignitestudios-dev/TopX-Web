@@ -24,7 +24,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [creating, setCreating] = useState(false);
   const [collectionName, setCollectionName] = useState("");
   const [selectedCollections, setSelectedCollections] = useState([]);
-  
+
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
@@ -185,7 +185,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
       const formData = new FormData();
       formData.append("name", collectionName.trim());
-      
+
       if (binaryFile instanceof File) {
         formData.append("image", binaryFile, binaryFile.name || "collection.png");
       }
@@ -236,9 +236,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   // Filter pages based on search
   const filteredPages =
     recommendationPages?.filter((col) =>
-      col.name?.toLowerCase().includes(search.toLowerCase()),
+      col.name?.toLowerCase().includes(search.toLowerCase()) ||
+      col.topic?.toLowerCase().includes(search.toLowerCase()) ||
+      col.ownerName?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
-console.log(filteredPages, "filteredPages");
+  console.log(filteredPages, "filteredPages");
   return (
     <>
       {/* Main Create Modal */}
@@ -386,11 +388,10 @@ console.log(filteredPages, "filteredPages");
                                         {col.name}
                                       </p>
                                       <span
-                                        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${
-                                          isPrivate
-                                            ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                        }`}
+                                        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isPrivate
+                                          ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                          }`}
                                       >
                                         {isPrivate ? (
                                           <>
@@ -407,18 +408,17 @@ console.log(filteredPages, "filteredPages");
                                     </div>
                                     {col.topic && (
                                       <p className="text-xs text-gray-400 truncate mt-0.5">
-                                        {col.topic}
+                                        {col.topic} {" - "} {col?.ownerName}
                                       </p>
                                     )}
                                   </div>
                                 </div>
 
                                 <div
-                                  className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${
-                                    selectedCollections.includes(col._id)
-                                      ? "bg-orange-500 border-orange-500 text-white"
-                                      : "border-gray-300 bg-white"
-                                  }`}
+                                  className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${selectedCollections.includes(col._id)
+                                    ? "bg-orange-500 border-orange-500 text-white"
+                                    : "border-gray-300 bg-white"
+                                    }`}
                                 >
                                   {selectedCollections.includes(col._id) && (
                                     <Check size={14} />
@@ -451,13 +451,12 @@ console.log(filteredPages, "filteredPages");
                   }
                   loading={isFinalSaving || addPageToCollectionLoading}
                   className={`w-full mt-5 py-3 rounded-xl text-white 
-                                    ${
-                                      selectedCollections.length === 0 ||
-                                      isFinalSaving ||
-                                      addPageToCollectionLoading
-                                        ? "bg-gray-400 cursor-not-allowed"
-                                        : "bg-orange-600 cursor-pointer hover:bg-orange-700"
-                                    }`}
+                                    ${selectedCollections.length === 0 ||
+                      isFinalSaving ||
+                      addPageToCollectionLoading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-orange-600 cursor-pointer hover:bg-orange-700"
+                    }`}
                 >
                   Save
                 </Button>

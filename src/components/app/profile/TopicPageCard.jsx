@@ -14,6 +14,7 @@ const TopicPageCard = ({
   onClick,
   pagetype,
   ownerName,
+  topic
 }) => {
   const baseClasses =
     `  rounded-[12px] border border-[0.8px] flex flex-col pt-5 pb-5 pl-3 pr-3 space-y-2  ${className}`;
@@ -65,6 +66,11 @@ const TopicPageCard = ({
         </div>
       </div>
       <p className="text-[14px] font-normal  text-[#000000]">{description.slice(0, 60)}...</p>
+      {topic && (
+        <span className="text-xs font-semibold text-[#DE4B12] bg-orange-50 px-2 py-0.5 rounded-full w-fit">
+          {typeof topic === "object" ? topic?.name : topic}
+        </span>
+      )}
       <div className="flex flex-wrap">
         {tags?.map((tag, i) => (
           <span

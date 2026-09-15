@@ -25,7 +25,7 @@ export default function DeleteAccount() {
   const { user } = useSelector((state) => state.auth);
 
   /* =========================
-     TIMER COUNTDOWN (20s)
+     TIMER COUNTDOWN (60s / 1 min)
      ========================= */
   useEffect(() => {
     if (resendTimer === 0) return;
@@ -48,7 +48,7 @@ export default function DeleteAccount() {
      ========================= */
   const handleSendOTP = () => {
     dispatch(sendEmailOTP());
-    setResendTimer(20); // 🔥 start cooldown on first send
+    setResendTimer(60); // 🔥 start cooldown on first send
   };
 
   /* =========================
@@ -61,7 +61,7 @@ export default function DeleteAccount() {
     }
 
     dispatch(sendEmailOTP());
-    setResendTimer(20); // 🔥 restart cooldown
+    setResendTimer(60); // 🔥 restart cooldown
   };
 
   /* =========================
@@ -133,6 +133,8 @@ const handleVerifyOTP = async (otp) => {
           isType="email"
           onVerify={handleVerifyOTP}     // ✅ verify & delete
           onResend={handleResendOTP}     // ✅ wrapped resend with timer
+          resendTimer={resendTimer}
+          setResendTimer={setResendTimer}
         />
 
         {/* SUCCESS MODAL */}

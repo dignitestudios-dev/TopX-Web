@@ -36,18 +36,34 @@ export default function VerificationModal({
 
     setValues(Array.from({ length }, () => ""));
 
-    setTimer(30); // Reset timer to 30 seconds
+    setTimer(60); // Reset timer to 1 minute
 
     setTimeout(() => {
       focusIndex(0);
-    }, 0)
+    }, 0);
   };
 
+  // Countdown for local timer only.
+  // If parent provides setResendTimer, parent should manage countdown.
+  useEffect(() => {
+    if (setResendTimer) return;
+    if (localTimer <= 0) return;
 
+    const intervalId = setInterval(() => {
+      setLocalTimer((prev) => Math.max(prev - 1, 0));
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [localTimer, setResendTimer]);
 
   useEffect(() => {
-    if (!isOpen) setValues(Array.from({ length }, () => ""));
-  }, [isOpen, length]);
+    if (!isOpen) {
+      setValues(Array.from({ length }, () => ""));
+      if (!setResendTimer) setLocalTimer(0);
+    } else {
+      if (!setResendTimer) setLocalTimer(60);
+    }
+  }, [isOpen, length, setResendTimer]);
 
   const code = useMemo(() => values.join("").trim(), [values]);
 

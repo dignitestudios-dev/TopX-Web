@@ -43,8 +43,13 @@ export default function VerificationModal({
   };
 
   useEffect(() => {
-    if (!isOpen) setValues(Array.from({ length }, () => ""));
-  }, [isOpen, length]);
+    if (!isOpen) {
+      setValues(Array.from({ length }, () => ""));
+      if (!setResendTimer) setLocalTimer(0);
+    } else {
+      if (!setResendTimer) setLocalTimer(60);
+    }
+  }, [isOpen, length, setResendTimer]);
 
   const code = useMemo(() => values.join("").trim(), [values]);
 
@@ -118,7 +123,7 @@ export default function VerificationModal({
     // Clear inputs so user can re-enter OTP
     setValues(Array.from({ length }, () => ""));
     // Reset timer (local or via parent)
-    setTimer(30);
+    setTimer(60);
     // Focus first input
     setTimeout(() => focusIndex(0), 0);
   };

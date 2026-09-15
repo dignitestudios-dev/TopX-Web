@@ -234,6 +234,7 @@ export default function OtherProfile() {
                             img={_?.image}
                             title={_.name}
                             description={_.about}
+                            topic={_?.topic}
                             tags={_.keywords}
                             Follows={_.followersCount}
                             className="bg-white"

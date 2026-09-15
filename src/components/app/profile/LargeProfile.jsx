@@ -151,6 +151,7 @@ export default function LargeProfile({
               <span>{userRecord.school}</span>
             </div>
           )}
+        
           <p className="text-[14px] font-[400] text-[#413b3b] pt-1">
             {userRecord.bio || "No Bio Available"}
           </p>
