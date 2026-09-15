@@ -49,7 +49,7 @@ export default function ActiveStoryModal({
 
     return mediaSource.map((m) => ({
       url: m.fileUrl,
-      type: m.type || (m.fileUrl?.match(/\.(mp4|webm|ogg)$/i) ? "video" : "image"),
+      type: m.type || (m.fileUrl?.match(/\.(mp4|webm|ogg|mov|m4v|mkv|avi|quicktime)$/i) ? "video" : "image"),
     }));
   }, [post?.media, post?.originalPost?.media]);
 

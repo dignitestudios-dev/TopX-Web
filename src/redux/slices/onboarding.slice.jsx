@@ -301,40 +301,40 @@ export const updateInterests = createAsyncThunk(
   }
 );
 
-export const getRecommendations = createAsyncThunk(
-  "onboarding/getRecommendations",
-  async ({ page = 1, limit = 10 }, thunkAPI) => {
-    try {
-      const token = Cookies.get("access_token");
-      if (!token) return thunkAPI.rejectWithValue("No access token found");
+  export const getRecommendations = createAsyncThunk(
+    "onboarding/getRecommendations",
+    async ({ page = 1, limit = 10, search = "" }, thunkAPI) => {
+      try {
+        const token = Cookies.get("access_token");
+        if (!token) return thunkAPI.rejectWithValue("No access token found");
 
-      const res = await axios.get(
-        `/pages/recommendations?page=${page}&limit=${limit}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await axios.get(
+          `/pages/recommendations?page=${page}&limit=${limit}&search=${search}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!res.data?.success) {
+          return thunkAPI.rejectWithValue(
+            res.data?.message || "Failed to fetch recommendations"
+          );
         }
-      );
 
-      if (!res.data?.success) {
+        return {
+          list: res.data.data, // array of recommended pages
+          pagination: res.data.pagination, // pagination object
+          message: res.data.message,
+        };
+      } catch (error) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to fetch recommendations"
+          error.response?.data?.message || "Failed to fetch recommendations"
         );
       }
-
-      return {
-        list: res.data.data, // array of recommended pages
-        pagination: res.data.pagination, // pagination object
-        message: res.data.message,
-      };
-    } catch (error) {
-      return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch recommendations"
-      );
     }
-  }
-);
+  );
 
 const onboardingSlice = createSlice({
   name: "onboarding",
@@ -402,7 +402,21 @@ const onboardingSlice = createSlice({
       })
       .addCase(getRecommendations.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.recommendations = action.payload.list;
+        const newItems = action.payload?.list || [];
+        if ((action.meta?.arg?.page || 1) > 1) {
+          const existingIds = new Set(
+            (state.recommendations || []).map((p) => String(p?._id || p?.id))
+          );
+          const uniqueNew = newItems.filter(
+            (p) => p && !existingIds.has(String(p._id || p.id))
+          );
+          state.recommendations = [
+            ...(state.recommendations || []),
+            ...uniqueNew,
+          ];
+        } else {
+          state.recommendations = newItems;
+        }
         state.recommendationPagination = action.payload.pagination;
         state.success = action.payload.message;
       })

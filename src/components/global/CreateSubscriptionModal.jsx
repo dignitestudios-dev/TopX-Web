@@ -10,7 +10,7 @@ import {
 } from "../../redux/slices/Subscription.slice";
 import Button from "../common/Button";
 import Avatar from "../common/Avatar";
-import { fetchOtherPages } from "../../redux/slices/pages.slice";
+import { getRecommendations } from "../../redux/slices/onboarding.slice";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
@@ -34,6 +34,9 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [selectedCollectionId, setSelectedCollectionId] = useState(null);
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
   const [isFinalSaving, setIsFinalSaving] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const dispatch = useDispatch();
 
   const resetModalState = () => {
@@ -48,12 +51,15 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     setShowSuccess(false);
     setIsCreatingCollection(false);
     setIsFinalSaving(false);
+    setCurrentPage(1);
+    setHasMore(true);
+    setIsFetchingMore(false);
   };
 
   useEffect(() => {
     if (isOpen) {
       resetModalState();
-      dispatch(fetchOtherPages({ page: 1, limit: 100 }));
+      dispatch(getRecommendations({ page: 1, limit: 20 }));
       dispatch(getMySubsctiptions({ page: 1, limit: 100 }));
     }
   }, [dispatch, isOpen]);
@@ -64,9 +70,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const { mySubscriptions, isLoading: addPageToCollectionLoading } = useSelector(
     (state) => state.subscriptions,
   );
-  const { recommendationPages, pagesLoading } = useSelector(
-    (state) => state.pages,
-  );
+  const {
+    recommendations,
+    isLoading: recommendationsLoading,
+    recommendationPagination,
+  } = useSelector((state) => state.onboarding);
 
   const handleCloseModal = () => {
     resetModalState();
@@ -235,11 +243,67 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
   // Filter pages based on search
   const filteredPages =
-    recommendationPages?.filter((col) =>
-      col.name?.toLowerCase().includes(search.toLowerCase()) ||
-      col.topic?.toLowerCase().includes(search.toLowerCase()) ||
-      col.ownerName?.toLowerCase().includes(search.toLowerCase()),
+    recommendations?.filter((col) =>
+      col?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      col?.topic?.toLowerCase().includes(search.toLowerCase()) ||
+      col?.ownerName?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
+
+  const handleScroll = (e) => {
+    const el = e.currentTarget;
+    if (recommendationsLoading || isFetchingMore || !hasMore || search.trim()) return;
+
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
+      const nextPage = currentPage + 1;
+      if (
+        recommendationPagination?.totalPages &&
+        recommendationPagination.totalPages > 1 &&
+        currentPage >= recommendationPagination.totalPages
+      ) {
+        setHasMore(false);
+        return;
+      }
+
+      setIsFetchingMore(true);
+      dispatch(getRecommendations({ page: nextPage, limit: 20 }))
+        .unwrap()
+        .then((res) => {
+          const newItems = res?.list || (Array.isArray(res) ? res : []);
+          if (!newItems || newItems.length === 0) {
+            setHasMore(false);
+          } else {
+            setCurrentPage(nextPage);
+            if (
+              res?.pagination?.totalPages &&
+              nextPage >= res.pagination.totalPages
+            ) {
+              setHasMore(false);
+            }
+          }
+        })
+        .catch(() => {
+          setHasMore(false);
+        })
+        .finally(() => {
+          setIsFetchingMore(false);
+        });
+    }
+  };
+  useEffect(() => {
+    if (!creating) return;
+
+    const timer = setTimeout(() => {
+      dispatch(
+        getRecommendations({
+          page: 1,
+          limit: 20,
+          search: search.trim(),
+        })
+      );
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search, creating, dispatch]);
   console.log(filteredPages, "filteredPages");
   return (
     <>
@@ -347,21 +411,24 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   />
                 </div>
                 {/* ================= EXISTING COLLECTIONS / PAGES ================= */}
-                <div className="space-y-4 max-h-[300px] overflow-y-auto mt-4 pr-2">
-                  {pagesLoading &&
+                <div
+                  onScroll={handleScroll}
+                  className="space-y-4 max-h-[300px] overflow-y-auto mt-4 pr-2"
+                >
+                  {recommendationsLoading && currentPage === 1 &&
                     [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
                   {/* Error */}
-                  {!pagesLoading && error && (
+                  {!(recommendationsLoading && currentPage === 1) && error && (
                     <p className="text-center text-red-500">{error}</p>
                   )}
 
                   {/* Data */}
-                  {!pagesLoading && (
+                  {!(recommendationsLoading && currentPage === 1) && (
                     <>
-                      {recommendationPages && recommendationPages.length > 0 ? (
-                        filteredPages.length > 0 ? (
-                          filteredPages.map((col) => {
+                      {recommendations && recommendations.length > 0 ? (
+                        recommendations.length > 0 ? (
+                          recommendations?.map((col) => {
                             const isPrivate =
                               col.pageType === "private" || col.isPrivate;
                             return (
@@ -385,7 +452,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <p className="font-medium text-gray-800 text-sm truncate max-w-[150px]">
-                                        {col.name}
+                                        {col?.ownerName}'s {col.name}
                                       </p>
                                       <span
                                         className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isPrivate
@@ -408,7 +475,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                                     </div>
                                     {col.topic && (
                                       <p className="text-xs text-gray-400 truncate mt-0.5">
-                                        {col.topic} {" - "} {col?.ownerName}
+                                        {col.topic}
                                       </p>
                                     )}
                                   </div>
@@ -438,6 +505,13 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                         </p>
                       )}
                     </>
+                  )}
+
+                  {isFetchingMore && (
+                    <div className="py-2.5 flex items-center justify-center gap-2 text-xs text-orange-600 font-medium bg-orange-50/50 rounded-xl">
+                      <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                      <span>Loading more pages...</span>
+                    </div>
                   )}
                 </div>
                 <Button

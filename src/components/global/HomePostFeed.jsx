@@ -91,8 +91,14 @@ export default function HomePostFeed({
   const fileInputRef = useRef(null);
   const postCardRef = useRef(null);
 
-  const isVideo = (url) => {
-    return /\.(mp4|webm|ogg)$/i.test(url);
+  const isVideo = (url, mediaObj) => {
+    if (mediaObj?.type === "video" || mediaObj?.fileType?.startsWith("video")) return true;
+    if (!url || typeof url !== "string") return false;
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    return (
+      /\.(mp4|webm|ogg|mov|m4v|mkv|avi|flv|wmv|quicktime|3gp|ts)$/i.test(cleanUrl) ||
+      cleanUrl.includes("video")
+    );
   };
 
   const [activeMedia, setActiveMedia] = useState(null);
@@ -128,9 +134,17 @@ export default function HomePostFeed({
 
     return () => observer.disconnect();
   }, [post?.isBoosted, post?.boostId, post?.boost, dispatch]);
-  const hasImages = Array.isArray(post.postimage) && post.postimage.length > 0;
-  const firstMedia = hasImages ? post.postimage[0] : null;
-  const firstMediaIsVideo = firstMedia ? isVideo(firstMedia) : false;
+
+  const mediaList =
+    Array.isArray(post.postimage) && post.postimage.length > 0
+      ? post.postimage
+      : Array.isArray(post.media) && post.media.length > 0
+        ? post.media.map((m) => m?.fileUrl || m?.url || m).filter(Boolean)
+        : [];
+  const hasImages = mediaList.length > 0;
+  const firstMedia = hasImages ? mediaList[0] : null;
+  const firstMediaObj = Array.isArray(post.media) && post.media.length > 0 ? post.media[0] : null;
+  const firstMediaIsVideo = firstMedia ? isVideo(firstMedia, firstMediaObj) : false;
   const isUnderReview = post?.isReported === true;
 
   const linkData = getLinkPreview(post?.text || post?.bodyText);
@@ -187,7 +201,7 @@ export default function HomePostFeed({
       ? currentLikesCount + 1
       : Math.max(currentLikesCount - 1, 0);
 
-  
+
     // Optimistic update - update UI immediately
     setLocalLikeState({
       isLiked: newIsLiked,
@@ -434,25 +448,24 @@ export default function HomePostFeed({
   return (
     <div
       ref={postCardRef}
-      className={`bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border flex flex-col transition-all ${
-        post?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
-      }`}
+      className={`bg-white relative min-h-[250px] rounded-2xl mb-4 shadow-sm border flex flex-col transition-all ${post?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
+        }`}
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100 gap-3">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="relative flex-shrink-0">
-           <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize overflow-hidden">
-  {post?.page?.image ? (
-    <img
-      src={post.page.image}
-      alt={post.user}
-      className="w-full h-full object-cover rounded-full"
-    />
-  ) : (
-    post?.user?.split(" ").map(w => w[0]).slice(0, 2).join("")
-  )}
-</div>
+            <div className="w-10 h-10 bg-amber-800 text-white flex justify-center items-center rounded-full capitalize overflow-hidden">
+              {post?.page?.image ? (
+                <img
+                  src={post.page.image}
+                  alt={post.user}
+                  className="w-full h-full object-cover rounded-full"
+                />
+              ) : (
+                post?.user?.split(" ").map(w => w[0]).slice(0, 2).join("")
+              )}
+            </div>
             {post.author.profilePicture ? (
               <img
                 src={post.author.profilePicture}
@@ -594,11 +607,15 @@ export default function HomePostFeed({
                   src={firstMedia}
                   className={`w-full rounded-2xl max-h-96 object-cover
     ${isUnderReview ? "blur-sm" : ""}`}
-                  muted
+                    
                   controls
                   playsInline
+                  preload="metadata"
                   onClick={(e) => e.stopPropagation()}
-                />
+                >
+                  <source src={firstMedia} type="video/mp4" />
+                  <source src={firstMedia} type="video/quicktime" />
+                </video>
               ) : (
                 <img
                   src={firstMedia}
@@ -609,9 +626,9 @@ export default function HomePostFeed({
               )}
 
               {/* Image count badge */}
-              {post.postimage.length > 1 && !isUnderReview && (
+              {mediaList.length > 1 && !isUnderReview && (
                 <div className="absolute top-[30px] right-[30px] bg-black bg-opacity-70 text-white px-2 py-1 rounded text-xs font-semibold">
-                  +{post.postimage.length}
+                  +{mediaList.length}
                 </div>
               )}
 
@@ -726,8 +743,8 @@ export default function HomePostFeed({
             >
               <Heart
                 className={`w-5 h-5 transition ${localLikeState.isLiked
-                    ? "fill-orange-500 text-orange-500"
-                    : "text-gray-600"
+                  ? "fill-orange-500 text-orange-500"
+                  : "text-gray-600"
                   }`}
               />
               <span
@@ -907,6 +924,7 @@ export default function HomePostFeed({
                             src={m?.fileUrl}
                             className="w-full h-32 object-cover"
                             controls
+
                           />
                         )}
 

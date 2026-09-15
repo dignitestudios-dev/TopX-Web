@@ -84,8 +84,12 @@ export default function TrendingPostCard({
 
   // Helper to check if media is video
   const isVideo = (url) => {
-    if (!url) return false;
-    return /\.(mp4|webm|ogg)$/i.test(url) || url.includes("video");
+    if (!url || typeof url !== "string") return false;
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    return (
+      /\.(mp4|webm|ogg|mov|m4v|mkv|avi|flv|wmv|quicktime|3gp|ts)$/i.test(cleanUrl) ||
+      cleanUrl.includes("video")
+    );
   };
 
 

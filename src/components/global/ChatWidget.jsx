@@ -81,11 +81,10 @@ const renderMessageWithLinks = (content, isMe = false) => {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className={`underline break-all transition font-medium ${
-                isMe
-                  ? "text-blue-100 hover:text-white"
-                  : "text-blue-600 hover:text-blue-800"
-              }`}
+              className={`underline break-all transition font-medium ${isMe
+                ? "text-blue-100 hover:text-white"
+                : "text-blue-600 hover:text-blue-800"
+                }`}
             >
               {cleanUrl}
             </a>
@@ -563,7 +562,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         (activeChat?.groupId === data.groupId || activeChat?._id === data.groupId)
       ) {
         dispatch(markChatAsRead({ chatId: data.groupId, userId: currentUserId }));
-        socket.joinGroup({ groupId: data.groupId, unreadCount: 0 }, () => {});
+        socket.joinGroup({ groupId: data.groupId, unreadCount: 0 }, () => { });
       } else if (!isMe) {
         playNotificationSound();
         const senderName =
@@ -795,7 +794,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     );
 
     if (chat.isGroup || groupId) {
-      socket?.joinGroup?.({ groupId: activeId, unreadCount: 0 }, () => {});
+      socket?.joinGroup?.({ groupId: activeId, unreadCount: 0 }, () => { });
       dispatch(
         fetchGroupChatHistory({
           groupId: activeId,
@@ -810,7 +809,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       if (chat.receiverInfo?._id) {
         socket?.requestIndividualChat?.(
           { receiverId: chat.receiverInfo._id },
-          () => {},
+          () => { },
         );
       }
       dispatch(
@@ -1343,8 +1342,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         <div
           ref={chatPopupRef}
           className={`fixed ${popupBottomClass} right-6 w-80 bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 transition-all ${open
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 translate-y-5 pointer-events-none"
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 translate-y-5 pointer-events-none"
             } z-40`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -1387,8 +1386,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 key={id}
                 onClick={() => setActiveTab(id)}
                 className={`flex-1 py-2 text-[14px] text-nowrap flex items-center justify-center gap-1.5 transition-colors ${activeTab === id
-                    ? "text-orange-500 border-b-2 border-orange-500 font-semibold"
-                    : "text-gray-500 hover:text-gray-700"
+                  ? "text-orange-500 border-b-2 border-orange-500 font-semibold"
+                  : "text-gray-500 hover:text-gray-700"
                   }`}
               >
                 <span>{label}</span>
@@ -1845,11 +1844,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                 openStoryViewer(msg.shared.contextId);
                               }}
                             >
-                              <img
-                                src={msg.shared.media}
-                                alt="Story"
-                                className="w-full h-40 object-cover rounded-lg"
-                              />
+                              {/\.(mp4|webm|ogg|mov|m4v|mkv|avi|quicktime)(\?.*)?$/i.test(msg.shared.media) ? (
+                                <video
+                                  src={msg.shared.media}
+                                  className="w-full h-40 object-cover rounded-lg pointer-events-none"
+                                  muted
+                                  autoPlay
+                                  preload="metadata"
+                                >
+                                  <source src={msg.shared.media} type="video/mp4" />
+                                  <source src={msg.shared.media} type="video/quicktime" />
+                                </video>
+                              ) : (
+                                <img
+                                  src={msg.shared.media}
+                                  alt="Story"
+                                  className="w-full h-40 object-cover rounded-lg"
+                                />
+                              )}
 
                               {/* Story badge */}
                               <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded font-medium">
@@ -1924,12 +1936,17 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
                             {msg.shared.media && (
                               <div className="rounded-lg overflow-hidden">
-                                {msg.shared.media.includes(".mp4") ? (
+                                {/\.(mp4|webm|ogg|mov|m4v|mkv|avi|quicktime)(\?.*)?$/i.test(msg.shared.media) ? (
                                   <video
                                     src={msg.shared.media}
                                     controls
+                                    playsInline
+                                    preload="metadata"
                                     className="w-full max-h-64 object-contain rounded-lg"
-                                  />
+                                  >
+                                    <source src={msg.shared.media} type="video/mp4" />
+                                    <source src={msg.shared.media} type="video/quicktime" />
+                                  </video>
                                 ) : (
                                   <img
                                     src={msg.shared.media}
@@ -1983,10 +2000,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         msg.mediaUrls.length > 0 &&
                         (() => {
                           const mediaCount = msg.mediaUrls.length;
+
                           if (mediaCount === 1) {
-                            return (
+                            const mediaUrl = msg.mediaUrls[0];
+
+                            const isVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(mediaUrl);
+
+                            return isVideo ? (
+                              <video
+                                src={mediaUrl}
+                                controls
+                                playsInline
+                                preload="metadata"
+                                className="w-full rounded mt-2 cursor-pointer"
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            ) : (
                               <img
-                                src={msg.mediaUrls[0]}
+                                src={mediaUrl}
                                 alt="Media"
                                 className="w-full rounded mt-2 cursor-pointer"
                                 onClick={() => {
@@ -1996,6 +2027,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                 }}
                               />
                             );
+
                           } else if (mediaCount === 2) {
                             return (
                               <div className="mt-2 grid grid-cols-2 gap-1">

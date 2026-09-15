@@ -6,7 +6,7 @@ import {
   createPageToCollections,
   getMySubsctiptions,
 } from "../../redux/slices/Subscription.slice";
-import { fetchOtherPages } from "../../redux/slices/pages.slice";
+import { getRecommendations } from "../../redux/slices/onboarding.slice";
 import Button from "../common/Button";
 import Avatar from "../common/Avatar";
 import { SuccessToast, ErrorToast } from "./Toaster";
@@ -24,16 +24,25 @@ export default function AddPageToExistingCollectionModal({
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+
 
   const { mySubscriptions } = useSelector((state) => state.subscriptions);
-  const { recommendationPages, pagesLoading } = useSelector(
-    (state) => state.pages
-  );
+  const {
+    recommendations,
+    isLoading: recommendationsLoading,
+    recommendationPagination,
+  } = useSelector((state) => state.onboarding);
 
   useEffect(() => {
     if (isOpen) {
+      setCurrentPage(1);
+      setHasMore(true);
+      setIsFetchingMore(false);
       dispatch(getMySubsctiptions({ page: 1, limit: 100 }));
-      dispatch(fetchOtherPages({ page: 1, limit: 100 }));
+      dispatch(getRecommendations({ page: 1, limit: 20, search }));
       setSelectedPages([]);
       setSearch("");
       setIsSaving(false);
@@ -100,12 +109,53 @@ export default function AddPageToExistingCollectionModal({
   };
 
   const filteredPages =
-    recommendationPages?.filter((page) =>
+    recommendations?.filter((page) =>
       (page?.name || "").toLowerCase().includes(search.toLowerCase()) ||
       (page?.topic || "").toLowerCase().includes(search.toLowerCase()) ||
       (page?.ownerName || "").toLowerCase().includes(search.toLowerCase())
     ) || [];
 
+  const handleScroll = (e) => {
+    const el = e.currentTarget;
+    if (recommendationsLoading || isFetchingMore || !hasMore || search.trim()) return;
+
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 60) {
+      const nextPage = currentPage + 1;
+      if (
+        recommendationPagination?.totalPages &&
+        recommendationPagination.totalPages > 1 &&
+        currentPage >= recommendationPagination.totalPages
+      ) {
+        setHasMore(false);
+        return;
+      }
+
+      setIsFetchingMore(true);
+      dispatch(getRecommendations({ page: nextPage, limit: 20 }))
+        .unwrap()
+        .then((res) => {
+          const newItems = res?.list || (Array.isArray(res) ? res : []);
+          if (!newItems || newItems.length === 0) {
+            setHasMore(false);
+          } else {
+            setCurrentPage(nextPage);
+            if (
+              res?.pagination?.totalPages &&
+              nextPage >= res.pagination.totalPages
+            ) {
+              setHasMore(false);
+            }
+          }
+        })
+        .catch(() => {
+          setHasMore(false);
+        })
+        .finally(() => {
+          setIsFetchingMore(false);
+        });
+    }
+  };
+  console.log(filteredPages, "filteredPages======")
   const handleSave = async () => {
     if (!selectedCollectionId) {
       ErrorToast("Please select a collection first.");
@@ -134,7 +184,24 @@ export default function AddPageToExistingCollectionModal({
       setIsSaving(false);
     }
   };
+  useEffect(() => {
+    if (!isOpen) return;
 
+    const timer = setTimeout(() => {
+      dispatch(
+        getRecommendations({
+          page: 1,
+          limit: 20,
+          search: search.trim(),
+        })
+      );
+
+      setCurrentPage(1);
+      setHasMore(true);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search, isOpen, dispatch]);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white w-full max-w-[440px] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -276,8 +343,11 @@ export default function AddPageToExistingCollectionModal({
           </div>
 
           {/* Pages List */}
-          <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
-            {pagesLoading ? (
+          <div
+            onScroll={handleScroll}
+            className="space-y-2 max-h-[260px] overflow-y-auto pr-1"
+          >
+            {recommendationsLoading && currentPage === 1 ? (
               [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
             ) : filteredPages.length > 0 ? (
               filteredPages.filter(Boolean).map((page) => {
@@ -315,7 +385,7 @@ export default function AddPageToExistingCollectionModal({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-gray-800 text-sm truncate">
-                            {page.name}
+                            {page?.ownerName ? `${page.ownerName}'s ` : ""}{page?.name}
                           </p>
                           <span
                             className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${isPrivate
@@ -342,7 +412,7 @@ export default function AddPageToExistingCollectionModal({
                           </p>
                         ) : page.topic ? (
                           <p className="text-xs text-gray-400 truncate">
-                            {page.topic} {' - '} {page?.ownerName}
+                            {page.topic}
                           </p>
                         ) : null}
                       </div>
@@ -364,6 +434,13 @@ export default function AddPageToExistingCollectionModal({
             ) : (
               <div className="text-center py-6 text-gray-400 text-sm">
                 No pages found matching "{search}"
+              </div>
+            )}
+
+            {isFetchingMore && (
+              <div className="py-2.5 flex items-center justify-center gap-2 text-xs text-orange-600 font-medium bg-orange-50/50 rounded-xl">
+                <div className="w-3.5 h-3.5 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                <span>Loading more pages...</span>
               </div>
             )}
           </div>

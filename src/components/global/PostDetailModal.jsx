@@ -10,31 +10,49 @@ export default function PostImageViewerModal({
 }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // ✅ ADD: media type helper
-  const isVideo = (url) => /\.(mp4|webm|ogg)$/i.test(url);
+  // ✅ Media type helper
+  const isVideo = (url, mediaObj) => {
+    if (mediaObj?.type === "video" || mediaObj?.fileType?.startsWith("video")) return true;
+    if (!url || typeof url !== "string") return false;
+    const cleanUrl = url.split("?")[0].split("#")[0].toLowerCase();
+    return (
+      /\.(mp4|webm|ogg|mov|m4v|mkv|avi|flv|wmv|quicktime|3gp|ts)$/i.test(cleanUrl) ||
+      cleanUrl.includes("video")
+    );
+  };
 
-  const images = React.useMemo(() => {
+  const mediaItems = React.useMemo(() => {
     if (!post) return [];
 
     if (Array.isArray(post)) {
-      return post.map((item) => item?.fileUrl || item?.url || item).filter(Boolean);
+      return post
+        .map((item) => {
+          const url = item?.fileUrl || item?.url || item;
+          return url ? { url, isVid: isVideo(url, item) } : null;
+        })
+        .filter(Boolean);
     }
 
     // Check both post.media (API response) and post.postimage (legacy)
     const mediaArray = post?.media || post?.postimage || [];
     if (Array.isArray(mediaArray) && mediaArray.length > 0) {
-      return mediaArray.map((item) => item?.fileUrl || item?.url || item).filter(Boolean);
+      return mediaArray
+        .map((item) => {
+          const url = item?.fileUrl || item?.url || item;
+          return url ? { url, isVid: isVideo(url, item) } : null;
+        })
+        .filter(Boolean);
     }
 
     if (post?.fileUrl) {
-      return [post.fileUrl];
+      return [{ url: post.fileUrl, isVid: isVideo(post.fileUrl, post) }];
     }
 
     return [];
   }, [post]);
 
-  console.log(post,"postpost")
-
+  const images = mediaItems.map((m) => m.url);
+  const currentMediaItem = mediaItems[currentImageIndex];
   const currentImage = images[currentImageIndex];
 
   useEffect(() => {
@@ -111,7 +129,7 @@ export default function PostImageViewerModal({
         {/* Media Container */}
         <div className="flex-1 flex items-center justify-center bg-black relative overflow-hidden min-h-[300px]">
           {/* ✅ REPLACE IMG WITH CONDITIONAL MEDIA */}
-          {isVideo(currentImage) ? (
+          {currentMediaItem?.isVid || isVideo(currentImage, currentMediaItem) ? (
             <video
               src={currentImage}
               controls
@@ -120,7 +138,10 @@ export default function PostImageViewerModal({
               preload="metadata"
               onClick={(e) => e.stopPropagation()}   // ✅ MOST IMPORTANT
               className="max-w-full max-h-full w-full h-full object-contain rounded-lg"
-            />
+            >
+              <source src={currentImage} type="video/mp4" />
+              <source src={currentImage} type="video/quicktime" />
+            </video>
 
 
           ) : (

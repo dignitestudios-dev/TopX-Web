@@ -98,14 +98,26 @@ const TrendingPagesGlobal = () => {
                   {/* Followers Images */}
                   {item.followersCount > 0 && item.followers && (
                     <div className="flex items-center -space-x-1 shrink-0">
-                      {item.followers.slice(0, 3).map((follower, index) => (
-                        <img
-                          key={index}
-                          src={follower || "https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg"} // Use follower image or default image if null
-                          alt={`Follower ${index + 1}`}
-                          className="w-[24px] h-[24px] rounded-full border border-white"
-                        />
-                      ))}
+                      {item.followers.slice(0, 3).map((follower, index) => {
+                        const profilePicture = follower?.profilePicture;
+                        const initial = follower?.name?.charAt(0)?.toUpperCase() || "?";
+
+                        return profilePicture ? (
+                          <img
+                            key={index}
+                            src={profilePicture}
+                            alt={`Follower ${index + 1}`}
+                            className="w-[24px] h-[24px] rounded-full border border-white object-cover"
+                          />
+                        ) : (
+                          <div
+                            key={index}
+                            className="w-[24px] h-[24px] rounded-full border border-white bg-gray-400 text-white flex items-center justify-center text-[11px] font-semibold"
+                          >
+                            {initial}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

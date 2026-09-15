@@ -9,6 +9,7 @@ const initialState = {
   myPages: [], // <-- list of pages from GET API
   recommendationPages: [], // <-- list of recommended pages
   pagination: null, // <-- pagination info
+  pagesLoadingMore: false,
   // NEW
   pageDetailLoading: false,
   pageDetail: null,
@@ -210,17 +211,43 @@ const pagesSlice = createSlice({
         state.pagesLoading = false;
         state.error = action.payload;
       })
-      .addCase(fetchOtherPages.pending, (state) => {
-        state.pagesLoading = true;
+      .addCase(fetchOtherPages.pending, (state, action) => {
+        if ((action.meta?.arg?.page || 1) > 1) {
+          state.pagesLoadingMore = true;
+        } else {
+          state.pagesLoading = true;
+        }
       })
       .addCase(fetchOtherPages.fulfilled, (state, action) => {
         state.pagesLoading = false;
-        state.recommendationPages = action.payload.data; // array of pages
-        state.pagination = action.payload.pagination;
+        state.pagesLoadingMore = false;
+        const newPages = Array.isArray(action.payload?.data)
+          ? action.payload.data
+          : Array.isArray(action.payload)
+          ? action.payload
+          : [];
+        const isNextPage = (action.meta?.arg?.page || 1) > 1;
+
+        if (isNextPage) {
+          const existingIds = new Set(
+            (state.recommendationPages || []).map((p) => String(p?._id || p?.id))
+          );
+          const uniqueNew = (newPages || []).filter(
+            (p) => p && !existingIds.has(String(p._id || p.id))
+          );
+          state.recommendationPages = [
+            ...(state.recommendationPages || []),
+            ...uniqueNew,
+          ];
+        } else {
+          state.recommendationPages = newPages;
+        }
+        state.pagination = action.payload?.pagination;
         state.success = true;
       })
       .addCase(fetchOtherPages.rejected, (state, action) => {
         state.pagesLoading = false;
+        state.pagesLoadingMore = false;
         state.error = action.payload;
       })
       // ******** DELETE PAGE ********
