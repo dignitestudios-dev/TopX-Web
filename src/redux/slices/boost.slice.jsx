@@ -117,7 +117,7 @@ export const createStripeCheckoutSession = createAsyncThunk(
       try {
         res = await axios.post("/boosts/stripe/checkout-session", { planId });
       } catch {
-        res = await axios.post("/api/boosts/stripe/checkout-session", { planId });
+        res = await axios.post("/boosts/stripe/checkout-session", { planId });
       }
       return res.data?.data;
     } catch (error) {
