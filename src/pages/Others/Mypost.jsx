@@ -286,6 +286,7 @@ export default function Mypost() {
             {Array.isArray(allPosts) && allPosts.length > 0 ? (
               allPosts.map((p) => {
                 const mappedPost = mapApiPostToUiPost(p);
+                console.log(mappedPost,"mappedPost==")
                 return (
                   <div key={mappedPost._id} className="mb-4">
                     <PostCard post={mappedPost} activeTab="feed" />

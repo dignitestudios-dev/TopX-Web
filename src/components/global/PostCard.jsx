@@ -28,7 +28,7 @@ import {
   elevatePost,
   demotePost,
 } from "../../redux/slices/posts.slice";
-import { recordImpression } from "../../redux/slices/boost.slice";
+import { recordImpression, fetchMyBoosts } from "../../redux/slices/boost.slice";
 import {
   getDeviceSessionId,
   hasRecordedImpression,
@@ -82,13 +82,22 @@ const PostCard = ({
     isLiked: false,
   },
   liked = {},
-  toggleLike = () => {},
+  toggleLike = () => { },
   activeTab = "feed",
 }) => {
   const [showComments, setShowComments] = useState(false);
   const { commentsCountByPostId } = useSelector(
     (state) => state.postsfeed || {},
   );
+  const { myBoosts } = useSelector((state) => state.boost || {});
+
+  // Backend sometimes doesn't populate boostId on post objects
+  // Derive it from myBoosts list by matching post ID
+  const resolvedBoostId =
+    post?.boostId ||
+    post?.boost?._id ||
+    myBoosts?.find((b) => b.post === post?._id || b.post?._id === post?._id)?._id;
+
   const postId = post._id || post.id;
   const displayCommentCount =
     commentsCountByPostId?.[postId] !== undefined
@@ -271,7 +280,7 @@ const PostCard = ({
   const linkData = getLinkPreview(post?.text || post?.bodyText || "");
   const images =
     post.postImages && post.postImages.length > 0 ? post.postImages : [];
-  
+
   // ✅ Combine video and images: video first, then images
   const allMedia = [];
   if (post.videoUrl) {
@@ -513,9 +522,10 @@ const PostCard = ({
     <>
       <div
         ref={postCardRef}
-        className={`bg-white rounded-lg shadow-sm overflow-hidden transition-all duration-300 ${
-          post?.isBoosted ? "border border-orange-200/90 ring-1 ring-orange-500/20" : ""
-        }`}
+        className={`bg-white rounded-lg shadow-sm overflow-visible transition-all duration-300 ${post?.isBoosted
+          ? "border border-orange-200/90 ring-1 ring-orange-500/20"
+          : ""
+          }`}
       >
         {/* Header */}
         <div className="p-4 flex items-start justify-between border-b border-gray-100 relative">
@@ -566,7 +576,9 @@ const PostCard = ({
                           className="w-4 h-4 rounded-full object-cover"
                         />
                       )}
-                      <Link to="/other-profile">
+                      <Link to="/other-profile" state={{
+                        pageId: post?.page?._id,
+                      }}>
                         <p className="text-xs text-gray-600">
                           {post.username} • {formatPostTime(post.time)}
                         </p>
@@ -579,23 +591,30 @@ const PostCard = ({
           </div>
 
           {/* More Options Button */}
-          <button
+          <div
             ref={buttonRef}
-            onClick={() => setShowpopup(!showpopup)}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors relative"
+            className="relative z-[100]"
           >
-            <MoreHorizontal className="w-5 h-5 text-black" />
+            <button
+              type="button"
+              onClick={() => setShowpopup((prev) => !prev)}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <MoreHorizontal className="w-5 h-5 text-black" />
+            </button>
 
             {/* Popup Menu */}
             {showpopup && (
               <div
                 ref={popupRef}
-                className="absolute right-0 top-10 bg-white border border-gray-200 rounded-lg shadow-lg py-2 w-[11em] z-50"
+                className="absolute right-0 top-10 w-[220px] bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-[9999]"
               >
-                {/* Edit sirf tab jab repost nahi hai */}
+                {/* Edit */}
                 {!post.sharedBy && (
                   <button
+                    type="button"
                     onClick={() => {
+                      setShowpopup(false);
                       setMoreOpenPostId(null);
                       openEditModal(post);
                     }}
@@ -605,7 +624,9 @@ const PostCard = ({
                   </button>
                 )}
 
+                {/* Boost Post */}
                 <button
+                  type="button"
                   onClick={() => {
                     setShowpopup(false);
                     setMoreOpenPostId(null);
@@ -617,9 +638,12 @@ const PostCard = ({
                   <span>Boost Post</span>
                 </button>
 
+                {/* Boost Analytics */}
                 {(post?.isBoosted || post?.boostId || post?.boost) && (
                   <button
-                    onClick={() => {
+                    type="button"
+                    onClick={async () => {
+                      await dispatch(fetchMyBoosts({ page: 1, limit: 50 }));
                       setShowpopup(false);
                       setMoreOpenPostId(null);
                       setAnalyticsModalOpen(true);
@@ -631,8 +655,11 @@ const PostCard = ({
                   </button>
                 )}
 
+                {/* Elevate */}
                 <button
+                  type="button"
                   onClick={() => {
+                    setShowpopup(false);
                     setMoreOpenPostId(null);
                     handleElevateToggle(post);
                   }}
@@ -642,8 +669,11 @@ const PostCard = ({
                   {post?.isElevated ? "Unelevate Post" : "Elevate Post"}
                 </button>
 
+                {/* Delete */}
                 <button
+                  type="button"
                   onClick={() => {
+                    setShowpopup(false);
                     setMoreOpenPostId(null);
                     handleDeletePost(post._id);
                   }}
@@ -653,7 +683,7 @@ const PostCard = ({
                 </button>
               </div>
             )}
-          </button>
+          </div>
         </div>
 
         {/* Media Section - Video first, then images (carousel) */}
@@ -797,20 +827,18 @@ const PostCard = ({
               <button
                 onClick={handleLikeToggle}
                 disabled={likeLoading}
-                className={`flex items-center gap-2 rounded-full p-1 transition-all ${
-                  likeLoading
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:text-orange-600 bg-orange-400/10"
-                }`}
+                className={`flex items-center gap-2 rounded-full p-1 transition-all ${likeLoading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:text-orange-600 bg-orange-400/10"
+                  }`}
               >
                 <Heart
-                  className={`w-5 h-5 transition-all ${
-                    isPostLiked
-                      ? "fill-orange-500 text-orange-500"
-                      : likeLoading
-                        ? "text-gray-400"
-                        : "text-orange-500"
-                  }`}
+                  className={`w-5 h-5 transition-all ${isPostLiked
+                    ? "fill-orange-500 text-orange-500"
+                    : likeLoading
+                      ? "text-gray-400"
+                      : "text-orange-500"
+                    }`}
                 />
                 <span className="text-orange-500">
                   {post.stats?.likes || 0}
@@ -953,8 +981,8 @@ const PostCard = ({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={post} onClose={setSelectedOption} />
@@ -1028,9 +1056,8 @@ const PostCard = ({
                   onChange={() => setElevateDuration("24h")}
                 />
                 <span
-                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                    elevateDuration === "24h" ? "bg-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "24h" ? "bg-orange-500" : ""
+                    }`}
                   onClick={() => setElevateDuration("24h")}
                 />
                 <label htmlFor="day" className="text-sm">
@@ -1049,9 +1076,8 @@ const PostCard = ({
                   onChange={() => setElevateDuration("7d")}
                 />
                 <span
-                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                    elevateDuration === "7d" ? "bg-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "7d" ? "bg-orange-500" : ""
+                    }`}
                   onClick={() => setElevateDuration("7d")}
                 />
                 <label htmlFor="week" className="text-sm">
@@ -1070,9 +1096,8 @@ const PostCard = ({
                   onChange={() => setElevateDuration("1m")}
                 />
                 <span
-                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                    elevateDuration === "1m" ? "bg-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "1m" ? "bg-orange-500" : ""
+                    }`}
                   onClick={() => setElevateDuration("1m")}
                 />
                 <label htmlFor="month" className="text-sm">
@@ -1091,9 +1116,8 @@ const PostCard = ({
                   onChange={() => setElevateDuration("manual")}
                 />
                 <span
-                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                    elevateDuration === "manual" ? "bg-orange-500" : ""
-                  }`}
+                  className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "manual" ? "bg-orange-500" : ""
+                    }`}
                   onClick={() => setElevateDuration("manual")}
                 />
                 <label htmlFor="until-change" className="text-sm">
@@ -1293,7 +1317,9 @@ const PostCard = ({
         <BoostAnalyticsModal
           isOpen={analyticsModalOpen}
           onClose={() => setAnalyticsModalOpen(false)}
-          boostId={post?.boostId || post?.boost?._id}
+          boostId={resolvedBoostId}
+          postId={post?._id}
+          post={post}
         />
       )}
     </>

@@ -109,7 +109,7 @@ const MySubscription = () => {
                     </div>
                     <p className="text-xs text-gray-500 font-medium">
                       <span className="text-black font-[600]">
-                        {item.pages.filter((p) => p).length}{" "}
+                        {item?.pagesCount}{" "}
                         {/* number of pages */}
                       </span>{" "}
                       Page{item.pages.filter((p) => p).length > 1 ? "s" : ""}

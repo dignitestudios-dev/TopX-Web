@@ -21,6 +21,7 @@ export default function AddPageToExistingCollectionModal({
     initialCollection?._id || ""
   );
   const [selectedPages, setSelectedPages] = useState([]);
+  const [selectedPagesData, setSelectedPagesData] = useState([]); // full page objects
   const [search, setSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -44,6 +45,7 @@ export default function AddPageToExistingCollectionModal({
       dispatch(getMySubsctiptions({ page: 1, limit: 100 }));
       dispatch(getRecommendations({ page: 1, limit: 20, search }));
       setSelectedPages([]);
+      setSelectedPagesData([]);
       setSearch("");
       setIsSaving(false);
       setIsDropdownOpen(false);
@@ -70,6 +72,7 @@ export default function AddPageToExistingCollectionModal({
 
   useEffect(() => {
     setSelectedPages([]);
+    setSelectedPagesData([]);
   }, [selectedCollectionId]);
 
   const isPageAlreadyInCollection = (pageId) => {
@@ -98,13 +101,15 @@ export default function AddPageToExistingCollectionModal({
     return false;
   };
 
-  const toggleSelectPage = (pageId) => {
+  const toggleSelectPage = (pageId, pageData) => {
     if (isPageAlreadyInCollection(pageId)) return;
 
     if (selectedPages.includes(pageId)) {
       setSelectedPages(selectedPages.filter((id) => id !== pageId));
+      setSelectedPagesData(selectedPagesData.filter((p) => p._id !== pageId));
     } else {
       setSelectedPages([...selectedPages, pageId]);
+      if (pageData) setSelectedPagesData([...selectedPagesData, pageData]);
     }
   };
 
@@ -114,6 +119,14 @@ export default function AddPageToExistingCollectionModal({
       (page?.topic || "").toLowerCase().includes(search.toLowerCase()) ||
       (page?.ownerName || "").toLowerCase().includes(search.toLowerCase())
     ) || [];
+
+  // Already in collection: shown separately at top, removed from main list
+  const alreadyAddedItems = filteredPages.filter((p) => p && isPageAlreadyInCollection(p._id));
+  // Selected items: use stored data so they stay on top even after search is cleared
+  const selectedItems = selectedPagesData.filter((p) => p && selectedPages.includes(p._id));
+  // Unselected items: exclude already-in-collection AND already-selected
+  const unselectedItems = filteredPages.filter((p) => p && !selectedPages.includes(p._id) && !isPageAlreadyInCollection(p._id));
+  const sortedPages = [...selectedItems, ...unselectedItems];
 
   const handleScroll = (e) => {
     const el = e.currentTarget;
@@ -337,8 +350,16 @@ export default function AddPageToExistingCollectionModal({
                 placeholder="Search pages by name..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-gray-50 focus:bg-white transition-all"
+                className="w-full pl-9 pr-8 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-gray-50 focus:bg-white transition-all"
               />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -347,94 +368,109 @@ export default function AddPageToExistingCollectionModal({
             onScroll={handleScroll}
             className="space-y-2 max-h-[260px] overflow-y-auto pr-1"
           >
-            {recommendationsLoading && currentPage === 1 ? (
+            {(recommendationsLoading && currentPage === 1 && (!recommendations || recommendations.length === 0)) ? (
               [...Array(3)].map((_, i) => <SkeletonCard key={i} />)
-            ) : filteredPages.length > 0 ? (
-              filteredPages.filter(Boolean).map((page) => {
-                const isSelected = selectedPages.includes(page?._id);
-                const isAlreadyInCollection = isPageAlreadyInCollection(page?._id);
-                const isPrivate = page.pageType === "private" || page.isPrivate;
-
-                return (
-                  <div
-                    key={page?._id}
-                    onClick={() => {
-                      if (!isAlreadyInCollection && page?._id) {
-                        toggleSelectPage(page._id);
-                      }
-                    }}
-                    className={`flex items-center justify-between p-2.5 border rounded-xl transition-all ${isAlreadyInCollection
-                      ? "border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed"
-                      : isSelected
-                        ? "border-orange-500 bg-orange-50/50 cursor-pointer"
-                        : "border-gray-200 hover:bg-gray-50 cursor-pointer"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar
-                        src={
-                          page.image ||
-                          page.user?.profilePicture ||
-                          page.author?.profilePicture ||
-                          page.userData?.profilePicture
-                        }
-                        alt={page.name}
-                        size="md"
-                        className="w-9 h-9 rounded-full object-cover flex-shrink-0"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-gray-800 text-sm truncate">
-                            {page?.ownerName ? `${page.ownerName}'s ` : ""}{page?.name}
-                          </p>
-                          <span
-                            className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${isPrivate
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              }`}
-                          >
-                            {isPrivate ? (
-                              <>
-                                <Lock size={9} />
-                                <span>Private</span>
-                              </>
-                            ) : (
-                              <>
-                                <Globe size={9} />
-                                <span>Public</span>
-                              </>
-                            )}
-                          </span>
-                        </div>
-                        {isAlreadyInCollection ? (
-                          <p className="text-[11px] text-gray-500 font-medium">
-                            Already in this collection
-                          </p>
-                        ) : page.topic ? (
-                          <p className="text-xs text-gray-400 truncate">
-                            {page.topic}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div
-                      className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ml-2 ${isAlreadyInCollection
-                        ? "border-gray-300 bg-gray-200 text-gray-500"
-                        : isSelected
-                          ? "bg-orange-500 border-orange-500 text-white"
-                          : "border-gray-300 bg-white"
-                        }`}
-                    >
-                      {(isSelected || isAlreadyInCollection) && <Check size={14} />}
-                    </div>
-                  </div>
-                );
-              })
             ) : (
-              <div className="text-center py-6 text-gray-400 text-sm">
-                No pages found matching "{search}"
-              </div>
+              <>
+                {/* Already in collection section */}
+                {alreadyAddedItems.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-2 py-1">
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Already Added</span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                    {alreadyAddedItems.map((page) => {
+                      const isPrivate = page.pageType === "private" || page.isPrivate;
+                      return (
+                        <div
+                          key={page?._id}
+                          className="flex items-center justify-between p-2.5 border border-gray-200 rounded-xl bg-gray-50 opacity-60 cursor-not-allowed"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <Avatar
+                              src={page.image || page.user?.profilePicture || page.author?.profilePicture || page.userData?.profilePicture}
+                              alt={page.name}
+                              size="md"
+                              className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-gray-800 text-sm truncate">
+                                  {page?.ownerName ? `${page.ownerName}'s ` : ""}{page?.name}
+                                </p>
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${isPrivate ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                                  {isPrivate ? <><Lock size={9} /><span>Private</span></> : <><Globe size={9} /><span>Public</span></>}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-500 font-medium">Already in this collection</p>
+                            </div>
+                          </div>
+                          <div className="w-5 h-5 rounded-md border border-gray-300 bg-gray-200 text-gray-500 flex items-center justify-center flex-shrink-0 ml-2">
+                            <Check size={14} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Selectable pages section */}
+                {sortedPages.length > 0 ? (
+                  <>
+                    {sortedPages.map((page, idx) => {
+                      const isSelected = selectedPages.includes(page?._id);
+                      const isPrivate = page.pageType === "private" || page.isPrivate;
+                      const showDivider = idx === selectedItems.length && selectedItems.length > 0 && unselectedItems.length > 0;
+
+                      return (
+                        <React.Fragment key={page?._id}>
+                          {showDivider && (
+                            <div className="flex items-center gap-2 py-1">
+                              <div className="flex-1 h-px bg-gray-200" />
+                              <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Other Pages</span>
+                              <div className="flex-1 h-px bg-gray-200" />
+                            </div>
+                          )}
+                          <div
+                            onClick={() => { if (page?._id) toggleSelectPage(page._id, page); }}
+                            className={`flex items-center justify-between p-2.5 border rounded-xl transition-all ${isSelected ? "border-orange-500 bg-orange-50/50 cursor-pointer" : "border-gray-200 hover:bg-gray-50 cursor-pointer"}`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <Avatar
+                                src={page.image || page.user?.profilePicture || page.author?.profilePicture || page.userData?.profilePicture}
+                                alt={page.name}
+                                size="md"
+                                className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-semibold text-gray-800 text-sm truncate">
+                                    {page?.ownerName ? `${page.ownerName}'s ` : ""}{page?.name}
+                                  </p>
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.2 rounded-full ${isPrivate ? "bg-amber-50 text-amber-700 border border-amber-200" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
+                                    {isPrivate ? <><Lock size={9} /><span>Private</span></> : <><Globe size={9} /><span>Public</span></>}
+                                  </span>
+                                </div>
+                                {page.topic && <p className="text-xs text-gray-400 truncate">{page.topic}</p>}
+                              </div>
+                            </div>
+                            <div className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ml-2 ${isSelected ? "bg-orange-500 border-orange-500 text-white" : "border-gray-300 bg-white"}`}>
+                              {isSelected && <Check size={14} />}
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                  </>
+                ) : (
+                  !alreadyAddedItems.length && (
+                    <div className="text-center py-6 text-gray-400 text-sm">
+                      {search ? `No pages found matching "${search}"` : "No pages found"}
+                    </div>
+                  )
+                )}
+              </>
             )}
 
             {isFetchingMore && (
@@ -444,6 +480,7 @@ export default function AddPageToExistingCollectionModal({
               </div>
             )}
           </div>
+
         </div>
 
         {/* Footer */}

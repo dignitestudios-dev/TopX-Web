@@ -48,7 +48,8 @@ export default function OtherProfile() {
 
   const location = useLocation();
   const isFromOtherProfile = location.pathname === "/other-profile"; // ✅ show tabs only on this page
-  const pageId = location.state.pageId;
+  const pageId = location?.state?.pageId;
+  console.log(pageId,"pageId==")
   const dispatch = useDispatch();
   const { topicPages, userCollections, userKnowledgePost, isLoading } =
     useSelector((state) => state.otherProfile);

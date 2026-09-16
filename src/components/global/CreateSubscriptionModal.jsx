@@ -24,6 +24,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   const [creating, setCreating] = useState(false);
   const [collectionName, setCollectionName] = useState("");
   const [selectedCollections, setSelectedCollections] = useState([]);
+  const [selectedColsData, setSelectedColsData] = useState([]); // full col objects
 
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -45,6 +46,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     setImageFile(null);
     setImagePreview(null);
     setSelectedCollections([]);
+    setSelectedColsData([]);
     setSelectedCollectionId(null);
     setSearch("");
     setErrors({ name: "", image: "" });
@@ -233,11 +235,13 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
   };
 
   // MULTI SELECT HANDLER
-  const toggleSelect = (id) => {
+  const toggleSelect = (id, colData) => {
     if (selectedCollections.includes(id)) {
       setSelectedCollections(selectedCollections.filter((x) => x !== id));
+      setSelectedColsData(selectedColsData.filter((c) => c._id !== id));
     } else {
       setSelectedCollections([...selectedCollections, id]);
+      if (colData) setSelectedColsData([...selectedColsData, colData]);
     }
   };
 
@@ -248,6 +252,11 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
       col?.topic?.toLowerCase().includes(search.toLowerCase()) ||
       col?.ownerName?.toLowerCase().includes(search.toLowerCase()),
     ) || [];
+
+  // Selected items: use stored data so they stay on top even after search is cleared
+  const selectedColItems = selectedColsData.filter((col) => col && selectedCollections.includes(col._id));
+  const unselectedColItems = filteredPages.filter((col) => col && !selectedCollections.includes(col._id));
+  const sortedCols = [...selectedColItems, ...unselectedColItems];
 
   const handleScroll = (e) => {
     const el = e.currentTarget;
@@ -407,15 +416,23 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                     placeholder="Search"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 rounded-[10px] border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-white"
+                    className="w-full pl-10 pr-8 py-2 rounded-[10px] border border-gray-200 text-sm focus:outline-none focus:border-orange-500 bg-white"
                   />
+                  {search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
                 {/* ================= EXISTING COLLECTIONS / PAGES ================= */}
                 <div
                   onScroll={handleScroll}
                   className="space-y-4 max-h-[300px] overflow-y-auto mt-4 pr-2"
                 >
-                  {recommendationsLoading && currentPage === 1 &&
+                  {recommendationsLoading && currentPage === 1 && (!recommendations || recommendations.length === 0) &&
                     [...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
 
                   {/* Error */}
@@ -424,81 +441,85 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                   )}
 
                   {/* Data */}
-                  {!(recommendationsLoading && currentPage === 1) && (
+                  {recommendations && recommendations.length > 0 && (
                     <>
                       {recommendations && recommendations.length > 0 ? (
-                        recommendations.length > 0 ? (
-                          recommendations?.map((col) => {
-                            const isPrivate =
-                              col.pageType === "private" || col.isPrivate;
-                            return (
-                              <div
-                                key={col._id}
-                                className="flex justify-between items-center cursor-pointer p-2.5 border rounded-xl hover:bg-gray-50 transition gap-2"
-                                onClick={() => toggleSelect(col._id)}
-                              >
-                                <div className="flex items-center gap-3 min-w-0 flex-1">
-                                  <Avatar
-                                    src={
-                                      col.image ||
-                                      col.user?.profilePicture ||
-                                      col.author?.profilePicture ||
-                                      col.userData?.profilePicture
-                                    }
-                                    alt={col.name}
-                                    size="md"
-                                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                                  />
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <p className="font-medium text-gray-800 text-sm truncate max-w-[150px]">
-                                        {col?.ownerName}'s {col.name}
-                                      </p>
-                                      <span
-                                        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isPrivate
-                                          ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                          : "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                          }`}
-                                      >
-                                        {isPrivate ? (
-                                          <>
-                                            <Lock size={10} />
-                                            <span>Private</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <Globe size={10} />
-                                            <span>Public</span>
-                                          </>
-                                        )}
-                                      </span>
+                          <>
+                            {sortedCols.map((col, idx) => {
+                              const isPrivate = col.pageType === "private" || col.isPrivate;
+                              const showDivider = idx === selectedColItems.length && selectedColItems.length > 0 && unselectedColItems.length > 0;
+                              return (
+                                <React.Fragment key={col._id}>
+                                  {showDivider && (
+                                    <div className="flex items-center gap-2 py-1">
+                                      <div className="flex-1 h-px bg-gray-200" />
+                                      <span className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Other Pages</span>
+                                      <div className="flex-1 h-px bg-gray-200" />
                                     </div>
-                                    {col.topic && (
-                                      <p className="text-xs text-gray-400 truncate mt-0.5">
-                                        {col.topic}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div
-                                  className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${selectedCollections.includes(col._id)
-                                    ? "bg-orange-500 border-orange-500 text-white"
-                                    : "border-gray-300 bg-white"
-                                    }`}
-                                >
-                                  {selectedCollections.includes(col._id) && (
-                                    <Check size={14} />
                                   )}
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
-                          <p className="text-center text-gray-500 py-8">
-                            No items found
-                          </p>
-                        )
+                                  <div
+                                    className="flex justify-between items-center cursor-pointer p-2.5 border rounded-xl hover:bg-gray-50 transition gap-2"
+                                    onClick={() => toggleSelect(col._id, col)}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                      <Avatar
+                                        src={
+                                          col.image ||
+                                          col.user?.profilePicture ||
+                                          col.author?.profilePicture ||
+                                          col.userData?.profilePicture
+                                        }
+                                        alt={col.name}
+                                        size="md"
+                                        className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                                      />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <p className="font-medium text-gray-800 text-sm truncate max-w-[150px]">
+                                            {col?.ownerName}'s {col.name}
+                                          </p>
+                                          <span
+                                            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${isPrivate
+                                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                              : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                              }`}
+                                          >
+                                            {isPrivate ? (
+                                              <>
+                                                <Lock size={10} />
+                                                <span>Private</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Globe size={10} />
+                                                <span>Public</span>
+                                              </>
+                                            )}
+                                          </span>
+                                        </div>
+                                        {col.topic && (
+                                          <p className="text-xs text-gray-400 truncate mt-0.5">
+                                            {col.topic}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div
+                                      className={`w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 transition-all ${selectedCollections.includes(col._id)
+                                        ? "bg-orange-500 border-orange-500 text-white"
+                                        : "border-gray-300 bg-white"
+                                        }`}
+                                    >
+                                      {selectedCollections.includes(col._id) && (
+                                        <Check size={14} />
+                                      )}
+                                    </div>
+                                  </div>
+                                </React.Fragment>
+                              );
+                            })}
+                          </>
                       ) : (
                         <p className="text-center text-gray-500 py-4">
                           No pages available

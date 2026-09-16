@@ -1051,6 +1051,8 @@ export default function HomePostFeed({
           isOpen={analyticsModalOpen}
           onClose={() => setAnalyticsModalOpen(false)}
           boostId={post?.boostId || post?.boost?._id}
+          postId={post?._id}
+          post={post}
         />
       )}
     </div>

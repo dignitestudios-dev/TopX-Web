@@ -121,7 +121,7 @@ export default function CollectionFeedPostCard({
   // Impression Delivery Tracking
   const targetPost = fullPost || post;
   const boostId = targetPost?.boostId || targetPost?.boost?._id;
-
+console.log(targetPost,"targetPost===")
   useEffect(() => {
     if (!targetPost?.isBoosted || !boostId) return;
     if (hasRecordedImpression(boostId)) return;
@@ -860,6 +860,8 @@ export default function CollectionFeedPostCard({
           isOpen={analyticsModalOpen}
           onClose={() => setAnalyticsModalOpen(false)}
           boostId={targetPost?.boostId || targetPost?.boost?._id}
+          postId={targetPost?._id}
+          post={targetPost}
         />
       )}
 

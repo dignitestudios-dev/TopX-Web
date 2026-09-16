@@ -50,8 +50,7 @@ import { sendReport } from "../../redux/slices/reports.slice";
 import AcceptMessageModal from "./AcceptMessageModal";
 import { toast } from "react-hot-toast";
 import { isValidUrl } from "../../lib/helpers";
-
-// Helper to auto-detect links in chat messages and render clickable hyperlinks
+import axios from "../../axios"
 const renderMessageWithLinks = (content, isMe = false) => {
   if (!content || typeof content !== "string") return content;
 
@@ -971,66 +970,237 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
   const totalUnreadCount =
     chatUnreadCount + groupUnreadCount + requestUnreadCount;
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files || []);
 
-  const handleSendMessage = async () => {
-    let mediaUrls = [];
-    if (selectedFiles.length > 0) {
-      mediaUrls = await Promise.all(
-        selectedFiles.map(
-          (file) =>
-            new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result);
-              reader.readAsDataURL(file);
-            }),
-        ),
-      );
-    } else if (selectedGif) {
-      mediaUrls = [selectedGif];
-    }
+    console.log("🔥 FILES SELECTED:", files);
+    console.log("🔥 FILE COUNT:", files.length);
 
-    if (!messageText.trim() && mediaUrls.length === 0) return;
+    if (files.length === 0) return;
 
-    const isGroup = selectedChat.isGroup || selectedChat.groupId;
-    let type = "text";
-    let content = messageText;
-    if (selectedGif) {
-      type = "gif";
-      content = "";
-    } else if (selectedFiles.length > 0) {
-      type = "media";
-      content = "";
-    }
-    //  const isGroup = selectedChat.isGroup || selectedChat.groupId;
+    setSelectedFiles(files);
 
-    const payload = isGroup
-      ? {
-        groupId: selectedChat.groupId || selectedChat._id,
-        type,
-        content,
-        mediaUrls,
+    const previews = files.map((file) => ({
+      url: URL.createObjectURL(file),
+      type: file.type,
+      name: file.name,
+    }));
+
+    setMediaPreview(previews);
+
+    // Same file dobara select karne ki permission
+    e.target.value = "";
+  };
+  const uploadFilesToS3 = async (files) => {
+    if (!files || files.length === 0) return [];
+
+    console.log("🔥 START S3 UPLOAD:", files);
+
+    // STEP 1: Get pre-signed URLs
+    const presignedResponse = await axios.post(
+      "/uploads/presigned-urls",
+      {
+        files: files.map((file) => ({
+          fileName: file.name,
+          fileType: file.type,
+          folder: "chat_media",
+        })),
       }
-      : {
-        chatId: selectedChat._id,
-        type,
-        content,
-        mediaUrls,
-      };
+    );
 
-    if (isGroup) {
-      socket.sendGroupMessage(payload, (response) => {
-        console.log("Group message sent:", response);
-      });
-    } else {
-      socket.sendMessage(payload, (response) => {
-        console.log("Message sent:", response);
-      });
+    console.log("🔥 PRESIGNED RESPONSE:", presignedResponse.data);
+
+    const { fileUrls, uploadUrls } = presignedResponse.data.data;
+
+    if (!fileUrls?.length || !uploadUrls?.length) {
+      throw new Error("Failed to get upload URLs");
     }
 
-    setMessageText("");
-    setSelectedFiles([]);
-    setSelectedGif(null);
-    setMediaPreview([]);
+    // STEP 2: Upload every file directly to S3
+    await Promise.all(
+      files.map(async (file, index) => {
+        console.log(`🔥 UPLOADING ${index + 1}:`, file.name);
+
+        const uploadResponse = await fetch(uploadUrls[index], {
+          method: "PUT",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(
+            `S3 upload failed for ${file.name}: ${uploadResponse.status}`
+          );
+        }
+
+        console.log(`✅ S3 UPLOAD DONE: ${file.name}`);
+      })
+    );
+
+    console.log("🔥 FINAL S3 FILE URLS:", fileUrls);
+
+    return fileUrls;
+  };
+  const handleSendMessage = async () => {
+    console.log("🔥 SEND CLICKED");
+
+    console.log("🔥 selectedFiles:", selectedFiles);
+    console.log("🔥 selectedFiles length:", selectedFiles.length);
+    console.log("🔥 selectedGif:", selectedGif);
+
+    try {
+      let mediaUrls = [];
+
+      // ============================================
+      // STEP 1: Upload selected files to S3
+      // ============================================
+      if (selectedFiles.length > 0) {
+        console.log("🔥 STARTING FILE UPLOAD...");
+
+        mediaUrls = await uploadFilesToS3(selectedFiles);
+
+        console.log("🔥 S3 MEDIA URLS:", mediaUrls);
+      }
+
+      // ============================================
+      // STEP 2: GIF
+      // ============================================
+      else if (selectedGif) {
+        mediaUrls = [selectedGif];
+
+        console.log("🔥 GIF URL:", selectedGif);
+      }
+
+      // ============================================
+      // STEP 3: Empty message check
+      // ============================================
+      if (!messageText.trim() && mediaUrls.length === 0) {
+        console.log("❌ Nothing to send");
+        return;
+      }
+
+      // ============================================
+      // STEP 4: Determine chat type
+      // ============================================
+      const isGroup =
+        selectedChat?.isGroup || selectedChat?.groupId;
+
+      // ============================================
+      // STEP 5: Determine message type
+      // ============================================
+      let type = "text";
+      let content = messageText;
+
+      if (selectedGif) {
+        type = "gif";
+        content = "";
+      } else if (selectedFiles.length > 0) {
+        type = "media";
+        content = "";
+      }
+
+      // ============================================
+      // STEP 6: Create payload
+      // ============================================
+      const payload = isGroup
+        ? {
+          groupId:
+            selectedChat.groupId || selectedChat._id,
+          type,
+          content,
+          mediaUrls,
+        }
+        : {
+          chatId: selectedChat._id,
+          type,
+          content,
+          mediaUrls,
+        };
+
+      console.log("🔥 FINAL PAYLOAD:", payload);
+      console.log("🔥 isGroup:", isGroup);
+      console.log("🔥 socket connected:", socket?.connected);
+
+      // ============================================
+      // STEP 7: Send GROUP message
+      // ============================================
+      if (isGroup) {
+        console.log("🔥 SENDING GROUP MESSAGE...");
+
+        socket.sendGroupMessage(payload, (response) => {
+          console.log("🔥 GROUP SEND RESPONSE:", response);
+
+          if (response?.success && response?.data) {
+            dispatch(
+              addMessage({
+                chatId:
+                  selectedChat.groupId || selectedChat._id,
+                message: response.data,
+                unreadCount: 0,
+                currentUserId:
+                  currentUserIdRef.current,
+              })
+            );
+
+            // cleanup
+            setMessageText("");
+            setSelectedFiles([]);
+            setSelectedGif(null);
+            setMediaPreview([]);
+          }
+        });
+      }
+
+      // ============================================
+      // STEP 8: Send INDIVIDUAL message
+      // ============================================
+      else {
+        console.log("🔥 SENDING INDIVIDUAL MESSAGE...");
+
+        socket.sendMessage(payload, (response) => {
+          console.log("🔥🔥 SEND RESPONSE:", response);
+
+          if (response?.success && response?.data) {
+            console.log(
+              "🔥🔥 MESSAGE DATA:",
+              response.data
+            );
+
+            dispatch(
+              addMessage({
+                chatId: selectedChat._id,
+                message: response.data,
+                unreadCount: 0,
+                currentUserId:
+                  currentUserIdRef.current,
+              })
+            );
+
+            // cleanup
+            setMessageText("");
+            setSelectedFiles([]);
+            setSelectedGif(null);
+            setMediaPreview([]);
+
+            console.log("✅ MESSAGE ADDED TO REDUX");
+          } else {
+            console.log(
+              "❌ MESSAGE SEND FAILED:",
+              response
+            );
+          }
+        });
+      }
+    } catch (error) {
+      console.error("❌ SEND MESSAGE ERROR:", error);
+
+      console.error(
+        "❌ ERROR RESPONSE:",
+        error?.response?.data
+      );
+    }
   };
 
   const handleBlockUser = () => {
@@ -1220,7 +1390,26 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       memberUser._id !== currentUserId;
 
     const rowId = memberUser._id;
+    useEffect(() => {
+      const input = fileInputRef.current;
 
+      if (!input) {
+        console.log("❌ FILE INPUT NOT FOUND");
+        return;
+      }
+
+      console.log("✅ FILE INPUT FOUND", input);
+
+      const testChange = (e) => {
+        console.log("🚨 NATIVE CHANGE EVENT:", e.target.files);
+      };
+
+      input.addEventListener("change", testChange);
+
+      return () => {
+        input.removeEventListener("change", testChange);
+      };
+    }, []);
     return (
       <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded mb-1">
         <div className="flex items-center gap-2">
@@ -1520,7 +1709,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       <>
         <div
           ref={chatPopupRef}
-          className={`fixed ${popupBottomClass} right-6 w-[360px] bg-white rounded-[12px] shadow-2xl overflow-hidden border border-gray-200 z-40 flex flex-col h-[27em]`}
+          className={`fixed ${popupBottomClass} right-6 w-[360px] bg-white rounded-[12px] shadow-2xl  border border-gray-200 z-40 flex flex-col h-[27em]`}
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <div className="flex items-center w-full justify-between gap-3">
@@ -1581,18 +1770,20 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       "Unknown"}
                   </p>
 
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
-                    {selectedChat?.isGroup ? (
-                      `${getMemberCount()} members`
-                    ) : onlineUsers[selectedChat?.receiverInfo?._id] ? (
-                      <>
-                        <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                        Online
-                      </>
-                    ) : (
-                      "Offline"
-                    )}
-                  </p>
+                  {!isBlocked && (
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      {selectedChat?.isGroup ? (
+                        `${getMemberCount()} members`
+                      ) : onlineUsers[selectedChat?.receiverInfo?._id] ? (
+                        <>
+                          <span className="w-2 h-2 bg-green-500 rounded-full"></span>
+                          Online
+                        </>
+                      ) : (
+                        "Offline"
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1613,7 +1804,20 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </button>
 
                 {showChatMenu && (
-                  <div className="absolute right-0 mt-2 w-[11em] bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div
+                    className="
+      absolute
+      right-0
+      top-full
+      mt-2
+      w-[180px]
+      bg-white
+      rounded-lg
+      shadow-lg
+      border border-gray-200
+      z-[9999]
+    "
+                  >
                     {/* Group Chat Options */}
                     {selectedChat?.isGroup ? (
                       <>
@@ -1682,34 +1886,36 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         </button>
 
                         {/* Create Group Chat with this user */}
-                        <button
-                          onClick={() => {
-                            if (!selectedChat?.receiverInfo?._id) return;
+                        {!isBlocked && (
+                          <button
+                            onClick={() => {
+                              if (!selectedChat?.receiverInfo?._id) return;
 
-                            // Pre-select this user for group creation
-                            setSelectedUsers([
-                              {
-                                _id: selectedChat.receiverInfo._id,
-                                name: selectedChat.receiverInfo.name,
-                                profilePicture:
-                                  selectedChat.receiverInfo.profilePicture,
-                                hasConnection: true,
-                              },
-                            ]);
+                              // Pre-select this user for group creation
+                              setSelectedUsers([
+                                {
+                                  _id: selectedChat.receiverInfo._id,
+                                  name: selectedChat.receiverInfo.name,
+                                  profilePicture:
+                                    selectedChat.receiverInfo.profilePicture,
+                                  hasConnection: true,
+                                },
+                              ]);
 
-                            setGroupName("");
-                            setGroupBio("");
-                            setGroupImage(null);
-                            setGroupImagePreview(null);
-                            setSearchTerm("");
+                              setGroupName("");
+                              setGroupBio("");
+                              setGroupImage(null);
+                              setGroupImagePreview(null);
+                              setSearchTerm("");
 
-                            setShowChatMenu(false);
-                            setScreen("createGroup");
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
-                        >
-                          Create Group Chat
-                        </button>
+                              setShowChatMenu(false);
+                              setScreen("createGroup");
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 text-gray-700"
+                          >
+                            Create Group Chat
+                          </button>
+                        )}
 
                         {/* Block User */}
                         {!isBlocked && (
@@ -2004,7 +2210,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           if (mediaCount === 1) {
                             const mediaUrl = msg.mediaUrls[0];
 
-                            const isVideo = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(mediaUrl);
+                            const isVideo =
+                              mediaUrl.startsWith("data:video/") ||
+                              /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(mediaUrl);
 
                             return isVideo ? (
                               <video
@@ -2156,24 +2364,24 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 {mediaPreview.length > 0 && (
                   <div className="mb-2">
                     <div className="grid grid-cols-4 gap-2">
-                      {mediaPreview.slice(0, 4).map((url, i) => (
-                        <img
-                          key={i}
-                          src={url}
-                          alt={`Preview ${i + 1}`}
-                          className="w-16 h-16 object-cover rounded"
-                        />
-                      ))}
-                      {mediaPreview.length > 4 && (
-                        <div
-                          className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
-                          onClick={() => setShowImageModal(true)}
-                        >
-                          <span className="text-sm font-semibold">
-                            +{mediaPreview.length - 4}
-                          </span>
+                      {mediaPreview.slice(0, 4).map((file, i) => (
+                        <div key={i} className="relative">
+                          {file.type?.startsWith("video/") ? (
+                            <video
+                              src={file.url}
+                              className="w-16 h-16 object-cover rounded"
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={file.url}
+                              alt={`Preview ${i + 1}`}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 )}
@@ -2226,20 +2434,36 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               </div>
 
               <div className="flex justify-around">
-                <button
-                  onClick={() => {
-                    fileInputRef.current.click();
-                    setShowMediaOptions(false);
-                  }}
-                  className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
-                >
-                  <input type="file" className="hidden" ref={fileInputRef} />
-                  <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
-                    <FaCamera />
-                  </div>
-                  <span className="text-sm text-gray-700">Image</span>
-                </button>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      console.log("🚨 INPUT ONCHANGE FIRED");
+                      console.log("🚨 FILES:", e.target.files);
 
+                      handleFileChange(e);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      console.log("🔥 IMAGE BUTTON CLICKED");
+                      fileInputRef.current?.click();
+                      // setShowMediaOptions(false);
+                    }}
+                    className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
+                  >
+                    <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-1">
+                      <FaCamera />
+                    </div>
+
+                    <span className="text-sm text-gray-700">Image</span>
+                  </button>
+                </div>
                 <button
                   onClick={() => {
                     setShowGifModal(true);
@@ -2308,13 +2532,22 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {mediaPreview.map((url, i) => (
-                    <img
-                      key={i}
-                      src={url}
-                      alt={`Image ${i + 1}`}
-                      className="w-full h-32 object-cover rounded"
-                    />
+                  {mediaPreview.map((file, i) => (
+                    <div key={i}>
+                      {file.type?.startsWith("video/") ? (
+                        <video
+                          src={file.url}
+                          controls
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      ) : (
+                        <img
+                          src={file.url}
+                          alt={`Image ${i + 1}`}
+                          className="w-full h-32 object-cover rounded"
+                        />
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -2573,14 +2806,31 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               Loading users...
             </p>
           ) : availableUsers.length > 0 ? (
-            availableUsers.map((user) => {
-              const isDisabled = user.isGroupInviteOpen === false;
+            (() => {
+              // Backend /users/search doesn't return isBlocked - derive from chats list
+              const blockedUserIds = new Set(
+                chats
+                  .filter((c) => c.blockedBy)
+                  .map((c) => c.receiverInfo?._id)
+                  .filter(Boolean)
+              );
+              return availableUsers.map((user) => {
+                const isBlocked = user?.isBlocked === true || blockedUserIds.has(user._id);
+                const isDisabled =
+                  user?.isGroupInviteOpen === false || isBlocked;
+
+
+
+
               const isSelected = selectedUsers.find((u) => u._id === user._id);
 
               return (
                 <div
                   key={user._id}
-                  onClick={() => handleSelectUser(user)}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    handleSelectUser(user);
+                  }}
                   className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:bg-gray-50 cursor-pointer"
@@ -2597,9 +2847,15 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       <span className="text-sm text-gray-900 block">
                         {user.name}
                       </span>
-                      {user.hasConnection && (
-                        <span className="text-xs text-gray-400">Connected</span>
-                      )}
+                      {isBlocked ? (
+                        <span className="text-xs text-red-500">
+                          Blocked
+                        </span>
+                      ) : user.hasConnection ? (
+                        <span className="text-xs text-gray-400">
+                          Connected
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   <div
@@ -2612,7 +2868,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </div>
                 </div>
               );
-            })
+              });
+            })()
           ) : (
             <p className="text-sm text-gray-500 text-center py-4">
               No users found

@@ -5,71 +5,206 @@ import {
   Eye,
   Calendar,
   TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
   Activity,
   BarChart3,
   Clock,
+  MessageCircle,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchBoostAnalytics,
   cancelBoost,
   clearAnalytics,
+  fetchMyBoosts,
 } from "../../redux/slices/boost.slice";
 
-export default function BoostAnalyticsModal({ isOpen, onClose, boostId }) {
+export default function BoostAnalyticsModal({
+  isOpen,
+  onClose,
+  boostId,
+  postId,
+  post,
+}) {
   const dispatch = useDispatch();
   const {
     analytics,
     analyticsBoost,
     analyticsLoading,
-    cancelLoading,
+    myBoosts,
   } = useSelector((state) => state.boost);
 
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [resolvedBoostId, setResolvedBoostId] = useState(boostId);
+  const [resolvingId, setResolvingId] = useState(false);
 
+  // Sync resolvedBoostId if boostId prop changes
   useEffect(() => {
-    if (isOpen && boostId) {
-      dispatch(fetchBoostAnalytics(boostId));
+    if (boostId) {
+      setResolvedBoostId(boostId);
     }
-    return () => {
-      if (!isOpen) {
-        dispatch(clearAnalytics());
-        setShowCancelConfirm(false);
+  }, [boostId]);
+
+  // Resolve boost ID from myBoosts if not passed directly
+  useEffect(() => {
+    if (!isOpen) {
+      dispatch(clearAnalytics());
+      return;
+    }
+
+    const resolveAndFetch = async () => {
+      let targetId = boostId || resolvedBoostId;
+      const effectivePostId = postId || post?._id;
+
+      // If we don't have a valid boostId yet, look it up in myBoosts
+      if (!targetId && effectivePostId) {
+        setResolvingId(true);
+        try {
+          const res = await dispatch(fetchMyBoosts({ page: 1, limit: 50 })).unwrap();
+          const list = res?.boosts || myBoosts || [];
+          const match = list.find(
+            (b) =>
+              b._id === effectivePostId ||
+              b.post === effectivePostId ||
+              b.post?._id === effectivePostId
+          );
+          if (match?._id) {
+            targetId = match._id;
+            setResolvedBoostId(match._id);
+          }
+        } catch (e) {
+          console.error("Could not resolve boost from myBoosts:", e);
+        } finally {
+          setResolvingId(false);
+        }
+      }
+
+      if (targetId) {
+        dispatch(fetchBoostAnalytics(targetId));
       }
     };
-  }, [isOpen, boostId, dispatch]);
+
+    resolveAndFetch();
+  }, [isOpen, boostId, postId, post?._id, dispatch]);
 
   if (!isOpen) return null;
 
+  // Find matching boost from Redux myBoosts list (if available) for extra meta
+  const matchedBoost = myBoosts?.find(
+    (b) =>
+      b._id === resolvedBoostId ||
+      b._id === boostId ||
+      b.post === (postId || post?._id) ||
+      b.post?._id === (postId || post?._id)
+  );
+
+  // Post preview info
+  const postData = analytics?.post || analyticsBoost || post;
+  const authorName =
+    postData?.page?.name ||
+    postData?.author?.name ||
+    postData?.author?.username ||
+    "Post Boost";
+  const authorAvatar =
+    postData?.page?.image ||
+    postData?.author?.profilePicture ||
+    null;
+  const postSnippet = postData?.bodyText || "";
+
+  // Performance data (from new API structure: overallPerformance + boostDetails)
+  const perf = analytics?.overallPerformance || {};
+  const boostDetails = analytics?.boostDetails || {};
+
+  // Status
   const currentStatus =
-    analytics?.status || analyticsBoost?.status || "active";
-  const delivered = analytics?.deliveredImpressions ?? 0;
-  const total = analytics?.totalImpressions ?? 0;
-  const remaining = analytics?.remainingImpressions ?? 0;
+    perf?.status ||
+    analytics?.status ||
+    analyticsBoost?.status ||
+    matchedBoost?.status ||
+    "active";
+
+  // Views / delivered
+  const delivered =
+    perf?.postViews ??
+    analytics?.deliveredImpressions ??
+    analytics?.deliveredViews ??
+    0;
+
+  // Comments
+  const comments =
+    perf?.postComments ??
+    postData?.commentsCount ??
+    0;
+
+  // Total target impressions (from plan or boost)
+  const total =
+    analytics?.totalImpressions ??
+    analytics?.targetImpressions ??
+    matchedBoost?.impressions ??
+    matchedBoost?.targetImpressions ??
+    matchedBoost?.plan?.impressions ??
+    0;
+
+  const remaining =
+    analytics?.remainingImpressions ??
+    (total > 0 ? Math.max(0, total - delivered) : 0);
+
   const percent =
     analytics?.completionPercentage ??
-    (total > 0 ? Math.round((delivered / total) * 100) : 0);
+    (total > 0 ? Math.min(100, Math.round((delivered / total) * 100)) : 0);
 
-  const daysElapsed = analytics?.daysElapsed ?? 0;
-  const daysRemaining = analytics?.daysRemaining ?? 0;
-  const dailyTarget = analytics?.dailyDeliveryTarget ?? 0;
-  const dailyActual = analytics?.actualDailyAverage ?? 0;
-  const dailyBreakdown = analytics?.dailyBreakdown || [];
+  // Dates
+  const startDate =
+    boostDetails?.boostStarted ||
+    perf?.dateRange?.from ||
+    matchedBoost?.createdAt;
 
-  const handleCancelBoost = async () => {
-    if (!boostId) return;
+  const endDate =
+    boostDetails?.endsOn ||
+    perf?.dateRange?.to;
+
+  const daysRemaining =
+    boostDetails?.daysRemaining ??
+    analytics?.daysRemaining ??
+    (endDate
+      ? Math.max(0, Math.ceil((new Date(endDate) - new Date()) / (1000 * 60 * 60 * 24)))
+      : 0);
+
+  const daysElapsed =
+    analytics?.daysElapsed ??
+    (startDate
+      ? Math.max(0, Math.floor((new Date() - new Date(startDate)) / (1000 * 60 * 60 * 24)))
+      : 0);
+
+  // Pacing
+  const dailyActual =
+    analytics?.actualDailyAverage ??
+    (daysElapsed > 0 ? Math.round(delivered / daysElapsed) : delivered);
+
+  // Daily breakdown / viewsOverTime
+  const rawBreakdown =
+    (Array.isArray(analytics?.viewsOverTime) && analytics.viewsOverTime.length > 0)
+      ? analytics.viewsOverTime
+      : (analytics?.dailyBreakdown || []);
+
+  const dailyBreakdown = rawBreakdown.map((item, idx) => ({
+    key: idx,
+    date: item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent"),
+    impressions: item.views ?? item.impressions ?? item.count ?? 0,
+  }));
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
     try {
-      await dispatch(cancelBoost(boostId)).unwrap();
-      setShowCancelConfirm(false);
-      // Refresh analytics
-      dispatch(fetchBoostAnalytics(boostId));
-    } catch (err) {
-      console.error("Cancel boost error:", err);
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return dateStr;
     }
   };
+
+  const isLoading = analyticsLoading || resolvingId;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
@@ -105,8 +240,8 @@ export default function BoostAnalyticsModal({ isOpen, onClose, boostId }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 custom-orange-scrollbar space-y-5">
-          {analyticsLoading ? (
+        <div className="flex-1 overflow-y-auto px-6 py-5 custom-orange-scrollbar space-y-4">
+          {isLoading ? (
             <div className="py-16 flex flex-col items-center justify-center gap-3 text-gray-500">
               <div className="w-8 h-8 border-3 border-[#DE4B12] border-t-transparent rounded-full animate-spin" />
               <span className="text-xs font-semibold">
@@ -115,104 +250,135 @@ export default function BoostAnalyticsModal({ isOpen, onClose, boostId }) {
             </div>
           ) : (
             <>
-              {/* Status & Overview Bar */}
-              <div className="flex items-center justify-between bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700">
-                    Campaign Status
-                  </span>
-                </div>
-
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold capitalize ${
-                    currentStatus === "active"
-                      ? "bg-green-100 text-green-700 border border-green-200"
-                      : currentStatus === "completed"
-                      ? "bg-blue-100 text-blue-700 border border-blue-200"
-                      : "bg-gray-200 text-gray-600 border border-gray-300"
-                  }`}
-                >
-                  {currentStatus === "active" && (
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+              {/* Post Header Card (if post details exist) */}
+              {postData && (
+                <div className="flex items-center gap-3 p-3 bg-orange-50/40 rounded-2xl border border-orange-100">
+                  {authorAvatar ? (
+                    <img
+                      src={authorAvatar}
+                      alt={authorName}
+                      className="w-10 h-10 rounded-full object-cover border border-orange-200"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-orange-200 text-orange-800 font-bold flex items-center justify-center text-xs">
+                      {authorName?.[0]?.toUpperCase() || "P"}
+                    </div>
                   )}
-                  {currentStatus}
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2.5 shadow-xs">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-gray-700">
-                    Impressions Progress
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-gray-900 truncate">
+                      {authorName}
+                    </p>
+                    {postSnippet && (
+                      <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                        {postSnippet}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold capitalize ${
+                      currentStatus === "active"
+                        ? "bg-green-100 text-green-700 border border-green-200"
+                        : currentStatus === "completed"
+                        ? "bg-blue-100 text-blue-700 border border-blue-200"
+                        : "bg-gray-200 text-gray-600 border border-gray-300"
+                    }`}
+                  >
+                    {currentStatus === "active" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
+                    )}
+                    {currentStatus}
                   </span>
-                  <span className="font-extrabold text-[#DE4B12]">
-                    {percent}% Completed
+                </div>
+              )}
+
+              {/* Status & Overview Bar (if no post preview) */}
+              {!postData && (
+                <div className="flex items-center justify-between bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-gray-600" />
+                    <span className="text-xs font-bold text-gray-700">
+                      Campaign Status
+                    </span>
+                  </div>
+
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold capitalize ${
+                      currentStatus === "active"
+                        ? "bg-green-100 text-green-700 border border-green-200"
+                        : currentStatus === "completed"
+                        ? "bg-blue-100 text-blue-700 border border-blue-200"
+                        : "bg-gray-200 text-gray-600 border border-gray-300"
+                    }`}
+                  >
+                    {currentStatus === "active" && (
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-ping" />
+                    )}
+                    {currentStatus}
                   </span>
                 </div>
+              )}
 
-                <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200">
-                  <div
-                    className="bg-gradient-to-r from-orange-500 to-[#DE4B12] h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(percent, 100)}%` }}
-                  />
-                </div>
+              {/* Progress Bar (Shown when total impressions is known) */}
+              {total > 0 && (
+                <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-gray-700">
+                      Impressions Progress
+                    </span>
+                    <span className="font-extrabold text-[#DE4B12]">
+                      {percent}% Completed
+                    </span>
+                  </div>
 
-                <div className="flex justify-between text-[11px] text-gray-500 font-medium pt-1">
-                  <span>{delivered} Delivered</span>
-                  <span>{remaining} Remaining</span>
-                  <span>{total} Total</span>
+                  <div className="w-full bg-gray-100 h-3 rounded-full overflow-hidden p-0.5 border border-gray-200">
+                    <div
+                      className="bg-gradient-to-r from-orange-500 to-[#DE4B12] h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(percent, 100)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between text-[11px] text-gray-500 font-medium pt-1">
+                    <span>{delivered} Delivered</span>
+                    <span>{remaining} Remaining</span>
+                    <span>{total} Total</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Key Metric Cards */}
               <div className="grid grid-cols-2 gap-3">
-                {/* Delivered */}
+                {/* Delivered Views */}
                 <div className="bg-orange-50/60 border border-orange-200/80 rounded-2xl p-3.5 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs text-[#DE4B12] font-semibold">
                     <Eye className="w-3.5 h-3.5" />
-                    <span>Delivered Views</span>
+                    <span>Post Views</span>
                   </div>
                   <div className="text-xl font-black text-gray-900">
                     {delivered}
                   </div>
                   <div className="text-[10px] text-gray-500">
-                    Unique session impressions
+                    Delivered impressions
                   </div>
                 </div>
 
-                {/* Remaining */}
+                {/* Post Comments */}
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Comments</span>
+                  </div>
+                  <div className="text-xl font-black text-gray-900">
+                    {comments}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    Audience engagement
+                  </div>
+                </div>
+
+                {/* Days Left */}
                 <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1">
                   <div className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold">
                     <Clock className="w-3.5 h-3.5" />
-                    <span>Remaining</span>
-                  </div>
-                  <div className="text-xl font-black text-gray-900">
-                    {remaining}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    Views to be delivered
-                  </div>
-                </div>
-
-                {/* Pacing Target */}
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold">
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>Daily Target</span>
-                  </div>
-                  <div className="text-xl font-black text-gray-900">
-                    ~{dailyTarget}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    Actual avg: {dailyActual}/day
-                  </div>
-                </div>
-
-                {/* Duration */}
-                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold">
-                    <Calendar className="w-3.5 h-3.5" />
                     <span>Days Left</span>
                   </div>
                   <div className="text-xl font-black text-gray-900">
@@ -222,20 +388,34 @@ export default function BoostAnalyticsModal({ isOpen, onClose, boostId }) {
                     {daysElapsed} days elapsed
                   </div>
                 </div>
+
+                {/* Duration / Schedule */}
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3.5 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-600 font-semibold">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>Ends On</span>
+                  </div>
+                  <div className="text-xs font-black text-gray-900 truncate">
+                    {formatDate(endDate)}
+                  </div>
+                  <div className="text-[10px] text-gray-500 truncate">
+                    From {formatDate(startDate)}
+                  </div>
+                </div>
               </div>
 
-              {/* Daily Breakdown */}
-              {dailyBreakdown.length > 0 && (
+              {/* Daily Breakdown / Views Over Time */}
+              {dailyBreakdown.length > 0 ? (
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-gray-800">
                     <BarChart3 className="w-4 h-4 text-[#DE4B12]" />
-                    <span>Daily Impression History</span>
+                    <span>Views History</span>
                   </div>
 
                   <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                    {dailyBreakdown.map((item, idx) => (
+                    {dailyBreakdown.map((item) => (
                       <div
-                        key={idx}
+                        key={item.key}
                         className="flex items-center justify-between text-xs py-1.5 px-3 bg-gray-50 rounded-xl border border-gray-100"
                       >
                         <span className="font-semibold text-gray-700">
@@ -248,46 +428,11 @@ export default function BoostAnalyticsModal({ isOpen, onClose, boostId }) {
                     ))}
                   </div>
                 </div>
-              )}
-
-              {/* Cancel Section */}
-              {currentStatus === "active" && (
-                <div className="pt-2">
-                  {!showCancelConfirm ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowCancelConfirm(true)}
-                      className="w-full text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 py-2.5 rounded-xl transition cursor-pointer"
-                    >
-                      Cancel Boost Campaign
-                    </button>
-                  ) : (
-                    <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-3 animate-fadeIn">
-                      <div className="flex items-start gap-2.5">
-                        <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                        <p className="text-xs text-red-800 font-medium leading-relaxed">
-                          Are you sure you want to cancel this boost? The post will no longer be served as a sponsored feed post.
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setShowCancelConfirm(false)}
-                          className="flex-1 bg-white border border-gray-200 text-gray-700 font-semibold py-2 rounded-xl text-xs hover:bg-gray-50 transition cursor-pointer"
-                        >
-                          Keep Campaign
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCancelBoost}
-                          disabled={cancelLoading}
-                          className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs transition disabled:opacity-60 cursor-pointer shadow-xs"
-                        >
-                          {cancelLoading ? "Cancelling..." : "Confirm Cancel"}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+              ) : (
+                <div className="bg-gray-50/70 border border-gray-100 rounded-2xl p-4 text-center">
+                  <p className="text-xs text-gray-500 font-medium">
+                    Daily breakdown will update automatically as views are recorded in the feed.
+                  </p>
                 </div>
               )}
             </>

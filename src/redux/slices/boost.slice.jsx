@@ -140,7 +140,7 @@ export const verifyPurchase = createAsyncThunk(
       try {
         res = await axios.post("/boosts/verify-purchase", payload);
       } catch {
-        res = await axios.post("/api/boosts/verify-purchase", payload);
+        res = await axios.post("/boosts/verify-purchase", payload);
       }
       return res.data?.data;
     } catch (error) {
@@ -400,8 +400,8 @@ const boostSlice = createSlice({
       })
       .addCase(fetchBoostAnalytics.fulfilled, (state, action) => {
         state.analyticsLoading = false;
-        state.analytics = action.payload?.analytics;
-        state.analyticsBoost = action.payload?.boost;
+        state.analytics = action.payload;
+        state.analyticsBoost = action.payload?.boost || action.payload?.post || null;
       })
       .addCase(fetchBoostAnalytics.rejected, (state, action) => {
         state.analyticsLoading = false;

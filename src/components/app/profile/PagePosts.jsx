@@ -22,6 +22,7 @@ import {
   deletePost,
   editPost,
 } from "../../../redux/slices/posts.slice";
+import { fetchMyBoosts } from "../../../redux/slices/boost.slice";
 import { useDispatch, useSelector } from "react-redux";
 import CommentsSection from "../../global/CommentsSection";
 import SharePostModal from "../../global/SharePostModal";
@@ -95,6 +96,7 @@ const PagePosts = ({
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
+  const { myBoosts } = useSelector((state) => state.boost || {});
 
   console.log(pagepost, "pagepostpagepostpagepostpagepost");
 
@@ -517,7 +519,7 @@ const PagePosts = ({
             return (
               <div
                 key={post._id}
-                className="bg-white relative pb-6 rounded-lg shadow-sm overflow-hidden"
+                className="bg-white relative pb-6 rounded-lg shadow-sm "
               >
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between border-b border-gray-100">
@@ -549,19 +551,20 @@ const PagePosts = ({
                         </div>
                       )}
                     </div>
-                    <div>
-                      <div className="flex items-center gap-1">
-                        <p className="font-bold text-sm">{post.author.name}</p>
-                        {post.isElevated && <TiPin />}
-                      </div>
+                   <div className="flex items-center gap-2">
+  <p className="font-bold text-sm">
+    {post.author.name}
+  </p>
 
-                      <button
-                        onClick={() => setIsProfilePostOpen(false)}
-                        className="text-xs cursor-pointer text-gray-600"
-                      >
-                        {post.author.username} • {formatDate(post.createdAt)}
-                      </button>
-                    </div>
+  {post.isElevated && <TiPin />}
+
+  {post?.isBoosted && (
+    <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+      <Zap className="w-2.5 h-2.5 fill-white" />
+      <span>Boosted</span>
+    </span>
+  )}
+</div>
                   </div>
                   <div className="relative">
                     {(() => {
@@ -645,9 +648,22 @@ const PagePosts = ({
                             {(post?.isBoosted || post?.boostId || post?.boost) && (
                               <button
                                 className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                onClick={() => {
+                                onClick={async () => {
                                   setMoreOpenPostId(null);
-                                  setSelectedAnalyticsBoostId(post?.boostId || post?.boost?._id);
+                                  setSelectedBoostPost(post);
+                                  let id = post?.boostId || post?.boost?._id;
+                                  if (!id) {
+                                    try {
+                                      const res = await dispatch(fetchMyBoosts({ page: 1, limit: 50 })).unwrap();
+                                      const match = (res?.boosts || myBoosts || []).find(
+                                        (b) => b.post === post?._id || b.post?._id === post?._id
+                                      );
+                                      id = match?._id;
+                                    } catch (e) {
+                                      console.error("fetchMyBoosts error:", e);
+                                    }
+                                  }
+                                  setSelectedAnalyticsBoostId(id);
                                   setAnalyticsModalOpen(true);
                                 }}
                               >
@@ -1290,8 +1306,11 @@ const PagePosts = ({
           onClose={() => {
             setAnalyticsModalOpen(false);
             setSelectedAnalyticsBoostId(null);
+            setSelectedBoostPost(null);
           }}
           boostId={selectedAnalyticsBoostId}
+          postId={selectedBoostPost?._id}
+          post={selectedBoostPost}
         />
       )}
     </div>
