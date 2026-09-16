@@ -117,7 +117,7 @@ export const createStripeCheckoutSession = createAsyncThunk(
       try {
         res = await axios.post("/boosts/stripe/checkout-session", { planId });
       } catch {
-        res = await axios.post("/api/boosts/stripe/checkout-session", { planId });
+        res = await axios.post("/boosts/stripe/checkout-session", { planId });
       }
       return res.data?.data;
     } catch (error) {
@@ -237,7 +237,7 @@ export const fetchBoostAnalytics = createAsyncThunk(
       try {
         res = await axios.get(`/boosts/${boostId}/analytics`);
       } catch {
-        res = await axios.get(`/api/boosts/${boostId}/analytics`);
+        res = await axios.get(`/boosts/${boostId}/analytics`);
       }
       return res.data?.data;
     } catch (error) {
