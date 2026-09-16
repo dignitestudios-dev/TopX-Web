@@ -237,7 +237,7 @@ export const fetchBoostAnalytics = createAsyncThunk(
       try {
         res = await axios.get(`/boosts/${boostId}/analytics`);
       } catch {
-        res = await axios.get(`/api/boosts/${boostId}/analytics`);
+        res = await axios.get(`/boosts/${boostId}/analytics`);
       }
       return res.data?.data;
     } catch (error) {
