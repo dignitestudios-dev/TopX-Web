@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useAgora } from "../../hooks/useAgora";
@@ -40,6 +40,8 @@ const LiveStreampage = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [hasAttemptedJoin, setHasAttemptedJoin] = useState(false);
   const [viewerCount, setViewerCount] = useState(0); // Renamed from RTM fallback, now used by Socket
+  const [isStreamEnded, setIsStreamEnded] = useState(false);
+  const hasStreamStartedRef = useRef(false);
   const localVideoRef = useRef(null);
   const remoteVideoRefs = useRef({});
   const remoteVideosContainerRef = useRef(null);
@@ -189,6 +191,18 @@ const LiveStreampage = () => {
   }, [role]);
 
   const [isRetryingPermissions, setIsRetryingPermissions] = useState(false);
+  const handleHostEndedStreamRef = useRef(null);
+
+  // Handle remote user (host) leaving channel
+  const handleRemoteUserLeft = useCallback(
+    (leftUser) => {
+      if (role === "audience") {
+        console.log("👋 Host left channel:", leftUser);
+        handleHostEndedStreamRef.current?.("The host has ended the live broadcast.");
+      }
+    },
+    [role]
+  );
 
   const {
     join,
@@ -211,8 +225,41 @@ const LiveStreampage = () => {
     token,
     uid,
     backendChannelName: channelName, // Use EXACT channelName from backend
+    onRemoteUserLeft: handleRemoteUserLeft,
   });
   console.log(remoteUsers, "remoteUsers==>")
+
+  // Centralized stream ended handler for audience
+  const handleHostEndedStream = useCallback(
+    async (reason = "The host has ended the live stream.") => {
+      if (isStreamEnded) return;
+      console.log("🔴 Host ended the stream for audience:", reason);
+      setIsStreamEnded(true);
+      try {
+        await leave();
+      } catch (err) {
+        console.error("Error leaving Agora after stream ended:", err);
+      }
+    },
+    [isStreamEnded, leave]
+  );
+  handleHostEndedStreamRef.current = handleHostEndedStream;
+
+  // Track if audience has ever seen the stream active, and if host leaves, mark stream ended
+  useEffect(() => {
+    if (remoteUsers.length > 0) {
+      hasStreamStartedRef.current = true;
+    } else if (
+      role === "audience" &&
+      isJoined &&
+      hasStreamStartedRef.current &&
+      remoteUsers.length === 0 &&
+      !isStreamEnded
+    ) {
+      console.log("🔴 Remote users dropped to 0 after stream was active - host ended stream");
+      handleHostEndedStream("The host has ended the live broadcast.");
+    }
+  }, [remoteUsers.length, role, isJoined, isStreamEnded, handleHostEndedStream]);
 
   const handleRetryPermissionsAndJoin = async () => {
     setIsRetryingPermissions(true);
@@ -244,6 +291,8 @@ const LiveStreampage = () => {
     sendComment,
     sendLike,
     viewerCount: rtmViewerCount, // Get RTM count, but we will prefer socket count
+    hostMediaState,
+    sendMediaState,
   } = useRTM(
     hasRTMParams
       ? {
@@ -251,9 +300,27 @@ const LiveStreampage = () => {
         uid: String(uid), // RTM requires string UID
         token: rtmToken,
         channelName, // Same channelName as RTC
+        onRemoteUserJoin: () => {
+          if (role === "host") {
+            sendMediaState?.({
+              isVideoMuted,
+              isAudioMuted,
+            });
+          }
+        },
       }
       : { appId: "", uid: "", token: "", channelName: "" }
   );
+
+  // Sync host media state to audience via RTM
+  useEffect(() => {
+    if (role === "host" && isJoined && typeof sendMediaState === "function") {
+      sendMediaState({
+        isVideoMuted,
+        isAudioMuted,
+      });
+    }
+  }, [isVideoMuted, isAudioMuted, role, isJoined, sendMediaState]);
 
   // Debug: Log comments updates in parent component
   useEffect(() => {
@@ -288,11 +355,14 @@ const LiveStreampage = () => {
     }
   }, [rtmError]);
 
-  // ✅ Socket.io Viewer Count Integration
+  // ✅ Socket.io Integration (Room join, Viewer count, Stream Ended)
   const { socket, on } = useSocket();
 
   useEffect(() => {
     if (!socket || !pageId) return;
+
+    // Join live stream socket room
+    socket.emit(SOCKET_EVENTS.LIVE.JOIN, { pageId });
 
     const handleUserJoined = (data) => {
       if (data.pageId === pageId && data.currentViewerCount !== undefined) {
@@ -306,15 +376,27 @@ const LiveStreampage = () => {
       }
     };
 
-    // Listen to backend socket events for viewer count
+    const handleLiveEnded = (data) => {
+      console.log("📡 Socket live:ended event received:", data);
+      if (!data || !data.pageId || data.pageId === pageId) {
+        if (role === "audience") {
+          handleHostEndedStream("The host has ended the live broadcast.");
+        }
+      }
+    };
+
+    // Listen to backend socket events for viewer count & stream end
     const unsubscribeJoin = on(SOCKET_EVENTS.LIVE.USER_JOINED, handleUserJoined);
     const unsubscribeLeft = on(SOCKET_EVENTS.LIVE.USER_LEFT, handleUserLeft);
+    const unsubscribeEnded = on(SOCKET_EVENTS.LIVE.ENDED, handleLiveEnded);
 
     return () => {
       unsubscribeJoin();
       unsubscribeLeft();
+      unsubscribeEnded();
+      socket.emit(SOCKET_EVENTS.LIVE.LEAVE, { pageId });
     };
-  }, [socket, pageId, on]);
+  }, [socket, pageId, role, on, handleHostEndedStream]);
 
   // Fallback to RTM viewer count if socket viewer count is 0
   const displayViewerCount = viewerCount > 0 ? viewerCount : rtmViewerCount;
@@ -417,14 +499,21 @@ const LiveStreampage = () => {
 
     remoteUsers.forEach((user) => {
       const uid = user.uid.toString();
+      const isVideoActive =
+        !hostMediaState?.isVideoMuted &&
+        Boolean(user.videoTrack) &&
+        user.hasVideo !== false &&
+        !user.videoTrack?.muted;
+
       console.log(`📹 Processing remote user ${uid}:`, {
         hasVideoTrack: !!user.videoTrack,
         hasAudioTrack: !!user.audioTrack,
+        isVideoActive,
         videoTrackState: user.videoTrack?.isPlaying,
       });
 
       // Handle video track
-      if (user.videoTrack) {
+      if (isVideoActive) {
         let div = remoteVideoRefs.current[uid];
 
         if (!div) {
@@ -443,6 +532,8 @@ const LiveStreampage = () => {
           remoteVideosContainerRef.current.appendChild(div);
           console.log(`✅ Created video container for remote user ${uid}`);
         }
+
+        div.style.display = "block";
 
         // Play video track - ensure it's not already playing
         if (user.videoTrack && div && !user.videoTrack.isPlaying) {
@@ -465,6 +556,12 @@ const LiveStreampage = () => {
         } else if (user.videoTrack && div && user.videoTrack.isPlaying) {
           // If already playing, just ensure it's in the right container
           console.log(`📹 Video already playing for user ${uid}`);
+        }
+      } else {
+        // Video track is muted or unpublished - hide the video element immediately
+        const div = remoteVideoRefs.current[uid];
+        if (div) {
+          div.style.display = "none";
         }
       }
 
@@ -505,7 +602,7 @@ const LiveStreampage = () => {
         delete remoteVideoRefs.current[uid];
       }
     });
-  }, [remoteUsers, role]);
+  }, [remoteUsers, role, hostMediaState?.isVideoMuted]);
 
   // Viewer count is now handled by RTM presence directly from useRTM hook
 
@@ -513,6 +610,9 @@ const LiveStreampage = () => {
   const handleEndStream = async () => {
     try {
       if (role === "host") {
+        if (socket) {
+          socket.emit(SOCKET_EVENTS.LIVE.END, { pageId });
+        }
         // End stream API call
         const endRes = await dispatch(endStream(pageId));
         if (endRes.meta.requestStatus === "fulfilled") {
@@ -650,39 +750,19 @@ const LiveStreampage = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Live Comments & Likes Sidebar */}
-      {rtmToken && hasRTMParams && (
-        <LiveCommentsLikes
-          comments={comments || []}
-          likesCount={likesCount || 0}
-          userLiked={userLiked || false}
-          onSendComment={async (text, userInfo) => {
-            try {
-              if (sendComment) {
-                const result = await sendComment(text, userInfo);
-                return result;
-              }
-            } catch (err) {
-              console.error("Error in sendComment:", err);
-            }
-            return false;
-          }}
-          onToggleLike={async () => {
-            try {
-              if (sendLike) {
-                await sendLike(userLiked ? "remove" : "add");
-              }
-            } catch (err) {
-              console.error("Error in sendLike:", err);
-            }
-          }}
-          user={user}
-          isConnected={rtmConnected || false}
-        />
-      )}
+  const hasRemoteVideo =
+    !hostMediaState?.isVideoMuted &&
+    remoteUsers.some(
+      (u) => Boolean(u.videoTrack) && u.hasVideo !== false && !u.videoTrack?.muted
+    );
+  const hasRemoteAudio =
+    !hostMediaState?.isAudioMuted &&
+    remoteUsers.some(
+      (u) => Boolean(u.audioTrack) && u.hasAudio !== false && !u.audioTrack?.muted
+    );
 
+  return (
+    <div className="">
       {/* Header */}
       <div className="absolute top-18 left-0 right-0 z-40 bg-gradient-to-b from-black/80 to-transparent p-4">
         <div className="flex items-center justify-start">
@@ -707,7 +787,7 @@ const LiveStreampage = () => {
             {localVideo ? (
               <div
                 ref={localVideoRef}
-                className="w-full h-full bg-black"
+                className={`w-full h-full bg-black ${isVideoMuted ? "opacity-0 pointer-events-none" : "opacity-100"}`}
                 style={{
                   width: "100%",
                   height: "100%",
@@ -723,40 +803,68 @@ const LiveStreampage = () => {
                 </div>
               </div>
             )}
+
+            {/* Host Camera Off Placeholder */}
+            {isVideoMuted && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-950 text-center p-6 select-none z-10">
+                <div className="w-24 h-24 rounded-full bg-neutral-800 border-2 border-neutral-700 flex items-center justify-center mb-4 shadow-2xl overflow-hidden">
+                 
+                    <VideoOff className="w-10 h-10 text-neutral-400" />
+                 
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">Your Camera is Off</h3>
+                <p className="text-sm text-neutral-400 max-w-xs">
+                  {isAudioMuted
+                    ? "Your microphone is also muted. Audience cannot see or hear you."
+                    : "Audience can still hear your audio. Click the camera icon below to turn it back on."}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
         {/* Remote Videos (Audience sees host, Host can see other hosts) */}
         {(role === "audience" || (role === "host" && remoteUsers.length > 0)) && (
-          <div
-            ref={remoteVideosContainerRef}
-            id="remote-videos-container"
-            className="absolute inset-0 bg-black"
-            style={{ width: "100%", height: "100%", position: "relative" }}
-          >
+          <div className="absolute inset-0 bg-black">
+            {/* Agora Remote Videos Mount Element */}
+            <div
+              ref={remoteVideosContainerRef}
+              id="remote-videos-container"
+              className="absolute inset-0 w-full h-full bg-black z-0"
+              style={{ width: "100%", height: "100%" }}
+            />
+
             {remoteUsers.length === 0 && !isJoined && (
-              <div className="absolute inset-0 flex items-center justify-center text-center text-white">
+              <div className="absolute inset-0 flex items-center justify-center text-center text-white z-20">
                 <div>
                   <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
                   <p>Connecting to stream...</p>
                 </div>
               </div>
             )}
-            {remoteUsers.length === 0 && isJoined && role === "audience" && (
-              <div className="absolute inset-0 flex items-center justify-center text-center text-white">
+            {remoteUsers.length === 0 && !hostMediaState?.isVideoMuted && isJoined && role === "audience" && !isStreamEnded && (
+              <div className="absolute inset-0 flex items-center justify-center text-center text-white z-20">
                 <div>
                   <Loader2 className="w-16 h-16 animate-spin mx-auto mb-4" />
                   <p>Waiting for host to start streaming...</p>
                 </div>
               </div>
             )}
-           
-            {/* {remoteUsers.length > 0 && (
-              <div className="text-white text-sm absolute top-4 left-4 bg-black/50 px-2 py-1 rounded z-10">
-                {remoteUsers.length} user(s) streaming
+
+            {/* Audience View: Host Camera Off Placeholder */}
+            {role === "audience" && (remoteUsers.length > 0 || hostMediaState?.isVideoMuted) && !hasRemoteVideo && !isStreamEnded && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-950 text-center p-6 select-none z-10">
+                <div className="w-24 h-24 rounded-full bg-neutral-800 border-2 border-neutral-700 flex items-center justify-center mb-4 shadow-2xl overflow-hidden">
+                  <VideoOff className="w-10 h-10 text-neutral-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-1">Host's Camera is Off</h3>
+                <p className="text-sm text-neutral-400 max-w-xs">
+                  {hasRemoteAudio
+                    ? "Audio is still streaming. Video will resume when the host turns it on."
+                    : "Host's camera and microphone are currently turned off."}
+                </p>
               </div>
-            )} */}
-            {/* Remote videos will be rendered here by the useEffect */}
+            )}
           </div>
         )}
 
@@ -819,13 +927,13 @@ const LiveStreampage = () => {
         )}
 
         {/* Audience View - Show message when host hasn't joined */}
-        {role === "audience" && remoteUsers.length === 0 && (
+        {role === "audience" && remoteUsers.length === 0 && !isStreamEnded && (
           <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 to-transparent p-6">
             <div className="text-center">
               <p className="text-lg mb-2">Waiting for stream to start...</p>
               <button
                 onClick={handleEndStream}
-                className="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                className="mt-4 px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors cursor-pointer"
               >
                 Leave Stream
               </button>
@@ -833,6 +941,58 @@ const LiveStreampage = () => {
           </div>
         )}
       </div>
+
+      {/* Live Comments & Likes Sidebar (Always on top with z-50) */}
+      {rtmToken && hasRTMParams && (
+        <LiveCommentsLikes
+          comments={comments || []}
+          likesCount={likesCount || 0}
+          userLiked={userLiked || false}
+          onSendComment={async (text, userInfo) => {
+            try {
+              if (sendComment) {
+                const result = await sendComment(text, userInfo);
+                return result;
+              }
+            } catch (err) {
+              console.error("Error in sendComment:", err);
+            }
+            return false;
+          }}
+          onToggleLike={async () => {
+            try {
+              if (sendLike) {
+                await sendLike(userLiked ? "remove" : "add");
+              }
+            } catch (err) {
+              console.error("Error in sendLike:", err);
+            }
+          }}
+          user={user}
+          isConnected={rtmConnected || false}
+        />
+      )}
+
+      {/* Stream Ended Modal for Audience */}
+      {isStreamEnded && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 max-w-md w-full text-center shadow-2xl">
+            <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-500 flex items-center justify-center">
+              <PhoneOff className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Live Stream Ended</h2>
+            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+              The host has ended the live broadcast. Thank you for watching!
+            </p>
+            <button
+              onClick={() => navigate("/home")}
+              className="w-full py-3 px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-orange-600/20 cursor-pointer"
+            >
+              Back to Home
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

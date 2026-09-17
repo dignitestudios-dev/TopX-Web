@@ -1,15 +1,23 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
-export const useRTM = ({ appId, uid, token, channelName }) => {
+export const useRTM = ({ appId, uid, token, channelName, onRemoteUserJoin }) => {
   const clientRef = useRef(null);
   const channelRef = useRef(null);
   const messageHandlerRef = useRef(null); // Store message handler for cleanup
+  const onRemoteUserJoinRef = useRef(onRemoteUserJoin);
+  useEffect(() => {
+    onRemoteUserJoinRef.current = onRemoteUserJoin;
+  }, [onRemoteUserJoin]);
 
   const [isConnected, setIsConnected] = useState(false);
   const [comments, setComments] = useState([]);
   const [likesCount, setLikesCount] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
   const [viewerCount, setViewerCount] = useState(0);
+  const [hostMediaState, setHostMediaState] = useState({
+    isVideoMuted: false,
+    isAudioMuted: false,
+  });
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -70,6 +78,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
             setViewerCount(event.snapshot.length);
           } else if (event.eventType === "REMOTE_JOIN") {
             setViewerCount((prev) => prev + 1);
+            onRemoteUserJoinRef.current?.();
           } else if (
             event.eventType === "REMOTE_LEAVE" ||
             event.eventType === "REMOTE_TIMEOUT"
@@ -127,6 +136,16 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
               };
             }
 
+            // Media state sync (camera/mic toggles)
+            if (data.type === "media-state" || data.customType === "media-state") {
+              console.log("📡 RTM: Host media state received", data);
+              setHostMediaState({
+                isVideoMuted: Boolean(data.isVideoMuted),
+                isAudioMuted: Boolean(data.isAudioMuted),
+              });
+              return;
+            }
+
             // Normalize comment detection: accept msg even without type
             const isComment =
               (data.customType && data.customType === "comment") ||
@@ -138,41 +157,53 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
               const messageUserId = String(data.userId || publisher);
               const currentUserId = String(uid);
               const isOwnMessage = messageUserId === currentUserId;
-
-              const commentId = `comment-${Date.now()}-${Math.random()}-${messageUserId}`;
-              const newComment = {
-                id: commentId,
-                username:
-                  data.userName || data.username || publisher || "Anonymous",
-                text: data.msg || data.text || data.comment || "",
-                profilePicture: data.profilePicture || data.userAvatar || null,
-                userId: messageUserId,
-                timestamp: Date.now(),
-              };
+              const messageId = data.messageId || data.id;
 
               setComments((prev) => {
-                // Always add comment from other users (ignore duplicate timestamp check)
-                if (!isOwnMessage) {
-                  return [...prev, { ...newComment, isOptimistic: false }];
+                // Handle own message - find matching optimistic comment and finalize it
+                if (isOwnMessage) {
+                  const existingIdx = prev.findIndex(
+                    (c) =>
+                      (messageId && c.id === messageId) ||
+                      (c.text === (data.msg || data.text || data.comment) &&
+                        String(c.userId) === currentUserId &&
+                        c.isOptimistic === true)
+                  );
+
+                  if (existingIdx >= 0) {
+                    if (!prev[existingIdx].isOptimistic) return prev;
+                    const updated = [...prev];
+                    updated[existingIdx] = {
+                      ...updated[existingIdx],
+                      isOptimistic: false,
+                    };
+                    return updated;
+                  }
+                  // If not in list, ignore echo or prevent duplicate
+                  return prev;
                 }
 
-                // Handle own message with optimistic update
-                const optimisticIndex = prev.findIndex(
-                  (c) =>
-                    c.text === newComment.text &&
-                    c.userId === newComment.userId &&
-                    c.isOptimistic === true
-                );
-                if (optimisticIndex >= 0) {
-                  const updated = [...prev];
-                  updated[optimisticIndex] = {
-                    ...newComment,
-                    isOptimistic: false,
-                  };
-                  return updated;
+                // From other users - prevent duplicate if same messageId already exists
+                if (messageId && prev.some((c) => c.id === messageId)) {
+                  return prev;
                 }
 
-                return [...prev, { ...newComment, isOptimistic: false }];
+                const commentId =
+                  messageId ||
+                  `comment-${Date.now()}-${Math.random()}-${messageUserId}`;
+
+                const newComment = {
+                  id: commentId,
+                  username:
+                    data.userName || data.username || publisher || "Anonymous",
+                  text: data.msg || data.text || data.comment || "",
+                  profilePicture: data.profilePicture || data.userAvatar || null,
+                  userId: messageUserId,
+                  timestamp: Date.now(),
+                  isOptimistic: false,
+                };
+
+                return [...prev, newComment];
               });
             }
           } catch (err) {
@@ -241,17 +272,21 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
       if (!channelRef.current || !text?.trim()) return false;
       const { client, name: channelName } = channelRef.current;
 
+      const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 8)}`;
+
       const payload = {
+        messageId,
         msg: text.trim(),
         userId: String(uid),
         userName: userInfo?.username || "Anonymous",
         profilePicture: userInfo?.profilePicture || null,
       };
 
-      // Optimistic UI
+      // Optimistic UI - append to bottom with stable messageId
       setComments((prev) => [
+        ...prev,
         {
-          id: `comment-${Date.now()}-${Math.random()}-${uid}`,
+          id: messageId,
           username: payload.userName,
           text: payload.msg,
           profilePicture: payload.profilePicture,
@@ -259,7 +294,6 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
           timestamp: Date.now(),
           isOptimistic: true,
         },
-        ...prev,
       ]);
 
       // ✅ Send with correct customType argument
@@ -321,6 +355,42 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
     [uid]
   );
 
+  // Send media state function (camera/mic toggles)
+  const sendMediaState = useCallback(
+    async (mediaState) => {
+      if (!channelRef.current) {
+        console.warn("⚠️ RTM: Cannot send media state - channel not available");
+        return false;
+      }
+
+      try {
+        const { client, name: channelName } = channelRef.current;
+        if (!client || !channelName) return false;
+
+        const payload = {
+          type: "media-state",
+          customType: "media-state",
+          isVideoMuted: Boolean(mediaState.isVideoMuted),
+          isAudioMuted: Boolean(mediaState.isAudioMuted),
+          userId: String(uid),
+        };
+
+        console.log("📤 RTM: Broadcasting media state", payload);
+
+        await client.publish(
+          channelName,
+          JSON.stringify(payload),
+          { customType: "msg" }
+        );
+        return true;
+      } catch (err) {
+        console.error("❌ RTM: Failed to send media state", err);
+        return false;
+      }
+    },
+    [uid]
+  );
+
   return {
     isConnected,
     comments,
@@ -330,5 +400,7 @@ export const useRTM = ({ appId, uid, token, channelName }) => {
     sendComment,
     sendLike,
     viewerCount,
+    hostMediaState,
+    sendMediaState,
   };
 };

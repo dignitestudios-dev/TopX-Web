@@ -9,8 +9,11 @@ export const useAgora = ({
   token = null,
   uid = null,
   backendChannelName = null,
+  onRemoteUserLeft = null,
 }) => {
   const clientRef = useRef(null);
+  const onRemoteUserLeftRef = useRef(onRemoteUserLeft);
+  onRemoteUserLeftRef.current = onRemoteUserLeft;
   const { user } = useSelector((state) => state.auth);
 
   const localVideoTrackRef = useRef(null);
@@ -55,12 +58,20 @@ export const useAgora = ({
         console.log(`✅ Subscribed to user ${user.uid}`);
 
         setRemoteUsers((prev) => {
-          const exists = prev.find((u) => u.uid === user.uid);
-          // Return a NEW array to trigger React re-render so video is displayed
+          const exists = prev.find((u) => String(u.uid) === String(user.uid));
+          const updatedUser = {
+            ...(exists || {}),
+            ...user,
+            hasVideo: mediaType === "video" ? true : (exists?.hasVideo ?? user.hasVideo),
+            hasAudio: mediaType === "audio" ? true : (exists?.hasAudio ?? user.hasAudio),
+            videoTrack: mediaType === "video" ? user.videoTrack : (exists?.videoTrack || user.videoTrack),
+            audioTrack: mediaType === "audio" ? user.audioTrack : (exists?.audioTrack || user.audioTrack),
+          };
+
           if (exists) {
-            return prev.map((u) => (u.uid === user.uid ? user : u));
+            return prev.map((u) => (String(u.uid) === String(user.uid) ? updatedUser : u));
           }
-          return [...prev, user];
+          return [...prev, updatedUser];
         });
 
         if (mediaType === "audio" && user.audioTrack) {
@@ -78,25 +89,95 @@ export const useAgora = ({
 
     // 🔹 User unpublished
     const handleUserUnpublished = (user, mediaType) => {
-      if (mediaType === "video") user.videoTrack?.stop();
-      if (mediaType === "audio") user.audioTrack?.stop();
+      console.log(`📡 Remote user ${user.uid} unpublished ${mediaType}`);
+      if (mediaType === "video") {
+        try {
+          user.videoTrack?.stop();
+        } catch (e) {
+          // ignore
+        }
+      }
+      if (mediaType === "audio") {
+        try {
+          user.audioTrack?.stop();
+        } catch (e) {
+          // ignore
+        }
+      }
 
-      // Force UI update
-      setRemoteUsers((prev) => prev.map((u) => (u.uid === user.uid ? user : u)));
+      setRemoteUsers((prev) =>
+        prev.map((u) => {
+          if (String(u.uid) === String(user.uid)) {
+            return {
+              ...u,
+              ...user,
+              hasVideo: mediaType === "video" ? false : u.hasVideo,
+              hasAudio: mediaType === "audio" ? false : u.hasAudio,
+              videoTrack: mediaType === "video" ? null : u.videoTrack,
+              audioTrack: mediaType === "audio" ? null : u.audioTrack,
+            };
+          }
+          return u;
+        })
+      );
+    };
+
+    // 🔹 User mute video
+    const handleUserMuteVideo = (user, isMuted) => {
+      console.log(`📡 Remote user ${user.uid} mute video: ${isMuted}`);
+      setRemoteUsers((prev) =>
+        prev.map((u) => {
+          if (String(u.uid) === String(user.uid)) {
+            return {
+              ...u,
+              ...user,
+              hasVideo: !isMuted,
+              videoTrack: isMuted ? null : (user.videoTrack || u.videoTrack),
+            };
+          }
+          return u;
+        })
+      );
+    };
+
+    // 🔹 User mute audio
+    const handleUserMuteAudio = (user, isMuted) => {
+      console.log(`📡 Remote user ${user.uid} mute audio: ${isMuted}`);
+      setRemoteUsers((prev) =>
+        prev.map((u) => {
+          if (String(u.uid) === String(user.uid)) {
+            return {
+              ...u,
+              ...user,
+              hasAudio: !isMuted,
+              audioTrack: isMuted ? null : (user.audioTrack || u.audioTrack),
+            };
+          }
+          return u;
+        })
+      );
     };
 
     // 🔹 User left
     const handleUserLeft = (user) => {
-      setRemoteUsers((prev) => prev.filter((u) => u.uid !== user.uid));
+      console.log(`👋 Remote user ${user.uid} left channel`);
+      setRemoteUsers((prev) => prev.filter((u) => String(u.uid) !== String(user.uid)));
+      if (typeof onRemoteUserLeftRef.current === "function") {
+        onRemoteUserLeftRef.current(user);
+      }
     };
 
     client.on("user-published", handleUserPublished);
     client.on("user-unpublished", handleUserUnpublished);
+    client.on("user-mute-video", handleUserMuteVideo);
+    client.on("user-mute-audio", handleUserMuteAudio);
     client.on("user-left", handleUserLeft);
 
     return () => {
       client.off("user-published", handleUserPublished);
       client.off("user-unpublished", handleUserUnpublished);
+      client.off("user-mute-video", handleUserMuteVideo);
+      client.off("user-mute-audio", handleUserMuteAudio);
       client.off("user-left", handleUserLeft);
     };
   }, [appId]);
@@ -247,16 +328,40 @@ export const useAgora = ({
   // ✅ Toggle Media
   const toggleAudio = useCallback(async () => {
     if (localAudio) {
+      const client = clientRef.current;
       const newMutedState = !isAudioMuted;
-      await localAudio.setMuted(newMutedState);
+      try {
+        await localAudio.setMuted(newMutedState);
+        if (client && (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING")) {
+          if (newMutedState) {
+            await client.unpublish(localAudio);
+          } else {
+            await client.publish(localAudio);
+          }
+        }
+      } catch (err) {
+        console.error("❌ Error toggling audio track:", err);
+      }
       setIsAudioMuted(newMutedState);
     }
   }, [localAudio, isAudioMuted]);
 
   const toggleVideo = useCallback(async () => {
     if (localVideo) {
+      const client = clientRef.current;
       const newMutedState = !isVideoMuted;
-      await localVideo.setMuted(newMutedState);
+      try {
+        await localVideo.setMuted(newMutedState);
+        if (client && (client.connectionState === "CONNECTED" || client.connectionState === "CONNECTING")) {
+          if (newMutedState) {
+            await client.unpublish(localVideo);
+          } else {
+            await client.publish(localVideo);
+          }
+        }
+      } catch (err) {
+        console.error("❌ Error toggling video track:", err);
+      }
       setIsVideoMuted(newMutedState);
     }
   }, [localVideo, isVideoMuted]);

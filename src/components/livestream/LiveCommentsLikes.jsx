@@ -41,7 +41,7 @@ const LiveCommentsLikes = ({
 
     try {
       const success = await onSendComment(commentText.trim(), {
-        username: user?.username || user?.name || user?.user?.username || "Anonymous",
+        username: user?.name || user?.name || user?.user?.username || "Anonymous",
         profilePicture: user?.profilePicture || user?.avatar || user?.user?.profilePicture || null,
       });
 
@@ -64,15 +64,15 @@ const LiveCommentsLikes = ({
   };
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-80 max-w-full bg-black/80 backdrop-blur-sm flex flex-col z-20 overflow-hidden">
+    <div className="absolute z-20 right-0 top-0 bottom-0 w-80 max-w-full bg-black/80 backdrop-blur-sm flex flex-col z-20 overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-white/20 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onToggleLike}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all ${userLiked
-                ? "bg-red-600 text-white"
-                : "bg-white/10 text-white hover:bg-white/20"
+              ? "bg-red-600 text-white"
+              : "bg-white/10 text-white hover:bg-white/20"
               }`}
           >
             <Heart
@@ -117,9 +117,6 @@ const LiveCommentsLikes = ({
                 <div
                   key={comment.id}
                   className="flex gap-2 max-w-full"
-                  style={{
-                    animation: "fadeIn 0.3s ease-in",
-                  }}
                 >
                   {comment.profilePicture ? (
                     <img
