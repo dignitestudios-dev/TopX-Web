@@ -99,20 +99,28 @@ const TrendingPagesGlobal = () => {
                   {item.followersCount > 0 && item.followers && (
                     <div className="flex items-center -space-x-1 shrink-0">
                       {item.followers.slice(0, 3).map((follower, index) => {
-                        const profilePicture = follower?.profilePicture;
-                        const initial = follower?.name?.charAt(0)?.toUpperCase() || "?";
+                        const isStringUrl =
+                          typeof follower === "string" &&
+                          (follower.startsWith("http") || follower.startsWith("data:") || follower.startsWith("/"));
+
+                        const profilePicture = isStringUrl
+                          ? follower
+                          : follower?.profilePicture || follower?.avatar || follower?.image || null;
+
+                        const nameStr = follower?.username || follower?.name || "";
+                        const initial = nameStr ? nameStr.charAt(0).toUpperCase() : "?";
 
                         return profilePicture ? (
                           <img
                             key={index}
                             src={profilePicture}
                             alt={`Follower ${index + 1}`}
-                            className="w-[24px] h-[24px] rounded-full border border-white object-cover"
+                            className="w-[24px] h-[24px] rounded-full border border-white object-cover bg-gray-100"
                           />
                         ) : (
                           <div
                             key={index}
-                            className="w-[24px] h-[24px] rounded-full border border-white bg-gray-400 text-white flex items-center justify-center text-[11px] font-semibold"
+                            className="w-[24px] h-[24px] rounded-full border border-white bg-gray-400 text-white flex items-center justify-center text-[11px] font-semibold select-none"
                           >
                             {initial}
                           </div>
@@ -124,7 +132,7 @@ const TrendingPagesGlobal = () => {
                   {/* Followers Count */}
                   <div className="flex items-center gap-1 pl-1">
                     <p className="text-[14px] font-[600] text-[#000000]">
-                      {item.followersCount}+
+                      {item?.followersCount}+
                     </p>
                     <p className="text-[14px] font-[500] text-[#ADADAD]">Follows</p>
                   </div>

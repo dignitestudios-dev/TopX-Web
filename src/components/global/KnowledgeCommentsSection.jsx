@@ -296,20 +296,20 @@ export default function KnowledgeCommentsSection({
             )}
           </div>
 
-          <div className="flex-1">
-            <div className="bg-gray-100 rounded-lg px-3 py-2">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="bg-gray-100 rounded-lg px-3 py-2 max-w-full overflow-hidden">
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
-                {comment.user?.name}
+                <span className="truncate">{comment.user?.name}</span>
                 {comment.isElevated && (
-                 <TiPin className="w-4 h-4" />
+                 <TiPin className="w-4 h-4 shrink-0" />
                 )}
                 {comment.isAdmin && (
-                  <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
+                  <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded shrink-0">
                     Admin
                   </span>
                 )}
               </p>
-              <p className="text-sm text-gray-700">{comment.text}</p>
+              <p className="text-sm text-gray-700 break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap">{comment.text}</p>
             </div>
             <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
               <button

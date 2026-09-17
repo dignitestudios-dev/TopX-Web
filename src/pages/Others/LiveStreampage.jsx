@@ -158,7 +158,7 @@ const LiveStreampage = () => {
 
   // Backend returns accountNumber as UID - convert to Number
   const uid = streamData?.accountNumber ? Number(streamData.accountNumber) : null;
-
+  console.log(streamData, "streamData==>")
   // Backend returns channelName - use EXACT value (no fallback)
   const channelName = streamData?.channelName || null;
 
@@ -212,6 +212,7 @@ const LiveStreampage = () => {
     uid,
     backendChannelName: channelName, // Use EXACT channelName from backend
   });
+  console.log(remoteUsers, "remoteUsers==>")
 
   const handleRetryPermissionsAndJoin = async () => {
     setIsRetryingPermissions(true);
@@ -749,6 +750,7 @@ const LiveStreampage = () => {
                 </div>
               </div>
             )}
+           
             {/* {remoteUsers.length > 0 && (
               <div className="text-white text-sm absolute top-4 left-4 bg-black/50 px-2 py-1 rounded z-10">
                 {remoteUsers.length} user(s) streaming

@@ -1975,9 +1975,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       />
                     )}
                     <div
-                      className={`max-w-xs px-3 py-2 rounded-lg text-sm ${isCurrentUser
-                        ? "bg-orange-500 text-white rounded-br-none"
-                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                      className={`min-w-0 max-w-[75%] break-words overflow-hidden px-3 py-2 rounded-lg text-sm ${isCurrentUser
+                          ? "bg-orange-500 text-white rounded-br-none"
+                          : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
                         }`}
                     >
                       {msg.type === "shared" && msg.shared ? (
@@ -2192,7 +2192,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           </div>
                         )
                       ) : (
-                        <p className="text-sm break-words whitespace-pre-wrap">
+                        <p className="text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere">
                           {renderMessageWithLinks(
                             isBoilerplateContent(msg.content) ? "" : msg.content,
                             (msg.sender?._id || msg.sender) === (user?._id || user?.id),
@@ -2822,52 +2822,52 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
 
 
-              const isSelected = selectedUsers.find((u) => u._id === user._id);
+                const isSelected = selectedUsers.find((u) => u._id === user._id);
 
-              return (
-                <div
-                  key={user._id}
-                  onClick={() => {
-                    if (isDisabled) return;
-                    handleSelectUser(user);
-                  }}
-                  className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-gray-50 cursor-pointer"
-                    }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <ChatAvatar
-                      src={user.profilePicture}
-                      name={user.name}
-                      size="w-8 h-8"
-                      textSize="text-xs"
-                    />
-                    <div>
-                      <span className="text-sm text-gray-900 block">
-                        {user.name}
-                      </span>
-                      {isBlocked ? (
-                        <span className="text-xs text-red-500">
-                          Blocked
-                        </span>
-                      ) : user.hasConnection ? (
-                        <span className="text-xs text-gray-400">
-                          Connected
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
+                return (
                   <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
-                      ? "bg-orange-500 border-orange-500"
-                      : "border-gray-300"
+                    key={user._id}
+                    onClick={() => {
+                      if (isDisabled) return;
+                      handleSelectUser(user);
+                    }}
+                    className={`flex items-center justify-between p-2 rounded mb-1 ${isDisabled
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-gray-50 cursor-pointer"
                       }`}
                   >
-                    {isSelected && <Check className="w-3 h-3 text-white" />}
+                    <div className="flex items-center gap-2">
+                      <ChatAvatar
+                        src={user.profilePicture}
+                        name={user.name}
+                        size="w-8 h-8"
+                        textSize="text-xs"
+                      />
+                      <div>
+                        <span className="text-sm text-gray-900 block">
+                          {user.name}
+                        </span>
+                        {isBlocked ? (
+                          <span className="text-xs text-red-500">
+                            Blocked
+                          </span>
+                        ) : user.hasConnection ? (
+                          <span className="text-xs text-gray-400">
+                            Connected
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSelected
+                        ? "bg-orange-500 border-orange-500"
+                        : "border-gray-300"
+                        }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
                   </div>
-                </div>
-              );
+                );
               });
             })()
           ) : (

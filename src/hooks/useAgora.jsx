@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
+import { useSelector } from "react-redux";
 
 export const useAgora = ({
   pageId,
@@ -10,6 +11,7 @@ export const useAgora = ({
   backendChannelName = null,
 }) => {
   const clientRef = useRef(null);
+  const { user } = useSelector((state) => state.auth);
 
   const localVideoTrackRef = useRef(null);
   const localAudioTrackRef = useRef(null);
@@ -40,6 +42,12 @@ export const useAgora = ({
 
     // 🔹 User published
     const handleUserPublished = async (user, mediaType) => {
+      console.log("USER PUBLISHED", {
+        remoteUid: user.uid,
+        mediaType,
+        myUid: client.uid,
+        channelName,
+      });
       try {
         console.log(`📡 User ${user.uid} published ${mediaType}`);
 
@@ -164,7 +172,20 @@ export const useAgora = ({
 
       await client.join(appId, channelName, token, numericUid);
       setIsJoined(true);
-
+      console.log("🔥 AGORA JOINED", {
+        role,
+        myUid: client.uid,
+        numericUid: numericUid,
+        // returnedUid,
+        channelName, appId,
+        connectionState: client.connectionState,
+      });
+      console.log("🔍 STREAM UID SOURCE", {
+        // streamAccountNumber: streamData?.accountNumber,
+        currentUser: user,
+        currentUserId: user?.id,
+        currentAccountNumber: user?.accountNumber,
+      });
       if (role === "host" && audioTrack && videoTrack) {
         await client.publish([audioTrack, videoTrack]);
       }

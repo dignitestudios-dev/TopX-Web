@@ -10,8 +10,16 @@ import {
   LucideSettings2,
   Cross,
   UserCheck,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Image as ImageIcon,
 } from "lucide-react";
 import FollowRequestsModal from "./FollowRequestsModal";
+import ProfilePictureModal from "./ProfilePictureModal";
+import EmojiPickerModal from "./EmojiPickerModal";
+import { gettopics } from "../../../redux/slices/topics.slice";
 import { IoChevronBackOutline } from "react-icons/io5";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -36,7 +44,7 @@ import {
   LikeOtherStories,
   viewOtherStories,
 } from "../../../redux/slices/Subscription.slice";
-import { timeAgo } from "../../../lib/helpers";
+import { timeAgo, emojiUrlToFile, isEmoji } from "../../../lib/helpers";
 import ActiveStoryModal from "./ActiveStoryModal";
 import { useNavigate } from "react-router";
 import { Lock } from "lucide-react";
@@ -86,6 +94,18 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }
   const [pageName, setPageName] = useState("");
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState("");
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState(null);
+  const [categorySearch, setCategorySearch] = useState("");
+  const categoryDropdownRef = useRef(null);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
+  const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
+  const editFileInputRef = useRef(null);
+
+  const { alltopics, isLoading: topicsLoading } = useSelector(
+    (state) => state.topics || {}
+  );
   const [expertModal, setExpertModal] = useState(false);
   const [followRequestsModal, setFollowRequestsModal] = useState(false);
   const [followRequestsCount, setFollowRequestsCount] = useState(0);
@@ -273,12 +293,65 @@ console.log(pageDetail,"pageDetail==>")
 
   // Reset edit form when modal opens
   useEffect(() => {
-    if (editPageModal && pageDetail) {
-      setPageName(pageDetail.name || "");
-      setEditImagePreview(pageDetail.image || null);
+    if (editPageModal) {
+      dispatch(gettopics());
+      const p = pageDetail || page;
+      if (p) {
+        setPageName(p.name || "");
+        setEditImagePreview(p.image || null);
+        setEditImageFile(null);
+        const currentTopic =
+          (typeof p.topic === "object" ? p.topic?.name : p.topic) ||
+          p.interest ||
+          "";
+        setSelectedTopic(currentTopic);
+      }
+      setIsCategoryOpen(false);
+      setCategorySearch("");
+      setExpandedCategory(null);
+    }
+  }, [editPageModal, pageDetail, page, dispatch]);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutsideCategory = (e) => {
+      if (
+        categoryDropdownRef.current &&
+        !categoryDropdownRef.current.contains(e.target)
+      ) {
+        setIsCategoryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutsideCategory);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutsideCategory);
+  }, []);
+
+  // Filter categories & subcategories based on search query
+  const filteredTopics = (alltopics || []).filter((item) => {
+    const searchLower = categorySearch.toLowerCase().trim();
+    if (!searchLower) return true;
+    const nameMatch = item.name?.toLowerCase().includes(searchLower);
+    const subMatch = (item.subCategories || []).some((sub) =>
+      sub.toLowerCase().includes(searchLower)
+    );
+    return nameMatch || subMatch;
+  });
+
+  const handleSelectEmoji = async (emojiUrl) => {
+    setEditImagePreview(emojiUrl);
+    try {
+      const file = await emojiUrlToFile(emojiUrl, "topic_page_emoji.png");
+      if (file) {
+        setEditImageFile(file);
+      } else {
+        setEditImageFile(null);
+      }
+    } catch (err) {
+      console.error("Error setting emoji file:", err);
       setEditImageFile(null);
     }
-  }, [editPageModal, pageDetail]);
+  };
 
   // Handle report success
   useEffect(() => {
@@ -528,7 +601,7 @@ console.log(pageDetail,"pageDetail==>")
   };
 
   // Handle update page
-  const handleUpdatePage = () => {
+  const handleUpdatePage = async () => {
     if (!pageName.trim()) {
       ErrorToast("Page name is required");
       return;
@@ -536,10 +609,30 @@ console.log(pageDetail,"pageDetail==>")
 
     const formData = new FormData();
     formData.append("pageName", pageName.trim());
+    
 
-    // Only append image if a new one is selected
-    if (editImageFile) {
-      formData.append("image", editImageFile);
+    // Topic
+    let topicValue = (selectedTopic || "").trim();
+    if (topicValue.includes(">")) {
+      topicValue = topicValue.split(">").pop().trim();
+    }
+    if (topicValue) {
+      formData.append("topic", topicValue);
+
+    }
+
+    // Only append image if a new one is selected (file or emoji converted to file)
+    let binaryFile = editImageFile;
+    if (!(binaryFile instanceof File) && editImagePreview && isEmoji(editImagePreview)) {
+      try {
+        binaryFile = await emojiUrlToFile(editImagePreview, "topic_page_emoji.png");
+      } catch (e) {
+        console.error("Error converting emoji to file:", e);
+      }
+    }
+
+    if (binaryFile instanceof File) {
+      formData.append("image", binaryFile, binaryFile.name || "topic_page.png");
     }
 
     if (pageId) {
@@ -1797,14 +1890,14 @@ console.log(pageDetail,"pageDetail==>")
       {/* Edit Page Modal */}
       {editPageModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-900">Edit Page</h2>
               <button
                 onClick={() => setEditPageModal(false)}
                 disabled={updatePageLoading}
-                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 <X className="w-6 h-6" />
               </button>
@@ -1825,42 +1918,223 @@ console.log(pageDetail,"pageDetail==>")
                 />
               </div>
 
-              {/* Image Upload */}
+              {/* Topic / Category Dropdown */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  Topic/ Category
+                </label>
+
+                {/* Header Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                  disabled={topicsLoading || updatePageLoading}
+                  className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all border-gray-200 ${
+                    selectedTopic
+                      ? "text-gray-900 font-medium"
+                      : "text-gray-400"
+                  } hover:border-gray-300 focus:outline-none cursor-pointer`}
+                >
+                  <span className="truncate">{selectedTopic || "Text goes here"}</span>
+                  {isCategoryOpen ? (
+                    <ChevronUp className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
+                  )}
+                </button>
+
+                {/* Dropdown Options Panel */}
+                {isCategoryOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 p-3 animate-fadeIn">
+                    {/* Search Bar */}
+                    <div className="relative mb-3">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search here"
+                        value={categorySearch}
+                        onChange={(e) =>
+                          setCategorySearch(e.target.value)
+                        }
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-800 outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Options List */}
+                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-orange-scrollbar">
+                      {topicsLoading ? (
+                        <div className="p-3 text-xs text-gray-500 text-center">
+                          Loading categories...
+                        </div>
+                      ) : filteredTopics.length === 0 ? (
+                        <div className="p-3 text-xs text-gray-500 text-center">
+                          No category found
+                        </div>
+                      ) : (
+                        filteredTopics.map((item) => {
+                          const hasSubs =
+                            Array.isArray(item.subCategories) &&
+                            item.subCategories.length > 0;
+                          const isExpanded =
+                            expandedCategory === item._id ||
+                            (categorySearch.trim().length > 0 && hasSubs);
+
+                          return (
+                            <div
+                              key={item._id}
+                              className="rounded-xl border border-transparent transition-all"
+                            >
+                              {/* Category Header Row */}
+                              <div
+                                onClick={() => {
+                                  setSelectedTopic(item.name);
+                                  if (hasSubs) {
+                                    setExpandedCategory(
+                                      isExpanded ? null : item._id
+                                    );
+                                  } else {
+                                    setIsCategoryOpen(false);
+                                  }
+                                }}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
+                                  selectedTopic === item.name || isExpanded
+                                    ? "text-orange-600 bg-orange-50/80"
+                                    : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
+                                }`}
+                              >
+                                <span className="flex-1 truncate">
+                                  {item.name}
+                                </span>
+
+                                {hasSubs && (
+                                  <div className="p-1 hover:bg-orange-100 rounded-md transition-colors ml-1">
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-orange-600" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Subcategories Accordion Panel */}
+                              {hasSubs && isExpanded && (
+                                <div className="pl-5 pr-2 py-1.5 space-y-1 bg-gray-50/50 rounded-b-xl border-t border-gray-100/80 animate-fadeIn">
+                                  {item.subCategories.map((sub, idx) => (
+                                    <div
+                                      key={idx}
+                                      onClick={() => {
+                                        setSelectedTopic(
+                                          `${item.name} > ${sub}`
+                                        );
+                                        setIsCategoryOpen(false);
+                                      }}
+                                      className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                        selectedTopic ===
+                                        `${item.name} > ${sub}`
+                                          ? "text-orange-600 font-semibold bg-orange-100/60"
+                                          : "text-gray-600 hover:text-orange-600 hover:bg-white"
+                                      }`}
+                                    >
+                                      {sub}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Page Image Upload with Device & Emoji options */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
                   Page Image
                 </label>
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleEditImageUpload}
-                  fileClassName="w-[100px] h-[100px]"
-                  preview={editImagePreview}
-                  disabled={updatePageLoading}
-                />
+                <div
+                  onClick={() => setIsOptionsModalOpen(true)}
+                  className="relative inline-block cursor-pointer group select-none"
+                >
+                  <div className="w-24 h-24 rounded-full border-2 border-dashed border-orange-400 flex items-center justify-center relative bg-orange-50/20 group-hover:bg-orange-50/50 transition-colors overflow-hidden">
+                    {editImagePreview ? (
+                      isEmoji(editImagePreview) ? (
+                        <span className="text-4xl select-none flex items-center justify-center">
+                          {editImagePreview}
+                        </span>
+                      ) : (
+                        <img
+                          src={editImagePreview}
+                          alt="Page Preview"
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      )
+                    ) : (
+                      <ImageIcon className="w-9 h-9 text-orange-400" />
+                    )}
+                  </div>
+                  <div className="absolute bottom-0 right-0 z-10 w-7 h-7 bg-gray-900 text-white rounded-full flex items-center justify-center shadow-md border-2 border-white">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <input
+                    ref={editFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageUpload}
+                    className="hidden"
+                    disabled={updatePageLoading}
+                  />
+                </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button
+                  type="button"
                   onClick={() => setEditPageModal(false)}
                   disabled={updatePageLoading}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-xl font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleUpdatePage}
                   disabled={updatePageLoading || !pageName.trim()}
-                  className="flex-1 bg-orange-500 text-white py-2 rounded-lg font-medium hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm flex items-center justify-center gap-2"
                 >
-                  {updatePageLoading ? "Updating..." : "Update Page"}
+                  {updatePageLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    "Update Page"
+                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Profile Picture Options Modal (Device vs Emoji) */}
+      <ProfilePictureModal
+        isOpen={isOptionsModalOpen}
+        onClose={() => setIsOptionsModalOpen(false)}
+        onSelectUploadImage={() => editFileInputRef.current?.click()}
+        onSelectUploadEmoji={() => setIsEmojiModalOpen(true)}
+      />
+
+      {/* Emoji Picker Modal */}
+      <EmojiPickerModal
+        isOpen={isEmojiModalOpen}
+        onClose={() => setIsEmojiModalOpen(false)}
+        onSelectEmoji={handleSelectEmoji}
+      />
       {/* Expert Status Modal - Landscape Layout */}
       {expertModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">

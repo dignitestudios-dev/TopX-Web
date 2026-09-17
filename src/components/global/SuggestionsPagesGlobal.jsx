@@ -97,14 +97,34 @@ const SuggestionsPagesGlobal = () => {
                   {/* Followers Images */}
                   {item.followersCount > 0 && item.followers && (
                     <div className="flex items-center -space-x-1 shrink-0">
-                      {item.followers.slice(0, 3).map((follower, index) => (
-                        <img
-                          key={index}
-                          src={follower || "https://static.vecteezy.com/system/resources/thumbnails/009/292/244/small/default-avatar-icon-of-social-media-user-vector.jpg"} // Use follower image or default image if null
-                          alt={`Follower ${index + 1}`}
-                          className="w-[24px] h-[24px] rounded-full border border-white"
-                        />
-                      ))}
+                      {item.followers.slice(0, 3).map((follower, index) => {
+                        const isStringUrl =
+                          typeof follower === "string" &&
+                          (follower.startsWith("http") || follower.startsWith("data:") || follower.startsWith("/"));
+
+                        const profilePicture = isStringUrl
+                          ? follower
+                          : follower?.profilePicture || follower?.avatar || follower?.image || null;
+
+                        const nameStr = follower?.username || follower?.name || "";
+                        const initial = nameStr ? nameStr.charAt(0).toUpperCase() : "?";
+
+                        return profilePicture ? (
+                          <img
+                            key={index}
+                            src={profilePicture}
+                            alt={`Follower ${index + 1}`}
+                            className="w-[24px] h-[24px] rounded-full border border-white object-cover bg-gray-100"
+                          />
+                        ) : (
+                          <div
+                            key={index}
+                            className="w-[24px] h-[24px] rounded-full border border-white bg-gray-400 text-white flex items-center justify-center text-[11px] font-semibold select-none"
+                          >
+                            {initial}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

@@ -234,17 +234,17 @@ export default function KnowledgePostComments({ postId }) {
               </span>
             )}
           </div>
-          <div className="flex-1">
-            <div className="bg-gray-100 rounded-lg px-3 py-2">
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="bg-gray-100 rounded-lg px-3 py-2 max-w-full overflow-hidden">
               <p className="font-semibold text-sm text-gray-900 flex items-center gap-1">
-                {comment.user?.username}
+                <span className="truncate">{comment.user?.username}</span>
                 {comment.isAdmin && (
-                  <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">
+                  <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded shrink-0">
                     Admin
                   </span>
                 )}
               </p>
-              <p className="text-sm text-gray-700">{comment.text}</p>
+              <p className="text-sm text-gray-700 break-words [overflow-wrap:anywhere] [word-break:break-word] whitespace-pre-wrap">{comment.text}</p>
               {comment?.reportedByCurrentUser && (
                 <p className="text-xs text-orange-500 font-medium mt-2">
                   This Comment has been reported
