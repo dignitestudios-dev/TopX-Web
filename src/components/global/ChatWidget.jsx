@@ -157,6 +157,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const [isAcceptMsg, setIsAcceptMsg] = useState(false);
   const [requestChat, setRequestChat] = useState(null);
   // Preset backgrounds for knowledge posts
+  const [isUploading, setIsUploading] = useState(false);
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
     { id: 2, name: "bg_orange_gradient", imagePath: "/bg_orange_gradient.jpg" },
@@ -978,15 +979,22 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     if (files.length === 0) return;
 
-    setSelectedFiles(files);
+    // Maximum 10 files
+    const filesToSelect = files.slice(0, 10);
 
-    const previews = files.map((file) => ({
+    setSelectedFiles(filesToSelect);
+
+    const previews = filesToSelect.map((file) => ({
       url: URL.createObjectURL(file),
       type: file.type,
       name: file.name,
+      file,
     }));
 
     setMediaPreview(previews);
+
+    // Media options close
+    setShowMediaOptions(false);
 
     // Same file dobara select karne ki permission
     e.target.value = "";
@@ -994,13 +1002,16 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
   const uploadFilesToS3 = async (files) => {
     if (!files || files.length === 0) return [];
 
-    console.log("🔥 START S3 UPLOAD:", files);
+    // Backend supports maximum 10 files
+    const filesToUpload = files.slice(0, 10);
+
+    console.log("🔥 START S3 UPLOAD:", filesToUpload);
 
     // STEP 1: Get pre-signed URLs
     const presignedResponse = await axios.post(
       "/uploads/presigned-urls",
       {
-        files: files.map((file) => ({
+        files: filesToUpload.map((file) => ({
           fileName: file.name,
           fileType: file.type,
           folder: "chat_media",
@@ -1010,15 +1021,21 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     console.log("🔥 PRESIGNED RESPONSE:", presignedResponse.data);
 
-    const { fileUrls, uploadUrls } = presignedResponse.data.data;
+    const { fileUrls, uploadUrls } =
+      presignedResponse.data?.data || {};
 
-    if (!fileUrls?.length || !uploadUrls?.length) {
-      throw new Error("Failed to get upload URLs");
+    if (
+      !Array.isArray(fileUrls) ||
+      !Array.isArray(uploadUrls) ||
+      fileUrls.length !== filesToUpload.length ||
+      uploadUrls.length !== filesToUpload.length
+    ) {
+      throw new Error("Invalid presigned URL response");
     }
 
-    // STEP 2: Upload every file directly to S3
+    // STEP 2: Upload directly to S3
     await Promise.all(
-      files.map(async (file, index) => {
+      filesToUpload.map(async (file, index) => {
         console.log(`🔥 UPLOADING ${index + 1}:`, file.name);
 
         const uploadResponse = await fetch(uploadUrls[index], {
@@ -1039,6 +1056,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       })
     );
 
+    // STEP 3: Return permanent file URLs
     console.log("🔥 FINAL S3 FILE URLS:", fileUrls);
 
     return fileUrls;
@@ -1051,6 +1069,9 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     console.log("🔥 selectedGif:", selectedGif);
 
     try {
+      if (selectedFiles.length > 0) {
+        setIsUploading(true);
+      }
       let mediaUrls = [];
 
       // ============================================
@@ -1149,14 +1170,18 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
             setSelectedFiles([]);
             setSelectedGif(null);
             setMediaPreview([]);
+            setIsUploading(false);
           }
         });
+
       }
 
       // ============================================
       // STEP 8: Send INDIVIDUAL message
       // ============================================
       else {
+            setIsUploading(false);
+
         console.log("🔥 SENDING INDIVIDUAL MESSAGE...");
 
         socket.sendMessage(payload, (response) => {
@@ -1390,26 +1415,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       memberUser._id !== currentUserId;
 
     const rowId = memberUser._id;
-    useEffect(() => {
-      const input = fileInputRef.current;
 
-      if (!input) {
-        console.log("❌ FILE INPUT NOT FOUND");
-        return;
-      }
-
-      console.log("✅ FILE INPUT FOUND", input);
-
-      const testChange = (e) => {
-        console.log("🚨 NATIVE CHANGE EVENT:", e.target.files);
-      };
-
-      input.addEventListener("change", testChange);
-
-      return () => {
-        input.removeEventListener("change", testChange);
-      };
-    }, []);
     return (
       <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded mb-1">
         <div className="flex items-center gap-2">
@@ -1976,8 +1982,8 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     )}
                     <div
                       className={`min-w-0 max-w-[75%] break-words overflow-hidden px-3 py-2 rounded-lg text-sm ${isCurrentUser
-                          ? "bg-orange-500 text-white rounded-br-none"
-                          : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
+                        ? "bg-orange-500 text-white rounded-br-none"
+                        : "bg-white text-gray-900 rounded-bl-none border border-gray-200"
                         }`}
                     >
                       {msg.type === "shared" && msg.shared ? (
@@ -2409,10 +2415,19 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </button>
 
                   <button
+                    type="button"
                     onClick={handleSendMessage}
-                    className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600"
+                    disabled={isUploading}
+                    className={`flex items-center justify-center w-10 h-10 rounded-full ${isUploading
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-orange-500 hover:bg-orange-600"
+                      } text-white`}
                   >
-                    <Send className="w-4 h-4" />
+                    {isUploading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </>
@@ -2452,7 +2467,11 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                     type="button"
                     onClick={() => {
                       console.log("🔥 IMAGE BUTTON CLICKED");
+
+                      // File picker open karo
                       fileInputRef.current?.click();
+
+                      // Options popup close karo
                       // setShowMediaOptions(false);
                     }}
                     className="flex flex-col items-center p-2 hover:bg-gray-50 rounded"
@@ -2533,18 +2552,44 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {mediaPreview.map((file, i) => (
-                    <div key={i}>
+                    <div
+                      key={i}
+                      className="relative rounded-lg overflow-hidden border border-gray-200"
+                    >
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedFiles = selectedFiles.filter(
+                            (_, index) => index !== i
+                          );
+
+                          const updatedPreviews = mediaPreview.filter(
+                            (_, index) => index !== i
+                          );
+
+                          // Old blob URL cleanup
+                          URL.revokeObjectURL(file.url);
+
+                          setSelectedFiles(updatedFiles);
+                          setMediaPreview(updatedPreviews);
+                        }}
+                        className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-500 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
                       {file.type?.startsWith("video/") ? (
                         <video
                           src={file.url}
                           controls
-                          className="w-full h-32 object-cover rounded"
+                          className="w-full h-32 object-cover"
                         />
                       ) : (
                         <img
                           src={file.url}
-                          alt={`Image ${i + 1}`}
-                          className="w-full h-32 object-cover rounded"
+                          alt={file.name}
+                          className="w-full h-32 object-cover"
                         />
                       )}
                     </div>
