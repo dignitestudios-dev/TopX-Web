@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   Check,
   AlertTriangle,
+  Play,
+  ExternalLink,
 } from "lucide-react";
 import { FaCamera } from "react-icons/fa6";
 import { MdGif } from "react-icons/md";
@@ -145,6 +147,123 @@ const ChatAvatar = ({
     </div>
   );
 };
+
+// Helper to resolve file type correctly even if browser/OS leaves it empty (e.g. .mov on Windows)
+const resolveFileType = (file) => {
+  if (file?.type) return file.type;
+  const ext = file?.name?.split(".").pop()?.toLowerCase();
+  const videoExts = {
+    mov: "video/quicktime",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    ogg: "video/ogg",
+    ogv: "video/ogg",
+    m4v: "video/mp4",
+    mkv: "video/x-matroska",
+    avi: "video/x-msvideo",
+    flv: "video/x-flv",
+    wmv: "video/x-ms-wmv",
+    "3gp": "video/3gpp",
+    ts: "video/mp2t",
+  };
+  const imageExts = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    svg: "image/svg+xml",
+  };
+  return videoExts[ext] || imageExts[ext] || "application/octet-stream";
+};
+
+// Helper to safely extract string URL from raw media item
+const getMediaUrl = (item) => {
+  if (!item) return "";
+  if (typeof item === "string") return item;
+  return item.url || item.path || item.link || item.mediaUrl || "";
+};
+
+// Helper to detect if a media item is a video
+const isVideoUrl = (item) => {
+  if (!item) return false;
+  const url = getMediaUrl(item);
+  if (typeof url === "string" && url.startsWith("data:video/")) return true;
+  if (
+    typeof item === "object" &&
+    item?.type &&
+    typeof item.type === "string" &&
+    item.type.startsWith("video/")
+  ) {
+    return true;
+  }
+  return /\.(mp4|webm|ogg|ogv|mov|m4v|mkv|avi|flv|wmv|3gp|ts|mts|quicktime)(\?.*)?$/i.test(
+    url
+  );
+};
+
+// Robust Video Player component supporting .mov, .mp4, .webm and fallbacks
+const ChatVideoPlayer = ({
+  src,
+  className = "w-full rounded mt-2",
+  onMediaClick,
+}) => {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <div
+        className="w-full rounded-lg mt-2 p-3 bg-gray-900 text-white border border-gray-700 flex flex-col items-center justify-center gap-2 cursor-pointer"
+        onClick={onMediaClick}
+      >
+        <div className="flex items-center gap-2 text-xs text-gray-300">
+          <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+            <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+          </div>
+          <span className="font-medium truncate max-w-[200px]">Video (.mov / media)</span>
+        </div>
+        <p className="text-[11px] text-gray-400 text-center">
+          Browser cannot decode this video codec directly
+        </p>
+        <a
+          href={src}
+          target="_blank"
+          rel="noopener noreferrer"
+          download
+          onClick={(e) => e.stopPropagation()}
+          className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium flex items-center gap-1.5 transition"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          Open / Download Video
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full rounded-lg mt-2 overflow-hidden bg-black flex flex-col items-center">
+      <video
+        controls
+        playsInline
+        preload="metadata"
+        className={`${className} max-h-72 w-full object-contain bg-black cursor-pointer`}
+        onClick={(e) => e.stopPropagation()}
+        onError={(e) => {
+          console.warn("Video playback error for URL:", src, e);
+          setHasError(true);
+        }}
+      >
+        <source src={src} type="video/mp4" />
+        <source src={src} type="video/quicktime" />
+        <source src={src} type="video/webm" />
+        <source src={src} type="video/ogg" />
+        <source src={src} />
+        Your browser does not support playing this video.
+      </video>
+    </div>
+  );
+};
+
 
 const ChatApp = ({ initialUser = null, onClose = null }) => {
   const dispatch = useDispatch();
@@ -986,7 +1105,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
     const previews = filesToSelect.map((file) => ({
       url: URL.createObjectURL(file),
-      type: file.type,
+      type: resolveFileType(file),
       name: file.name,
       file,
     }));
@@ -999,6 +1118,39 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
     // Same file dobara select karne ki permission
     e.target.value = "";
   };
+
+  const handleRemoveMedia = (indexToRemove) => {
+    const fileToRemove = mediaPreview[indexToRemove];
+    const url =
+      typeof fileToRemove === "string" ? fileToRemove : fileToRemove?.url;
+    if (url && typeof url === "string" && url.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Error revoking object URL:", err);
+      }
+    }
+
+    const updatedFiles = selectedFiles.filter(
+      (_, idx) => idx !== indexToRemove
+    );
+    const updatedPreviews = mediaPreview.filter(
+      (_, idx) => idx !== indexToRemove
+    );
+
+    setSelectedFiles(updatedFiles);
+    setMediaPreview(updatedPreviews);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    if (updatedPreviews.length === 0) {
+      setSelectedGif(null);
+      setShowImageModal(false);
+    }
+  };
+
   const uploadFilesToS3 = async (files) => {
     if (!files || files.length === 0) return [];
 
@@ -1013,7 +1165,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
       {
         files: filesToUpload.map((file) => ({
           fileName: file.name,
-          fileType: file.type,
+          fileType: resolveFileType(file),
           folder: "chat_media",
         })),
       }
@@ -1041,7 +1193,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
         const uploadResponse = await fetch(uploadUrls[index], {
           method: "PUT",
           headers: {
-            "Content-Type": file.type,
+            "Content-Type": resolveFileType(file),
           },
           body: file,
         });
@@ -2214,28 +2366,26 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           const mediaCount = msg.mediaUrls.length;
 
                           if (mediaCount === 1) {
-                            const mediaUrl = msg.mediaUrls[0];
-
-                            const isVideo =
-                              mediaUrl.startsWith("data:video/") ||
-                              /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(mediaUrl);
+                            const rawMedia = msg.mediaUrls[0];
+                            const mediaUrl = getMediaUrl(rawMedia);
+                            const isVideo = isVideoUrl(rawMedia);
 
                             return isVideo ? (
-                              <video
+                              <ChatVideoPlayer
                                 src={mediaUrl}
-                                controls
-                                playsInline
-                                preload="metadata"
-                                className="w-full rounded mt-2 cursor-pointer"
-                                onClick={(e) => e.stopPropagation()}
+                                onMediaClick={() => {
+                                  setSelectedMessageImages([mediaUrl]);
+                                  setCurrentImageIndex(0);
+                                  setShowMessageImageModal(true);
+                                }}
                               />
                             ) : (
                               <img
                                 src={mediaUrl}
                                 alt="Media"
-                                className="w-full rounded mt-2 cursor-pointer"
+                                className="w-full rounded mt-2 cursor-pointer max-h-72 object-cover"
                                 onClick={() => {
-                                  setSelectedMessageImages(msg.mediaUrls);
+                                  setSelectedMessageImages([mediaUrl]);
                                   setCurrentImageIndex(0);
                                   setShowMessageImageModal(true);
                                 }}
@@ -2244,69 +2394,138 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
 
                           } else if (mediaCount === 2) {
                             return (
-                              <div className="mt-2 grid grid-cols-2 gap-1">
-                                {msg.mediaUrls.map((url, idx) => (
-                                  <img
-                                    key={idx}
-                                    src={url}
-                                    alt={`Media ${idx + 1}`}
-                                    className="w-full h-20 object-cover rounded cursor-pointer"
-                                    onClick={() => {
-                                      setSelectedMessageImages(msg.mediaUrls);
-                                      setCurrentImageIndex(idx);
-                                      setShowMessageImageModal(true);
-                                    }}
-                                  />
-                                ))}
+                              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                {msg.mediaUrls.map((rawItem, idx) => {
+                                  const url = getMediaUrl(rawItem);
+                                  const isVideo = isVideoUrl(rawItem);
+
+                                  return isVideo ? (
+                                    <div
+                                      key={idx}
+                                      className="relative w-full h-24 bg-black rounded overflow-hidden cursor-pointer flex items-center justify-center group"
+                                      onClick={() => {
+                                        setSelectedMessageImages(
+                                          msg.mediaUrls.map(getMediaUrl)
+                                        );
+                                        setCurrentImageIndex(idx);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    >
+                                      <video
+                                        src={url}
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                        className="w-full h-full object-cover opacity-80"
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition">
+                                        <div className="w-7 h-7 rounded-full bg-white/90 text-gray-900 flex items-center justify-center shadow">
+                                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      key={idx}
+                                      src={url}
+                                      alt={`Media ${idx + 1}`}
+                                      className="w-full h-24 object-cover rounded cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMessageImages(
+                                          msg.mediaUrls.map(getMediaUrl)
+                                        );
+                                        setCurrentImageIndex(idx);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    />
+                                  );
+                                })}
                               </div>
                             );
                           } else {
                             // 3 or more, 2x2 grid
                             return (
-                              <div className="mt-2 grid grid-cols-2 gap-1">
-                                {msg.mediaUrls.slice(0, 4).map((url, idx) => {
+                              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                                {msg.mediaUrls.slice(0, 4).map((rawItem, idx) => {
+                                  const url = getMediaUrl(rawItem);
+                                  const isVideo = isVideoUrl(rawItem);
+
                                   if (idx === 3 && mediaCount > 4) {
                                     return (
                                       <div
                                         key={idx}
-                                        className="relative cursor-pointer"
+                                        className="relative cursor-pointer w-full h-24 rounded overflow-hidden"
                                         onClick={() => {
                                           setSelectedMessageImages(
-                                            msg.mediaUrls,
+                                            msg.mediaUrls.map(getMediaUrl)
                                           );
-                                          setCurrentImageIndex(0);
+                                          setCurrentImageIndex(3);
                                           setShowMessageImageModal(true);
                                         }}
                                       >
-                                        <img
-                                          src={url}
-                                          alt={`Media ${idx + 1}`}
-                                          className="w-full h-20 object-cover rounded"
-                                        />
-                                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded">
+                                        {isVideo ? (
+                                          <video
+                                            src={url}
+                                            muted
+                                            playsInline
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          <img
+                                            src={url}
+                                            alt={`Media ${idx + 1}`}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
                                           <span className="text-white font-bold text-sm">
                                             +{mediaCount - 3}
                                           </span>
                                         </div>
                                       </div>
                                     );
-                                  } else {
-                                    return (
-                                      <img
-                                        key={idx}
-                                        src={url}
-                                        alt={`Media ${idx + 1}`}
-                                        className="w-full h-20 object-cover rounded cursor-pointer"
-                                        onClick={() => {
-                                          setSelectedMessageImages(
-                                            msg.mediaUrls,
-                                          );
-                                          setCurrentImageIndex(idx);
-                                          setShowMessageImageModal(true);
-                                        }}
-                                      />
-                                    );
                                   }
+
+                                  return isVideo ? (
+                                    <div
+                                      key={idx}
+                                      className="relative w-full h-24 bg-black rounded overflow-hidden cursor-pointer flex items-center justify-center group"
+                                      onClick={() => {
+                                        setSelectedMessageImages(
+                                          msg.mediaUrls.map(getMediaUrl)
+                                        );
+                                        setCurrentImageIndex(idx);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    >
+                                      <video
+                                        src={url}
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                        className="w-full h-full object-cover opacity-80"
+                                      />
+                                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition">
+                                        <div className="w-7 h-7 rounded-full bg-white/90 text-gray-900 flex items-center justify-center shadow">
+                                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <img
+                                      key={idx}
+                                      src={url}
+                                      alt={`Media ${idx + 1}`}
+                                      className="w-full h-24 object-cover rounded cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMessageImages(
+                                          msg.mediaUrls.map(getMediaUrl)
+                                        );
+                                        setCurrentImageIndex(idx);
+                                        setShowMessageImageModal(true);
+                                      }}
+                                    />
+                                  );
                                 })}
                               </div>
                             );
@@ -2368,26 +2587,89 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
               <>
                 {/* ✅ Input & media visible when NOT blocked and NOT left group */}
                 {mediaPreview.length > 0 && (
-                  <div className="mb-2">
-                    <div className="grid grid-cols-4 gap-2">
-                      {mediaPreview.slice(0, 4).map((file, i) => (
-                        <div key={i} className="relative">
-                          {file.type?.startsWith("video/") ? (
-                            <video
-                              src={file.url}
-                              className="w-16 h-16 object-cover rounded"
-                              muted
-                              playsInline
-                            />
-                          ) : (
-                            <img
-                              src={file.url}
-                              alt={`Preview ${i + 1}`}
-                              className="w-16 h-16 object-cover rounded"
-                            />
-                          )}
-                        </div>
-                      ))}
+                  <div className="mb-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center justify-between mb-1.5 px-0.5">
+                      <span className="text-xs font-medium text-gray-600">
+                        Selected {mediaPreview.length > 1 ? "files" : "file"} (
+                        {mediaPreview.length})
+                      </span>
+                      {mediaPreview.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            mediaPreview.forEach((f) => {
+                              const url =
+                                typeof f === "string" ? f : f?.url;
+                              if (
+                                url &&
+                                typeof url === "string" &&
+                                url.startsWith("blob:")
+                              ) {
+                                try {
+                                  URL.revokeObjectURL(url);
+                                } catch (e) {}
+                              }
+                            });
+                            setSelectedFiles([]);
+                            setMediaPreview([]);
+                            setSelectedGif(null);
+                            if (fileInputRef.current)
+                              fileInputRef.current.value = "";
+                          }}
+                          className="text-xs text-red-500 hover:text-red-600 font-medium"
+                        >
+                          Remove all
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                      {mediaPreview.map((file, i) => {
+                        const fileUrl =
+                          typeof file === "string" ? file : file?.url;
+                        const isVideo = isVideoUrl(file);
+
+                        return (
+                          <div
+                            key={i}
+                            className="relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border border-gray-200 bg-black/5"
+                          >
+                            {/* Cross button to remove image */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveMedia(i);
+                              }}
+                              className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-black/70 hover:bg-red-500 text-white flex items-center justify-center transition-colors shadow-sm"
+                              title="Remove"
+                            >
+                              <X className="w-3.5 h-3.5 stroke-[2.5]" />
+                            </button>
+
+                            {isVideo ? (
+                              <div className="relative w-full h-full bg-black flex items-center justify-center">
+                                <video
+                                  src={fileUrl}
+                                  className="w-full h-full object-cover opacity-80"
+                                  muted
+                                  playsInline
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <div className="w-5 h-5 rounded-full bg-white/80 text-gray-900 flex items-center justify-center">
+                                    <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <img
+                                src={fileUrl}
+                                alt={file?.name || `Preview ${i + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2551,49 +2833,42 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {mediaPreview.map((file, i) => (
-                    <div
-                      key={i}
-                      className="relative rounded-lg overflow-hidden border border-gray-200"
-                    >
-                      {/* Remove button */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedFiles = selectedFiles.filter(
-                            (_, index) => index !== i
-                          );
+                  {mediaPreview.map((file, i) => {
+                    const fileUrl =
+                      typeof file === "string" ? file : file?.url;
+                    const isVideo = isVideoUrl(file);
 
-                          const updatedPreviews = mediaPreview.filter(
-                            (_, index) => index !== i
-                          );
-
-                          // Old blob URL cleanup
-                          URL.revokeObjectURL(file.url);
-
-                          setSelectedFiles(updatedFiles);
-                          setMediaPreview(updatedPreviews);
-                        }}
-                        className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-500 transition"
+                    return (
+                      <div
+                        key={i}
+                        className="relative rounded-lg overflow-hidden border border-gray-200"
                       >
-                        <X className="w-4 h-4" />
-                      </button>
+                        {/* Remove button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveMedia(i)}
+                          className="absolute top-1 right-1 z-10 w-7 h-7 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-500 transition"
+                          title="Remove"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
 
-                      {file.type?.startsWith("video/") ? (
-                        <video
-                          src={file.url}
-                          controls
-                          className="w-full h-32 object-cover"
-                        />
-                      ) : (
-                        <img
-                          src={file.url}
-                          alt={file.name}
-                          className="w-full h-32 object-cover"
-                        />
-                      )}
-                    </div>
-                  ))}
+                        {isVideo ? (
+                          <video
+                            src={fileUrl}
+                            controls
+                            className="w-full h-32 object-cover"
+                          />
+                        ) : (
+                          <img
+                            src={fileUrl}
+                            alt={file?.name || `Media ${i + 1}`}
+                            className="w-full h-32 object-cover"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -2608,11 +2883,61 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                 >
                   ×
                 </button>
-                <img
-                  src={selectedMessageImages[currentImageIndex]}
-                  alt="Full image"
-                  className="max-w-full max-h-full object-contain"
-                />
+
+                {isVideoUrl(selectedMessageImages[currentImageIndex]) ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <video
+                      key={getMediaUrl(
+                        selectedMessageImages[currentImageIndex]
+                      )}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="max-w-full max-h-[70vh] object-contain rounded-lg bg-black"
+                    >
+                      <source
+                        src={getMediaUrl(
+                          selectedMessageImages[currentImageIndex]
+                        )}
+                        type="video/mp4"
+                      />
+                      <source
+                        src={getMediaUrl(
+                          selectedMessageImages[currentImageIndex]
+                        )}
+                        type="video/quicktime"
+                      />
+                      <source
+                        src={getMediaUrl(
+                          selectedMessageImages[currentImageIndex]
+                        )}
+                        type="video/webm"
+                      />
+                      <source
+                        src={getMediaUrl(
+                          selectedMessageImages[currentImageIndex]
+                        )}
+                        type="video/ogg"
+                      />
+                      <source
+                        src={getMediaUrl(
+                          selectedMessageImages[currentImageIndex]
+                        )}
+                      />
+                      Your browser does not support playing this video.
+                    </video>
+                   
+                  </div>
+                ) : (
+                  <img
+                    src={getMediaUrl(
+                      selectedMessageImages[currentImageIndex]
+                    )}
+                    alt="Full media"
+                    className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-lg"
+                  />
+                )}
+
                 {selectedMessageImages.length > 1 && (
                   <>
                     <button
@@ -2620,20 +2945,21 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                         setCurrentImageIndex(
                           (prev) =>
                             (prev - 1 + selectedMessageImages.length) %
-                            selectedMessageImages.length,
+                            selectedMessageImages.length
                         )
                       }
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 text-white text-3xl bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full flex items-center justify-center transition"
                     >
                       ‹
                     </button>
                     <button
                       onClick={() =>
                         setCurrentImageIndex(
-                          (prev) => (prev + 1) % selectedMessageImages.length,
+                          (prev) =>
+                            (prev + 1) % selectedMessageImages.length
                         )
                       }
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-2xl"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white text-3xl bg-black/50 hover:bg-black/80 w-10 h-10 rounded-full flex items-center justify-center transition"
                     >
                       ›
                     </button>
