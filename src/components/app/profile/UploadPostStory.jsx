@@ -54,96 +54,123 @@ export default function UploadPostStory({
   };
 
   const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
 
-    const invalidFiles = files.filter((f) => {
-      if (f.type.startsWith("video/")) return false;
-      return !f.type.startsWith("image/");
-    });
+  const invalidFiles = files.filter((f) => {
+    if (f.type.startsWith("video/")) return false;
+    return !f.type.startsWith("image/");
+  });
 
-    if (invalidFiles.length > 0) {
-      ErrorToast("Only images (JPEG, PNG, WEBP) and videos are allowed!");
-      e.target.value = "";
-      return;
-    }
-
-    const remainingSlots = MAX_IMAGES - images.length;
-    if (remainingSlots <= 0) {
-      ErrorToast(`Maximum ${MAX_IMAGES} media allowed!`);
-      e.target.value = "";
-      return;
-    }
-
-    if (files.length > remainingSlots) {
-      ErrorToast(
-        `You can only add ${remainingSlots} more media item${remainingSlots > 1 ? "s" : ""}. Maximum is ${MAX_IMAGES}.`
-      );
-      e.target.value = "";
-      return;
-    }
-
-    // Check individual video limit (30MB)
-    const oversizedVideos = files.filter(
-      (f) => f.type.startsWith("video/") && f.size > MAX_VIDEO_SIZE
-    );
-    if (oversizedVideos.length > 0) {
-      ErrorToast("Video size exceeds the 30MB limit!");
-      e.target.value = "";
-      return;
-    }
-
-    // Auto-compress large images client-side
-    setIsCompressing(true);
-    let processedFiles = [];
-    try {
-      processedFiles = await Promise.all(
-        files.map(async (file) => {
-          if (file.type.startsWith("image/")) {
-            return await compressImageFile(file);
-          }
-          return file;
-        })
-      );
-    } catch (err) {
-      console.error("Image compression error:", err);
-      processedFiles = files;
-    } finally {
-      setIsCompressing(false);
-    }
-
-    // Check individual image size (after compression, must not exceed 10MB)
-    const oversizedImages = processedFiles.filter(
-      (f) => f.type.startsWith("image/") && f.size > MAX_IMAGE_SIZE
-    );
-    if (oversizedImages.length > 0) {
-      ErrorToast("Individual image size exceeds the 10MB limit!");
-      e.target.value = "";
-      return;
-    }
-
-    // Check total media payload against 30MB limit
-    const incomingBatchSize = processedFiles.reduce((sum, f) => sum + f.size, 0);
-    const combinedTotalSize = currentTotalBytes + incomingBatchSize;
-
-    if (combinedTotalSize > MAX_TOTAL_MEDIA_SIZE) {
-      const combinedMB = (combinedTotalSize / (1024 * 1024)).toFixed(1);
-      ErrorToast(
-        `Total media size exceeds the 30MB limit (${combinedMB}MB selected). Allowed total media size is 30MB.`
-      );
-      e.target.value = "";
-      return;
-    }
-
-    const newMediaItems = processedFiles.map((file) => ({
-      id: Date.now() + Math.random(),
-      url: URL.createObjectURL(file),
-      fileObject: file,
-    }));
-
-    setImages((prev) => [...prev, ...newMediaItems]);
+  if (invalidFiles.length > 0) {
+    ErrorToast("Only images (JPEG, PNG, WEBP) and videos are allowed!");
     e.target.value = "";
-  };
+    return;
+  }
+
+  const remainingSlots = MAX_IMAGES - images.length;
+
+  if (remainingSlots <= 0) {
+    ErrorToast(`Maximum ${MAX_IMAGES} media allowed!`);
+    e.target.value = "";
+    return;
+  }
+
+  if (files.length > remainingSlots) {
+    ErrorToast(
+      `You can only add ${remainingSlots} more media item${
+        remainingSlots > 1 ? "s" : ""
+      }. Maximum is ${MAX_IMAGES}.`
+    );
+    e.target.value = "";
+    return;
+  }
+
+  // ❌ 30MB se zyada file ko compress nahi karna
+  const oversizedFiles = files.filter(
+    (file) => file.size > MAX_VIDEO_SIZE
+  );
+
+  if (oversizedFiles.length > 0) {
+    ErrorToast("File size must be 30MB or less. Please upload a file under 30MB.");
+    e.target.value = "";
+    return;
+  }
+
+  // Individual video limit
+  const oversizedVideos = files.filter(
+    (f) => f.type.startsWith("video/") && f.size > MAX_VIDEO_SIZE
+  );
+
+  if (oversizedVideos.length > 0) {
+    ErrorToast("Video size must be 30MB or less!");
+    e.target.value = "";
+    return;
+  }
+
+  // Ab sirf 30MB ke andar images compress hongi
+  setIsCompressing(true);
+
+  let processedFiles = [];
+
+  try {
+    processedFiles = await Promise.all(
+      files.map(async (file) => {
+        if (file.type.startsWith("image/")) {
+          return await compressImageFile(file);
+        }
+
+        return file;
+      })
+    );
+  } catch (err) {
+    console.error("Image compression error:", err);
+    processedFiles = files;
+  } finally {
+    setIsCompressing(false);
+  }
+
+  // Compression ke baad bhi final 30MB check
+  const oversizedProcessedFiles = processedFiles.filter(
+    (file) => file.size > MAX_VIDEO_SIZE
+  );
+
+  if (oversizedProcessedFiles.length > 0) {
+    ErrorToast(
+      "File size must be 30MB or less. Please upload a smaller file."
+    );
+    e.target.value = "";
+    return;
+  }
+
+  // Total 30MB check
+  const incomingBatchSize = processedFiles.reduce(
+    (sum, file) => sum + file.size,
+    0
+  );
+
+  const combinedTotalSize = currentTotalBytes + incomingBatchSize;
+
+  if (combinedTotalSize > MAX_TOTAL_MEDIA_SIZE) {
+    const combinedMB = (combinedTotalSize / (1024 * 1024)).toFixed(1);
+
+    ErrorToast(
+      `Total media size exceeds the 30MB limit (${combinedMB}MB selected).`
+    );
+
+    e.target.value = "";
+    return;
+  }
+
+  const newMediaItems = processedFiles.map((file) => ({
+    id: Date.now() + Math.random(),
+    url: URL.createObjectURL(file),
+    fileObject: file,
+  }));
+
+  setImages((prev) => [...prev, ...newMediaItems]);
+  e.target.value = "";
+};
 
   const removeImage = (id) => {
     setImages((prev) => {
