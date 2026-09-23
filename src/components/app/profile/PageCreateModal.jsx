@@ -36,6 +36,7 @@ export default function PageCreateModal({
   const fileInputRef = useRef(null);
   const [errors, setErrors] = useState({});
   const [keywordInput, setKeywordInput] = useState("");
+  const [loadingsubmit, setLoadingSubmit] = useState(false)
 
   // Category Dropdown & Accordion State
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -192,93 +193,115 @@ export default function PageCreateModal({
     return Object.keys(newErrors).length === 0;
   };
 
+  const isCreatingRef = useRef(false);
+
   const handleCreatePage = async () => {
+    if (isCreatingRef.current) return;
+
+    isCreatingRef.current = true;
+    setLoadingSubmit(true);
+
     try {
       if (!validateForm()) {
         return;
       }
 
       let binaryFile = uploadedImage;
+
       if (!(binaryFile instanceof File) && previewImage) {
-        binaryFile = await emojiUrlToFile(previewImage, "topic_page_emoji.png");
+        binaryFile = await emojiUrlToFile(
+          previewImage,
+          "topic_page_emoji.png"
+        );
       }
 
       const fd = new FormData();
 
       if (binaryFile instanceof File) {
-        fd.append("image", binaryFile, binaryFile.name || "topic_page.png");
+        fd.append(
+          "image",
+          binaryFile,
+          binaryFile.name || "topic_page.png"
+        );
       }
 
       fd.append("name", (formData.name || "").trim());
 
       let topicValue = (formData.topic || "").trim();
+
       if (topicValue.includes(">")) {
         topicValue = topicValue.split(">").pop().trim();
       }
-      fd.append("topic", topicValue);
 
+      fd.append("topic", topicValue);
       fd.append("about", (formData.about || "").trim());
       fd.append("pageType", formData.pageType);
 
       if (Array.isArray(formData.keywords)) {
         formData.keywords.forEach((item) => {
           if (item) {
-            fd.append("keywords[]", `#${item.replace(/^#/, "")}`);
+            fd.append(
+              "keywords[]",
+              `#${item.replace(/^#/, "")}`
+            );
           }
         });
       }
 
-      dispatch(createPage(fd))
-        .unwrap()
-        .then(() => {
-          SuccessToast("Page created successfully!");
-          dispatch(fetchMyPages({ page: 1, limit: 100 }));
-          if (typeof setSelectedType === "function") {
-            setSelectedType("Page done");
-          }
-          setIsOpen(false);
-          setFormData({
-            name: "",
-            about: "",
-            topic: "",
-            keywords: [],
-            pageType: "public",
-          });
-          setUploadedImage(null);
-          setPreviewImage(null);
-          setErrors({});
-        })
-        .catch((err) => {
-          const errorMessage =
-            typeof err === "string"
-              ? err
-              : err?.message || err?.data?.message || "Something went wrong";
+      await dispatch(createPage(fd)).unwrap();
 
-          const lowerMsg = String(errorMessage).toLowerCase();
+      SuccessToast("Page created successfully!");
 
-          if (
-            lowerMsg.includes("already exist") ||
-            lowerMsg.includes("duplicate") ||
-            lowerMsg.includes("already taken") ||
-            lowerMsg.includes("page with this name") ||
-            lowerMsg.includes("name must be unique")
-          ) {
-            setErrors((prev) => ({
-              ...prev,
-              name:
-                "A page with this name already exists. Please choose a different page name.",
-            }));
-          } else {
-            ErrorToast("Error creating page: " + errorMessage);
-          }
-          console.log("Create page error:", err);
-        });
+      dispatch(fetchMyPages({ page: 1, limit: 100 }));
+
+      if (typeof setSelectedType === "function") {
+        setSelectedType("Page done");
+      }
+
+      setIsOpen(false);
+
+      setFormData({
+        name: "",
+        about: "",
+        topic: "",
+        keywords: [],
+        pageType: "public",
+      });
+
+      setUploadedImage(null);
+      setPreviewImage(null);
+      setErrors({});
     } catch (err) {
-      console.error("Error in handleCreatePage:", err);
-      ErrorToast("An unexpected error occurred while creating the page.");
+      const errorMessage =
+        typeof err === "string"
+          ? err
+          : err?.message ||
+          err?.data?.message ||
+          "Something went wrong";
+
+      const lowerMsg = String(errorMessage).toLowerCase();
+
+      if (
+        lowerMsg.includes("already exist") ||
+        lowerMsg.includes("duplicate") ||
+        lowerMsg.includes("already taken") ||
+        lowerMsg.includes("page with this name") ||
+        lowerMsg.includes("name must be unique")
+      ) {
+        setErrors((prev) => ({
+          ...prev,
+          name: "A page with this name already exists. Please choose a different page name.",
+        }));
+      } else {
+        ErrorToast("Error creating page: " + errorMessage);
+      }
+
+      console.log("Create page error:", err);
+    } finally {
+      isCreatingRef.current = false;
+      setLoadingSubmit(false);
     }
   };
-
   // Filter categories & subcategories based on search query
   const filteredTopics = (alltopics || []).filter((item) => {
     const searchLower = categorySearch.toLowerCase().trim();
@@ -372,11 +395,10 @@ export default function PageCreateModal({
                         onChange={(e) =>
                           handleInputChange("name", e.target.value)
                         }
-                        className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all ${
-                          errors.name
-                            ? "border-red-500 focus:ring-2 focus:ring-red-200"
-                            : "border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                        }`}
+                        className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all ${errors.name
+                          ? "border-red-500 focus:ring-2 focus:ring-red-200"
+                          : "border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                          }`}
                         disabled={pagesLoading}
                       />
                       {errors.name && (
@@ -398,11 +420,10 @@ export default function PageCreateModal({
                         onChange={(e) =>
                           handleInputChange("about", e.target.value)
                         }
-                        className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all ${
-                          errors.about
-                            ? "border-red-500 focus:ring-2 focus:ring-red-200"
-                            : "border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                        }`}
+                        className={`w-full border rounded-xl px-4 py-3 text-sm outline-none transition-all ${errors.about
+                          ? "border-red-500 focus:ring-2 focus:ring-red-200"
+                          : "border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                          }`}
                         disabled={pagesLoading}
                       />
                       {errors.about && (
@@ -426,13 +447,11 @@ export default function PageCreateModal({
                         type="button"
                         onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                         disabled={isLoading || pagesLoading}
-                        className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all ${
-                          errors.topic ? "border-red-500" : "border-gray-200"
-                        } ${
-                          formData.topic
+                        className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all ${errors.topic ? "border-red-500" : "border-gray-200"
+                          } ${formData.topic
                             ? "text-gray-900 font-medium"
                             : "text-gray-400"
-                        } hover:border-gray-300 focus:outline-none`}
+                          } hover:border-gray-300 focus:outline-none`}
                       >
                         <span>{formData.topic || "Text goes here"}</span>
                         {isCategoryOpen ? (
@@ -501,11 +520,10 @@ export default function PageCreateModal({
                                           setIsCategoryOpen(false);
                                         }
                                       }}
-                                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
-                                        formData.topic === item.name || isExpanded
-                                          ? "text-orange-600 bg-orange-50/80"
-                                          : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
-                                      }`}
+                                      className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${formData.topic === item.name || isExpanded
+                                        ? "text-orange-600 bg-orange-50/80"
+                                        : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
+                                        }`}
                                     >
                                       <span className="flex-1">
                                         {item.name}
@@ -535,12 +553,11 @@ export default function PageCreateModal({
                                               );
                                               setIsCategoryOpen(false);
                                             }}
-                                            className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
-                                              formData.topic ===
+                                            className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${formData.topic ===
                                               `${item.name} > ${sub}`
-                                                ? "text-orange-600 font-semibold bg-orange-100/60"
-                                                : "text-gray-600 hover:text-orange-600 hover:bg-white"
-                                            }`}
+                                              ? "text-orange-600 font-semibold bg-orange-100/60"
+                                              : "text-gray-600 hover:text-orange-600 hover:bg-white"
+                                              }`}
                                           >
                                             {sub}
                                           </div>
@@ -657,10 +674,10 @@ export default function PageCreateModal({
                 <button
                   type="button"
                   onClick={handleCreatePage}
-                  disabled={pagesLoading}
+                  disabled={loadingsubmit}
                   className="w-full bg-[#DE4B12] hover:bg-orange-600 text-white font-semibold py-3.5 rounded-2xl transition-all shadow-md flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                 >
-                  {pagesLoading ? (
+                  {loadingsubmit ? (
                     <>
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       <span>Creating Page...</span>
