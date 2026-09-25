@@ -605,7 +605,7 @@ export default function HomePostFeed({
               {firstMediaIsVideo ? (
                 <video
                   src={firstMedia}
-                  className={`w-full rounded-2xl max-h-96 object-cover
+                  className={`w-full rounded-2xl max-h-[550px] object-contain
     ${isUnderReview ? "blur-sm" : ""}`}
                     
                   controls
@@ -620,7 +620,7 @@ export default function HomePostFeed({
                 <img
                   src={firstMedia}
                   alt="post"
-                  className={`w-full max-h-[420px] object-cover rounded-2xl
+                  className={`w-full max-h-[550px] object-contain rounded-2xl
     ${isUnderReview ? "blur-sm" : ""}`}
                 />
               )}
@@ -646,10 +646,6 @@ export default function HomePostFeed({
                 </div>
               )}
             </div>
-          ) : !isUnderReview && linkData ? (
-            <div className="px-3">
-              <LinkPreviewCard linkData={linkData} />
-            </div>
           ) : (
             <div className="relative">
               {isUnderReview && (
@@ -664,6 +660,12 @@ export default function HomePostFeed({
                   />
                 </div>
               )}
+            </div>
+          )}
+
+          {!isUnderReview && linkData && (
+            <div className="px-3 mb-2">
+              <LinkPreviewCard linkData={linkData} compact={Boolean(hasImages)} />
             </div>
           )}
           <div className="px-3">

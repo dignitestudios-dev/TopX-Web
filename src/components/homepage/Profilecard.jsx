@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../redux/slices/auth.slice";
 import FollowersFollowingModal from "../global/FollowersFollowingModal";
-import { GraduationCap } from "lucide-react";
+import { schoolIcon, collegeIcon } from "../../assets/export";
 
 const Profilecard = () => {
   const dispatch = useDispatch();
@@ -157,10 +157,20 @@ const Profilecard = () => {
           >
             {cleanUsername}
           </p>
-          {allUserData?.school && (
-            <div className="flex items-center gap-1.5 text-[12px] text-gray-600 font-medium mt-2">
-              <GraduationCap className="w-3.5 h-3.5 text-[#DE4B12] flex-shrink-0" />
-              <span className="truncate">{allUserData.school}</span>
+          {(allUserData?.school || allUserData?.college) && (
+            <div className="flex flex-col gap-1 text-[12px] text-gray-600 font-medium mt-2">
+              {allUserData.school && (
+                <div className="flex items-center gap-1.5">
+                  <img src={schoolIcon} alt="School" className="w-3.5 h-3.5 object-contain flex-shrink-0" />
+                  <span className="truncate">{allUserData.school}</span>
+                </div>
+              )}
+              {allUserData.college && (
+                <div className="flex items-center gap-1.5">
+                  <img src={collegeIcon} alt="College" className="w-3.5 h-3.5 object-contain flex-shrink-0" />
+                  <span className="truncate">{allUserData.college}</span>
+                </div>
+              )}
             </div>
           )}
           <p className="text-[13px] text-gray-600 leading-relaxed mt-2.5 break-words">

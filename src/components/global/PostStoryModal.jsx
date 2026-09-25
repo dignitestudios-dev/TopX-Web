@@ -241,7 +241,7 @@ const PostStoryModal = ({ onClose, post }) => {
                   )}
 
                   {/* Compact Media / Link representation in Step 1 */}
-                  {hasMedia ? (
+                  {hasMedia && (
                     <div className="rounded-lg overflow-hidden bg-black/5 h-16 w-full flex items-center justify-center">
                       {currentMedia?.type === "video" ? (
                         <video
@@ -257,8 +257,9 @@ const PostStoryModal = ({ onClose, post }) => {
                         />
                       )}
                     </div>
-                  ) : linkData ? (
-                    <div className="flex items-center gap-2.5 p-1.5 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                  )}
+                  {linkData && (
+                    <div className="flex items-center gap-2.5 p-1.5 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden mt-1.5">
                       {(linkData.thumbnail || `https://icon.horse/icon/${linkData.domain}`) && (
                         <img
                           src={linkData.thumbnail || `https://icon.horse/icon/${linkData.domain}`}
@@ -278,7 +279,7 @@ const PostStoryModal = ({ onClose, post }) => {
                         </p>
                       </div>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               </div>
             )}
@@ -424,7 +425,7 @@ const PostStoryModal = ({ onClose, post }) => {
                   )}
 
                   {/* Media carousel */}
-                  {hasMedia ? (
+                  {hasMedia && (
                     <div className="relative rounded-2xl overflow-hidden bg-black/5">
                       {currentMedia?.type === "video" ? (
                         <video
@@ -484,11 +485,13 @@ const PostStoryModal = ({ onClose, post }) => {
                         </>
                       )}
                     </div>
-                  ) : linkData ? (
+                  )}
+
+                  {linkData && (
                     <div className="mt-2">
                       <LinkPreviewCard linkData={linkData} />
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>

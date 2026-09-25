@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ExternalLink, Play, X } from "lucide-react";
 
-export default function LinkPreviewCard({ linkData }) {
+export default function LinkPreviewCard({ linkData, compact = false }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [ogData, setOgData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,10 +36,10 @@ export default function LinkPreviewCard({ linkData }) {
 
   if (isLoading) {
     return (
-      <div className="w-full my-3 border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm p-4 flex items-center gap-4">
-        <div className="w-16 h-16 bg-gray-200 rounded-xl animate-pulse shrink-0"></div>
-        <div className="flex-1 space-y-3">
-          <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
+      <div className="w-full my-2 border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm p-3 flex items-center gap-3">
+        <div className="w-14 h-14 bg-gray-200 rounded-lg animate-pulse shrink-0"></div>
+        <div className="flex-1 space-y-2">
+          <div className="h-3.5 bg-gray-200 rounded animate-pulse w-3/4"></div>
           <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
         </div>
       </div>
@@ -61,6 +61,59 @@ export default function LinkPreviewCard({ linkData }) {
       setIsPlaying(true);
     }
   };
+
+  // Compact horizontal layout (used when post already has user-uploaded image/video)
+  if (compact) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="block w-full my-2 border border-gray-200 hover:border-orange-300 rounded-xl overflow-hidden bg-gray-50/80 hover:bg-orange-50/20 transition-all p-2.5 group shadow-xs hover:shadow-sm"
+      >
+        <div className="flex items-center gap-3">
+          {displayThumbnail && (
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden shrink-0 bg-gray-100 border border-gray-200/80 relative">
+              <img
+                src={displayThumbnail}
+                alt="Link thumbnail"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                onError={(e) => {
+                  e.target.src = fallbackImage;
+                }}
+              />
+              {isYoutube && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/35">
+                  <Play className="w-3.5 h-3.5 text-white fill-white ml-0.5" />
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide truncate">
+                {domain}
+              </span>
+              <ExternalLink className="w-3 h-3 text-gray-400 shrink-0" />
+            </div>
+            <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate group-hover:text-orange-600 transition-colors">
+              {displayTitle}
+            </p>
+            {ogData?.description && (
+              <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">
+                {ogData.description}
+              </p>
+            )}
+            <p className="text-[11px] text-orange-600 truncate mt-0.5 font-normal">
+              {url}
+            </p>
+          </div>
+        </div>
+      </a>
+    );
+  }
 
   return (
     <div className="w-full my-3 border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow transition-all duration-200">

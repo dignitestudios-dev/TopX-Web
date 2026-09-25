@@ -30,6 +30,7 @@ export default function EditedProfile({ setIsEditProfile }) {
   const [username, setUsername] = useState(allUserData?.username || "");
   const [email, setEmail] = useState(allUserData?.email || "");
   const [school, setSchool] = useState(allUserData?.school || "");
+  const [college, setCollege] = useState(allUserData?.college || "");
   const [bio, setBio] = useState(allUserData?.bio || "");
   const [link, setLink] = useState(allUserData?.link || allUserData?.website || "");
   const [preview, setPreview] = useState(allUserData?.profilePicture || "");
@@ -298,6 +299,7 @@ export default function EditedProfile({ setIsEditProfile }) {
     }
 
     formData.append("school", school ? school.trim() : "");
+    formData.append("college", college ? college.trim() : "");
     formData.append("bio", bio);
     if (link && link.trim()) {
       formData.append("link", link.trim());
@@ -338,6 +340,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       setOriginalUsername(allUserData.username || "");
       setEmail(allUserData.email || "");
       setSchool(allUserData.school || "");
+      setCollege(allUserData.college || "");
       setBio(allUserData.bio || "");
       setLink(allUserData.link || allUserData.website || "");
       setPreview(allUserData.profilePicture || "");
@@ -526,14 +529,42 @@ export default function EditedProfile({ setIsEditProfile }) {
         />
       </div>
 
-      {/* School / College */}
-      <div className="w-full flex flex-col gap-2 py-2">
-        <label className="text-[14px] font-[500] text-gray-700">School/College (optional)</label>
+      {/* School */}
+      <div className="w-full flex flex-col gap-1 py-2">
+        <div className="flex justify-between items-center">
+          <label className="text-[14px] font-[500] text-gray-700">
+            School <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <span className="text-[11px] text-gray-400">
+            {school ? school.length : 0}/100
+          </span>
+        </div>
         <Input
           type="text"
           value={school}
+          maxLength={100}
           onChange={(e) => setSchool(e.target.value)}
-          placeholder="Enter your school or college"
+          placeholder="Enter your school"
+          size="md"
+        />
+      </div>
+
+      {/* College */}
+      <div className="w-full flex flex-col gap-1 py-2">
+        <div className="flex justify-between items-center">
+          <label className="text-[14px] font-[500] text-gray-700">
+            College <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <span className="text-[11px] text-gray-400">
+            {college ? college.length : 0}/100
+          </span>
+        </div>
+        <Input
+          type="text"
+          value={college}
+          maxLength={100}
+          onChange={(e) => setCollege(e.target.value)}
+          placeholder="Enter your college"
           size="md"
         />
       </div>

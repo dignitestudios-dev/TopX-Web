@@ -12,6 +12,7 @@ export default function PostStoryModal({
   isOpen,
   title,
   setSelectedType,
+  initialSelectedPageId,
 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
@@ -20,8 +21,29 @@ export default function PostStoryModal({
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
 
   useEffect(() => {
-    dispatch(fetchMyPages({ page: 1, limit: 100 }));
-  }, [dispatch]);
+    if (isOpen) {
+      dispatch(fetchMyPages({ page: 1, limit: 100 }));
+    }
+  }, [dispatch, isOpen]);
+
+  useEffect(() => {
+    if (initialSelectedPageId) {
+      setSelectedPages((prev) =>
+        prev.includes(initialSelectedPageId)
+          ? prev
+          : [...prev, initialSelectedPageId]
+      );
+    }
+  }, [initialSelectedPageId]);
+
+  const handleClose = () => {
+    if (typeof setIsOpen === "function") {
+      setIsOpen(false);
+    }
+    if (typeof setSelectedType === "function") {
+      setSelectedType(null);
+    }
+  };
 
   const togglePageSelection = (pageId) => {
     setSelectedPages((prev) =>
@@ -66,7 +88,7 @@ export default function PostStoryModal({
         <>
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-50 transition-opacity"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
           />
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -83,7 +105,7 @@ export default function PostStoryModal({
                   </p>
                 </div>
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
                 >
                   <X className="w-5 h-5" />

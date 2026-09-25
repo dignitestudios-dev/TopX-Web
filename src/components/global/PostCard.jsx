@@ -695,14 +695,14 @@ const PostCard = ({
                 <video
                   src={currentMedia.url}
                   controls
-                  className="w-full h-[27em] object-cover rounded-lg"
+                  className="w-full h-auto max-h-[550px] object-contain rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
                 <img
                   src={currentMedia?.url}
                   alt="Post"
-                  className="w-full h-[27em] object-cover rounded-lg hover:opacity-90 transition-opacity"
+                  className="w-full h-auto max-h-[550px] object-contain rounded-lg hover:opacity-90 transition-opacity"
                 />
               )}
 
@@ -743,10 +743,10 @@ const PostCard = ({
           </div>
         )}
 
-        {/* Link Preview (if no uploaded media) */}
-        {!hasMedia && linkData && (
-          <div className="px-4">
-            <LinkPreviewCard linkData={linkData} />
+        {/* Link Preview */}
+        {linkData && (
+          <div className="px-4 mb-3">
+            <LinkPreviewCard linkData={linkData} compact={Boolean(hasMedia)} />
           </div>
         )}
 

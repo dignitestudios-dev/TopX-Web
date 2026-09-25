@@ -357,7 +357,7 @@ export default function TrendingPostCard({
               {currentMedia?.type === "video" || isVideo(currentMedia?.url) ? (
                 <video
                   src={currentMedia.url}
-                  className="w-full h-72 object-cover"
+                  className="w-full max-h-[550px] object-contain"
                   controls
                   onClick={(e) => e.stopPropagation()}
                   playsInline
@@ -366,7 +366,7 @@ export default function TrendingPostCard({
                 <img
                   src={currentMedia.url}
                   alt="post media"
-                  className="w-full h-72 object-cover"
+                  className="w-full max-h-[550px] object-contain"
                 />
               )}
 
@@ -424,6 +424,13 @@ export default function TrendingPostCard({
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Link Preview */}
+        {linkData && (
+          <div className="mb-3">
+            <LinkPreviewCard linkData={linkData} compact={Boolean(hasMedia)} />
           </div>
         )}
 

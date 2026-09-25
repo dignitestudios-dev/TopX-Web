@@ -10,11 +10,15 @@ import {
   Layers,
   Repeat2,
   Pencil,
+  GraduationCap,
+  Plus,
 } from "lucide-react";
 import { BsThreeDotsVertical } from "react-icons/bs";
-import { nofound, notes, topics } from "../../assets/export";
+import { nofound, notes, topics, expert } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
+import ExpertStatusModal from "../../components/global/ExpertStatusModal";
+import CreateKnowledgePostModal from "../../components/global/CreateKnowledgePostModal";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getKnowledgePostDetail,
@@ -54,7 +58,9 @@ export default function KnowledgePageDetail() {
   const [showEditPageModal, setShowEditPageModal] = useState(false);
   const [showPageOptionsDropdown, setShowPageOptionsDropdown] = useState(false);
   const [showManagePostsModal, setShowManagePostsModal] = useState(false);
+  const [expertModal, setExpertModal] = useState(false);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [openCreatePostModal, setOpenCreatePostModal] = useState(false);
   const dropdownRef = useRef(null);
   const pageOptionsRef = useRef(null);
   const { user } = useSelector((state) => state.auth);
@@ -390,6 +396,15 @@ export default function KnowledgePageDetail() {
                   Manage Posts
                 </button>
 
+                <button
+                  type="button"
+                  onClick={() => setOpenCreatePostModal(true)}
+                  className="p-2 rounded-xl bg-gradient-to-r from-[#DE4B12] to-[#E56F41] hover:from-[#c73e0a] hover:to-[#d45e32] text-white transition cursor-pointer flex items-center justify-center shadow-xs"
+                  title="Create Post"
+                >
+                  <Plus size={18} />
+                </button>
+
                 {/* 3 Dots Menu: Edit Page, Delete Page */}
                 <div className="relative" ref={pageOptionsRef}>
                   <button
@@ -416,6 +431,24 @@ export default function KnowledgePageDetail() {
                       >
                         <Pencil size={15} className="text-orange-500" />
                         <span>Edit Page</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPageOptionsDropdown(false);
+                          setExpertModal(true);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                      >
+                        <GraduationCap size={15} className="text-orange-500" />
+                        <span>
+                          {knowledgePageDetail?.expertLevelStatus === "accepted"
+                            ? "Expert Status (Approved)"
+                            : knowledgePageDetail?.expertLevelStatus === "pending"
+                            ? "Expert Status (Pending)"
+                            : "Apply for Expert Status"}
+                        </span>
                       </button>
 
                       <button
@@ -453,9 +486,19 @@ export default function KnowledgePageDetail() {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <h1 className="text-xl font-bold text-gray-900 truncate">
-                    {knowledgePageDetail.name}
-                  </h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 className="text-xl font-bold text-gray-900 truncate">
+                      {knowledgePageDetail.name}
+                    </h1>
+                    {(knowledgePageDetail?.expertLevelStatus === "accepted" ||
+                      knowledgePageDetail?.expertLevelStatus === "approved") && (
+                      <img
+                        src={expert}
+                        className="w-[80px] h-[25px] flex-shrink-0"
+                        alt="Expert"
+                      />
+                    )}
+                  </div>
 
                   {!isPageOwner && (
                     <button
@@ -873,6 +916,28 @@ export default function KnowledgePageDetail() {
               dispatch(getKnowledgePostDetail({ pageId: id, page: 1, limit: 10 }));
             }
           }}
+        />
+      )}
+
+      {/* Apply for Expert Status Modal */}
+      <ExpertStatusModal
+        isOpen={expertModal}
+        onClose={() => setExpertModal(false)}
+        pageId={id || knowledgePageDetail?._id}
+        defaultTopic={knowledgePageDetail?.topic || knowledgePageDetail?.name}
+        onSuccess={() => {
+          if (id || knowledgePageDetail?._id) {
+            dispatch(getKnowledgePostDetail({ pageId: id || knowledgePageDetail?._id, page: 1, limit: 10 }));
+          }
+        }}
+      />
+
+      {/* Create Knowledge Post Modal */}
+      {openCreatePostModal && (
+        <CreateKnowledgePostModal
+          onClose={() => setOpenCreatePostModal(false)}
+          selectedPageId={id || knowledgePageDetail?._id}
+          selectedSubTopics={activeSubTopic && activeSubTopic !== "All" ? [activeSubTopic] : []}
         />
       )}
     </div>

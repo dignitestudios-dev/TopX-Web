@@ -10,6 +10,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
   const [selectedOption, setSelectedOption] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
   const [title, setTitle] = useState(null);
+  const [newlyCreatedPageId, setNewlyCreatedPageId] = useState(null);
   const options = [
     { label: "Create Post", icon: Plus },
     { label: "Create Story", icon: Plus },
@@ -48,6 +49,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
                     <button
                       key={index}
                       onClick={() => {
+                        setNewlyCreatedPageId(null);
                         setSelectedOption(true);
                         setSelectedType(option.label);
                         setTitle(option.label);
@@ -79,6 +81,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           isOpen={selectedOption}
           title={title}
           setSelectedType={setSelectedType}
+          initialSelectedPageId={newlyCreatedPageId}
         />
       )}
       {(selectedType?.type === "upload Post" ||
@@ -90,6 +93,7 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
               setSelectedType(null);
             }
           }}
+          
           isOpen={selectedOption}
           title={title}
           setSelectedType={setSelectedType}
@@ -109,6 +113,19 @@ export default function CreatePostModal({ setIsOpen, isOpen }) {
           setIsOpen={setSelectedOption}
           isOpen={selectedOption}
           setSelectedType={setSelectedType}
+          title={title}
+          onPageCreated={(newPageId) => {
+            if (newPageId) {
+              setNewlyCreatedPageId(newPageId);
+            }
+            if (title === "Create Post" || title === "Create Story") {
+              setSelectedType(title);
+              setSelectedOption(true);
+            } else {
+              setSelectedType("Page done");
+              setSelectedOption(true);
+            }
+          }}
         />
       )}
       {(selectedType === "Page done" || (selectedType === "Done" && title === "Create New Page")) && (

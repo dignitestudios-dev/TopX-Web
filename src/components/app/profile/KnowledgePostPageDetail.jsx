@@ -10,6 +10,8 @@ import {
   Layers,
   Repeat2,
   Pencil,
+  GraduationCap,
+  Plus,
 } from "lucide-react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import {
@@ -33,6 +35,9 @@ import DeleteKnowledgePageModal from "../../global/DeleteKnowledgePageModal";
 import ManageKnowledgePostsModal from "../../global/ManageKnowledgePostsModal";
 import EditKnowledgePostModal from "../../global/EditKnowledgePostModal";
 import EditKnowledgePageModal from "../../global/EditKnowledgePageModal";
+import ExpertStatusModal from "../../global/ExpertStatusModal";
+import CreateKnowledgePostModal from "../../global/CreateKnowledgePostModal";
+import { expert } from "../../../assets/export";
 import { sendReport } from "../../../redux/slices/reports.slice";
 
 export default function KnowledgePostPageDetail({
@@ -43,6 +48,8 @@ export default function KnowledgePostPageDetail({
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [likesCounts, setLikesCounts] = useState({}); // Track optimistic likes counts
   const [showDeleteMenu, setShowDeleteMenu] = useState(null);
+  const [expertModal, setExpertModal] = useState(false);
+  const [openCreatePostModal, setOpenCreatePostModal] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [likingPostId, setLikingPostId] = useState(null);
   const [activeSubTopic, setActiveSubTopic] = useState("All");
@@ -398,14 +405,14 @@ export default function KnowledgePostPageDetail({
 
           {isPageOwner && (
             <div className="flex items-center gap-2">
-              {/* <button
+              <button
                 type="button"
-                onClick={() => setShowManagePostsModal(true)}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200"
+                onClick={() => setOpenCreatePostModal(true)}
+                className="p-2 rounded-xl bg-gradient-to-r from-[#DE4B12] to-[#E56F41] hover:from-[#c73e0a] hover:to-[#d45e32] text-white transition cursor-pointer flex items-center justify-center shadow-xs"
+                title="Create Post"
               >
-                <Layers size={14} />
-                Manage Posts
-              </button> */}
+                <Plus size={18} />
+              </button>
 
               {/* 3 Dots Menu: Edit Page, Delete Page */}
               <div className="relative" ref={pageOptionsRef}>
@@ -433,6 +440,24 @@ export default function KnowledgePostPageDetail({
                     >
                       <Pencil size={15} className="text-orange-500" />
                       <span>Edit Page</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPageOptionsDropdown(false);
+                        setExpertModal(true);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                    >
+                      <GraduationCap size={15} className="text-orange-500" />
+                      <span>
+                        {knowledgePageDetail?.expertLevelStatus === "accepted"
+                          ? "Expert Status (Approved)"
+                          : knowledgePageDetail?.expertLevelStatus === "pending"
+                          ? "Expert Status (Pending)"
+                          : "Apply for Expert Status"}
+                      </span>
                     </button>
 
                     <button
@@ -469,9 +494,19 @@ export default function KnowledgePostPageDetail({
             )}
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-gray-900 truncate">
-                {knowledgePageDetail.name}
-              </h1>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900 truncate">
+                  {knowledgePageDetail.name}
+                </h1>
+                {(knowledgePageDetail?.expertLevelStatus === "accepted" ||
+                  knowledgePageDetail?.expertLevelStatus === "approved") && (
+                  <img
+                    src={expert}
+                    className="w-[80px] h-[25px] flex-shrink-0"
+                    alt="Expert"
+                  />
+                )}
+              </div>
 
               {knowledgePageDetail.topic && (
                 <span className="inline-block mt-1 text-xs bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full font-medium">
@@ -871,6 +906,29 @@ export default function KnowledgePostPageDetail({
               dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
             }
           }}
+        />
+      )}
+
+      {/* Apply for Expert Status Modal */}
+      <ExpertStatusModal
+        isOpen={expertModal}
+        onClose={() => setExpertModal(false)}
+        pageId={pageId}
+        defaultTopic={knowledgePageDetail?.topic || knowledgePageDetail?.name}
+        onSuccess={() => {
+          if (pageId) {
+            dispatch(getKnowledgePostDetail({ pageId, page: 1, limit: 10 }));
+            dispatch(fetchMyKnowledgePages({ page: 1, limit: 100 }));
+          }
+        }}
+      />
+
+      {/* Create Knowledge Post Modal */}
+      {openCreatePostModal && (
+        <CreateKnowledgePostModal
+          onClose={() => setOpenCreatePostModal(false)}
+          selectedPageId={pageId || knowledgePageDetail?._id}
+          selectedSubTopics={activeSubTopic !== "All" ? [activeSubTopic] : []}
         />
       )}
     </div>

@@ -20,6 +20,8 @@ export default function PageCreateModal({
   setIsOpen,
   isOpen,
   setSelectedType,
+  title,
+  onPageCreated,
 }) {
   const [formData, setFormData] = useState({
     name: "",
@@ -248,17 +250,37 @@ export default function PageCreateModal({
         });
       }
 
-      await dispatch(createPage(fd)).unwrap();
+      const createdPageRes = await dispatch(createPage(fd)).unwrap();
 
       SuccessToast("Page created successfully!");
 
       dispatch(fetchMyPages({ page: 1, limit: 100 }));
 
-      if (typeof setSelectedType === "function") {
-        setSelectedType("Page done");
-      }
+      const newPageId =
+        createdPageRes?._id ||
+        createdPageRes?.page?._id ||
+        createdPageRes?.data?._id ||
+        createdPageRes?.id;
 
-      setIsOpen(false);
+      if (typeof onPageCreated === "function") {
+        onPageCreated(newPageId);
+      } else if (typeof setSelectedType === "function") {
+        if (title === "Create Post" || title === "Create Story") {
+          setSelectedType(title);
+          if (typeof setIsOpen === "function") {
+            setIsOpen(true);
+          }
+        } else {
+          setSelectedType("Page done");
+          if (typeof setIsOpen === "function") {
+            setIsOpen(true);
+          }
+        }
+      } else {
+        if (typeof setIsOpen === "function") {
+          setIsOpen(false);
+        }
+      }
 
       setFormData({
         name: "",
@@ -302,6 +324,23 @@ export default function PageCreateModal({
       setLoadingSubmit(false);
     }
   };
+
+  const handleClose = () => {
+    if (
+      typeof setSelectedType === "function" &&
+      (title === "Create Post" || title === "Create Story")
+    ) {
+      setSelectedType(title);
+    } else {
+      if (typeof setIsOpen === "function") {
+        setIsOpen(false);
+      }
+      if (typeof setSelectedType === "function") {
+        setSelectedType(null);
+      }
+    }
+  };
+
   // Filter categories & subcategories based on search query
   const filteredTopics = (alltopics || []).filter((item) => {
     const searchLower = categorySearch.toLowerCase().trim();
@@ -319,7 +358,7 @@ export default function PageCreateModal({
         <>
           <div
             className="fixed inset-0 bg-black bg-opacity-50 z-50 cursor-pointer"
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
           />
 
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -331,7 +370,7 @@ export default function PageCreateModal({
                     Create Page
                   </h2>
                   <button
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleClose}
                     disabled={pagesLoading}
                     className="text-orange-500 hover:text-orange-600 transition-colors disabled:opacity-50"
                   >

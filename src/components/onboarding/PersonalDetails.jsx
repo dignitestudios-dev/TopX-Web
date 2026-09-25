@@ -186,6 +186,9 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
       if (values.school && values.school.trim()) {
         formData.append("school", values.school.trim());
       }
+      if (values.college && values.college.trim()) {
+        formData.append("college", values.college.trim());
+      }
       formData.append("bio", values.bio || "");
       // if (values.link && values.link.trim()) {
       //   formData.append("link", values.link.trim());
@@ -446,18 +449,50 @@ export default function PersonalDetails({ name, email, handleNext, handlePreviou
               )}
             </div>
 
-            {/* School / College */}
+            {/* School */}
             <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center">
+                <label className="text-[14px] font-[500] text-gray-700">
+                  School <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <span className="text-[11px] text-gray-400">
+                  {values.school ? values.school.length : 0}/100
+                </span>
+              </div>
               <Input
-                label="School/College (optional)"
                 type="text"
                 name="school"
                 value={values.school}
                 onChange={handleChange}
                 onBlur={handleBlur}
-                placeholder="Enter your school or college"
+                maxLength={100}
+                placeholder="Enter your school"
                 touched={touched.school}
                 error={errors.school}
+                size="md"
+              />
+            </div>
+
+            {/* College */}
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center">
+                <label className="text-[14px] font-[500] text-gray-700">
+                  College <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <span className="text-[11px] text-gray-400">
+                  {values.college ? values.college.length : 0}/100
+                </span>
+              </div>
+              <Input
+                type="text"
+                name="college"
+                value={values.college}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                maxLength={100}
+                placeholder="Enter your college"
+                touched={touched.college}
+                error={errors.college}
                 size="md"
               />
             </div>

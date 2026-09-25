@@ -249,6 +249,7 @@ export default function UploadPostStory({
       }
 
       handleCloseModal();
+      
     } catch (err) {
       console.error("Post creation error:", err);
       const isPayloadTooLarge =
@@ -304,12 +305,12 @@ export default function UploadPostStory({
                     rows="4"
                     className="w-full p-3 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 resize-none transition-all"
                   />
-                  {images.length === 0 && linkData && (
+                  {linkData && (
                     <div className="mt-3">
                       <p className="text-xs font-semibold text-gray-500 mb-1">
                         Link Preview
                       </p>
-                      <LinkPreviewCard linkData={linkData} />
+                      <LinkPreviewCard linkData={linkData} compact={images.length > 0} />
                     </div>
                   )}
                 </div>

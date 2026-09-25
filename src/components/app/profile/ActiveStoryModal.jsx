@@ -437,15 +437,15 @@ export default function ActiveStoryModal({
             ) : null}
           </div>
 
-          {/* Link Preview if no uploaded post media */}
-          {!hasPostMedia && postLinkData && (
+          {/* Link Preview */}
+          {postLinkData && (
             <div
               className="p-3 bg-black/40"
               onClick={(e) => {
                 e.stopPropagation();
               }}
             >
-              <LinkPreviewCard linkData={postLinkData} />
+              <LinkPreviewCard linkData={postLinkData} compact={Boolean(hasPostMedia)} />
             </div>
           )}
 

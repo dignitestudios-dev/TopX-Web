@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Edit, MessageCircle, GraduationCap } from "lucide-react";
-import { profilehigh } from "../../../assets/export";
+import { Edit, MessageCircle } from "lucide-react";
+import { profilehigh, schoolIcon, collegeIcon } from "../../../assets/export";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUserData } from "../../../redux/slices/auth.slice";
 import FollowersFollowingModal from "../../global/FollowersFollowingModal";
@@ -145,10 +145,28 @@ export default function LargeProfile({
               ) : null}
             </div>
           </div>
-          {userRecord.school && (
-            <div className="flex items-center gap-1.5 text-[14px] text-gray-700 font-medium pt-1">
-              <GraduationCap className="w-4 h-4 text-[#DE4B12] flex-shrink-0" />
-              <span>{userRecord.school}</span>
+          {(userRecord.school || userRecord.college) && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[14px] text-gray-700 font-medium pt-1">
+              {userRecord.school && (
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src={schoolIcon}
+                    alt="School"
+                    className="w-4 h-4 object-contain flex-shrink-0"
+                  />
+                  <span>{userRecord.school}</span>
+                </div>
+              )}
+              {userRecord.college && (
+                <div className="flex items-center gap-1.5">
+                  <img
+                    src={collegeIcon}
+                    alt="College"
+                    className="w-4 h-4 object-contain flex-shrink-0"
+                  />
+                  <span>{userRecord.college}</span>
+                </div>
+              )}
             </div>
           )}
         

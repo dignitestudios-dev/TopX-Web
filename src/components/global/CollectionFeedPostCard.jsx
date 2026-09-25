@@ -620,9 +620,9 @@ console.log(targetPost,"targetPost===")
         </div>
       )}
 
-      {!hasUploadedMedia && linkData && (
-        <div className="px-4">
-          <LinkPreviewCard linkData={linkData} />
+      {linkData && (
+        <div className="px-4 mb-3">
+          <LinkPreviewCard linkData={linkData} compact={Boolean(hasUploadedMedia)} />
         </div>
       )}
 

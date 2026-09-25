@@ -31,7 +31,7 @@ import {
   applyExpertStatus,
   resetExpertStatusSuccess,
 } from "../../../redux/slices/pages.slice";
-import { BsFileEarmarkTextFill } from "react-icons/bs";
+import { BsFileEarmarkTextFill, BsFileEarmarkArrowUpFill } from "react-icons/bs";
 import PagePosts from "./PagePosts";
 import CommentFilterModal from "./CommentFilterModal";
 import UploadPostStory from "./UploadPostStory";
@@ -63,7 +63,7 @@ import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import Input from "../../common/Input";
 import { createStory } from "../../../redux/slices/posts.slice";
 import axios from "../../../axios";
-import { expert, nofound, postrequesticon } from "../../../assets/export";
+import { expert, nofound } from "../../../assets/export";
 import { startStream } from "../../../redux/slices/livestream.slice";
 import { FaPlus } from "react-icons/fa6";
 import { TbNotification } from "react-icons/tb";
@@ -1309,7 +1309,7 @@ console.log(pageDetail,"pageDetail==>")
                             className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition flex items-center justify-between gap-2 cursor-pointer"
                           >
                             <div className="flex items-center gap-2">
-                              <TbNotification className="w-4 h-4 text-orange-500" />
+                              <Lightbulb className="w-4 h-4 text-orange-500" />
                               <span>Post Requests</span>
                             </div>
                             {postRequests.length > 0 && (
@@ -1471,18 +1471,9 @@ console.log(pageDetail,"pageDetail==>")
                       : "text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <div className="p-1 rounded">
-                    <TbNotification
-                      size={20}
-                      className={`${
-                        activeTab === "postrequest"
-                          ? "text-orange-600"
-                          : "text-gray-500"
-                      } transition-colors`}
-                    />
-                  </div>
+                  <Lightbulb size={19} />
 
-                  <span className="text-[13px] font-[500] -ml-[6px]">
+                  <span className="text-[14px] font-[500]">
                     Post Request
                   </span>
 

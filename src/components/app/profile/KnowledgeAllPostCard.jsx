@@ -1,5 +1,6 @@
 import React from "react";
 import { TbFileText } from "react-icons/tb";
+import { expert } from "../../../assets/export";
 
 export default function KnowledgeAllPostCard({ item }) {
 
@@ -35,10 +36,18 @@ export default function KnowledgeAllPostCard({ item }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className="text-[14px] font-[600] text-black capitalize">
             {item?.name}
           </p>
+
+          {(item?.expertLevelStatus === "accepted" || item?.expertLevelStatus === "approved") && (
+            <img
+              src={expert}
+              className="w-[60px] h-[19px] flex-shrink-0"
+              alt="Expert"
+            />
+          )}
 
           <TbFileText className="w-[16px] h-[16px]" />
         </div>

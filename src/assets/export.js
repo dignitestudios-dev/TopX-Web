@@ -43,10 +43,17 @@ import topxlogout from "./landingpage/topx-logo.png"
 import PostUnderReview from "../assets/under-review-img.png"
 import nofound from "../assets/notfound.png"
 import expert from "../assets/expert.png"
-import postrequesticon from "../assets/notification.svg"
 import KnowledeIcon from "../assets/knowledge-icon.png"
+import schoolIcon from "./school.png"
+import collegeIcon from "./college.png"
 
 export {
+  schoolIcon,
+  collegeIcon,
+  schoolIcon as schoolImg,
+  collegeIcon as collegeImg,
+  schoolIcon as school,
+  collegeIcon as college,
   KnowledeIcon,
   PostUnderReview,
   user,
@@ -85,7 +92,7 @@ export {
   topxlogout,
   Mask,
   bg,
-  postrequesticon,
+  
   nofound,
   expert,
 };

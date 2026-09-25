@@ -120,7 +120,7 @@ export default function Profile() {
                         className="w-full h-[40px] flex justify-between items-center bg-white rounded-[12px] border border-[#B9B9B9] px-1"
                       >
                         <p className="text-[14px] font-[500] text-[#18181899] pl-2">
-                          Create Post
+                          Create  
                         </p>
                         <button className="bg-gradient-to-l from-[#DE4B12] to-[#E56F41] text-white w-[34px] h-[34px] rounded-[10px] flex items-center justify-center">
                           <FiPlus size={24} className="text-white" />

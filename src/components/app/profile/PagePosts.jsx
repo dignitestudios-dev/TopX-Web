@@ -823,8 +823,8 @@ const PagePosts = ({
                   </div>
                 )}
 
-                {/* Media or Link Preview */}
-                {hasMedia ? (
+                {/* Media */}
+                {hasMedia && (
                   <div
                     className="m-4 cursor-pointer"
                     onClick={() => openImageModal(post.media)}
@@ -834,13 +834,13 @@ const PagePosts = ({
                         <img
                           src={post.media[0].fileUrl}
                           alt="Post"
-                          className="w-full rounded-lg hover:opacity-90 transition-opacity"
+                          className="w-full h-auto max-h-[550px] object-contain rounded-xl hover:opacity-90 transition-opacity"
                         />
                       ) : post.media[0].type === "video" ? (
                         <video
                           src={post.media[0].fileUrl}
                           controls
-                          className="w-full h-[40em] rounded-lg"
+                          className="w-full h-auto max-h-[550px] object-contain rounded-xl"
                         />
                       ) : null}
 
@@ -851,11 +851,14 @@ const PagePosts = ({
                       )}
                     </div>
                   </div>
-                ) : linkData ? (
-                  <div className="px-4">
-                    <LinkPreviewCard linkData={linkData} />
+                )}
+
+                {/* Link Preview */}
+                {linkData && (
+                  <div className="px-4 mb-3">
+                    <LinkPreviewCard linkData={linkData} compact={Boolean(hasMedia)} />
                   </div>
-                ) : null}
+                )}
 
                 {/* Topic Tag */}
                 {/* {post.page?.topic && (

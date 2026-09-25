@@ -343,7 +343,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                             <img
                               src={currentMedia.fileUrl}
                               alt="Post media"
-                              className="w-full h-auto object-cover max-h-96"
+                              className="w-full h-auto object-contain max-h-[550px] rounded-lg"
                               loading="lazy"
                               onLoad={() => handleMediaLoad(post._id)}
                             />
@@ -351,7 +351,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                             <video
                               src={currentMedia.fileUrl}
                               controls
-                              className="w-full h-auto object-cover max-h-96"
+                              className="w-full h-auto object-contain max-h-[550px] rounded-lg"
                               onLoadedData={() => handleMediaLoad(post._id)}
                             />
                           ) : null}
@@ -385,8 +385,10 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                         </div>
                       )}
 
-                      {!hasMedia && linkData && (
-                        <LinkPreviewCard linkData={linkData} />
+                      {linkData && (
+                        <div className="mb-3">
+                          <LinkPreviewCard linkData={linkData} compact={Boolean(hasMedia)} />
+                        </div>
                       )}
 
                       {/* Repost Tag Pill (Figma style) */}
