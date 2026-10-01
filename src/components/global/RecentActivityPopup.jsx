@@ -281,6 +281,7 @@ const RecentActivityPopup = ({ onClose }) => {
                         <video
                           src={post.media[0].fileUrl}
                           controls
+                          muted
                           className="w-full rounded-lg max-h-48"
                         >
                           Your browser does not support the video tag.

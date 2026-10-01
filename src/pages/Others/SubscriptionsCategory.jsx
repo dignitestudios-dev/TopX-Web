@@ -114,7 +114,7 @@ export default function SubscriptionsCategory() {
   const { user } = useSelector((state) => state.auth);
 
 
-  
+
   // Fetch collection name from mySubscriptions
   useEffect(() => {
     const fetchCollectionName = async () => {
@@ -231,7 +231,7 @@ export default function SubscriptionsCategory() {
   // Filter posts based on selected page
   const filteredPosts = selectedPageId
     ? CollectionFeeds?.filter((post) => post?.page?._id === selectedPageId) ||
-      []
+    []
     : CollectionFeeds || [];
 
   // Handle page click - check for stories or navigate
@@ -282,7 +282,7 @@ export default function SubscriptionsCategory() {
 
         <Profilecard smallcard={true} />
 
-       {/* Topic Pages */}
+        {/* Topic Pages */}
         <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
           <h3 className="font-[500] text-lg mb-4 flex items-center gap-2">
             <TbNotes className="w-5 h-5 text-orange-500" />

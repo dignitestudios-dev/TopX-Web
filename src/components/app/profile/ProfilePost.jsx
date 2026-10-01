@@ -15,6 +15,7 @@ import {
   ChevronUp,
   ChevronRight,
   Image as ImageIcon,
+  Pencil,
 } from "lucide-react";
 import FollowRequestsModal from "./FollowRequestsModal";
 import ProfilePictureModal from "./ProfilePictureModal";
@@ -102,6 +103,9 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }
   const [isOptionsModalOpen, setIsOptionsModalOpen] = useState(false);
   const [isEmojiModalOpen, setIsEmojiModalOpen] = useState(false);
   const editFileInputRef = useRef(null);
+  const [pageAbout, setPageAbout] = useState("");
+  const [editKeywords, setEditKeywords] = useState([]);
+  const [keywordInput, setKeywordInput] = useState("");
 
   const { alltopics, isLoading: topicsLoading } = useSelector(
     (state) => state.topics || {}
@@ -297,7 +301,8 @@ console.log(pageDetail,"pageDetail==>")
       dispatch(gettopics());
       const p = pageDetail || page;
       if (p) {
-        setPageName(p.name || "");
+        setPageName(p.name || p.pageName || "");
+        setPageAbout(p.about || p.description || "");
         setEditImagePreview(p.image || null);
         setEditImageFile(null);
         const currentTopic =
@@ -305,12 +310,60 @@ console.log(pageDetail,"pageDetail==>")
           p.interest ||
           "";
         setSelectedTopic(currentTopic);
+
+        const rawKeywords = p.keywords || [];
+        let parsedKeywords = [];
+        if (Array.isArray(rawKeywords)) {
+          parsedKeywords = rawKeywords.map((k) =>
+            typeof k === "string" ? k.replace(/^#+/, "").trim() : ""
+          );
+        } else if (typeof rawKeywords === "string") {
+          try {
+            const json = JSON.parse(rawKeywords);
+            if (Array.isArray(json)) {
+              parsedKeywords = json.map((k) =>
+                typeof k === "string" ? k.replace(/^#+/, "").trim() : ""
+              );
+            }
+          } catch {
+            parsedKeywords = rawKeywords
+              .split(",")
+              .map((k) => k.replace(/^#+/, "").trim());
+          }
+        }
+        setEditKeywords(parsedKeywords.filter(Boolean));
+        setKeywordInput("");
       }
       setIsCategoryOpen(false);
       setCategorySearch("");
       setExpandedCategory(null);
     }
   }, [editPageModal, pageDetail, page, dispatch]);
+
+  const handleKeywordKeyDown = (e) => {
+    if ((e.key === "Enter" || e.key === ",") && keywordInput.trim() !== "") {
+      e.preventDefault();
+      const items = keywordInput
+        .split(/[,\n;]/)
+        .map((k) => k.trim().replace(/^#+/, ""))
+        .filter(Boolean);
+
+      setEditKeywords((prev) => {
+        const next = [...prev];
+        items.forEach((item) => {
+          if (!next.some((k) => k.toLowerCase() === item.toLowerCase())) {
+            next.push(item);
+          }
+        });
+        return next;
+      });
+      setKeywordInput("");
+    }
+  };
+
+  const removeKeyword = (index) => {
+    setEditKeywords((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // Close category dropdown when clicking outside
   useEffect(() => {
@@ -327,16 +380,55 @@ console.log(pageDetail,"pageDetail==>")
       document.removeEventListener("mousedown", handleClickOutsideCategory);
   }, []);
 
+  // Helper to extract safe string name from subcategory
+  const getSubName = (sub) => {
+    if (typeof sub === "string") return sub.trim();
+    return (sub?.name || sub?.title || "").trim();
+  };
+
   // Filter categories & subcategories based on search query
-  const filteredTopics = (alltopics || []).filter((item) => {
-    const searchLower = categorySearch.toLowerCase().trim();
-    if (!searchLower) return true;
-    const nameMatch = item.name?.toLowerCase().includes(searchLower);
-    const subMatch = (item.subCategories || []).some((sub) =>
-      sub.toLowerCase().includes(searchLower)
-    );
-    return nameMatch || subMatch;
-  });
+  const filteredTopics = (alltopics || [])
+    .map((item) => {
+      const searchLower = categorySearch.toLowerCase().trim();
+      const catName = typeof item === "string" ? item.trim() : (item?.name || "").trim();
+      const rawSubs = Array.isArray(item?.subCategories)
+        ? item.subCategories
+        : Array.isArray(item?.subTopics)
+        ? item.subTopics
+        : [];
+
+      const cleanSubs = rawSubs.map(getSubName).filter(Boolean);
+
+      if (!searchLower) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      }
+
+      const catMatches = catName.toLowerCase().includes(searchLower);
+      const matchingSubs = cleanSubs.filter((subName) =>
+        subName.toLowerCase().includes(searchLower)
+      );
+
+      if (catMatches) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      } else if (matchingSubs.length > 0) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: matchingSubs,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
 
   const handleSelectEmoji = async (emojiUrl) => {
     setEditImagePreview(emojiUrl);
@@ -607,9 +699,26 @@ console.log(pageDetail,"pageDetail==>")
       return;
     }
 
+    // Auto-commit any keyword still in keywordInput
+    let finalKeywords = [...editKeywords];
+    if (keywordInput.trim()) {
+      const items = keywordInput
+        .split(/[,\n;]/)
+        .map((k) => k.trim().replace(/^#+/, ""))
+        .filter(Boolean);
+      items.forEach((item) => {
+        if (!finalKeywords.some((k) => k.toLowerCase() === item.toLowerCase())) {
+          finalKeywords.push(item);
+        }
+      });
+      setEditKeywords(finalKeywords);
+      setKeywordInput("");
+    }
+
     const formData = new FormData();
     formData.append("pageName", pageName.trim());
-    
+    // formData.append("name", pageName.trim());
+    // formData.append("about", (pageAbout || "").trim());
 
     // Topic
     let topicValue = (selectedTopic || "").trim();
@@ -618,14 +727,31 @@ console.log(pageDetail,"pageDetail==>")
     }
     if (topicValue) {
       formData.append("topic", topicValue);
-
     }
+
+    // Keywords
+    const formattedKeywords = finalKeywords.map((kw) =>
+      kw.startsWith("#") ? kw : `#${kw}`
+    );
+    formattedKeywords.forEach((k) => {
+      formData.append("keywords[]", k);
+    });
+    // if (formattedKeywords.length > 0) {
+    //   formData.append("keywords", JSON.stringify(formattedKeywords));
+    // }
 
     // Only append image if a new one is selected (file or emoji converted to file)
     let binaryFile = editImageFile;
-    if (!(binaryFile instanceof File) && editImagePreview && isEmoji(editImagePreview)) {
+    if (
+      !(binaryFile instanceof File) &&
+      editImagePreview &&
+      isEmoji(editImagePreview)
+    ) {
       try {
-        binaryFile = await emojiUrlToFile(editImagePreview, "topic_page_emoji.png");
+        binaryFile = await emojiUrlToFile(
+          editImagePreview,
+          "topic_page_emoji.png"
+        );
       } catch (e) {
         console.error("Error converting emoji to file:", e);
       }
@@ -1399,13 +1525,7 @@ console.log(pageDetail,"pageDetail==>")
             </div>
 
             {/* KEYWORDS (Hashtags) */}
-            <div className="flex flex-wrap gap-2 mb-3 mt-4">
-              {page?.keywords?.map((keyword, idx) => (
-                <span key={idx} className="text-gray-400 text-sm">
-                  {keyword}
-                </span>
-              ))}
-            </div>
+                  
             {page.followersCount > 0 && (
               <div className="flex gap-1 items-center">
                 {/* Followers Images */}
@@ -1881,9 +2001,9 @@ console.log(pageDetail,"pageDetail==>")
       {/* Edit Page Modal */}
       {editPageModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 relative max-h-[90vh] overflow-y-auto custom-orange-scrollbar">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-semibold text-gray-900">Edit Page</h2>
               <button
                 onClick={() => setEditPageModal(false)}
@@ -1896,151 +2016,6 @@ console.log(pageDetail,"pageDetail==>")
 
             {/* Content */}
             <div className="space-y-4">
-              {/* Page Name Input */}
-              <div>
-                <Input
-                  label="Page Name"
-                  size="md"
-                  type="text"
-                  placeholder="Enter page name"
-                  value={pageName}
-                  onChange={(e) => setPageName(e.target.value)}
-                  disabled={updatePageLoading}
-                />
-              </div>
-
-              {/* Topic / Category Dropdown */}
-              <div className="relative" ref={categoryDropdownRef}>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                  Topic/ Category
-                </label>
-
-                {/* Header Trigger */}
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                  disabled={topicsLoading || updatePageLoading}
-                  className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all border-gray-200 ${
-                    selectedTopic
-                      ? "text-gray-900 font-medium"
-                      : "text-gray-400"
-                  } hover:border-gray-300 focus:outline-none cursor-pointer`}
-                >
-                  <span className="truncate">{selectedTopic || "Text goes here"}</span>
-                  {isCategoryOpen ? (
-                    <ChevronUp className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
-                  )}
-                </button>
-
-                {/* Dropdown Options Panel */}
-                {isCategoryOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 p-3 animate-fadeIn">
-                    {/* Search Bar */}
-                    <div className="relative mb-3">
-                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <input
-                        type="text"
-                        placeholder="Search here"
-                        value={categorySearch}
-                        onChange={(e) =>
-                          setCategorySearch(e.target.value)
-                        }
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-800 outline-none focus:border-orange-500 focus:bg-white transition-all"
-                      />
-                    </div>
-
-                    {/* Options List */}
-                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-orange-scrollbar">
-                      {topicsLoading ? (
-                        <div className="p-3 text-xs text-gray-500 text-center">
-                          Loading categories...
-                        </div>
-                      ) : filteredTopics.length === 0 ? (
-                        <div className="p-3 text-xs text-gray-500 text-center">
-                          No category found
-                        </div>
-                      ) : (
-                        filteredTopics.map((item) => {
-                          const hasSubs =
-                            Array.isArray(item.subCategories) &&
-                            item.subCategories.length > 0;
-                          const isExpanded =
-                            expandedCategory === item._id ||
-                            (categorySearch.trim().length > 0 && hasSubs);
-
-                          return (
-                            <div
-                              key={item._id}
-                              className="rounded-xl border border-transparent transition-all"
-                            >
-                              {/* Category Header Row */}
-                              <div
-                                onClick={() => {
-                                  setSelectedTopic(item.name);
-                                  if (hasSubs) {
-                                    setExpandedCategory(
-                                      isExpanded ? null : item._id
-                                    );
-                                  } else {
-                                    setIsCategoryOpen(false);
-                                  }
-                                }}
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
-                                  selectedTopic === item.name || isExpanded
-                                    ? "text-orange-600 bg-orange-50/80"
-                                    : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
-                                }`}
-                              >
-                                <span className="flex-1 truncate">
-                                  {item.name}
-                                </span>
-
-                                {hasSubs && (
-                                  <div className="p-1 hover:bg-orange-100 rounded-md transition-colors ml-1">
-                                    {isExpanded ? (
-                                      <ChevronDown className="w-4 h-4 text-orange-600" />
-                                    ) : (
-                                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Subcategories Accordion Panel */}
-                              {hasSubs && isExpanded && (
-                                <div className="pl-5 pr-2 py-1.5 space-y-1 bg-gray-50/50 rounded-b-xl border-t border-gray-100/80 animate-fadeIn">
-                                  {item.subCategories.map((sub, idx) => (
-                                    <div
-                                      key={idx}
-                                      onClick={() => {
-                                        setSelectedTopic(
-                                          `${item.name} > ${sub}`
-                                        );
-                                        setIsCategoryOpen(false);
-                                      }}
-                                      className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
-                                        selectedTopic ===
-                                        `${item.name} > ${sub}`
-                                          ? "text-orange-600 font-semibold bg-orange-100/60"
-                                          : "text-gray-600 hover:text-orange-600 hover:bg-white"
-                                      }`}
-                                    >
-                                      {sub}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* Page Image Upload with Device & Emoji options */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -2081,8 +2056,207 @@ console.log(pageDetail,"pageDetail==>")
                 </div>
               </div>
 
+              {/* Page Name Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  Page Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter page name"
+                  value={pageName}
+                  onChange={(e) => setPageName(e.target.value)}
+                  disabled={updatePageLoading}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 transition-all bg-white"
+                />
+              </div>
+
+              {/* Topic / Category Dropdown */}
+              <div className="relative" ref={categoryDropdownRef}>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  Topic/ Category
+                </label>
+
+                {/* Header Trigger */}
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                  disabled={topicsLoading || updatePageLoading}
+                  className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all border-gray-200 ${
+                    selectedTopic
+                      ? "text-gray-900 font-medium"
+                      : "text-gray-400"
+                  } hover:border-gray-300 focus:outline-none cursor-pointer`}
+                >
+                  <span className="truncate">{selectedTopic || "Select topic/category"}</span>
+                  {isCategoryOpen ? (
+                    <ChevronUp className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-700 shrink-0 ml-2" />
+                  )}
+                </button>
+
+                {/* Dropdown Options Panel */}
+                {isCategoryOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl z-50 p-3 animate-fadeIn">
+                    {/* Search Bar */}
+                    <div className="relative mb-3">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Search here"
+                        value={categorySearch}
+                        onChange={(e) =>
+                          setCategorySearch(e.target.value)
+                        }
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-800 outline-none focus:border-orange-500 focus:bg-white transition-all"
+                      />
+                    </div>
+
+                    {/* Options List */}
+                    <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-orange-scrollbar">
+                      {topicsLoading ? (
+                        <div className="p-3 text-xs text-gray-500 text-center">
+                          Loading categories...
+                        </div>
+                      ) : filteredTopics.length === 0 ? (
+                        <div className="p-3 text-xs text-gray-500 text-center">
+                          No category found
+                        </div>
+                      ) : (
+                        filteredTopics.map((item) => {
+                          const hasSubs =
+                            Array.isArray(item.displaySubs) &&
+                            item.displaySubs.length > 0;
+                          const isExpanded =
+                            expandedCategory === item._id ||
+                            (categorySearch.trim().length > 0 && hasSubs);
+
+                          return (
+                            <div
+                              key={item._id}
+                              className="rounded-xl border border-transparent transition-all"
+                            >
+                              {/* Category Header Row */}
+                              <div
+                                onClick={() => {
+                                  setSelectedTopic(item.name);
+                                  if (hasSubs) {
+                                    setExpandedCategory(
+                                      isExpanded ? null : item._id
+                                    );
+                                  } else {
+                                    setIsCategoryOpen(false);
+                                  }
+                                }}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
+                                  selectedTopic === item.name || isExpanded
+                                    ? "text-orange-600 bg-orange-50/80"
+                                    : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
+                                }`}
+                              >
+                                <span className="flex-1 truncate">
+                                  {item.name}
+                                </span>
+
+                                {hasSubs && (
+                                  <div
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedCategory(
+                                        isExpanded ? null : item._id
+                                      );
+                                    }}
+                                    className="p-1 hover:bg-orange-100 rounded-md transition-colors ml-1"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-orange-600" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Subcategories Accordion Panel */}
+                              {hasSubs && isExpanded && (
+                                <div className="pl-5 pr-2 py-1.5 space-y-1 bg-gray-50/50 rounded-b-xl border-t border-gray-100/80 animate-fadeIn">
+                                  {item.displaySubs.map((subName, idx) => (
+                                    <div
+                                      key={idx}
+                                      onClick={() => {
+                                        setSelectedTopic(
+                                          `${item.name} > ${subName}`
+                                        );
+                                        setIsCategoryOpen(false);
+                                      }}
+                                      className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                        selectedTopic ===
+                                        `${item.name} > ${subName}`
+                                          ? "text-orange-600 font-semibold bg-orange-100/60"
+                                          : "text-gray-600 hover:text-orange-600 hover:bg-white"
+                                      }`}
+                                    >
+                                      {subName}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* About / Description Input */}
+              
+
+              {/* Keywords Input */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  Keywords
+                </label>
+                <div className="w-full border border-gray-200 rounded-xl p-2.5 flex flex-wrap gap-2 min-h-[46px] bg-white focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                  {editKeywords.map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="flex items-center bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-xs font-medium"
+                    >
+                      #{keyword.replace(/^#/, "")}
+                      <button
+                        type="button"
+                        onClick={() => removeKeyword(index)}
+                        className="ml-1.5 text-orange-600 hover:text-orange-800 font-bold cursor-pointer"
+                        disabled={updatePageLoading}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    className="flex-1 outline-none px-1 text-sm text-gray-800 bg-transparent placeholder-gray-400 min-w-[120px]"
+                    placeholder={
+                      editKeywords.length === 0
+                        ? "Enter keywords (press Enter)"
+                        : "Add keyword..."
+                    }
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={handleKeywordKeyDown}
+                    disabled={updatePageLoading}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Press Enter or comma to add keywords
+                </p>
+              </div>
+
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-3">
                 <button
                   type="button"
                   onClick={() => setEditPageModal(false)}
@@ -2511,6 +2685,7 @@ console.log(pageDetail,"pageDetail==>")
                         <video
                           src={storyMediaPreview}
                           controls
+                          muted
                           className="w-full h-64 object-cover"
                         />
                       ) : (

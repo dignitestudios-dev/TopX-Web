@@ -947,6 +947,7 @@ const SearchItem = () => {
                               ) : post.media[0]?.type === "video" ? (
                                 <video
                                   controls
+                                  muted
                                   className="w-full h-auto rounded-2xl object-cover max-h-96"
                                   src={post.media[0].fileUrl}
                                 />
@@ -1111,6 +1112,7 @@ const SearchItem = () => {
                                   ) : post.media[0]?.type === "video" ? (
                                     <video
                                       controls
+                                      muted
                                       className="w-full h-auto rounded-2xl object-cover max-h-96"
                                       src={post.media[0].fileUrl}
                                     />

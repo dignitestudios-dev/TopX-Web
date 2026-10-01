@@ -424,6 +424,7 @@ export default function LiveChat() {
                         key={i}
                         src={url}
                         controls
+                        muted
                         className="mt-2 rounded-lg max-w-full max-h-60"
                       />
                     ) : (

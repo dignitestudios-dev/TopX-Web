@@ -146,7 +146,19 @@ export default function Interests({ handleNext, handlePrevious }) {
                 const subList = getSubList(item);
                 const hasSubs = subList.length > 0;
                 const isCatSelected = activeCategories.includes(catName);
-                const isExpanded = openCategoryId === catId;
+                const isExpanded =
+                  openCategoryId === catId ||
+                  (searchQuery.trim().length > 0 && hasSubs);
+
+                const query = searchQuery.toLowerCase().trim();
+                const displaySubs =
+                  query && !catName.toLowerCase().includes(query)
+                    ? subList.filter((sub) => {
+                        const subName =
+                          typeof sub === "string" ? sub : sub?.name || "";
+                        return subName.toLowerCase().includes(query);
+                      })
+                    : subList;
 
                 return (
                   <div
@@ -175,7 +187,11 @@ export default function Interests({ handleNext, handlePrevious }) {
 
                       {hasSubs && (
                         <div className="flex items-center gap-1 text-xs text-gray-500 hover:text-orange-600 font-medium px-2 py-1 rounded-lg hover:bg-gray-200/50 transition-colors">
-                          <span>{subList.length} sub-interests</span>
+                          <span>
+                            {query && displaySubs.length !== subList.length
+                              ? `${displaySubs.length} matching`
+                              : `${subList.length} sub-interests`}
+                          </span>
                           {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </div>
                       )}
@@ -184,7 +200,7 @@ export default function Interests({ handleNext, handlePrevious }) {
                     {/* Sub-interests Pills Panel */}
                     {hasSubs && isExpanded && (
                       <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200/60 animate-fadeIn">
-                        {subList.map((sub, subIdx) => {
+                        {displaySubs.map((sub, subIdx) => {
                           const subName = typeof sub === "string" ? sub : sub?.name || "";
                           if (!subName) return null;
                           const isSubSelected = activeCategories.includes(subName);

@@ -432,6 +432,7 @@ const PostStoryModal = ({ onClose, post }) => {
                           src={currentMedia.url}
                           className="w-full max-h-80 object-cover bg-black"
                           controls
+                          muted
                         />
                       ) : (
                         <img

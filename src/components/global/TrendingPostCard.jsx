@@ -359,6 +359,7 @@ export default function TrendingPostCard({
                   src={currentMedia.url}
                   className="w-full max-h-[550px] object-contain"
                   controls
+                  muted
                   onClick={(e) => e.stopPropagation()}
                   playsInline
                 />

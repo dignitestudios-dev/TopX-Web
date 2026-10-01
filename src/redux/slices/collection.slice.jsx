@@ -142,25 +142,30 @@ export const updateSavedCollections = createAsyncThunk(
       const token = Cookies.get("access_token");
       if (!token) return thunkAPI.rejectWithValue("No access token found");
 
-      const res = await axios.patch(`/collections/${payload}/save`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.patch(
+        `/collections/${payload}/save`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to create collection"
+          res.data?.message || "Failed to update saved collection"
         );
       }
 
       return {
         message: res.data.message,
+        id: payload,
+        data: res.data.data,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create collection"
+        error.response?.data?.message || "Failed to update saved collection"
       );
     }
   }
@@ -394,7 +399,13 @@ const collectionSlice = createSlice({
       })
       .addCase(updateSavedCollections.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.success = action.payload.message;
+        state.success = action.payload?.message;
+        const targetId = action.payload?.id;
+        if (targetId && Array.isArray(state.savedCollections)) {
+          state.savedCollections = state.savedCollections.filter(
+            (c) => c._id !== targetId && c.id !== targetId
+          );
+        }
       })
       .addCase(updateSavedCollections.rejected, (state, action) => {
         state.isLoading = false;

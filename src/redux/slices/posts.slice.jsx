@@ -112,7 +112,7 @@ export const deletePost = createAsyncThunk(
   async ({ postId }, thunkAPI) => {
     try {
       const res = await axios.delete(`/posts/${postId}`);
-      return res.data; // { success, message, data:{Post} }
+      return { ...res.data, postId }; // { success, message, data:{Post}, postId }
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || "Failed to delete Post",
@@ -395,6 +395,18 @@ const postsSlice = createSlice({
       .addCase(deletePost.fulfilled, (state, action) => {
         state.isLoading = false;
         state.success = true;
+        const deletedId =
+          action.payload?.postId ||
+          action.payload?.data?.Post?._id ||
+          action.payload?.data?._id;
+        if (deletedId) {
+          if (Array.isArray(state.pagepost)) {
+            state.pagepost = state.pagepost.filter((p) => p._id !== deletedId);
+          }
+          if (Array.isArray(state.posts)) {
+            state.posts = state.posts.filter((p) => p._id !== deletedId);
+          }
+        }
       })
 
       .addCase(deletePost.rejected, (state, action) => {

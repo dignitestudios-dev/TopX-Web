@@ -592,6 +592,7 @@ export default function EditKnowledgePageModal({
             options={(alltopics || []).map((item) => ({
               value: item.name,
               label: item.name,
+              subCategories: item.subCategories || item.subTopics || [],
             }))}
             value={formData.topic}
             onChange={(val) => handleInputChange("topic", val)}

@@ -195,6 +195,7 @@ export default function StoryPostDetailModal({ post, isOpen, onClose }) {
                 src={currentMedia.url}
                 className="w-full max-h-[400px] object-contain"
                 controls
+                muted
               />
             ) : (
               <img

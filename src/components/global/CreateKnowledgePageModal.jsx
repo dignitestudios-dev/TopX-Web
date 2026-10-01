@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
-import { X, Upload } from "lucide-react";
+import {
+  X,
+  Upload,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { gettopics } from "../../redux/slices/topics.slice";
 import {
@@ -8,7 +15,6 @@ import {
   resetKnowledge,
 } from "../../redux/slices/knowledgepost.slice";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
-import CustomSelect from "./CustomeSelect";
 import ProfilePictureModal from "../app/profile/ProfilePictureModal";
 import EmojiPickerModal from "../app/profile/EmojiPickerModal";
 import { emojiUrlToFile, isEmoji } from "../../lib/helpers";
@@ -42,6 +48,12 @@ export default function CreateKnowledgePageModal({ onClose }) {
   const [keywords, setKeywords] = useState([]);
   const [keywordInput, setKeywordInput] = useState("");
 
+  // Category Dropdown & Accordion State
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState(null);
+  const [categorySearch, setCategorySearch] = useState("");
+  const dropdownRef = useRef(null);
+
   const dispatch = useDispatch();
   const { alltopics, isLoading } = useSelector((state) => state.topics);
   const { loadingCreate, knowledgePages } = useSelector(
@@ -58,11 +70,77 @@ export default function CreateKnowledgePageModal({ onClose }) {
     dispatch(fetchMyPages({ page: 1, limit: 100 }));
   }, [dispatch]);
 
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsCategoryOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Helper to extract safe string name from subcategory
+  const getSubName = (sub) => {
+    if (typeof sub === "string") return sub.trim();
+    return (sub?.name || sub?.title || "").trim();
+  };
+
+  // Filter categories & subcategories based on search query
+  const filteredTopics = (alltopics || [])
+    .map((item) => {
+      const searchLower = categorySearch.toLowerCase().trim();
+      const catName = typeof item === "string" ? item.trim() : (item?.name || "").trim();
+      const rawSubs = Array.isArray(item?.subCategories)
+        ? item.subCategories
+        : Array.isArray(item?.subTopics)
+        ? item.subTopics
+        : [];
+
+      const cleanSubs = rawSubs.map(getSubName).filter(Boolean);
+
+      if (!searchLower) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      }
+
+      const catMatches = catName.toLowerCase().includes(searchLower);
+      const matchingSubs = cleanSubs.filter((subName) =>
+        subName.toLowerCase().includes(searchLower)
+      );
+
+      if (catMatches) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      } else if (matchingSubs.length > 0) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: matchingSubs,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+
   // INPUT HANDLER
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (field === "topic") {
-      setSelectedSuggestedSubCategory("");
+      if (value && value.includes(">")) {
+        const sub = value.split(">").pop().trim();
+        setSelectedSuggestedSubCategory(sub);
+      } else {
+        setSelectedSuggestedSubCategory("");
+      }
     }
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -100,25 +178,7 @@ export default function CreateKnowledgePageModal({ onClose }) {
     }
   };
 
-  // SUGGESTED SUBCATEGORY HANDLER (Single Selection)
-  const handleSelectSuggestedSubCategory = (subName) => {
-    const name = (
-      typeof subName === "string" ? subName : subName?.name || ""
-    ).trim();
-    if (!name) return;
 
-    if (
-      selectedSuggestedSubCategory.toLowerCase() === name.toLowerCase()
-    ) {
-      setSelectedSuggestedSubCategory("");
-    } else {
-      setSelectedSuggestedSubCategory(name);
-    }
-
-    if (errors.subCategories || errors.suggestedSubCategory) {
-      setErrors((prev) => ({ ...prev, subCategories: "", suggestedSubCategory: "" }));
-    }
-  };
 
   // SUB CATEGORY HELPERS (Manual Custom Subcategories)
   const addSubCategory = (rawText) => {
@@ -255,21 +315,6 @@ export default function CreateKnowledgePageModal({ onClose }) {
 
     if (!(formData.topic || "").trim()) {
       newErrors.topic = "Topic is required";
-    }
-
-    const selectedCategory = (alltopics || []).find(
-      (item) =>
-        item.name === formData.topic || item._id === formData.topic,
-    );
-    const availableSubCategories =
-      selectedCategory?.subCategories ||
-      selectedCategory?.subTopics ||
-      [];
-
-    if (availableSubCategories.length > 0 && !suggestedSub) {
-      newErrors.suggestedSubCategory = "Please select a suggested subcategory";
-    } else if (!suggestedSub && currentSubCategories.length === 0) {
-      newErrors.suggestedSubCategory = "At least 1 subcategory is required";
     }
 
     if (currentKeywords.length === 0) {
@@ -497,79 +542,151 @@ export default function CreateKnowledgePageModal({ onClose }) {
             )}
           </div>
 
-          {/* TOPIC / CATEGORY */}
-          <CustomSelect
-            options={(alltopics || []).map((item) => ({
-              value: item.name,
-              label: item.name,
-            }))}
-            value={formData.topic}
-            onChange={(val) => handleInputChange("topic", val)}
-            disabled={isBusy || isLoading}
-            error={errors.topic}
-          />
+          {/* TOPIC / CATEGORY DROPDOWN */}
+          <div className="relative" ref={dropdownRef}>
+            <label className="text-sm font-semibold text-black mb-1.5 block">
+              Topic / Category
+            </label>
 
-          {/* Subcategories Display for selected Category */}
-          {(() => {
-            const selectedCategory = (alltopics || []).find(
-              (item) =>
-                item.name === formData.topic || item._id === formData.topic,
-            );
-            const availableSubCategories =
-              selectedCategory?.subCategories ||
-              selectedCategory?.subTopics ||
-              [];
-            if (!formData.topic || availableSubCategories.length === 0)
-              return null;
+            {/* Header Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+              disabled={isLoading || isBusy}
+              className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all ${
+                errors.topic ? "border-red-500" : "border-gray-300"
+              } ${
+                formData.topic
+                  ? "text-gray-900 font-medium"
+                  : "text-gray-400"
+              } hover:border-gray-400 focus:outline-none ${
+                isBusy ? "bg-gray-50 cursor-not-allowed" : ""
+              }`}
+            >
+              <span>{formData.topic || "Text goes here"}</span>
+              {isCategoryOpen ? (
+                <ChevronUp className="w-5 h-5 text-gray-700" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-700" />
+              )}
+            </button>
 
-            const subCategoryError =
-              errors.suggestedSubCategory || errors.subCategories;
+            {errors.topic && (
+              <p className="text-red-500 text-xs mt-1">{errors.topic}</p>
+            )}
 
-            return (
-              <div className="flex flex-col gap-1">
-                <div
-                  className={`p-3 bg-gray-50 border rounded-xl transition-all ${
-                    subCategoryError
-                      ? "border-red-500 bg-red-50/30"
-                      : "border-gray-200"
-                  }`}
-                >
-                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                    Suggested Subcategories (click to select):{" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {availableSubCategories.map((sub, idx) => {
-                      const subName =
-                        typeof sub === "string" ? sub : sub?.name || "";
-                      if (!subName) return null;
-                      const isSelected =
-                        selectedSuggestedSubCategory.toLowerCase() ===
-                        subName.toLowerCase();
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          disabled={isBusy}
-                          onClick={() => handleSelectSuggestedSubCategory(subName)}
-                          className={`text-xs px-2.5 py-1 rounded-full border transition cursor-pointer font-medium ${
-                            isSelected
-                              ? "bg-orange-500 text-white border-orange-500 shadow-sm"
-                              : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600"
-                          }`}
-                        >
-                          {isSelected ? `✓ ${subName}` : `+ ${subName}`}
-                        </button>
-                      );
-                    })}
-                  </div>
+            {/* Dropdown Options Panel */}
+            {isCategoryOpen && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 p-3 animate-fadeIn">
+                {/* Search Bar */}
+                <div className="relative mb-3">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Search here"
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-xs text-gray-800 outline-none focus:border-orange-500 focus:bg-white transition-all"
+                  />
                 </div>
-                {subCategoryError && (
-                  <p className="text-red-500 text-xs mt-0.5">{subCategoryError}</p>
-                )}
+
+                {/* Options List */}
+                <div className="max-h-52 overflow-y-auto space-y-1 pr-1 custom-orange-scrollbar">
+                  {isLoading ? (
+                    <div className="p-3 text-xs text-gray-500 text-center">
+                      Loading categories...
+                    </div>
+                  ) : filteredTopics.length === 0 ? (
+                    <div className="p-3 text-xs text-gray-500 text-center">
+                      No category found
+                    </div>
+                  ) : (
+                    filteredTopics.map((item) => {
+                      const hasSubs =
+                        Array.isArray(item.displaySubs) &&
+                        item.displaySubs.length > 0;
+                      const isExpanded =
+                        expandedCategory === item._id ||
+                        (categorySearch.trim().length > 0 && hasSubs);
+
+                      return (
+                        <div
+                          key={item._id}
+                          className="rounded-xl border border-transparent transition-all"
+                        >
+                          {/* Category Header Row */}
+                          <div
+                            onClick={() => {
+                              handleInputChange("topic", item.name);
+                              if (hasSubs) {
+                                setExpandedCategory(
+                                  isExpanded ? null : item._id,
+                                );
+                              } else {
+                                setIsCategoryOpen(false);
+                              }
+                            }}
+                            className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
+                              formData.topic === item.name || isExpanded
+                                ? "text-orange-600 bg-orange-50/80"
+                                : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            <span className="flex-1">{item.name}</span>
+
+                            {hasSubs && (
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setExpandedCategory(
+                                    isExpanded ? null : item._id,
+                                  );
+                                }}
+                                className="p-1 hover:bg-orange-100 rounded-md transition-colors"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="w-4 h-4 text-orange-600" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Subcategories Accordion Panel */}
+                          {hasSubs && isExpanded && (
+                            <div className="pl-5 pr-2 py-1.5 space-y-1 bg-gray-50/50 rounded-b-xl border-t border-gray-100/80 animate-fadeIn">
+                              {item.displaySubs.map((subName, idx) => (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    handleInputChange(
+                                      "topic",
+                                      `${item.name} > ${subName}`,
+                                    );
+                                    setSelectedSuggestedSubCategory(subName);
+                                    setIsCategoryOpen(false);
+                                  }}
+                                  className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
+                                    formData.topic ===
+                                    `${item.name} > ${subName}`
+                                      ? "text-orange-600 font-semibold bg-orange-100/60"
+                                      : "text-gray-600 hover:text-orange-600 hover:bg-white"
+                                  }`}
+                                >
+                                  {subName}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            );
-          })()}
+            )}
+          </div>
 
           {/* KEYWORDS */}
           <div>

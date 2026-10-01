@@ -134,7 +134,7 @@ export default function PostImageViewerModal({
               src={currentImage}
               controls
               playsInline
-              muted={false}
+              muted
               preload="metadata"
               onClick={(e) => e.stopPropagation()}   // ✅ MOST IMPORTANT
               className="max-w-full max-h-full w-full h-full object-contain rounded-lg"

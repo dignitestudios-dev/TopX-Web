@@ -436,7 +436,13 @@ export default function HomePostFeed({
   };
 
   const handleDeleteModal = async () => {
-    await dispatch(deletePost({ postId: selectedPost })).unwrap();
+    const targetPostId =
+      typeof selectedPost === "string" ? selectedPost : selectedPost?._id;
+    if (!targetPostId) {
+      setDeleteModal(false);
+      return;
+    }
+    await dispatch(deletePost({ postId: targetPostId })).unwrap();
     setDeleteModal(false);
     if (pageId) {
       await dispatch(
@@ -560,7 +566,8 @@ export default function HomePostFeed({
                     <button
                       onClick={() => {
                         setMoreOpenPostId(null);
-                        handleDeletePost(post._id);
+                        setSelectedPost(post._id);
+                        setDeleteModal(true);
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                     >
@@ -609,6 +616,7 @@ export default function HomePostFeed({
     ${isUnderReview ? "blur-sm" : ""}`}
                     
                   controls
+                  muted
                   playsInline
                   preload="metadata"
                   onClick={(e) => e.stopPropagation()}
@@ -926,7 +934,7 @@ export default function HomePostFeed({
                             src={m?.fileUrl}
                             className="w-full h-32 object-cover"
                             controls
-
+                            muted
                           />
                         )}
 
@@ -976,6 +984,7 @@ export default function HomePostFeed({
                             src={preview.preview}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
                         <button

@@ -23,9 +23,16 @@ export default function CustomSelect({
   }, []);
 
   const safeOptions = Array.isArray(options) ? options : [];
-  const filteredOptions = safeOptions.filter((opt) =>
-    (opt?.label || "").toLowerCase().includes((search || "").toLowerCase()),
-  );
+  const filteredOptions = safeOptions.filter((opt) => {
+    const q = (search || "").toLowerCase().trim();
+    if (!q) return true;
+    const labelMatch = (opt?.label || "").toLowerCase().includes(q);
+    const subMatch = (opt?.subCategories || []).some((sub) => {
+      const sName = typeof sub === "string" ? sub : sub?.name || "";
+      return sName.toLowerCase().includes(q);
+    });
+    return labelMatch || subMatch;
+  });
 
   return (
     <div className="relative" ref={dropdownRef}>

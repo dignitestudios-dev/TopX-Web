@@ -22,6 +22,8 @@ import {
   deletePost,
   editPost,
 } from "../../../redux/slices/posts.slice";
+import { getPageDetail } from "../../../redux/slices/pages.slice";
+import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import { fetchMyBoosts } from "../../../redux/slices/boost.slice";
 import { useDispatch, useSelector } from "react-redux";
 import CommentsSection from "../../global/CommentsSection";
@@ -80,6 +82,8 @@ const PagePosts = ({
   const [existingMedia, setExistingMedia] = useState([]);
   const [currentImages, setCurrentImages] = useState([]);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletedPostIds, setDeletedPostIds] = useState(new Set());
   const [deleteLoadingId, setDeleteLoadingId] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
@@ -98,7 +102,7 @@ const PagePosts = ({
   );
   const { myBoosts } = useSelector((state) => state.boost || {});
 
-  console.log(pagepost, "pagepostpagepostpagepostpagepost");
+
 
   const options = [
     "Share to your Story",
@@ -287,8 +291,8 @@ const PagePosts = ({
       <div className="max-w-2xl mx-auto p-4 bg-gray-50 min-h-screen">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
           <div className=" flex justify-center">
-              <img src={nofound} height={300} width={300} alt="" />
-            </div>
+            <img src={nofound} height={300} width={300} alt="" />
+          </div>
           <p className="text-red-600 text-sm pt-10">{pageposterror}</p>
         </div>
       </div>
@@ -297,11 +301,15 @@ const PagePosts = ({
 
   // Merge elevatedPosts (from page) + normal page posts
   const mergedPosts = (() => {
-    const base = pagepost || [];
-    if (!elevatedPosts || elevatedPosts.length === 0) return base;
+    const base = (pagepost || []).filter((p) => !deletedPostIds.has(p._id));
+    const activeElevated = (elevatedPosts || []).filter(
+      (p) => !deletedPostIds.has(p._id),
+    );
+
+    if (!activeElevated || activeElevated.length === 0) return base;
 
     const baseIds = new Set(base.map((p) => p._id));
-    const uniqueElevated = elevatedPosts.filter((p) => !baseIds.has(p._id));
+    const uniqueElevated = activeElevated.filter((p) => !baseIds.has(p._id));
     // Elevated posts first, then normal posts
     return [...uniqueElevated, ...base];
   })();
@@ -320,7 +328,7 @@ const PagePosts = ({
     );
   }
 
-  
+
 
   // Comment filter applies to comments inside posts, not the posts themselves
   const filteredPosts = mergedPosts || [];
@@ -342,8 +350,10 @@ const PagePosts = ({
       await dispatch(
         elevatePost({ postId: elevatePostId, duration: elevateDuration }),
       ).unwrap();
-      // Refresh posts so isElevated updates
+      SuccessToast("Post elevated successfully");
+      // Refresh page detail and posts so elevatedPosts updates
       if (pageId) {
+        await dispatch(getPageDetail(pageId)).unwrap();
         await dispatch(
           getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
         ).unwrap();
@@ -352,6 +362,7 @@ const PagePosts = ({
       setElevatePostId(null);
     } catch (error) {
       console.error("Failed to elevate post:", error);
+      ErrorToast(error || "Failed to elevate post");
     } finally {
       setElevateLoading(false);
     }
@@ -362,34 +373,25 @@ const PagePosts = ({
       setElevateLoading(true);
       // Call demote endpoint to unelevate post
       await dispatch(demotePost(postId)).unwrap();
-      // Refresh posts so isElevated updates
+      SuccessToast("Post unelevated successfully");
+      // Refresh page detail and posts so elevatedPosts updates
       if (pageId) {
+        await dispatch(getPageDetail(pageId)).unwrap();
         await dispatch(
           getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
         ).unwrap();
       }
     } catch (error) {
       console.error("Failed to unelevate post:", error);
+      ErrorToast(error || "Failed to unelevate post");
     } finally {
       setElevateLoading(false);
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!postId) return;
-    setDeleteLoadingId(postId);
-    try {
-      await dispatch(deletePost({ postId })).unwrap();
-      if (pageId) {
-        await dispatch(
-          getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
-        ).unwrap();
-      }
-    } catch (error) {
-      console.error("Failed to delete post:", error);
-    } finally {
-      setDeleteLoadingId(null);
-    }
+  const handleDeletePost = (postOrId) => {
+    setSelectedPost(postOrId);
+    setDeleteModal(true);
   };
 
   const openEditModal = (post) => {
@@ -483,12 +485,54 @@ const PagePosts = ({
   };
 
   const handleDeleteModal = async () => {
-    await dispatch(deletePost({ postId: selectedPost })).unwrap();
-    setDeleteModal(false);
-    if (pageId) {
-      await dispatch(
-        getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
-      ).unwrap();
+    const targetPostId =
+      typeof selectedPost === "string" ? selectedPost : selectedPost?._id;
+    if (!targetPostId) {
+      setDeleteModal(false);
+      return;
+    }
+
+    try {
+      setDeleteLoading(true);
+
+      const isElevatedPost =
+        selectedPost?.isElevated ||
+        elevatedPosts?.some((p) => p._id === targetPostId);
+
+      if (isElevatedPost) {
+        try {
+          await dispatch(demotePost(targetPostId)).unwrap();
+        } catch (demoteErr) {
+          console.warn("Demote before delete:", demoteErr);
+        }
+      }
+
+      await dispatch(deletePost({ postId: targetPostId })).unwrap();
+
+      setDeletedPostIds((prev) => new Set([...prev, targetPostId]));
+
+      SuccessToast("Post deleted successfully");
+      setDeleteModal(false);
+      setSelectedPost(null);
+
+      if (pageId) {
+        dispatch(getPageDetail(pageId));
+        dispatch(
+          getPostsByPageId({
+            pageId: pageId,
+            page: 1,
+            limit: 100,
+            filterType: commentFilter,
+            commentFilter: commentFilter,
+            applyFilter: true,
+          }),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+      ErrorToast(error || "Failed to delete post");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -551,26 +595,28 @@ const PagePosts = ({
                         </div>
                       )}
                     </div>
-                   <div className="flex items-center gap-2">
-  <p className="font-bold text-sm">
-    {post.author.name}
-  </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-sm">
+                        {post.author.name}
+                      </p>
 
-  {post.isElevated && <TiPin />}
+                      {post.isElevated && <TiPin />}
 
-  {post?.isBoosted && (
-    <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
-      <Zap className="w-2.5 h-2.5 fill-white" />
-      <span>Boosted</span>
-    </span>
-  )}
-</div>
+                      {post?.isBoosted && (
+                        <span className="inline-flex items-center gap-1 bg-gradient-to-r from-orange-500 to-[#DE4B12] text-white px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider">
+                          <Zap className="w-2.5 h-2.5 fill-white" />
+                          <span>Boosted</span>
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="relative">
                     {(() => {
-                      // Determine if this is the current user's post
-                      // so we can change menu options (Edit/Delete vs Report)
-                      const isMyPost = post?.author?._id === user?._id;
+                      const isMyPost =
+                        post?.author?._id === user?._id ||
+                        post?.author === user?._id ||
+                        post?.user?._id === user?._id ||
+                        post?.user === user?._id;
                       return null;
                     })()}
                     <button
@@ -587,34 +633,37 @@ const PagePosts = ({
                     {moreOpenPostId === post._id && (
                       <div className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                         {/* Elevate / Unelevate (keep for page owner) */}
-                        {post.isElevated ? (
-                          <button
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                            disabled={elevateLoading}
-                            onClick={() => {
-                              setMoreOpenPostId(null);
-                              handleUnelevate(post._id);
-                            }}
-                          >
-                            {elevateLoading ? "Updating..." : "Unelevate Post"}
-                          </button>
-                        ) : (
-                          <button
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                            onClick={() => {
-                              setMoreOpenPostId(null);
-                              handleModalToggle(post._id);
-                            }}
-                          >
-                            Elevate Post
-                          </button>
+                        {isPageOwner && (
+                          post.isElevated ? (
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                              disabled={elevateLoading}
+                              onClick={() => {
+                                setMoreOpenPostId(null);
+                                handleUnelevate(post._id);
+                              }}
+                            >
+                              {elevateLoading ? "Updating..." : "Unelevate Post"}
+                            </button>
+                          ) : (
+                            <button
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                              onClick={() => {
+                                setMoreOpenPostId(null);
+                                handleModalToggle(post._id);
+                              }}
+                            >
+                              Elevate Post
+                            </button>
+                          )
                         )}
 
                         {/* If this is a shared post: show only Delete (no Edit) */}
                         {post?.sharedBy ? (
                           <button
                             onClick={() => {
-                              setSelectedPost(post?._id);
+                              setMoreOpenPostId(null);
+                              setSelectedPost(post);
                               setDeleteModal(true);
                               setShowpopup(false);
                             }}
@@ -622,72 +671,76 @@ const PagePosts = ({
                           >
                             Delete
                           </button>
-                        ) : post.author?._id === user?._id ? (
+                        ) : ((post?.author?._id === user?._id || post?.author === user?._id || post?.user?._id === user?._id || post?.user === user?._id) || isPageOwner) ? (
                           <>
-                            {/* My post (not shared): show Edit + Delete */}
-                            <button
-                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
-                              onClick={() => {
-                                setMoreOpenPostId(null);
-                                openEditModal(post);
-                              }}
-                            >
-                              Edit Post
-                            </button>
-                            <button
-                              className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
-                              onClick={() => {
-                                setMoreOpenPostId(null);
-                                setSelectedBoostPost(post);
-                                setBoostModalOpen(true);
-                              }}
-                            >
-                              <Zap className="w-4 h-4 text-orange-500" />
-                              <span>Boost Post</span>
-                            </button>
-                            {(post?.isBoosted || post?.boostId || post?.boost) && (
-                              <button
-                                className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                onClick={async () => {
-                                  setMoreOpenPostId(null);
-                                  setSelectedBoostPost(post);
-                                  let id = post?.boostId || post?.boost?._id;
-                                  if (!id) {
-                                    try {
-                                      const res = await dispatch(fetchMyBoosts({ page: 1, limit: 50 })).unwrap();
-                                      const match = (res?.boosts || myBoosts || []).find(
-                                        (b) => b.post === post?._id || b.post?._id === post?._id
-                                      );
-                                      id = match?._id;
-                                    } catch (e) {
-                                      console.error("fetchMyBoosts error:", e);
-                                    }
-                                  }
-                                  setSelectedAnalyticsBoostId(id);
-                                  setAnalyticsModalOpen(true);
-                                }}
-                              >
-                                <BarChart2 className="w-4 h-4 text-blue-500" />
-                                <span>Boost Analytics</span>
-                              </button>
+                            {/* Author options */}
+                            {(post?.author?._id === user?._id || post?.author === user?._id || post?.user?._id === user?._id || post?.user === user?._id) && (
+                              <>
+                                <button
+                                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50"
+                                  onClick={() => {
+                                    setMoreOpenPostId(null);
+                                    openEditModal(post);
+                                  }}
+                                >
+                                  Edit Post
+                                </button>
+                                <button
+                                  className="w-full text-left px-4 py-2 text-sm text-orange-600 font-semibold hover:bg-orange-50 transition-colors flex items-center gap-1.5"
+                                  onClick={() => {
+                                    setMoreOpenPostId(null);
+                                    setSelectedBoostPost(post);
+                                    setBoostModalOpen(true);
+                                  }}
+                                >
+                                  <Zap className="w-4 h-4 text-orange-500" />
+                                  <span>Boost Post</span>
+                                </button>
+                                {(post?.isBoosted || post?.boostId || post?.boost) && (
+                                  <button
+                                    className="w-full text-left px-4 py-2 text-sm text-blue-600 font-semibold hover:bg-blue-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                    onClick={async () => {
+                                      setMoreOpenPostId(null);
+                                      setSelectedBoostPost(post);
+                                      let id = post?.boostId || post?.boost?._id;
+                                      if (!id) {
+                                        try {
+                                          const res = await dispatch(fetchMyBoosts({ page: 1, limit: 50 })).unwrap();
+                                          const match = (res?.boosts || myBoosts || []).find(
+                                            (b) => b.post === post?._id || b.post?._id === post?._id
+                                          );
+                                          id = match?._id;
+                                        } catch (e) {
+                                          console.error("fetchMyBoosts error:", e);
+                                        }
+                                      }
+                                      setSelectedAnalyticsBoostId(id);
+                                      setAnalyticsModalOpen(true);
+                                    }}
+                                  >
+                                    <BarChart2 className="w-4 h-4 text-blue-500" />
+                                    <span>Boost Analytics</span>
+                                  </button>
+                                )}
+                              </>
                             )}
+
+                            {/* Delete Post - opens confirmation modal */}
                             <button
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                              disabled={deleteLoadingId === post._id}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                               onClick={() => {
                                 setMoreOpenPostId(null);
-                                handleDeletePost(post._id);
+                                setSelectedPost(post);
+                                setDeleteModal(true);
                               }}
                             >
-                              {deleteLoadingId === post._id
-                                ? "Deleting..."
-                                : "Delete Post"}
+                              Delete Post
                             </button>
                           </>
                         ) : (
                           <button
                             onClick={() => {
-                              setMoreOpenPostId(false);
+                              setMoreOpenPostId(null);
                               setReportModalOpen(!reportModalOpen);
                               setReportPostId(post?._id);
                             }}
@@ -735,9 +788,8 @@ const PagePosts = ({
                             onChange={() => setElevateDuration("24h")}
                           />
                           <span
-                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                              elevateDuration === "24h" ? "bg-orange-500" : ""
-                            }`}
+                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "24h" ? "bg-orange-500" : ""
+                              }`}
                             onClick={() => setElevateDuration("24h")}
                           />
                           <label htmlFor="day" className="text-sm">
@@ -755,9 +807,8 @@ const PagePosts = ({
                             onChange={() => setElevateDuration("7d")}
                           />
                           <span
-                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                              elevateDuration === "7d" ? "bg-orange-500" : ""
-                            }`}
+                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "7d" ? "bg-orange-500" : ""
+                              }`}
                             onClick={() => setElevateDuration("7d")}
                           />
                           <label htmlFor="week" className="text-sm">
@@ -775,9 +826,8 @@ const PagePosts = ({
                             onChange={() => setElevateDuration("1m")}
                           />
                           <span
-                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                              elevateDuration === "1m" ? "bg-orange-500" : ""
-                            }`}
+                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "1m" ? "bg-orange-500" : ""
+                              }`}
                             onClick={() => setElevateDuration("1m")}
                           />
                           <label htmlFor="month" className="text-sm">
@@ -795,11 +845,10 @@ const PagePosts = ({
                             onChange={() => setElevateDuration("manual")}
                           />
                           <span
-                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${
-                              elevateDuration === "manual"
-                                ? "bg-orange-500"
-                                : ""
-                            }`}
+                            className={`w-4 h-4 mr-2 border-2 border-orange-500 rounded-full inline-block cursor-pointer ${elevateDuration === "manual"
+                              ? "bg-orange-500"
+                              : ""
+                              }`}
                             onClick={() => setElevateDuration("manual")}
                           />
                           <label htmlFor="until-change" className="text-sm">
@@ -830,20 +879,29 @@ const PagePosts = ({
                     onClick={() => openImageModal(post.media)}
                   >
                     <div className="relative">
-                      {post.media[0].type === "image" ? (
-                        <img
-                          src={post.media[0].fileUrl}
-                          alt="Post"
-                          className="w-full h-auto max-h-[550px] object-contain rounded-xl hover:opacity-90 transition-opacity"
-                        />
-                      ) : post.media[0].type === "video" ? (
-                        <video
-                          src={post.media[0].fileUrl}
-                          controls
-                          className="w-full h-auto max-h-[550px] object-contain rounded-xl"
-                        />
-                      ) : null}
+                      {(() => {
+                        const mediaUrl = post.media[0].fileUrl;
 
+                        const isVideo =
+                          post.media[0].type === "video" ||
+                          /\.(mp4|mov|webm|ogg|m4v)$/i.test(mediaUrl);
+
+                        return isVideo ? (
+                          <video
+                            src={mediaUrl}
+                            controls
+                            muted
+                            playsInline
+                            className="w-full h-auto max-h-[550px] object-contain rounded-xl"
+                          />
+                        ) : (
+                          <img
+                            src={mediaUrl}
+                            alt="Post"
+                            className="w-full h-auto max-h-[550px] object-contain rounded-xl hover:opacity-90 transition-opacity"
+                          />
+                        );
+                      })()}
                       {post.media.length > 1 && (
                         <div className="absolute top-3 right-3 bg-black bg-opacity-60 text-white px-2 py-1 rounded text-xs font-medium">
                           1/{post.media.length}
@@ -931,75 +989,75 @@ const PagePosts = ({
                   );
                 })()}
 
-                  {/* Stats & Actions */}
-                  <div className="flex  border-t py-2 border-gray-200 items-center gap-4 text-sm text-orange-500 ">
-                    {(() => {
-                      const likeData = getPostLikeData(post);
-                      return (
-                        <button
-                          onClick={() =>
-                            handleLikeClick(
-                              post._id,
-                              likeData.isLiked,
-                              likeData.likesCount,
-                            )
-                          }
-                          className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
-                        >
-                          <Heart
-                            className={`w-5 h-5 ${likeData.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
-                          />
-                          <span>{likeData.likesCount}</span>
-                        </button>
-                      );
-                    })()}
-
-                    <button
-                      onClick={() => {
-                        setOpenCommentsPostId(
-                          openCommentsPostId === post._id ? null : post._id,
-                        );
-                        if (openCommentsPostId !== post._id) {
-                          dispatch(getcommentsofpost({ postId: post._id }));
+                {/* Stats & Actions */}
+                <div className="flex  border-t py-2 border-gray-200 items-center gap-4 text-sm text-orange-500 ">
+                  {(() => {
+                    const likeData = getPostLikeData(post);
+                    return (
+                      <button
+                        onClick={() =>
+                          handleLikeClick(
+                            post._id,
+                            likeData.isLiked,
+                            likeData.likesCount,
+                          )
                         }
-                      }}
-                      className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
-                    >
-                      <MessageCircle className="w-5 h-5" />
-                      <span>
-                        {commentsCountByPostId?.[post._id] !== undefined
-                          ? commentsCountByPostId[post._id]
-                          : (post.commentsCount || 0)}
-                      </span>
-                    </button>
+                        className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
+                      >
+                        <Heart
+                          className={`w-5 h-5 ${likeData.isLiked ? "fill-orange-500 text-orange-500" : ""}`}
+                        />
+                        <span>{likeData.likesCount}</span>
+                      </button>
+                    );
+                  })()}
 
-                    <button
-                      onClick={() => {
-                        setSelectedPost(post);
-                        setSharepost(true);
-                      }}
-                      className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
-                    >
-                      <Share2 className="w-5 h-5" />
-                      <span>{post.sharesCount || 0}</span>
-                    </button>
+                  <button
+                    onClick={() => {
+                      setOpenCommentsPostId(
+                        openCommentsPostId === post._id ? null : post._id,
+                      );
+                      if (openCommentsPostId !== post._id) {
+                        dispatch(getcommentsofpost({ postId: post._id }));
+                      }
+                    }}
+                    className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span>
+                      {commentsCountByPostId?.[post._id] !== undefined
+                        ? commentsCountByPostId[post._id]
+                        : (post.commentsCount || 0)}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setSelectedPost(post);
+                      setSharepost(true);
+                    }}
+                    className="flex items-center gap-2 hover:text-orange-600 bg-orange-400/10 rounded-full p-1 transition-colors"
+                  >
+                    <Share2 className="w-5 h-5" />
+                    <span>{post.sharesCount || 0}</span>
+                  </button>
+                </div>
+
+                {/* Comments Section */}
+                {openCommentsPostId === post._id && (
+                  <div className="mt-4 border-t border-gray-100 pt-4">
+                    <CommentsSection
+                      postId={post._id}
+                      postDetail={post}
+                      isPageOwner={isPageOwner}
+                      pageId={pageId}
+                      applyFilter={true}
+                      commentFilter={commentFilter}
+                    />
                   </div>
+                )}
 
-                  {/* Comments Section */}
-                  {openCommentsPostId === post._id && (
-                    <div className="mt-4 border-t border-gray-100 pt-4">
-                      <CommentsSection
-                        postId={post._id}
-                        postDetail={post}
-                        isPageOwner={isPageOwner}
-                        pageId={pageId}
-                        applyFilter={true}
-                        commentFilter={commentFilter}
-                      />
-                    </div>
-                  )}
-
-                  {/* 🔒 Under Review Overlay (hide only for non-owners) */}
+                {/* 🔒 Under Review Overlay (hide only for non-owners) */}
                 {post?.isReported && !isPageOwner && (
                   <div
                     className="absolute inset-0 flex flex-col items-center justify-center 
@@ -1023,64 +1081,88 @@ const PagePosts = ({
       </div>
 
       {/* Image Modal */}
-      {showImageModal && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowImageModal(false)}
+  {showImageModal && (
+  <div
+    className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center p-4"
+    onClick={() => setShowImageModal(false)}
+  >
+    <button
+      onClick={() => setShowImageModal(false)}
+      className="absolute top-6 right-6 text-white hover:bg-white/20 p-2 rounded-full transition-colors z-10"
+    >
+      <X size={32} />
+    </button>
+
+    <div
+      className="relative w-full h-full flex items-center justify-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {(() => {
+        const currentMedia = currentImages[currentImageIndex];
+
+        const mediaUrl = currentMedia?.fileUrl || "";
+
+        const isVideo =
+          currentMedia?.type === "video" ||
+          /\.(mp4|mov|webm|ogg|m4v)$/i.test(mediaUrl);
+
+        return isVideo ? (
+          <video
+            key={mediaUrl}
+            src={mediaUrl}
+            controls
+            muted
+            playsInline
+            className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
+          />
+        ) : (
+          <img
+            src={mediaUrl}
+            alt="Full screen"
+            className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
+          />
+        );
+      })()}
+
+      {/* Previous Button */}
+      {currentImages.length > 1 && (
+        <button
+          onClick={prevImage}
+          className="absolute left-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
         >
-          <button
-            onClick={() => setShowImageModal(false)}
-            className="absolute top-6 right-6 text-white hover:bg-white/20 p-2 rounded-full transition-colors z-10"
-          >
-            <X size={32} />
-          </button>
+          ◀
+        </button>
+      )}
 
-          <div
-            className="relative w-full h-full flex items-center justify-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={currentImages[currentImageIndex].fileUrl}
-              alt="Full screen"
-              className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
-            />
+      {/* Next Button */}
+      {currentImages.length > 1 && (
+        <button
+          onClick={nextImage}
+          className="absolute right-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
+        >
+          ▶
+        </button>
+      )}
 
-            {/* Previous Button */}
-            {currentImages.length > 1 && (
-              <button
-                onClick={prevImage}
-                className="absolute left-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
-              >
-                ◀
-              </button>
-            )}
-
-            {/* Next Button */}
-            {currentImages.length > 1 && (
-              <button
-                onClick={nextImage}
-                className="absolute right-8 top-1/2 transform -translate-y-1/2 text-white hover:bg-white/20 p-3 rounded-full transition-colors z-20"
-              >
-                ▶
-              </button>
-            )}
-
-            {/* Image Counter */}
-            {currentImages.length > 1 && (
-              <div className="absolute bottom-8 text-white text-center z-20">
-                <p className="text-lg font-semibold">
-                  {currentImageIndex + 1} / {currentImages.length}
-                </p>
-              </div>
-            )}
-          </div>
+      {/* Media Counter */}
+      {currentImages.length > 1 && (
+        <div className="absolute bottom-8 text-white text-center z-20">
+          <p className="text-lg font-semibold">
+            {currentImageIndex + 1} / {currentImages.length}
+          </p>
         </div>
       )}
+    </div>
+  </div>
+)}
       {deleteModal && (
         <DeletePostModal
-          onClose={() => setDeleteModal(false)}
+          onClose={() => {
+            setDeleteModal(false);
+            setSelectedPost(null);
+          }}
           onConfirm={() => handleDeleteModal()}
-          isLoading={postsUpdating}
+          isLoading={deleteLoading || postsUpdating}
         />
       )}
       {/* Share Post Modal */}
@@ -1096,11 +1178,11 @@ const PagePosts = ({
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal
-          onClose={() => setSelectedOption("")}
-          post={selectedPost}
-        />
-      )}
+          <ShareToChatsModal
+            onClose={() => setSelectedOption("")}
+            post={selectedPost}
+          />
+        )}
 
       {selectedOption === "Share to your Story" && selectedPost && (
         <PostStoryModal
@@ -1164,33 +1246,41 @@ const PagePosts = ({
                   </label>
 
                   <div className="grid grid-cols-2 gap-3">
-                    {existingMedia.map((m) => (
-                      <div
-                        key={m._id}
-                        className="relative w-full overflow-hidden rounded-lg border"
-                      >
-                        {m.type === "image" ? (
-                          <img
-                            src={m.fileUrl}
-                            className="w-full h-32 object-cover"
-                          />
-                        ) : (
-                          <video
-                            src={m.fileUrl}
-                            className="w-full h-32 object-cover"
-                            controls
-                          />
-                        )}
+                    {existingMedia.map((m) => {
+                      const isVideo =
+                        m.type === "video" ||
+                        /\.(mp4|mov|webm|ogg)$/i.test(m.fileUrl);
 
-                        {/* ❌ remove button */}
-                        <button
-                          onClick={() => removeExistingMedia(m._id)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                      return (
+                        <div
+                          key={m._id}
+                          className="relative w-full overflow-hidden rounded-lg border"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
+                          {isVideo ? (
+                            <video
+                              src={m.fileUrl}
+                              className="w-full h-32 object-cover"
+                              controls
+                              muted
+                              playsInline
+                            />
+                          ) : (
+                            <img
+                              src={m.fileUrl}
+                              alt="Media"
+                              className="w-full h-32 object-cover"
+                            />
+                          )}
+
+                          <button
+                            onClick={() => removeExistingMedia(m._id)}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1228,6 +1318,7 @@ const PagePosts = ({
                             src={preview.preview}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
                         <button

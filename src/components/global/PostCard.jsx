@@ -508,12 +508,20 @@ const PostCard = ({
   };
 
   const handleDeleteModal = async () => {
-    await dispatch(deletePost({ postId: selectedPost })).unwrap();
+    const targetPostId =
+      typeof selectedPost === "string" ? selectedPost : selectedPost?._id;
+    if (!targetPostId) {
+      setDeleteModal(false);
+      return;
+    }
+    await dispatch(deletePost({ postId: targetPostId })).unwrap();
     setDeleteModal(false);
     if (pageId) {
       await dispatch(
         getPostsByPageId({ pageId: pageId, page: 1, limit: 100 }),
       ).unwrap();
+    } else {
+      await dispatch(getMyPosts({ page: 1, limit: 100 })).unwrap();
     }
   };
   const navigate = useNavigate();
@@ -675,7 +683,8 @@ const PostCard = ({
                   onClick={() => {
                     setShowpopup(false);
                     setMoreOpenPostId(null);
-                    handleDeletePost(post._id);
+                    setSelectedPost(post._id);
+                    setDeleteModal(true);
                   }}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
@@ -695,6 +704,7 @@ const PostCard = ({
                 <video
                   src={currentMedia.url}
                   controls
+                  muted
                   className="w-full h-auto max-h-[550px] object-contain rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -926,6 +936,7 @@ const PostCard = ({
               <video
                 src={currentMedia.url}
                 controls
+                muted
                 className="max-w-5xl max-h-[90vh] w-auto h-auto rounded-lg shadow-2xl object-contain"
               />
             ) : (
@@ -1192,6 +1203,7 @@ const PostCard = ({
                             src={m?.fileUrl}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
 
@@ -1241,6 +1253,7 @@ const PostCard = ({
                             src={preview.preview}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
                         <button

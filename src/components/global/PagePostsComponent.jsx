@@ -351,6 +351,7 @@ export default function PagePostsComponent({ pageId, commentFilter: externalFilt
                             <video
                               src={currentMedia.fileUrl}
                               controls
+                              muted
                               className="w-full h-auto object-contain max-h-[550px] rounded-lg"
                               onLoadedData={() => handleMediaLoad(post._id)}
                             />

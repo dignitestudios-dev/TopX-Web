@@ -341,16 +341,55 @@ export default function PageCreateModal({
     }
   };
 
+  // Helper to extract safe string name from subcategory
+  const getSubName = (sub) => {
+    if (typeof sub === "string") return sub.trim();
+    return (sub?.name || sub?.title || "").trim();
+  };
+
   // Filter categories & subcategories based on search query
-  const filteredTopics = (alltopics || []).filter((item) => {
-    const searchLower = categorySearch.toLowerCase().trim();
-    if (!searchLower) return true;
-    const nameMatch = item.name?.toLowerCase().includes(searchLower);
-    const subMatch = (item.subCategories || []).some((sub) =>
-      sub.toLowerCase().includes(searchLower)
-    );
-    return nameMatch || subMatch;
-  });
+  const filteredTopics = (alltopics || [])
+    .map((item) => {
+      const searchLower = categorySearch.toLowerCase().trim();
+      const catName = typeof item === "string" ? item.trim() : (item?.name || "").trim();
+      const rawSubs = Array.isArray(item?.subCategories)
+        ? item.subCategories
+        : Array.isArray(item?.subTopics)
+        ? item.subTopics
+        : [];
+
+      const cleanSubs = rawSubs.map(getSubName).filter(Boolean);
+
+      if (!searchLower) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      }
+
+      const catMatches = catName.toLowerCase().includes(searchLower);
+      const matchingSubs = cleanSubs.filter((subName) =>
+        subName.toLowerCase().includes(searchLower)
+      );
+
+      if (catMatches) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: cleanSubs,
+        };
+      } else if (matchingSubs.length > 0) {
+        return {
+          ...item,
+          name: catName,
+          displaySubs: matchingSubs,
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
 
   return (
     <div>
@@ -536,8 +575,8 @@ export default function PageCreateModal({
                             ) : (
                               filteredTopics.map((item) => {
                                 const hasSubs =
-                                  Array.isArray(item.subCategories) &&
-                                  item.subCategories.length > 0;
+                                  Array.isArray(item.displaySubs) &&
+                                  item.displaySubs.length > 0;
                                 const isExpanded =
                                   expandedCategory === item._id ||
                                   (categorySearch.trim().length > 0 && hasSubs);
@@ -569,7 +608,15 @@ export default function PageCreateModal({
                                       </span>
 
                                       {hasSubs && (
-                                        <div className="p-1 hover:bg-orange-100 rounded-md transition-colors">
+                                        <div
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setExpandedCategory(
+                                              isExpanded ? null : item._id
+                                            );
+                                          }}
+                                          className="p-1 hover:bg-orange-100 rounded-md transition-colors"
+                                        >
                                           {isExpanded ? (
                                             <ChevronDown className="w-4 h-4 text-orange-600" />
                                           ) : (
@@ -582,23 +629,23 @@ export default function PageCreateModal({
                                     {/* Subcategories Accordion Panel */}
                                     {hasSubs && isExpanded && (
                                       <div className="pl-5 pr-2 py-1.5 space-y-1 bg-gray-50/50 rounded-b-xl border-t border-gray-100/80 animate-fadeIn">
-                                        {item.subCategories.map((sub, idx) => (
+                                        {item.displaySubs.map((subName, idx) => (
                                           <div
                                             key={idx}
                                             onClick={() => {
                                               handleInputChange(
                                                 "topic",
-                                                `${item.name} > ${sub}`
+                                                `${item.name} > ${subName}`
                                               );
                                               setIsCategoryOpen(false);
                                             }}
                                             className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${formData.topic ===
-                                              `${item.name} > ${sub}`
+                                              `${item.name} > ${subName}`
                                               ? "text-orange-600 font-semibold bg-orange-100/60"
                                               : "text-gray-600 hover:text-orange-600 hover:bg-white"
                                               }`}
                                           >
-                                            {sub}
+                                            {subName}
                                           </div>
                                         ))}
                                       </div>

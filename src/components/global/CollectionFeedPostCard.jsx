@@ -75,8 +75,8 @@ export default function CollectionFeedPostCard({
   const displayCommentCount = isCommentsHidden
     ? 0
     : (commentsCountByPostId?.[targetPostId] !== undefined
-        ? commentsCountByPostId[targetPostId]
-        : (commentCount || fullPost?.commentsCount || 0));
+      ? commentsCountByPostId[targetPostId]
+      : (commentCount || fullPost?.commentsCount || 0));
 
   const isCommentsOpen = typeof setActiveCommentPostId === "function"
     ? activeCommentPostId === isPostId
@@ -121,7 +121,7 @@ export default function CollectionFeedPostCard({
   // Impression Delivery Tracking
   const targetPost = fullPost || post;
   const boostId = targetPost?.boostId || targetPost?.boost?._id;
-console.log(targetPost,"targetPost===")
+  console.log(targetPost, "targetPost===")
   useEffect(() => {
     if (!targetPost?.isBoosted || !boostId) return;
     if (hasRecordedImpression(boostId)) return;
@@ -322,6 +322,7 @@ console.log(targetPost,"targetPost===")
       return (
         <video
           controls
+          muted
           className="w-full h-auto rounded-2xl object-cover max-h-96"
           src={mediaItem.fileUrl}
         />
@@ -462,9 +463,8 @@ console.log(targetPost,"targetPost===")
   return (
     <div
       ref={postCardRef}
-      className={`bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border transition-all ${
-        targetPost?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
-      }`}
+      className={`bg-white relative rounded-2xl mb-4 overflow-hidden shadow-sm border transition-all ${targetPost?.isBoosted ? "border-orange-200/90 ring-1 ring-orange-500/20" : "border-gray-100"
+        }`}
     >
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-gray-100">
@@ -485,7 +485,7 @@ console.log(targetPost,"targetPost===")
                 {fullPost?.page?.name
                   ? fullPost.page.name.split(" ").length > 1
                     ? fullPost.page.name.split(" ")[0][0] +
-                      fullPost.page.name.split(" ")[1][0]
+                    fullPost.page.name.split(" ")[1][0]
                     : fullPost.page.name.charAt(0)
                   : "P"}
               </div>
@@ -737,16 +737,14 @@ console.log(targetPost,"targetPost===")
           className="flex items-center gap-1.5 text-gray-600 hover:text-orange-500 transition cursor-pointer"
         >
           <Heart
-            className={`w-5 h-5 transition ${
-              localLikeState.isLiked
+            className={`w-5 h-5 transition ${localLikeState.isLiked
                 ? "fill-orange-500 text-orange-500"
                 : "text-gray-600"
-            }`}
+              }`}
           />
           <span
-            className={`text-sm font-medium ${
-              localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
-            }`}
+            className={`text-sm font-medium ${localLikeState.isLiked ? "text-orange-500" : "text-gray-600"
+              }`}
           >
             {localLikeState.likesCount}
           </span>
@@ -756,11 +754,10 @@ console.log(targetPost,"targetPost===")
           type="button"
           onClick={handleToggleComments}
           disabled={isCommentsHidden}
-          className={`flex items-center gap-1.5 transition ${
-            isCommentsHidden
+          className={`flex items-center gap-1.5 transition ${isCommentsHidden
               ? "text-gray-400 cursor-not-allowed opacity-60"
               : "text-gray-600 hover:text-orange-500 cursor-pointer"
-          }`}
+            }`}
           title={isCommentsHidden ? "Comments hidden for this collection" : "Comments"}
         >
           <MessageCircle className="w-5 h-5" />
@@ -801,8 +798,8 @@ console.log(targetPost,"targetPost===")
 
       {(selectedOption === "Share in Individuals Chats" ||
         selectedOption === "Share in Group Chats") && (
-        <ShareToChatsModal onClose={setSelectedOption} />
-      )}
+          <ShareToChatsModal onClose={setSelectedOption} />
+        )}
 
       {selectedOption === "Share to your Story" && (
         <PostStoryModal post={fullPost || post} onClose={setSelectedOption} />
@@ -917,6 +914,7 @@ console.log(targetPost,"targetPost===")
                             src={m.fileUrl}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
 
@@ -966,6 +964,7 @@ console.log(targetPost,"targetPost===")
                             src={preview.preview}
                             className="w-full h-32 object-cover"
                             controls
+                            muted
                           />
                         )}
                         <button

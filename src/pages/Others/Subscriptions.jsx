@@ -85,7 +85,9 @@ export default function Subscriptions() {
     open: false,
     title: "",
     description: "",
+    removedId: null,
   });
+  const [removedSavedIds, setRemovedSavedIds] = useState(new Set());
 
   // First load
   useEffect(() => {
@@ -93,7 +95,12 @@ export default function Subscriptions() {
     dispatch(getMySavedCollections({ page: 1, limit: 10, search: "" }));
   }, [dispatch, activeTab]);
 
-  const subscriptions = activeTab === "my" ? mySubscriptions : savedCollections;
+  const currentSavedCollections = (savedCollections || []).filter(
+    (item) => !removedSavedIds.has(item._id) && !removedSavedIds.has(item.id)
+  );
+
+  const subscriptions =
+    activeTab === "my" ? mySubscriptions : currentSavedCollections;
 
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
   const { user } = useSelector((state) => state.auth);
@@ -181,25 +188,46 @@ export default function Subscriptions() {
     }
   };
   const savedCollection = async (id, item) => {
-    console.log(id, "idesss");
-    await dispatch(updateSavedCollections(id)).unwrap();
-    if (item?.isSavedByMe) {
-      // UNSAVE
-      setPopup({
-        open: true,
-        title: "Subscription Unsaved",
-        description: "This subscription has been removed from your saved list.",
-      });
-    } else {
-      // SAVE
-      setPopup({
-        open: true,
-        title: "Subscription Saved",
-        description:
-          "You can easily access this subscription anytime from your profile.",
-      });
+    const isUnsaving = activeTab === "saved" || item?.isSavedByMe;
+
+    if (isUnsaving) {
+      // Optimistically remove immediately from list so user sees it gone right away
+      setRemovedSavedIds((prev) => new Set([...prev, id]));
     }
-    dispatch(fetchMyPages({ page: 1, limit: 10 }));
+
+    try {
+      await dispatch(updateSavedCollections(id)).unwrap();
+
+      if (isUnsaving) {
+        // UNSAVE
+        setPopup({
+          open: true,
+          title: "Subscription Unsaved",
+          description: "This subscription has been removed from your saved list.",
+          removedId: id,
+        });
+      } else {
+        // SAVE
+        setPopup({
+          open: true,
+          title: "Subscription Saved",
+          description:
+            "You can easily access this subscription anytime from your profile.",
+          removedId: null,
+        });
+      }
+
+      dispatch(getMySavedCollections({ page: 1, limit: 10, search: "" }));
+    } catch (err) {
+      console.error("Failed to update saved collection:", err);
+      if (isUnsaving) {
+        setRemovedSavedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    }
   };
   console.log(myPages, "myPages==????");
   return (
@@ -577,7 +605,14 @@ export default function Subscriptions() {
         open={popup.open}
         title={popup.title}
         description={popup.description}
-        onClose={() => setPopup({ ...popup, open: false })}
+        onClose={() => {
+          const removedId = popup.removedId;
+          setPopup({ open: false, title: "", description: "", removedId: null });
+          if (removedId) {
+            setRemovedSavedIds((prev) => new Set([...prev, removedId]));
+          }
+          dispatch(getMySavedCollections({ page: 1, limit: 10, search: "" }));
+        }}
       />
       {/* Right Sidebar - 1/4 width */}
       <div className="w-1/4 bg-[#F2F2F2] overflow-y-auto overflow-x-hidden border-gray-200 scrollbar-hide">

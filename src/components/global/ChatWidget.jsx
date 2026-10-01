@@ -244,6 +244,7 @@ const ChatVideoPlayer = ({
     <div className="relative w-full rounded-lg mt-2 overflow-hidden bg-black flex flex-col items-center">
       <video
         controls
+        muted
         playsInline
         preload="metadata"
         className={`${className} max-h-72 w-full object-contain bg-black cursor-pointer`}
@@ -2304,6 +2305,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                                   <video
                                     src={msg.shared.media}
                                     controls
+                                    muted
                                     playsInline
                                     preload="metadata"
                                     className="w-full max-h-64 object-contain rounded-lg"
@@ -2857,6 +2859,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                           <video
                             src={fileUrl}
                             controls
+                            muted
                             className="w-full h-32 object-cover"
                           />
                         ) : (
@@ -2892,6 +2895,7 @@ const ChatApp = ({ initialUser = null, onClose = null }) => {
                       )}
                       controls
                       autoPlay
+                      muted
                       playsInline
                       className="max-w-full max-h-[70vh] object-contain rounded-lg bg-black"
                     >

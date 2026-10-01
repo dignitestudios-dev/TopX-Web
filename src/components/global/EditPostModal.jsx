@@ -118,6 +118,7 @@ const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
                       <video
                         src={m.fileUrl}
                         controls
+                        muted
                         className="w-full h-32 object-cover"
                       />
                     )}
@@ -155,6 +156,7 @@ const EditPostModal = ({ post, onClose, onSave, isLoading }) => {
                       <video
                         src={preview.preview}
                         controls
+                        muted
                         className="w-full h-32 object-cover"
                       />
                     )}

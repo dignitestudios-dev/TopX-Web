@@ -87,6 +87,7 @@ const SubscriptionStories = ({ pageId }) => {
                   ) : story?.story?.media?.type === "video" ? (
                     <video
                       controls
+                      muted
                       className="w-full h-full object-cover"
                       src={story?.story?.media?.fileUrl}
                     />

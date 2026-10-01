@@ -20,9 +20,18 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
 
   // FILTER SEARCH
   const filteredPages =
-    knowledgePages?.filter((item) =>
-      item.name.toLowerCase().includes(searchText.toLowerCase()),
-    ) || [];
+    knowledgePages?.filter((item) => {
+      const q = searchText.toLowerCase().trim();
+      if (!q) return true;
+      const nameMatch = item.name?.toLowerCase().includes(q);
+      const topicMatch = item.topic?.toLowerCase().includes(q);
+      const subs = Array.isArray(item.subTopic) ? item.subTopic : [];
+      const subMatch = subs.some((s) => {
+        const sName = typeof s === "string" ? s : s?.name || "";
+        return sName.toLowerCase().includes(q);
+      });
+      return nameMatch || topicMatch || subMatch;
+    }) || [];
 
   // SUBTOPIC TOGGLE
   const toggleSubTopic = (topic) => {
@@ -81,7 +90,7 @@ export default function PageCategorySelector({ onNext, onClose, heading }) {
         <Search className="absolute top-7 left-4 text-gray-400 w-5 h-5" />
         <input
           type="text"
-          placeholder="Search Knowledge Page"
+          placeholder="Search knowledge page, topic or subcategory..."
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           className="w-full bg-[#f5f5f5] mt-5 rounded-full pl-12 pr-4 py-2 outline-none text-[15px]"

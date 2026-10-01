@@ -46,4 +46,5 @@ const PrivatePostModal = ({ onClose, post }) => {
   );
 };
 
+
 export default PrivatePostModal;
