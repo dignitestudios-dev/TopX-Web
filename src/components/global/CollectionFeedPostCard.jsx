@@ -9,6 +9,7 @@ import {
   Zap,
   BarChart2,
   Repeat2,
+  Lock,
 } from "lucide-react";
 import BoostPostModal from "./BoostPostModal";
 import BoostAnalyticsModal from "./BoostAnalyticsModal";
@@ -458,8 +459,10 @@ export default function CollectionFeedPostCard({
     }
     setDeleteModal(false);
   };
+  const isPrivateLocked =
+    fullPost?.page?.pageType === "private" &&
+    !fullPost?.page?.isSubscribed;
 
-  console.log(fullPost, "sharedRepost");
   return (
     <div
       ref={postCardRef}
@@ -471,6 +474,8 @@ export default function CollectionFeedPostCard({
         <div className="flex items-center gap-3">
           {/* Page Image with Author Image Overlay */}
           <div className="relative">
+
+
             {fullPost?.page?.image ? (
               <img
                 src={fullPost.page.image}
@@ -513,6 +518,8 @@ export default function CollectionFeedPostCard({
                 />
               );
             })()}
+
+
           </div>
 
           <div>
@@ -609,22 +616,74 @@ export default function CollectionFeedPostCard({
         </div>
       </div>
       {/* Post Media - Render Image or Video */}
-      {post && post.length > 0 && (
-        <div
-          className="w-full bg-white overflow-hidden p-4 cursor-pointer hover:opacity-90 transition relative"
-          onClick={() => {
-            setImageViewerOpen(true);
-          }}
-        >
-          {renderMedia(post[0])}
-        </div>
-      )}
+    <div className="relative">
 
-      {linkData && (
-        <div className="px-4 mb-3">
-          <LinkPreviewCard linkData={linkData} compact={Boolean(hasUploadedMedia)} />
+  {/* PRIVATE CONTENT */}
+  <div
+    className={
+      isPrivateLocked
+        ? "blur-[6px] select-none pointer-events-none"
+        : ""
+    }
+  >
+    {/* Media */}
+    {post && post.length > 0 && (
+      <div className="w-full bg-white overflow-hidden p-4">
+        {renderMedia(post[0])}
+      </div>
+    )}
+
+    {/* Link Preview */}
+    {linkData && (
+      <div className="px-4 mb-3">
+        <LinkPreviewCard
+          linkData={linkData}
+          compact={Boolean(hasUploadedMedia)}
+        />
+      </div>
+    )}
+
+    {/* Text */}
+    {!isUnderReview &&
+      (() => {
+        const rawText =
+          text || fullPost?.bodyText || fullPost?.text || "";
+
+        const cleanText = linkData
+          ? rawText.replace(linkData.url, "").trim()
+          : rawText;
+
+        if (!cleanText) return null;
+
+        return (
+          <div className="px-4 py-3">
+            <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {cleanText}
+            </p>
+          </div>
+        );
+      })()}
+  </div>
+
+  {/* LOCK OVERLAY */}
+  {isPrivateLocked && (
+    <div
+      className="absolute inset-0 z-20 flex items-center justify-center cursor-pointer"
+      onClick={() => setIsPrivatePost(true)}
+    >
+      <div className="flex flex-col items-center">
+        <div className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center">
+          <Lock className="w-6 h-6 text-orange-500" />
         </div>
-      )}
+
+        <span className="mt-2 text-sm font-semibold text-gray-800">
+          Private Post
+        </span>
+      </div>
+    </div>
+  )}
+
+</div>
 
       {/* Repost Tag Pill (Figma style) */}
       {(fullPost?.sharedBy || post?.sharedBy || fullPost?.originalPost || post?.originalPost || fullPost?.isRepost || post?.isRepost) && (
@@ -685,9 +744,19 @@ export default function CollectionFeedPostCard({
           if (!cleanText) return null;
           return (
             <div className="px-4 py-3">
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {cleanText}
-              </p>
+                <div
+    className={
+      isPrivateLocked
+        ? "blur-[6px] select-none pointer-events-none"
+        : ""
+    }
+  >
+    <div className="px-4 py-3">
+      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+        {cleanText}
+      </p>
+    </div>
+  </div>
             </div>
           );
         })()}
@@ -726,6 +795,8 @@ export default function CollectionFeedPostCard({
         )}
       </div>
       {/* Stats - Action Bar */}
+      {!isPrivateLocked && (
+
       <div className="px-4 py-3 border-t border-gray-100 flex items-center gap-6">
         <button
           type="button"
@@ -738,8 +809,8 @@ export default function CollectionFeedPostCard({
         >
           <Heart
             className={`w-5 h-5 transition ${localLikeState.isLiked
-                ? "fill-orange-500 text-orange-500"
-                : "text-gray-600"
+              ? "fill-orange-500 text-orange-500"
+              : "text-gray-600"
               }`}
           />
           <span
@@ -755,8 +826,8 @@ export default function CollectionFeedPostCard({
           onClick={handleToggleComments}
           disabled={isCommentsHidden}
           className={`flex items-center gap-1.5 transition ${isCommentsHidden
-              ? "text-gray-400 cursor-not-allowed opacity-60"
-              : "text-gray-600 hover:text-orange-500 cursor-pointer"
+            ? "text-gray-400 cursor-not-allowed opacity-60"
+            : "text-gray-600 hover:text-orange-500 cursor-pointer"
             }`}
           title={isCommentsHidden ? "Comments hidden for this collection" : "Comments"}
         >
@@ -772,6 +843,7 @@ export default function CollectionFeedPostCard({
           <span className="text-sm font-medium">{shareCount}</span>
         </button>
       </div>
+      )}
 
       {isPrivatePost && (
         <PrivatePostModal

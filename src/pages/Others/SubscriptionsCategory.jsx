@@ -135,7 +135,7 @@ export default function SubscriptionsCategory() {
           const res = await axios.get(`/collections/${location.state.id}`);
           console.log("Collection API Response:", res.data);
           if (res.data?.success && res.data?.data) {
-            setCollectionName(res.data.data.name || "");
+            setCollectionName(res?.data?.data?.name || "");
           } else if (res.data?.data?.name) {
             setCollectionName(res.data.data.name);
           } else if (res.data?.name) {
@@ -170,7 +170,6 @@ export default function SubscriptionsCategory() {
     }
   }, [location.state?.id, reduxSubscriptions, dispatch]);
 
-  console.log(collectionName, "collectionName");
 
   // Check stories for each page
   useEffect(() => {
@@ -269,8 +268,8 @@ export default function SubscriptionsCategory() {
 
 
   const visiblePosts = filteredPosts?.filter((post) => {
-    if (post?.page?.pageType == "private" && !post?.page?.isSubscribed) {
-      return false; // hide
+    if (post?.page?.pageType === "private" && !post?.page?.isSubscribed) {
+      return true; // hide
     }
     return true; // show
   });
@@ -473,6 +472,7 @@ export default function SubscriptionsCategory() {
             </div>
           )}
         </div>
+        {console.log(visiblePosts, "visiblePosts")}
         <div className="mt-6">
           {visiblePosts && visiblePosts.length > 0 ? (
             visiblePosts.map((post) => (

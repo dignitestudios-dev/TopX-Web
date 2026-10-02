@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Image as ImageIcon,
   Pencil,
+  MessageCircle,
 } from "lucide-react";
 import FollowRequestsModal from "./FollowRequestsModal";
 import ProfilePictureModal from "./ProfilePictureModal";
@@ -1357,6 +1358,7 @@ console.log(pageDetail,"pageDetail==>")
                       }}
                       className="border-[1px] border-orange-200 p-2 text-nowrap px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm"
                     >
+                      <MessageCircle className="w-5 h-5 text-orange-500" />
                       <span>Start A Live Chat</span>
                       <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
                          {page?.liveChatCount || page?.liveChatCount?.length || 0} 

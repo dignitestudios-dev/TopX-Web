@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X, SlidersHorizontal, CheckCircle2, MessageSquare, Flame, Heart, EyeOff } from "lucide-react";
+import { X, SlidersHorizontal, CheckCircle2, MessageCircle, Flame, Heart, EyeOff } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getCollectionCommentFilter,
@@ -12,7 +12,7 @@ const FILTER_OPTIONS = [
     id: "all-comments",
     title: "All Comments",
     description: "Show all comments on posts in this collection.",
-    icon: MessageSquare,
+    icon: MessageCircle,
   },
   {
     id: "elevated-comments",

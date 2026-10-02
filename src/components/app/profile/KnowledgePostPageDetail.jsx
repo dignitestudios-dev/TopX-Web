@@ -293,6 +293,7 @@ export default function KnowledgePostPageDetail({
           pageId,
           page: 1,
           limit: 10,
+          
         }),
       );
     } catch (err) {
@@ -559,7 +560,7 @@ export default function KnowledgePostPageDetail({
                     }`}
                 >
                   <span>{topic}</span>
-                  {isPageOwner && (
+                  {/* {isPageOwner && (
                     <span
                       onClick={(e) => {
                         e.stopPropagation();
@@ -573,7 +574,7 @@ export default function KnowledgePostPageDetail({
                     >
 
                     </span>
-                  )}
+                  )} */}
                 </button>
               </div>
             ))}
