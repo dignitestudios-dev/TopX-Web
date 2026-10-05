@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import { X, Check, Search, Lock, Globe } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { FaPlus } from "react-icons/fa6";
@@ -110,8 +111,6 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
       setIsFinalSaving(false);
     }
   };
-
-  if (!isOpen) return null;
 
   // Image upload preview
   const handleImageUpload = (e) => {
@@ -299,7 +298,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }
   };
   useEffect(() => {
-    if (!creating) return;
+    if (!isOpen || !creating) return;
 
     const timer = setTimeout(() => {
       dispatch(
@@ -312,12 +311,14 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [search, creating, dispatch]);
-  console.log(filteredPages, "filteredPages");
-  return (
+  }, [isOpen, search, creating, dispatch]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
     <>
       {/* Main Create Modal */}
-      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[100]">
         <div className="bg-white w-[400px] py-4 rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-5 py-3">
@@ -563,7 +564,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
       {/* ✅ Success Modal */}
       {showSuccess && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[60]">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[110]">
           <div className="bg-white w-[340px] rounded-2xl shadow-xl p-6 text-center">
             <div className="flex justify-center mb-3">
               <div className="bg-orange-500 p-3 rounded-full">
@@ -599,7 +600,8 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
         onClose={() => setIsEmojiModalOpen(false)}
         onSelectEmoji={handleSelectEmoji}
       />
-    </>
+    </>,
+    document.body
   );
 };
 

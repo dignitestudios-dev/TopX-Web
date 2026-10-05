@@ -181,7 +181,7 @@ export default function Trending() {
   return (
     <div className="flex max-w-7xl mx-auto min-h-screen">
       {/* Left Sidebar */}
-      <div className="w-1/4 bg-[#F2F2F2] sticky top-20 h-screen overflow-y-auto pt-3">
+      <div className="w-1/4 bg-[#F2F2F2] sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto pt-3 pb-8 scrollbar-hide">
         <Profilecard smallcard={true} />
         <div className="pt-4">
           <MySubscription />

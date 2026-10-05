@@ -115,7 +115,7 @@ export default function Trendingsuggestpage() {
   return (
     <div className="flex max-w-7xl mx-auto min-h-screen">
       {/* Left Sidebar - 25% width (Fixed) */}
-      <div className="w-1/4 bg-[#F2F2F2] pt-3 pb-3 overflow-y-auto">
+      <div className="w-1/4 bg-[#F2F2F2] sticky top-20 h-[calc(100vh-5rem)] pt-3 pb-8 overflow-y-auto scrollbar-hide">
         <Profilecard smallcard={true} />
         <div className="pt-4">
           <MySubscription />

@@ -3,7 +3,12 @@ import { X, Search, Loader2 } from "lucide-react";
 import axios from "../../../axios";
 import { ErrorToast } from "../../global/Toaster";
 
-export default function EmojiPickerModal({ isOpen, onClose, onSelectEmoji }) {
+export default function EmojiPickerModal({
+  isOpen,
+  onClose,
+  onSelectEmoji,
+  zIndex = "z-[130]",
+}) {
   const [emojis, setEmojis] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -49,12 +54,12 @@ export default function EmojiPickerModal({ isOpen, onClose, onSelectEmoji }) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity"
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm ${zIndex} transition-opacity`}
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4`}>
         <div className="bg-white rounded-[24px] w-full max-w-md p-6 shadow-2xl relative border border-gray-100 flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-200">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-gray-100">

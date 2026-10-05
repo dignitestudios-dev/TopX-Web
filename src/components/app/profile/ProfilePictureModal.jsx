@@ -6,6 +6,7 @@ export default function ProfilePictureModal({
   onClose,
   onSelectUploadImage,
   onSelectUploadEmoji,
+  zIndex = "z-[120]",
 }) {
   if (!isOpen) return null;
 
@@ -13,12 +14,12 @@ export default function ProfilePictureModal({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 backdrop-blur-sm z-50 transition-opacity"
+        className={`fixed inset-0 backdrop-blur-sm ${zIndex} transition-opacity`}
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className={`fixed inset-0 ${zIndex} flex items-center justify-center p-4`}>
         <div className="bg-white rounded-[24px] w-full max-w-sm p-6 shadow-2xl relative border border-gray-100 transform transition-all animate-in fade-in zoom-in duration-200">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-5">
