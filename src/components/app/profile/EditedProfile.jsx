@@ -301,10 +301,10 @@ export default function EditedProfile({ setIsEditProfile }) {
     formData.append("school", school ? school.trim() : "");
     formData.append("college", college ? college.trim() : "");
     formData.append("bio", bio);
-    if (link && link.trim()) {
-      formData.append("link", link.trim());
-      formData.append("website", link.trim());
-    }
+    // if (link && link.trim()) {
+    //   formData.append("link", link.trim());
+    //   formData.append("website", link.trim());
+    // }
     console.log(activeCategories, "active categories");
     // Add each valid interest to FormData as indexed array (interests[0], interests[1], etc.)
     activeCategories.forEach((interest, index) => {
@@ -342,7 +342,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       setSchool(allUserData.school || "");
       setCollege(allUserData.college || "");
       setBio(allUserData.bio || "");
-      setLink(allUserData.link || allUserData.website || "");
+      // setLink(allUserData.link || allUserData.website || "");
       setPreview(allUserData.profilePicture || "");
       setActiveCategories(
         allUserData.interests?.map((i) => i) || []
@@ -570,7 +570,7 @@ export default function EditedProfile({ setIsEditProfile }) {
       </div>
 
       {/* Website / Link */}
-      <div className="w-full flex flex-col gap-2 py-2">
+      {/* <div className="w-full flex flex-col gap-2 py-2">
         <label className="text-[14px] font-[500] text-gray-700">Website / Link</label>
         <Input
           type="text"
@@ -579,7 +579,7 @@ export default function EditedProfile({ setIsEditProfile }) {
           placeholder="https://example.com"
           size="md"
         />
-      </div>
+      </div> */}
 
       {/* Interests */}
       <div className="w-full flex flex-col px-4 space-y-4">

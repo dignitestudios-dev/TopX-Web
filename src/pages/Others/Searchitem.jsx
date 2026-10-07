@@ -285,7 +285,7 @@ const SearchItem = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex gap-2 items-center">
                         <p className="font-semibold text-[14px] text-gray-900 truncate">
-                          {page.name}
+                           {page?.user?.name}'s {page.name}
                         </p>
                         {page?.contentType == "knowledge" ? (
                           <img
