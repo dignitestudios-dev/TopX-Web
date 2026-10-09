@@ -16,6 +16,10 @@ import Cookies from "js-cookie";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, appleProvider } from "../../firebase/firebase";
 import { getOnboardingStatus } from "../../lib/helpers";
+import {
+  getPendingReferralCode,
+  clearPendingReferralCode,
+} from "../../lib/referralStorage";
 
 const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -58,6 +62,7 @@ const Login = () => {
         };
         const result = await dispatch(login(payload));
         if (result.payload?.accessToken) {
+          clearPendingReferralCode();
           Cookies.set("access_token", result.payload.accessToken, {
             expires: 7,
             secure: window.location.protocol === "https:",
@@ -88,14 +93,17 @@ const Login = () => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
+      const pendingReferral = getPendingReferralCode();
       const response = await dispatch(
         socialLogin({
           idToken,
           role: "user",
+          ...(pendingReferral ? { referralLink: pendingReferral } : {}),
         })
       );
 
       if (response?.payload?.accessToken) {
+        clearPendingReferralCode();
         Cookies.set("access_token", response.payload.accessToken, {
           expires: 7,
           secure: window.location.protocol === "https:",

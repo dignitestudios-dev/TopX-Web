@@ -21,6 +21,10 @@ import { ErrorToast, SuccessToast } from "../global/Toaster";
 import Cookies from "js-cookie";
 import { FcGoogle } from "react-icons/fc";
 import { getOnboardingStatus } from "../../lib/helpers";
+import {
+  getPendingReferralCode,
+  clearPendingReferralCode,
+} from "../../lib/referralStorage";
 
 const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
   const dispatch = useDispatch();
@@ -40,14 +44,17 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
+      const pendingReferral = getPendingReferralCode();
       const response = await dispatch(
         socialLogin({
           idToken,
           role: "user",
+          ...(pendingReferral ? { referralLink: pendingReferral } : {}),
         })
       );
 
       if (response?.payload?.accessToken) {
+        clearPendingReferralCode();
         Cookies.set("access_token", response.payload.accessToken, {
           expires: 7,
           secure: window.location.protocol === "https:",

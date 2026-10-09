@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { X, Clock } from "lucide-react";
+import { X, Clock, Trophy, Bell } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markNotificationAsRead, notificationfollowrequest, notificationpostrequest } from "../../redux/slices/notifications.slice";
 import { useNavigate } from "react-router";
@@ -84,6 +84,20 @@ const NotificationPopup = ({ onClose }) => {
     const meta = notification?.metaData || {};
     const type = meta?.type;
     const subType = meta?.subType;
+
+    // Referral Contest Winner notification
+    if (
+      subType === "ReferralContestWinner" ||
+      (type === "accountAndSystemNotification" && subType === "ReferralContestWinner")
+    ) {
+      navigate("/affiliates", {
+        state: {
+          isWinner: true,
+          contestId: meta?.contest,
+        },
+      });
+      return;
+    }
 
     // Live stream / live chat redirects
     if (type === "liveAndInteractiveNotification") {
@@ -256,7 +270,11 @@ const NotificationPopup = ({ onClose }) => {
                 <div className="flex-shrink-0">
 
 
-                  {n.metaData?.user?.profilePicture ? (
+                  {n.metaData?.subType === "ReferralContestWinner" ? (
+                    <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white shadow-xs">
+                      <Trophy size={18} />
+                    </div>
+                  ) : n.metaData?.user?.profilePicture ? (
                     <img
                       src={n.metaData?.user?.profilePicture}
                       alt={n.metaData?.user?.name || "User"}
@@ -264,7 +282,7 @@ const NotificationPopup = ({ onClose }) => {
                     />
                   ) : (
                     <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {n.metaData?.user?.name?.charAt(0).toUpperCase()}
+                      {n.metaData?.user?.name?.charAt(0).toUpperCase() || <Bell size={18} />}
                     </div>
                   )}
                 </div>
@@ -318,8 +336,8 @@ const NotificationPopup = ({ onClose }) => {
                     </>
                   ) : (
                     <>
-                      <p className="text-sm font-semibold text-gray-900">{n.title}</p>
-                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{n.detail}</p>
+                      <p className="text-sm font-semibold text-gray-900">{n.title || "Notification"}</p>
+                      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{n.detail || n.body || n.description}</p>
                     </>
                   )}
 

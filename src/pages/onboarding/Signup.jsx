@@ -16,13 +16,24 @@ import { getAllUserData, logout } from "../../redux/slices/auth.slice";
 import { getOnboardingStatus } from "../../lib/helpers";
 import Cookies from "js-cookie";
 import { FiLoader } from "react-icons/fi";
+import {
+  getPendingReferralCode,
+  setPendingReferralCode,
+  isValidReferralCode,
+} from "../../lib/referralStorage";
 
 export default function SignUp() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [searchParams] = useSearchParams();
-  const ref = searchParams.get("ref");
+  const ref = searchParams.get("ref") || searchParams.get("code");
+
+  useEffect(() => {
+    if (isValidReferralCode(ref)) {
+      setPendingReferralCode(ref);
+    }
+  }, [ref]);
 
   const { allUserData, user } = useSelector((state) => state.auth);
   const currentUser = allUserData || user;
@@ -154,7 +165,7 @@ export default function SignUp() {
             />
           ) : currentStep === 1 ? (
             <VerifyAccount
-              referalCode={ref}
+              referalCode={getPendingReferralCode() || ref}
               email={email || currentUser?.email}
               phone={phone || currentUser?.phone}
               setPhone={setPhone}

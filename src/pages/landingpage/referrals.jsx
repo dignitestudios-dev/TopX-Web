@@ -1,18 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import GenerateLink from "../../components/global/GenerateLink";
 import { bg, Mask, topxlogout } from "../../assets/export";
 import Navbarlandingpage from "../../components/global/Navbarlandingpage";
+
+import Cookies from "js-cookie";
 
 const Referrals = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = () => {
-    console.log("Name:", name, "Email:", email);
-    setModalOpen(true);
+    const token = Cookies.get("access_token");
+    if (token) {
+      navigate("/affiliates");
+    } else {
+      navigate("/auth/signup");
+    }
   };
 
   return (
@@ -89,8 +93,6 @@ const Referrals = () => {
       <div className="absolute bottom-0 right-0">
         <img src={Mask} alt="" className="w-[260px] h-[260px]" />
       </div>
-
-      <GenerateLink isOpen={modalOpen} onRequestClose={() => setModalOpen(false)} />
     </div>
   );
 };

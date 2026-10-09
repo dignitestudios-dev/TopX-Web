@@ -16,6 +16,10 @@ import {
 import { getAllUserData } from "../../redux/slices/auth.slice";
 import { ErrorToast, SuccessToast } from "../global/Toaster";
 import { formatPhoneNumber } from "../../lib/helpers";
+import {
+  getPendingReferralCode,
+  clearPendingReferralCode,
+} from "../../lib/referralStorage";
 
 export default function VerifyAccount({
   email,
@@ -158,14 +162,17 @@ export default function VerifyAccount({
   const handleVerifyOTP = async (code) => {
     let res;
 
-    const payload = referalCode
-      ? {
-          otp: String(code), // ✅ STRING
-          referral: Number(referalCode),
-        }
-      : {
-          otp: String(code), // ✅ STRING
-        };
+    const pendingCode = (referalCode ? String(referalCode) : getPendingReferralCode()) || null;
+
+    const payload =
+      isType === "email" && pendingCode
+        ? {
+            otp: String(code).trim(),
+            referral: String(pendingCode).trim(),
+          }
+        : {
+            otp: String(code).trim(),
+          };
 
     if (isType === "email") {
       res = await dispatch(verifyEmailOTP(payload));
@@ -174,6 +181,9 @@ export default function VerifyAccount({
     }
 
     if (res.meta.requestStatus === "fulfilled") {
+      if (isType === "email") {
+        clearPendingReferralCode();
+      }
       SuccessToast(
         isType === "email"
           ? "Email Verified Successfully"
@@ -182,6 +192,7 @@ export default function VerifyAccount({
       setIsModalOpen(false);
       dispatch(getAllUserData());
     } else {
+      // Failed OTP retains pending referral code so user can retry
       ErrorToast(res.payload || "Invalid OTP");
     }
   };

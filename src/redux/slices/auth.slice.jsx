@@ -87,18 +87,22 @@ export const signUp = createAsyncThunk(
 // ================= SOCIAL LOGIN =================
 export const socialLogin = createAsyncThunk(
   "auth/socialLogin",
-  async ({ idToken, role = "user" }, thunkAPI) => {
+  async ({ idToken, role = "user", referralLink }, thunkAPI) => {
     try {
-      const res = await axios.post("/auth/socialRegister", {
+      const payload = {
         idToken,
         role,
-      });
+        ...(referralLink ? { referralLink: String(referralLink).trim() } : {}),
+      };
+
+      const res = await axios.post("/auth/socialRegister", payload);
 
       const api = res.data;
 
       const token = api?.data?.token || null;
       const user = api?.data?.user || null;
       const message = api?.message || "Login successful";
+      const isNewUser = res.status === 201;
 
       if (!token) {
         return thunkAPI.rejectWithValue("Token not found in response");
@@ -108,6 +112,8 @@ export const socialLogin = createAsyncThunk(
         message,
         accessToken: token,
         user,
+        isNewUser,
+        status: res.status,
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(

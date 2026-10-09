@@ -135,13 +135,15 @@ export const verifyEmailOTP = createAsyncThunk(
   "onboarding/verifyEmailOTP",
   async ({ otp, referral }, thunkAPI) => {
     try {
-      // ✅ Build endpoint conditionally
-      const query = referral ? `?referral=${referral}` : "";
+      // Build query string safely with encodeURIComponent
+      const cleanReferral = referral && String(referral).trim();
+      const query = cleanReferral
+        ? `?referral=${encodeURIComponent(cleanReferral)}`
+        : "";
 
-      const res = await axios.post(
-        `/auth/verifyEmail${query}`,
-        { otp }
-      );
+      const res = await axios.post(`/auth/verifyEmail${query}`, {
+        otp: String(otp),
+      });
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(

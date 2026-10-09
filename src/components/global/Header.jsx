@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Layers,
+  Trophy,
 } from "lucide-react";
 import { dummyprofile, Logo, profile } from "../../assets/export";
 import { Link, useLocation, useNavigate } from "react-router";
@@ -89,7 +90,7 @@ const Header = () => {
     { icon: TrendingUp, to: "/trending", label: "Trending" },
     { icon: Users, to: "/knowledge", label: "Knowledge" },
     { icon: Radio, to: "/go-live", label: "Go Live" },
-    { icon: RiMoneyDollarCircleFill, to: "/affiliates", label: "Affiliates" },
+    { icon: Trophy, to: "/affiliates", label: "Refer & Win" },
     { icon: Bell, to: "/notifications", label: "Notifications" },
   ];
   // Click outside handler
