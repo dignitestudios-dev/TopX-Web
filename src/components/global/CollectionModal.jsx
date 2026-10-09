@@ -95,7 +95,7 @@ export default function CollectionModal({
         const trimmedName = collectionName.trim();
 
         if (!trimmedName) {
-            err.name = "Collection name is required.";
+            err.name = "Interest page name is required.";
             valid = false;
         } else {
             const existingCollections = Array.isArray(allcollections) ? allcollections : [];
@@ -103,7 +103,7 @@ export default function CollectionModal({
                 (col) => (col?.name || "").trim().toLowerCase() === trimmedName.toLowerCase()
             );
             if (isDuplicate) {
-                err.name = "A collection with this name already exists. Please choose a different name.";
+                err.name = "An interest page with this name already exists. Please choose a different name.";
                 valid = false;
             }
         }
@@ -156,7 +156,7 @@ export default function CollectionModal({
                 ) {
                     setErrors((prev) => ({
                         ...prev,
-                        name: "A collection with this name already exists. Please choose a different name.",
+                        name: "An interest page with this name already exists. Please choose a different name.",
                     }));
                 }
             }
@@ -191,7 +191,7 @@ export default function CollectionModal({
                     </button>
 
                     <h2 className="text-center text-xl font-bold mb-4">
-                        {creating ? "Create New Collection" : "Organize Your Interest!"}
+                        {creating ? "Create New Interest Page" : "Organize Your Interest!"}
                     </h2>
                     {!creating && page?.name && (
                         <p className="text-slate-500 text-sm text-center mb-2">
@@ -230,7 +230,7 @@ export default function CollectionModal({
 
                             {/* Name Input */}
                             <div>
-                                <label className="text-sm font-semibold">Collection Name</label>
+                                <label className="text-sm font-semibold">Interest Page Name</label>
                                 <input
                                     className="w-full mt-1 border rounded-xl p-3 bg-gray-100"
                                     placeholder="Enter name here"
@@ -275,7 +275,7 @@ export default function CollectionModal({
                                     <div className="w-10 h-10 border-2 border-orange-500 rounded-full flex items-center justify-center">
                                         <FaPlus className="text-orange-500" />
                                     </div>
-                                    <span className="font-medium">Create New Collection</span>
+                                    <span className="font-medium">Create New Interest Page</span>
                                 </div>
 
                                 {/* Search Bar */}
@@ -332,7 +332,7 @@ export default function CollectionModal({
                                             ))
                                         ) : (
                                             <p className="text-center text-gray-500 py-4">
-                                                No collections found
+                                                No interest pages found
                                             </p>
                                         )}
                                     </>

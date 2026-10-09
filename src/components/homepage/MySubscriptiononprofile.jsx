@@ -67,7 +67,7 @@ const MySubscriptiononprofile = ({ userCollections, toggleBookmark }) => {
             <div className=" flex justify-center">
               <img src={nofound} height={200} width={200} alt="" />
             </div>
-            <p className="font-bold pt-4 text-black">No Collections</p>
+            <p className="font-bold pt-4 text-black">No Interest Pages</p>
           </div>
         ) : (
           userCollections?.map((item) => (

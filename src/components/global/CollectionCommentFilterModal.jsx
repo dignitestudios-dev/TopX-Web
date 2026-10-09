@@ -11,7 +11,7 @@ const FILTER_OPTIONS = [
   {
     id: "all-comments",
     title: "All Comments",
-    description: "Show all comments on posts in this collection.",
+    description: "Show all comments on posts in this interest page.",
     icon: MessageCircle,
   },
   {
@@ -29,7 +29,7 @@ const FILTER_OPTIONS = [
   {
     id: "none-comments",
     title: "No Comments",
-    description: "Hide comments from all posts in this collection.",
+    description: "Hide comments from all posts in this interest page.",
     icon: EyeOff,
   },
 ];
@@ -66,7 +66,7 @@ export default function CollectionCommentFilterModal({
 
   const handleSaveFilter = async () => {
     if (!collectionId) {
-      ErrorToast("Invalid collection ID");
+      ErrorToast("Invalid interest page ID");
       return;
     }
 
@@ -79,13 +79,13 @@ export default function CollectionCommentFilterModal({
         })
       ).unwrap();
 
-      SuccessToast(res?.message || "Collection filter updated successfully!");
+      SuccessToast(res?.message || "Interest page filter updated successfully!");
       if (typeof onFilterApplied === "function") {
         onFilterApplied(selectedFilter);
       }
       onClose();
     } catch (err) {
-      ErrorToast(typeof err === "string" ? err : "Failed to update collection filter");
+      ErrorToast(typeof err === "string" ? err : "Failed to update interest page filter");
     } finally {
       setIsSubmitting(false);
     }
@@ -101,8 +101,8 @@ export default function CollectionCommentFilterModal({
               <SlidersHorizontal className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-base">Collection Comment Filter</h3>
-              <p className="text-xs text-gray-500">Filter comments for this collection feed</p>
+              <h3 className="font-bold text-gray-900 text-base">Interest Page Comment Filter</h3>
+              <p className="text-xs text-gray-500">Filter comments for this interest page feed</p>
             </div>
           </div>
           <button

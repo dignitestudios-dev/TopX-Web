@@ -126,7 +126,7 @@ const MySubscription = () => {
                             <div className=" flex justify-center">
                             <img src={nofound} height={300} width={300} alt="" />
                             </div>
-                            <p className="font-bold pt-4 text-black capitalize">You have no collections</p>
+                            <p className="font-bold pt-4 text-black capitalize">You have no interest pages</p>
                           </div>
                                </div>
           </div>

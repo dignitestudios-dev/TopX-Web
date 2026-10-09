@@ -624,7 +624,7 @@ console.log(pageDetail,"pageDetail==>")
         setIsSubscribed(true);
         dispatch(getPageDetail(pageId));
         setOpenModal(false);
-        toast.success("Page subscribed to collections successfully")
+        toast.success("Page subscribed to interest pages successfully")
         dispatch(getMyCollections({ page: 1, limit: 100 }));
       }
     });

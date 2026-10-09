@@ -383,7 +383,7 @@ export default function Subscriptions() {
                       <div className="p-1.5 bg-orange-100 text-orange-600 rounded-lg">
                         <FolderPlus size={16} />
                       </div>
-                      <span className="font-medium">Create New Collection</span>
+                      <span className="font-medium">Create New Interest Page</span>
                     </button>
 
                     <button
@@ -457,8 +457,8 @@ export default function Subscriptions() {
                 <img src={nofound} height={300} width={300} alt="" />
               </div>
               <p className="font-bold pt-4 text-black">
-                {activeTab === "saved" && " No Saved Collections"}
-                {activeTab === "my" && "You Have No Collections"}
+                {activeTab === "saved" && " No Saved Interest Pages"}
+                {activeTab === "my" && "You Have No Interest Pages"}
               </p>
             </div> // Display this message if there are no subscriptions
           ) : (

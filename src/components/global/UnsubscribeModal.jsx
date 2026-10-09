@@ -96,7 +96,7 @@ export default function UnsubscribeModal({
                 </h2>
                 {page?.name && (
                     <p className="text-slate-500 text-sm text-left mb-2">
-                        Unsubscribe {page.name} from collections. Uncheck collections to unsubscribe.
+                        Unsubscribe {page.name} from interest pages. Uncheck interest pages to unsubscribe.
                     </p>
                 )}
 
@@ -105,7 +105,7 @@ export default function UnsubscribeModal({
                     <input
                         type="text"
                         className="w-full p-2 rounded-lg border border-gray-300"
-                        placeholder="Search collections"
+                        placeholder="Search interest pages"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -159,7 +159,7 @@ export default function UnsubscribeModal({
                                 ))
                             ) : (
                                 <p className="text-center text-gray-500 py-4">
-                                    No collections found
+                                    No interest pages found
                                 </p>
                             )}
                         </>

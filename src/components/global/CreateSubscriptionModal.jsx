@@ -150,7 +150,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
     const trimmedName = collectionName.trim();
 
     if (!trimmedName) {
-      err.name = "Collection name is required.";
+      err.name = "Interest page name is required.";
       valid = false;
     } else {
       const existingCollections = [
@@ -165,7 +165,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
 
       if (isDuplicate) {
         err.name =
-          "A subscription/collection with this name already exists. Please choose a different name.";
+          "An interest page with this name already exists. Please choose a different name.";
         valid = false;
       }
     }
@@ -222,7 +222,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
           setErrors((prev) => ({
             ...prev,
             name:
-              "A subscription/collection with this name already exists. Please choose a different name.",
+              "An interest page with this name already exists. Please choose a different name.",
           }));
         }
       }
@@ -322,7 +322,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
         <div className="bg-white w-[400px] py-4 rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between border-b px-5 py-3">
-            <h2 className="text-[17px] font-semibold">Create New Collection</h2>
+            <h2 className="text-[17px] font-semibold">Create New Interest Page</h2>
             <button
               onClick={handleCloseModal}
               className="text-gray-500 hover:text-gray-700"
@@ -372,7 +372,7 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
                 {/* Name Input */}
                 <div>
                   <label className="text-sm font-semibold">
-                    Collection Name
+                    Interest Page Name
                   </label>
                   <input
                     className="w-full mt-1 border rounded-xl p-3 bg-gray-100 text-gray-800 focus:outline-none focus:border-orange-500"

@@ -171,7 +171,7 @@ export default function AddPageToExistingCollectionModal({
   console.log(filteredPages, "filteredPages======")
   const handleSave = async () => {
     if (!selectedCollectionId) {
-      ErrorToast("Please select a collection first.");
+      ErrorToast("Please select an interest page first.");
       return;
     }
     if (selectedPages.length === 0) {
@@ -188,11 +188,11 @@ export default function AddPageToExistingCollectionModal({
         })
       ).unwrap();
 
-      SuccessToast(res?.message || "Pages successfully added to collection!");
+      SuccessToast(res?.message || "Pages successfully added to interest page!");
       dispatch(getMySubsctiptions({ page: 1, limit: 10, search: "" }));
       onClose();
     } catch (err) {
-      ErrorToast(err?.message || err || "Failed to add pages to collection");
+      ErrorToast(err?.message || err || "Failed to add pages to interest page");
     } finally {
       setIsSaving(false);
     }
@@ -226,10 +226,10 @@ export default function AddPageToExistingCollectionModal({
             </div>
             <div>
               <h2 className="text-[17px] font-bold text-gray-900">
-                Add Pages to Collection
+                Add Pages to Interest Page
               </h2>
               <p className="text-xs text-gray-500">
-                Select a collection and choose pages to add
+                Select an interest page and choose pages to add
               </p>
             </div>
           </div>
@@ -245,7 +245,7 @@ export default function AddPageToExistingCollectionModal({
           {/* Collection Picker */}
           <div>
             <label className="text-xs font-semibold text-gray-700 uppercase tracking-wider block mb-1.5">
-              Target Collection
+              Target Interest Page
             </label>
 
             <div className="relative">
@@ -267,13 +267,13 @@ export default function AddPageToExistingCollectionModal({
                         {selectedCollection.name}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {selectedCollection.pages?.length || 0} pages already in collection
+                        {selectedCollection.pages?.length || 0} pages already in interest page
                       </p>
                     </div>
                   </div>
                 ) : (
                   <span className="text-sm text-gray-400">
-                    Select a collection...
+                    Select an interest page...
                   </span>
                 )}
                 <ChevronDown
@@ -403,7 +403,7 @@ export default function AddPageToExistingCollectionModal({
                                   {isPrivate ? <><Lock size={9} /><span>Private</span></> : <><Globe size={9} /><span>Public</span></>}
                                 </span>
                               </div>
-                              <p className="text-[11px] text-gray-500 font-medium">Already in this collection</p>
+                              <p className="text-[11px] text-gray-500 font-medium">Already in this interest page</p>
                             </div>
                           </div>
                           <div className="w-5 h-5 rounded-md border border-gray-300 bg-gray-200 text-gray-500 flex items-center justify-center flex-shrink-0 ml-2">

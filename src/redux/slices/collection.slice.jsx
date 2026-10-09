@@ -38,7 +38,7 @@ export const getCollectionNames = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to fetch collections"
+          res.data?.message || "Failed to fetch interest pages"
         );
       }
 
@@ -49,7 +49,7 @@ export const getCollectionNames = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch collections"
+        error.response?.data?.message || "Failed to fetch interest pages"
       );
     }
   }
@@ -76,7 +76,7 @@ export const getMyCollections = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to fetch collections"
+          res.data?.message || "Failed to fetch interest pages"
         );
       }
 
@@ -87,7 +87,7 @@ export const getMyCollections = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch collections"
+        error.response?.data?.message || "Failed to fetch interest pages"
       );
     }
   }
@@ -115,7 +115,7 @@ export const getMySavedCollections = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to fetch collections"
+          res.data?.message || "Failed to fetch interest pages"
         );
       }
 
@@ -126,7 +126,7 @@ export const getMySavedCollections = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to fetch collections"
+        error.response?.data?.message || "Failed to fetch interest pages"
       );
     }
   }
@@ -154,7 +154,7 @@ export const updateSavedCollections = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to update saved collection"
+          res.data?.message || "Failed to update saved interest page"
         );
       }
 
@@ -165,7 +165,7 @@ export const updateSavedCollections = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to update saved collection"
+        error.response?.data?.message || "Failed to update saved interest page"
       );
     }
   }
@@ -267,7 +267,7 @@ export const createCollection = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to create collection"
+          res.data?.message || "Failed to create interest page"
         );
       }
 
@@ -277,7 +277,7 @@ export const createCollection = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create collection"
+        error.response?.data?.message || "Failed to create interest page"
       );
     }
   }
@@ -302,7 +302,7 @@ export const updateCollection = createAsyncThunk(
 
       if (!res.data?.success) {
         return thunkAPI.rejectWithValue(
-          res.data?.message || "Failed to create collection"
+          res.data?.message || "Failed to create interest page"
         );
       }
 
@@ -312,7 +312,7 @@ export const updateCollection = createAsyncThunk(
       };
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to create collection"
+        error.response?.data?.message || "Failed to create interest page"
       );
     }
   }
@@ -560,7 +560,7 @@ export const setCollectionCommentFilter = createAsyncThunk(
       return res.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to set collection filter"
+        error.response?.data?.message || "Failed to set interest page filter"
       );
     }
   }
@@ -579,7 +579,7 @@ export const getCollectionCommentFilter = createAsyncThunk(
       return res.data?.data;
     } catch (error) {
       return thunkAPI.rejectWithValue(
-        error.response?.data?.message || "Failed to get collection filter"
+        error.response?.data?.message || "Failed to get interest page filter"
       );
     }
   }

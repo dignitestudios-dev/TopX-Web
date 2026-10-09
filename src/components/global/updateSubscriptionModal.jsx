@@ -64,7 +64,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
   const handleUpdate = async () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setNameError("Subscription name is required.");
+      setNameError("Interest page name is required.");
       return;
     }
 
@@ -79,7 +79,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
 
     if (isDuplicate) {
       setNameError(
-        "A subscription/collection with this name already exists. Please choose a different name.",
+        "An interest page with this name already exists. Please choose a different name.",
       );
       return;
     }
@@ -120,7 +120,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
         lowerMsg.includes("unique")
       ) {
         setNameError(
-          "A subscription/collection with this name already exists. Please choose a different name.",
+          "An interest page with this name already exists. Please choose a different name.",
         );
       }
     }
@@ -132,7 +132,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
         <div className="bg-white w-[380px] rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
           <div className="flex justify-between items-center px-5 py-3 border-b">
-            <h2 className="text-lg font-semibold">Edit Collection</h2>
+            <h2 className="text-lg font-semibold">Edit Interest Page</h2>
             <button onClick={onClose}>
               <X />
             </button>
@@ -155,7 +155,7 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
                     <img
                       src={imagePreview}
                       className="w-full h-full rounded-full object-cover"
-                      alt="Collection"
+                      alt="Interest Page"
                     />
                   )
                 ) : (
@@ -174,12 +174,12 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
             {/* Name */}
             <div>
               <label htmlFor="" className="text-gray-400 font-light text-[14px]">
-                Update Collection Name
+                Update Interest Page Name
               </label>
-              <p className="text-[15px] mt-2 text-gray-700 font-medium">Collection Name</p>
+              <p className="text-[15px] mt-2 text-gray-700 font-medium">Interest Page Name</p>
               <input
                 className="w-full border rounded-xl mt-1 p-3 bg-gray-100 focus:outline-none focus:border-orange-500"
-                placeholder="Subscription Name"
+                placeholder="Interest Page Name"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);

@@ -829,7 +829,7 @@ export default function CollectionFeedPostCard({
             ? "text-gray-400 cursor-not-allowed opacity-60"
             : "text-gray-600 hover:text-orange-500 cursor-pointer"
             }`}
-          title={isCommentsHidden ? "Comments hidden for this collection" : "Comments"}
+          title={isCommentsHidden ? "Comments hidden for this interest page" : "Comments"}
         >
           <MessageCircle className="w-5 h-5" />
           <span className="text-sm font-medium">{displayCommentCount}</span>
