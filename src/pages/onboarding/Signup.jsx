@@ -77,6 +77,22 @@ export default function SignUp() {
     }
   }, [dispatch, navigate]);
 
+  // Sync step when location.state changes (e.g. redirected or navigated with state)
+  useEffect(() => {
+    if (location.state?.step !== undefined && location.state.step !== currentStep) {
+      setCurrentStep(location.state.step);
+    }
+  }, [location.state?.step]);
+
+  // Sync user details if currentUser updates in Redux
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.name && !name) setName(currentUser.name);
+      if (currentUser.email && !email) setEmail(currentUser.email);
+      if (currentUser.phone && !phone) setPhone(currentUser.phone);
+    }
+  }, [currentUser]);
+
   const providerSteps = [
     { icon: LiaIdCard, title: "Your Details" },
     { icon: TbCheckbox, title: "Verification" },
@@ -162,6 +178,7 @@ export default function SignUp() {
               setEmail={setEmail}
               setPhone={setPhone}
               handleNext={handleNext}
+              setCurrentStep={setCurrentStep}
             />
           ) : currentStep === 1 ? (
             <VerifyAccount

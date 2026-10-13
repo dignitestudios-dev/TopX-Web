@@ -140,7 +140,7 @@ export const shareKnowledgePostToCategory = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
-          "Failed to share knowledge post to category",
+        "Failed to share knowledge post to category",
       );
     }
   },
@@ -169,7 +169,7 @@ export const assignKnowledgePostsToCategory = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
-          "Failed to assign knowledge post(s) to subcategory",
+        "Failed to assign knowledge post(s) to subcategory",
       );
     }
   },
@@ -215,7 +215,7 @@ export const getKnowledgePostDetail = createAsyncThunk(
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message ||
-          "Failed to fetch knowledge page detail",
+        "Failed to fetch knowledge page detail",
       );
     }
   },

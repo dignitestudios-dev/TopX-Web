@@ -15,6 +15,7 @@ import {
   getUserTopicPages,
 } from "../../redux/slices/otherprofile.slice";
 import OtherProfileKnowledgePostCard from "../../components/app/profile/OtherProfileKnowledgePostCard";
+import KnowledgePostPageDetail from "../../components/app/profile/KnowledgePostPageDetail";
 import { updateSavedCollections } from "../../redux/slices/collection.slice";
 import { FaCheckSquare } from "react-icons/fa";
 
@@ -44,6 +45,8 @@ export default function OtherProfile() {
   const [isEditProfile, setIsEditProfile] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isProfilePostOpen, setIsProfilePostOpen] = useState(false);
+  const [isKnowledgePageOpen, setIsKnowledgePageOpen] = useState(false);
+  const [selectedKnowledgePageId, setSelectedKnowledgePageId] = useState(null);
   const [selectedPageId, setSelectedPageId] = useState(null);
 
   const location = useLocation();
@@ -129,7 +132,7 @@ export default function OtherProfile() {
 
       {/* Right Side */}
       <div className="overflow-y-auto scrollbar-hide w-full md:w-3/4">
-        {!isProfilePostOpen ? (
+        {!isProfilePostOpen && !isKnowledgePageOpen ? (
           <div className="flex flex-col gap-3">
             {/* Edit OR Profile View */}
             {isEditProfile ? (
@@ -249,6 +252,10 @@ export default function OtherProfile() {
                     <OtherProfileKnowledgePostCard
                       loading={isLoading}
                       userKnowledgePost={userKnowledgePost}
+                      onOpenPage={(id) => {
+                        setSelectedKnowledgePageId(id);
+                        setIsKnowledgePageOpen(true);
+                      }}
                     />
                   ) : (
                     // ✅ Show only when on /other-profile route
@@ -263,6 +270,11 @@ export default function OtherProfile() {
               </>
             )}
           </div>
+        ) : isKnowledgePageOpen ? (
+          <KnowledgePostPageDetail
+            pageId={selectedKnowledgePageId}
+            setIsKnowledgePageOpen={setIsKnowledgePageOpen}
+          />
         ) : (
           <ProfilePost
             setIsProfilePostOpen={setIsProfilePostOpen}

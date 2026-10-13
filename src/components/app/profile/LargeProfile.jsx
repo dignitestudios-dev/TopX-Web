@@ -34,7 +34,7 @@ export default function LargeProfile({
     );
   }
 
-  console.log(userRecord, "allUserData");
+
 
   return (
     <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
@@ -169,7 +169,7 @@ export default function LargeProfile({
               )}
             </div>
           )}
-        
+
           <p className="text-[14px] font-[400] text-[#413b3b] pt-1">
             {userRecord.bio || "No Bio Available"}
           </p>

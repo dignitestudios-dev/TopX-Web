@@ -9,6 +9,7 @@ import TopicPageCard from "../../components/app/profile/TopicPageCard";
 import EditedProfile from "../../components/app/profile/EditedProfile";
 import CreatePostModal from "../../components/app/profile/CreatePostModal";
 import ProfilePost from "../../components/app/profile/ProfilePost";
+import KnowledgePostPageDetail from "../../components/app/profile/KnowledgePostPageDetail";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import TopicPageSkeleton from "../../components/global/TopicPageSkeleton";
@@ -19,6 +20,8 @@ export default function Profile() {
   const [isEditProfile, setIsEditProfile] = useState(false);
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [isProfilePostOpen, setIsProfilePostOpen] = useState(false);
+  const [isKnowledgePageOpen, setIsKnowledgePageOpen] = useState(false);
+  const [selectedKnowledgePageId, setSelectedKnowledgePageId] = useState(null);
   const location = useLocation();
   const [selectedPageId, setSelectedPageId] = useState(null);
   useEffect(() => {
@@ -49,7 +52,7 @@ export default function Profile() {
 
       {/* Right Side */}
       <div className="overflow-y-auto w-full md:w-3/4 h-full pr-1 pb-16 custom-orange-scrollbar scroll-smooth">
-        {!isProfilePostOpen ? (
+        {!isProfilePostOpen && !isKnowledgePageOpen ? (
           <div className=" flex flex-col gap-3  ">
             {/* Edit OR Profile View */}
             {isEditProfile ? (
@@ -160,15 +163,25 @@ export default function Profile() {
                       </div>
                     </div>
                   ) : (
-                    <KnowledgePostCard />
+                    <KnowledgePostCard
+                      onOpenPage={(id) => {
+                        setSelectedKnowledgePageId(id);
+                        setIsKnowledgePageOpen(true);
+                      }}
+                    />
                   )}
                 </div>
               </>
             )}
           </div>
+        ) : isKnowledgePageOpen ? (
+          <KnowledgePostPageDetail
+            pageId={selectedKnowledgePageId}
+            setIsKnowledgePageOpen={setIsKnowledgePageOpen}
+          />
         ) : (
           <ProfilePost
-          postRequest={location?.state?.req&&true}
+            postRequest={location?.state?.req && true}
             setIsProfilePostOpen={setIsProfilePostOpen}
             pageId={selectedPageId} // <-- DETAIL PAGE RECEIVES ID
           />

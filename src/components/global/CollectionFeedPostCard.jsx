@@ -40,6 +40,11 @@ import PrivatePostModal from "./PrivatePostModal";
 import { IoWarning } from "react-icons/io5";
 import DeletePostModal from "./DeletePostModal";
 import { getCollectionFeed } from "../../redux/slices/Subscription.slice";
+import {
+  removePageFromCollections,
+  getMyCollections,
+} from "../../redux/slices/collection.slice";
+import { SuccessToast, ErrorToast } from "./Toaster";
 import { getLinkPreview } from "../../lib/helpers";
 import LinkPreviewCard from "./LinkPreviewCard";
 
@@ -57,6 +62,7 @@ export default function CollectionFeedPostCard({
   collectionId,
   activeCommentPostId,
   setActiveCommentPostId,
+  onUnsubscribe,
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
@@ -122,7 +128,79 @@ export default function CollectionFeedPostCard({
   // Impression Delivery Tracking
   const targetPost = fullPost || post;
   const boostId = targetPost?.boostId || targetPost?.boost?._id;
-  console.log(targetPost, "targetPost===")
+  console.log(targetPost, "targetPost===");
+
+  // Subscription State & Handler
+  const targetPage = fullPost?.page || page;
+  const targetPageId = targetPage?._id || targetPage?.id;
+  const isPageOwner = Boolean(
+    targetPage && (
+      targetPage.isOwner ||
+      targetPage.user?._id === currentUserId ||
+      targetPage.user === currentUserId ||
+      targetPage.author?._id === currentUserId ||
+      targetPage.author === currentUserId
+    )
+  );
+
+  const getInitialSubscribed = () => {
+    if (isPageOwner) return false;
+    if (targetPage?.isSubscribed !== undefined) {
+      return Boolean(targetPage.isSubscribed);
+    }
+    return Boolean(collectionId);
+  };
+
+  const [isSubscribed, setIsSubscribed] = useState(getInitialSubscribed());
+  const [unsubscribeLoading, setUnsubscribeLoading] = useState(false);
+
+  useEffect(() => {
+    setIsSubscribed(getInitialSubscribed());
+  }, [targetPage?.isSubscribed, targetPage?._id, isPageOwner, collectionId]);
+
+  const handleUnsubscribe = async () => {
+    if (!targetPageId || unsubscribeLoading) return;
+    setUnsubscribeLoading(true);
+    try {
+      const collectionsToRemove = Array.from(
+        new Set(
+          [
+            ...(collectionId ? [collectionId] : []),
+            ...(Array.isArray(targetPage?.collections)
+              ? targetPage.collections.map((c) => (typeof c === "object" ? c._id : c))
+              : []),
+          ].filter(Boolean)
+        )
+      );
+
+      const res = await dispatch(
+        removePageFromCollections({
+          collections: collectionsToRemove,
+          page: targetPageId,
+        })
+      ).unwrap();
+
+      setIsSubscribed(false);
+      setMoreOpen(false);
+      SuccessToast(res?.message || "Page unsubscribed successfully");
+
+      if (typeof onUnsubscribe === "function") {
+        onUnsubscribe(targetPageId);
+      } else if (collectionId) {
+        dispatch(getCollectionFeed({ id: collectionId }));
+      }
+      dispatch(getMyCollections({ page: 1, limit: 100 }));
+    } catch (error) {
+      console.error("Failed to unsubscribe:", error);
+      ErrorToast(
+        typeof error === "string"
+          ? error
+          : error?.message || "Failed to unsubscribe"
+      );
+    } finally {
+      setUnsubscribeLoading(false);
+    }
+  };
   useEffect(() => {
     if (!targetPost?.isBoosted || !boostId) return;
     if (hasRecordedImpression(boostId)) return;
@@ -460,8 +538,8 @@ export default function CollectionFeedPostCard({
     setDeleteModal(false);
   };
   const isPrivateLocked =
-    fullPost?.page?.pageType === "private" &&
-    !fullPost?.page?.isSubscribed;
+    targetPage?.pageType === "private" &&
+    !isSubscribed;
 
   return (
     <div
@@ -600,16 +678,27 @@ export default function CollectionFeedPostCard({
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => {
-                    setMoreOpen(false);
-                    setReportmodal(!reportmodal);
-                    console.log("Report clicked");
-                  }}
-                  className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
-                >
-                  Report
-                </button>
+                <>
+                  {isSubscribed && (
+                    <button
+                      onClick={handleUnsubscribe}
+                      disabled={unsubscribeLoading}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition cursor-pointer disabled:opacity-50"
+                    >
+                      {unsubscribeLoading ? "Unsubscribing..." : "Unsubscribe"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setReportmodal(!reportmodal);
+                      console.log("Report clicked");
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer transition"
+                  >
+                    Report
+                  </button>
+                </>
               )}
             </div>
           )}

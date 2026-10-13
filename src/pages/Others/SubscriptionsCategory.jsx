@@ -491,6 +491,11 @@ export default function SubscriptionsCategory() {
                 collectionId={collectionId}
                 activeCommentPostId={activeCommentPostId}
                 setActiveCommentPostId={setActiveCommentPostId}
+                onUnsubscribe={() => {
+                  if (collectionId) {
+                    dispatch(getCollectionFeed({ id: collectionId }));
+                  }
+                }}
               />
             ))
           ) : (

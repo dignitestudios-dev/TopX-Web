@@ -5,6 +5,7 @@ import {
   MessageCircle,
   Share2,
   MoreHorizontal,
+  MoreVertical,
   ArrowLeft,
   Trash2,
   Layers,
@@ -14,6 +15,9 @@ import {
   Plus,
 } from "lucide-react";
 import { BsThreeDotsVertical } from "react-icons/bs";
+import { FaArrowLeft } from "react-icons/fa6";
+import { IoChevronBackOutline } from "react-icons/io5";
+import Avatar from "../../components/common/Avatar";
 import { nofound, notes, topics, expert } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -158,14 +162,14 @@ export default function KnowledgePageDetail() {
 
   const isPageOwner = Boolean(
     user?._id &&
-      knowledgePageDetail &&
-      (user._id === knowledgePageDetail?.user?._id ||
-        user._id === knowledgePageDetail?.user ||
-        user._id === knowledgePageDetail?.creator?._id ||
-        user._id === knowledgePageDetail?.creator ||
-        user._id === knowledgePageDetail?.author?._id ||
-        user._id === knowledgePageDetail?.author ||
-        knowledgePageDetail?.isOwner)
+    knowledgePageDetail &&
+    (user._id === knowledgePageDetail?.user?._id ||
+      user._id === knowledgePageDetail?.user ||
+      user._id === knowledgePageDetail?.creator?._id ||
+      user._id === knowledgePageDetail?.creator ||
+      user._id === knowledgePageDetail?.author?._id ||
+      user._id === knowledgePageDetail?.author ||
+      knowledgePageDetail?.isOwner)
   );
 
   const handleDeleteKnowledgePage = async () => {
@@ -354,13 +358,13 @@ export default function KnowledgePageDetail() {
     subTopicTabs.length === 0 || !activeSubTopic
       ? knowledgePagePosts
       : (knowledgePagePosts || []).filter((post) => {
-          if (!post?.subTopic) return false;
-          const topics = post.subTopic
-            .split(",")
-            .map((p) => p.trim().toLowerCase())
-            .filter(Boolean);
-          return topics.includes(activeSubTopic.toLowerCase());
-        });
+        if (!post?.subTopic) return false;
+        const topics = post.subTopic
+          .split(",")
+          .map((p) => p.trim().toLowerCase())
+          .filter(Boolean);
+        return topics.includes(activeSubTopic.toLowerCase());
+      });
 
   return (
     <div className="flex min-h-screen max-w-7xl mx-auto">
@@ -375,171 +379,251 @@ export default function KnowledgePageDetail() {
       {/* Middle Feed */}
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto scrollbar-hide">
         <div className="max-w-2xl mx-auto p-4 space-y-5">
-          {/* Top Bar with Back and Actions */}
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-orange-600 hover:text-orange-700 transition-colors font-semibold cursor-pointer"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </button>
-
-            {isPageOwner && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowManagePostsModal(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-50 text-orange-600 hover:bg-orange-100 rounded-xl text-xs font-semibold transition border border-orange-200 cursor-pointer"
-                >
-                  <Layers size={14} />
-                  Manage Posts
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setOpenCreatePostModal(true)}
-                  className="p-2 rounded-xl bg-gradient-to-r from-[#DE4B12] to-[#E56F41] hover:from-[#c73e0a] hover:to-[#d45e32] text-white transition cursor-pointer flex items-center justify-center shadow-xs"
-                  title="Create Post"
-                >
-                  <Plus size={18} />
-                </button>
-
-                {/* 3 Dots Menu: Edit Page, Delete Page */}
-                <div className="relative" ref={pageOptionsRef}>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPageOptionsDropdown((prev) => !prev);
-                    }}
-                    className="p-2 rounded-xl bg-white hover:bg-gray-100 border border-gray-200 text-gray-700 transition cursor-pointer flex items-center justify-center shadow-xs"
-                    title="Page Options"
-                  >
-                    <BsThreeDotsVertical size={18} />
-                  </button>
-
-                  {showPageOptionsDropdown && (
-                    <div className="absolute right-0 top-full mt-1.5 bg-white border border-gray-100 rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden py-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPageOptionsDropdown(false);
-                          setShowEditPageModal(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer"
-                      >
-                        <Pencil size={15} className="text-orange-500" />
-                        <span>Edit Page</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPageOptionsDropdown(false);
-                          setExpertModal(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
-                      >
-                        <GraduationCap size={15} className="text-orange-500" />
-                        <span>
-                          {knowledgePageDetail?.expertLevelStatus === "accepted"
-                            ? "Expert Status (Approved)"
-                            : knowledgePageDetail?.expertLevelStatus === "pending"
-                            ? "Expert Status (Pending)"
-                            : "Apply for Expert Status"}
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPageOptionsDropdown(false);
-                          setShowDeletePageModal(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
-                      >
-                        <Trash2 size={15} className="text-red-500" />
-                        <span>Delete Page</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+          {/* TOPIC PAGE HEADER (EXACT REPLICA FROM SCREENSHOT 1) */}
+          <div className="bg-white rounded-[15px] overflow-hidden shadow-sm">
+            {/* Orange Banner */}
+            <div className="h-28 bg-gradient-to-l from-[#DE4B12] to-[#E56F41] p-3 relative">
+              <div
+                onClick={() => navigate(-1)}
+                className="flex items-center justify-center bg-white w-[30px] h-[30px] rounded-full cursor-pointer hover:bg-gray-100 transition shadow-sm"
+              >
+                <IoChevronBackOutline className="w-4 h-4 text-[#DE4B12]" />
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Knowledge Page Header Card */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <div className="flex items-start gap-4">
-              {knowledgePageDetail.image ? (
-                <img
-                  src={knowledgePageDetail.image}
-                  alt={knowledgePageDetail.name}
-                  className="w-14 h-14 rounded-full object-cover border border-gray-200 flex-shrink-0"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                  {(knowledgePageDetail.name || "K").charAt(0).toUpperCase()}
-                </div>
-              )}
+            {/* Profile Section */}
+            <div className="px-4 pb-6">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between -mt-12 gap-4">
+                {/* Left: Avatar + Details */}
+                <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
+                  <div className="relative flex-shrink-0 flex flex-col items-center">
+                    <div className="w-[110px] sm:w-[135px] h-[110px] sm:h-[135px] rounded-full overflow-hidden bg-white border-4 border-white shadow-md relative">
+                      {knowledgePageDetail?.image ? (
+                        <Avatar
+                          src={knowledgePageDetail.image}
+                          alt={knowledgePageDetail?.name || "Page"}
+                          size="xl"
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-orange-500 flex items-center justify-center">
+                          <span className="text-4xl sm:text-6xl font-semibold text-white">
+                            {(() => {
+                              if (!knowledgePageDetail?.name) return "K";
+                              const words = knowledgePageDetail.name.trim().split(/\s+/);
+                              const targetWord = words[1] || words[0];
+                              return targetWord.charAt(0).toUpperCase();
+                            })()}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className="text-xl font-bold text-gray-900 truncate">
-                      {knowledgePageDetail.name}
-                    </h1>
-                    {(knowledgePageDetail?.expertLevelStatus === "accepted" ||
-                      knowledgePageDetail?.expertLevelStatus === "approved") && (
-                      <img
-                        src={expert}
-                        className="w-[80px] h-[25px] flex-shrink-0"
-                        alt="Expert"
-                      />
+                    {/* Owner Plus badge on avatar bottom-right */}
+                    {isPageOwner && (
+                      <button
+                        type="button"
+                        onClick={() => setOpenCreatePostModal(true)}
+                        className="absolute bottom-6 right-0 w-8 h-8 sm:w-9 sm:h-9 bg-orange-500 rounded-full flex items-center justify-center hover:bg-orange-600 transition-colors shadow-md border-2 border-white cursor-pointer"
+                        title="Create Post"
+                      >
+                        <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                      </button>
                     )}
+
+                    {/* Followers count below avatar (e.g. "1+ Follows") */}
+                    <div className="flex items-center gap-1.5 mt-2">
+                      <div className="w-5 h-5 rounded-full bg-slate-900 border border-white flex items-center justify-center text-[8px] text-white font-bold">
+                        {knowledgePageDetail?.name?.charAt(0).toUpperCase() || "T"}
+                      </div>
+                      <span className="text-xs font-semibold text-gray-700">
+                        {knowledgePageDetail?.followersCount || knowledgePageDetail?.subscribersCount || 0}+ Follows
+                      </span>
+                    </div>
                   </div>
 
-                  {!isPageOwner && (
-                    <button
-                      type="button"
-                      onClick={handleSubscribeClick}
-                      className={`px-4 py-1.5 rounded-full text-xs font-semibold transition ${
-                        isSubscribed
-                          ? "bg-gray-100 text-gray-600 cursor-default"
-                          : "bg-orange-500 text-white hover:bg-orange-600 shadow-sm cursor-pointer"
-                      }`}
-                    >
-                      {isSubscribed ? "Subscribed" : "Subscribe"}
-                    </button>
-                  )}
+                  {/* Page Title + About + Badges */}
+                  <div className="mt-8 sm:mt-12 min-w-0 flex-1">
+                    <div className="flex gap-2 items-center flex-wrap min-w-0">
+                      <h1
+                        className="text-[18px] sm:text-[20px] font-[600] text-[#000000] break-words line-clamp-2 max-w-full"
+                        title={knowledgePageDetail?.name}
+                      >
+                        {knowledgePageDetail?.name}
+                      </h1>
+                      {(knowledgePageDetail?.expertLevelStatus === "accepted" ||
+                        knowledgePageDetail?.expertLevelStatus === "approved") && (
+                        <img
+                          src={expert}
+                          className="w-[80px] h-[25px] flex-shrink-0"
+                          alt="Expert"
+                        />
+                      )}
+                    </div>
+
+                    <p className="text-gray-500 text-[13px] leading-relaxed mt-[6px] break-words max-w-xl">
+                      {knowledgePageDetail?.about || "Knowledge Page"}
+                    </p>
+
+                    {/* Badges: Topic, Posts, Followers */}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      {knowledgePageDetail?.topic && (
+                        <span className="bg-orange-50 text-[#DE4B12] border border-orange-200 text-xs font-semibold px-3 py-0.5 rounded-full shadow-xs inline-flex items-center gap-1">
+                          <span className="text-gray-400 font-normal">Topic:</span>
+                          <span>{knowledgePageDetail.topic}</span>
+                        </span>
+                      )}
+                      <span className="bg-orange-50 text-orange-600 border border-orange-200 text-xs font-semibold px-3 py-0.5 rounded-full shadow-xs">
+                        {knowledgePagePosts?.length ?? 0} Posts
+                      </span>
+                      {(knowledgePageDetail?.followersCount || knowledgePageDetail?.subscribersCount) ? (
+                        <span className="text-gray-500 font-medium text-xs">
+                          {knowledgePageDetail?.followersCount || knowledgePageDetail?.subscribersCount || 0}+ Followers
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {/* Keywords Chips */}
+                    {Array.isArray(knowledgePageDetail?.keywords) &&
+                      knowledgePageDetail.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2.5">
+                          {knowledgePageDetail.keywords.map((kw, i) => (
+                            <span
+                              key={i}
+                              className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-medium"
+                            >
+                              {kw.startsWith("#") ? kw : `#${kw}`}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                  </div>
                 </div>
 
-                {knowledgePageDetail.topic && (
-                  <span className="inline-block mt-1 text-xs bg-orange-100 text-orange-700 px-2.5 py-0.5 rounded-full font-medium">
-                    {knowledgePageDetail.topic}
-                  </span>
-                )}
-
-                {knowledgePageDetail.about && (
-                  <p className="text-sm text-gray-600 mt-2 leading-relaxed">
-                    {knowledgePageDetail.about}
-                  </p>
-                )}
-
-                {Array.isArray(knowledgePageDetail.keywords) &&
-                  knowledgePageDetail.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {knowledgePageDetail.keywords.map((kw, i) => (
-                        <span
-                          key={i}
-                          className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md font-medium"
+                {/* Right: Action Buttons */}
+                <div className="flex items-center gap-2 mt-4 sm:mt-14 flex-shrink-0 flex-wrap">
+                  {/* Non-owner Subscribe */}
+                  {!isPageOwner && (
+                    <>
+                      {!isSubscribed ? (
+                        <button
+                          type="button"
+                          onClick={handleSubscribeClick}
+                          className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2 border-orange-500 cursor-pointer"
                         >
-                          {kw.startsWith("#") ? kw : `#${kw}`}
-                        </span>
-                      ))}
-                    </div>
+                          Subscribe
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-gray-200 text-gray-700 cursor-not-allowed border-2 border-gray-300"
+                        >
+                          Subscribed
+                        </button>
+                      )}
+                    </>
                   )}
+
+                  {/* Owner Controls: Manage Posts, Plus Button, 3-dots */}
+                  {isPageOwner && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowManagePostsModal(true)}
+                        className="border-[1px] border-orange-200 p-2 text-nowrap px-4 flex items-center gap-2 rounded-2xl cursor-pointer font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 shadow-sm text-xs"
+                      >
+                        <Layers className="w-4 h-4 text-orange-500" />
+                        <span>Manage Posts</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setOpenCreatePostModal(true)}
+                        className="w-10 h-10 flex items-center justify-center bg-orange-500 text-white rounded-full hover:bg-orange-600 transition-colors shadow-md cursor-pointer"
+                        title="Create Post"
+                      >
+                        <Plus className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+
+                  {/* 3-dots dropdown */}
+                  <div className="relative" ref={pageOptionsRef}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPageOptionsDropdown((prev) => !prev);
+                      }}
+                      className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 rounded-lg transition-colors relative cursor-pointer"
+                      title="Page Options"
+                    >
+                      <MoreVertical className="w-5 h-5 text-gray-600" />
+                    </button>
+
+                    {showPageOptionsDropdown && (
+                      <div className="absolute right-0 top-full mt-1.5 w-[13em] bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-50 overflow-hidden">
+                        {isPageOwner ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPageOptionsDropdown(false);
+                                setShowEditPageModal(true);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer"
+                            >
+                              <Pencil size={15} className="text-orange-500" />
+                              <span>Edit Page</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPageOptionsDropdown(false);
+                                setExpertModal(true);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                            >
+                              <GraduationCap size={15} className="text-orange-500" />
+                              <span>
+                                {knowledgePageDetail?.expertLevelStatus === "accepted"
+                                  ? "Expert Status (Approved)"
+                                  : knowledgePageDetail?.expertLevelStatus === "pending"
+                                    ? "Expert Status (Pending)"
+                                    : "Apply for Expert Status"}
+                              </span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPageOptionsDropdown(false);
+                                setShowDeletePageModal(true);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2.5 font-medium cursor-pointer border-t border-gray-50"
+                            >
+                              <Trash2 size={15} className="text-red-500" />
+                              <span>Delete Page</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPageOptionsDropdown(false);
+                              setReportmodal(true);
+                            }}
+                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                          >
+                            Report
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -549,11 +633,10 @@ export default function KnowledgePageDetail() {
             <button
               type="button"
               onClick={() => setActiveSubTopic("")}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${
-                activeSubTopic === ""
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer ${activeSubTopic === ""
                   ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                   : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-              }`}
+                }`}
             >
               All
             </button>
@@ -563,11 +646,10 @@ export default function KnowledgePageDetail() {
                 <button
                   type="button"
                   onClick={() => setActiveSubTopic(topic)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer flex items-center gap-1.5 ${
-                    activeSubTopic === topic
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition cursor-pointer flex items-center gap-1.5 ${activeSubTopic === topic
                       ? "bg-orange-500 text-white border-orange-500 shadow-sm"
                       : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <span>{topic}</span>
                   {isPageOwner && (
@@ -577,11 +659,10 @@ export default function KnowledgePageDetail() {
                         handleDeleteSubCategory(topic);
                       }}
                       title={`Delete ${topic} subcategory`}
-                      className={`hover:bg-black/10 rounded-full w-4 h-4 flex items-center justify-center text-xs ml-0.5 cursor-pointer font-bold ${
-                        activeSubTopic === topic
+                      className={`hover:bg-black/10 rounded-full w-4 h-4 flex items-center justify-center text-xs ml-0.5 cursor-pointer font-bold ${activeSubTopic === topic
                           ? "text-white hover:bg-white/20"
                           : "text-gray-400 hover:text-red-500"
-                      }`}
+                        }`}
                     >
                       ×
                     </span>
@@ -725,10 +806,10 @@ export default function KnowledgePageDetail() {
                   style={
                     post.background
                       ? {
-                          backgroundImage: `url(${post.background})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }
+                        backgroundImage: `url(${post.background})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                      }
                       : {}
                   }
                 >
@@ -755,16 +836,14 @@ export default function KnowledgePageDetail() {
                       return (
                         <>
                           <Heart
-                            className={`w-5 h-5 transition ${
-                              isLiked
+                            className={`w-5 h-5 transition ${isLiked
                                 ? "fill-orange-500 text-orange-500"
                                 : "text-gray-600"
-                            }`}
+                              }`}
                           />
                           <span
-                            className={`text-sm font-medium ${
-                              isLiked ? "text-orange-500" : "text-gray-600"
-                            }`}
+                            className={`text-sm font-medium ${isLiked ? "text-orange-500" : "text-gray-600"
+                              }`}
                           >
                             {likesCount}
                           </span>
@@ -809,7 +888,7 @@ export default function KnowledgePageDetail() {
           ) : (
             <div className="bg-white rounded-2xl p-12 text-center items-center justify-center shadow-sm">
               <div className="flex justify-center">
-              <img src={nofound} height={200} width={200} alt="" />
+                <img src={nofound} height={200} width={200} alt="" />
               </div>
               <p className="text-gray-500 font-semibold mt-4">
                 {subTopicTabs.length === 0 || !activeSubTopic

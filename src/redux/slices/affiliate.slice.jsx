@@ -100,8 +100,8 @@ export const updatePrizeDeliveryDetails = createAsyncThunk(
         ...(deliveryData.email?.trim() ? { email: deliveryData.email.trim() } : {}),
         ...(deliveryData.phone?.trim() ? { phone: deliveryData.phone.trim() } : {}),
         ...(deliveryData.apartment?.trim() ? { apartment: deliveryData.apartment.trim() } : {}),
-        ...(deliveryData.city?.trim() ? { city: deliveryData.city.trim() } : {}),
-        ...(deliveryData.state?.trim() ? { state: deliveryData.state.trim() } : {}),
+        city: deliveryData.city?.trim() || null,
+        state: deliveryData.state?.trim() || null,
         ...(deliveryData.postalCode !== undefined && deliveryData.postalCode !== null && String(deliveryData.postalCode).trim()
           ? { postalCode: String(deliveryData.postalCode).trim() }
           : {}),

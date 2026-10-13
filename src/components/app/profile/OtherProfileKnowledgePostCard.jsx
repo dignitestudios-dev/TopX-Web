@@ -11,7 +11,7 @@ import PageCategorySelector from "./PageCategorySelector";
 import KnowledgePostPageDetail from "./KnowledgePostPageDetail";
 import { nofound } from "../../../assets/export";
 
-export default function OtherProfileKnowledgePostCard({ userKnowledgePost, loading }) {
+export default function OtherProfileKnowledgePostCard({ userKnowledgePost, loading, onOpenPage }) {
   const dispatch = useDispatch();
   const [selectoption, setSelectoption] = useState(false);
   const [createpage, setCreatepage] = useState(false);
@@ -73,8 +73,12 @@ export default function OtherProfileKnowledgePostCard({ userKnowledgePost, loadi
                   <div
                     key={item._id}
                     onClick={() => {
-                      setSelectedPage(item._id);
-                      setIsKnowledgePageOpen(true);
+                      if (onOpenPage) {
+                        onOpenPage(item._id);
+                      } else {
+                        setSelectedPage(item._id);
+                        setIsKnowledgePageOpen(true);
+                      }
                     }}
                     className="cursor-pointer"
                   >

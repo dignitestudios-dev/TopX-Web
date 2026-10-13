@@ -26,7 +26,7 @@ import {
   clearPendingReferralCode,
 } from "../../lib/referralStorage";
 
-const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
+const CreateAccount = ({ handleNext, setName, setEmail, setPhone, setCurrentStep }) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
@@ -38,10 +38,12 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState(null);
   const [firebaseLoading, setFirebaseLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // GOOGLE LOGIN / SIGNUP FUNCTION
   const handleGoogleLogin = async () => {
     try {
+      setGoogleLoading(true);
       const result = await signInWithPopup(auth, googleProvider);
       const idToken = await result.user.getIdToken();
       const pendingReferral = getPendingReferralCode();
@@ -61,20 +63,40 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
           sameSite: "lax",
         });
 
+        SuccessToast(response.payload?.message || "Google sign-in successful");
+
+        let userData = null;
         try {
           const userRes = await dispatch(getAllUserData()).unwrap();
-          const userData = userRes || response.payload.user;
-          const status = getOnboardingStatus(userData);
-          if (status.isCompleted) {
-            navigate("/Home");
-          } else {
-            navigate("/auth/signup", { state: { step: status.step } });
+          userData = userRes || response.payload.user;
+        } catch (fetchErr) {
+          userData = response.payload.user;
+        }
+
+        if (userData) {
+          setName?.(userData.name || result?.user?.displayName || "");
+          setEmail?.(userData.email || result?.user?.email || "");
+          setPhone?.(userData.phone || result?.user?.phoneNumber || "");
+        }
+
+        const status = getOnboardingStatus(userData);
+        if (status.isCompleted) {
+          navigate("/home");
+        } else {
+          const nextStep = status.step !== undefined && status.step > 0 ? status.step : 1;
+          if (typeof setCurrentStep === "function") {
+            setCurrentStep(nextStep);
+          } else if (typeof handleNext === "function") {
+            handleNext();
           }
-        } catch (err) {
-          navigate("/Home");
+          navigate("/auth/signup", { state: { step: nextStep }, replace: true });
         }
       } else {
-        ErrorToast(response?.payload || "Social Login Failed");
+        ErrorToast(
+          typeof response?.payload === "string"
+            ? response.payload
+            : "Social Login Failed"
+        );
       }
     } catch (error) {
       console.error("Google Login Error:", error);
@@ -87,6 +109,8 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
       } else {
         ErrorToast(error?.message || "Google Login Failed");
       }
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -453,10 +477,20 @@ const CreateAccount = ({ handleNext, setName, setEmail, setPhone }) => {
               <button
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full h-[49px] rounded-[8px] border-[1px] border-gray-300 shadow-xl flex items-center justify-center gap-4 text-[14px] font-medium px-3 hover:bg-[#ffe8d9] hover:border-[#e2b97f] focus:outline-none"
+                disabled={googleLoading || firebaseLoading || isLoading}
+                className="w-full h-[49px] rounded-[8px] border-[1px] border-gray-300 shadow-xl flex items-center justify-center gap-4 text-[14px] font-medium px-3 hover:bg-[#ffe8d9] hover:border-[#e2b97f] focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer transition-colors"
               >
-                <FcGoogle className="w-[24px] h-[24px]" />
-                <span className="text-[#000]">Continue with Google</span>
+                {googleLoading ? (
+                  <div className="flex items-center gap-2">
+                    <FiLoader className="w-5 h-5 animate-spin text-[#F85E00]" />
+                    <span className="text-[#000]">Signing in with Google...</span>
+                  </div>
+                ) : (
+                  <>
+                    <FcGoogle className="w-[24px] h-[24px]" />
+                    <span className="text-[#000]">Continue with Google</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

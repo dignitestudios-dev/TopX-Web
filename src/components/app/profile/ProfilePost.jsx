@@ -73,7 +73,7 @@ import toast from "react-hot-toast";
 import { checkMediaPermissions } from "../../../lib/helpers";
 import LivePermissionModal from "../../global/LivePermissionModal";
 
-export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }) {
+export default function ProfilePost({ setIsProfilePostOpen, pageId, postRequest }) {
   const [activeTab, setActiveTab] = useState("post");
   const [activeStory, setActiveStory] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -122,11 +122,11 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId,postRequest }
     expertiseDoc: null,
   });
 
-useEffect(()=>{
-   if (postRequest) {
-     setActiveTab("postrequest")
-   }
-},[postRequest])
+  useEffect(() => {
+    if (postRequest) {
+      setActiveTab("postrequest")
+    }
+  }, [postRequest])
 
   const [expertDocPreview, setExpertDocPreview] = useState(null);
   const [identityFrontPreview, setIdentityFrontPreview] = useState(null);
@@ -194,7 +194,7 @@ useEffect(()=>{
     user?._id === page?.user ||
     user?._id === page?.user?._id?.toString() ||
     user?._id?.toString() === page?.user;
-console.log(pageDetail,"pageDetail==>")
+  console.log(pageDetail, "pageDetail==>")
   // ✅ Page owner should ALWAYS see content, regardless of privacy/subscription
   // Show content if: is page owner OR (not private OR subscribed OR request accepted)
   const shouldShowContent =
@@ -395,8 +395,8 @@ console.log(pageDetail,"pageDetail==>")
       const rawSubs = Array.isArray(item?.subCategories)
         ? item.subCategories
         : Array.isArray(item?.subTopics)
-        ? item.subTopics
-        : [];
+          ? item.subTopics
+          : [];
 
       const cleanSubs = rawSubs.map(getSubName).filter(Boolean);
 
@@ -642,7 +642,7 @@ console.log(pageDetail,"pageDetail==>")
         setIsSubscribed(false);
         dispatch(getPageDetail(pageId));
         dispatch(getMyCollections({ page: 1, limit: 100 }));
-         toast.success("Page unsubscribed successfully")
+        toast.success("Page unsubscribed successfully")
         setShowDropdown(false);
       }
     });
@@ -1189,7 +1189,7 @@ console.log(pageDetail,"pageDetail==>")
 
   const maxLength = 100;
 
-  console.log(pageDetail,page ,"pageDetail");
+  console.log(pageDetail, page, "pageDetail");
 
   return (
     <div className="relative">
@@ -1361,7 +1361,7 @@ console.log(pageDetail,"pageDetail==>")
                       <MessageCircle className="w-5 h-5 text-orange-500" />
                       <span>Start A Live Chat</span>
                       <span className="bg-orange-500 text-white text-[11px] px-2 py-0.5 rounded-full font-bold">
-                         {page?.liveChatCount || page?.liveChatCount?.length || 0} 
+                        {page?.liveChatCount || page?.liveChatCount?.length || 0}
                       </span>
                     </button>
                   )}
@@ -1527,7 +1527,7 @@ console.log(pageDetail,"pageDetail==>")
             </div>
 
             {/* KEYWORDS (Hashtags) */}
-                  
+
             {page.followersCount > 0 && (
               <div className="flex gap-1 items-center">
                 {/* Followers Images */}
@@ -1587,11 +1587,10 @@ console.log(pageDetail,"pageDetail==>")
                 {/* Post Request Tab - Consistently displayed for all pages */}
                 <button
                   onClick={() => setActiveTab("postrequest")}
-                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${
-                    activeTab === "postrequest"
-                      ? "text-orange-600"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-3 font-medium transition-all relative ${activeTab === "postrequest"
+                    ? "text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                    }`}
                 >
                   <Lightbulb size={19} />
 
@@ -1653,7 +1652,7 @@ console.log(pageDetail,"pageDetail==>")
             }
           >
             <PagePosts
-            setIsProfilePostOpen={setIsProfilePostOpen}
+              setIsProfilePostOpen={setIsProfilePostOpen}
               pageId={pageId}
               commentFilter={commentFilter}
               isPageOwner={isPageOwner}
@@ -2084,11 +2083,10 @@ console.log(pageDetail,"pageDetail==>")
                   type="button"
                   onClick={() => setIsCategoryOpen(!isCategoryOpen)}
                   disabled={topicsLoading || updatePageLoading}
-                  className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all border-gray-200 ${
-                    selectedTopic
-                      ? "text-gray-900 font-medium"
-                      : "text-gray-400"
-                  } hover:border-gray-300 focus:outline-none cursor-pointer`}
+                  className={`w-full flex items-center justify-between border rounded-xl px-4 py-3 text-sm bg-white text-left transition-all border-gray-200 ${selectedTopic
+                    ? "text-gray-900 font-medium"
+                    : "text-gray-400"
+                    } hover:border-gray-300 focus:outline-none cursor-pointer`}
                 >
                   <span className="truncate">{selectedTopic || "Select topic/category"}</span>
                   {isCategoryOpen ? (
@@ -2151,11 +2149,10 @@ console.log(pageDetail,"pageDetail==>")
                                     setIsCategoryOpen(false);
                                   }
                                 }}
-                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${
-                                  selectedTopic === item.name || isExpanded
-                                    ? "text-orange-600 bg-orange-50/80"
-                                    : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
-                                }`}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer select-none transition-colors ${selectedTopic === item.name || isExpanded
+                                  ? "text-orange-600 bg-orange-50/80"
+                                  : "text-gray-800 hover:text-orange-600 hover:bg-gray-50"
+                                  }`}
                               >
                                 <span className="flex-1 truncate">
                                   {item.name}
@@ -2192,12 +2189,11 @@ console.log(pageDetail,"pageDetail==>")
                                         );
                                         setIsCategoryOpen(false);
                                       }}
-                                      className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${
-                                        selectedTopic ===
+                                      className={`py-1.5 px-2.5 text-xs rounded-lg cursor-pointer transition-colors ${selectedTopic ===
                                         `${item.name} > ${subName}`
-                                          ? "text-orange-600 font-semibold bg-orange-100/60"
-                                          : "text-gray-600 hover:text-orange-600 hover:bg-white"
-                                      }`}
+                                        ? "text-orange-600 font-semibold bg-orange-100/60"
+                                        : "text-gray-600 hover:text-orange-600 hover:bg-white"
+                                        }`}
                                     >
                                       {subName}
                                     </div>
@@ -2214,7 +2210,7 @@ console.log(pageDetail,"pageDetail==>")
               </div>
 
               {/* About / Description Input */}
-              
+
 
               {/* Keywords Input */}
               <div>
@@ -2482,7 +2478,7 @@ console.log(pageDetail,"pageDetail==>")
                         {expertDocPreview ? (
                           <div className="space-y-2">
                             {expertForm.expertiseDoc?.type === "application/pdf" ||
-                            expertForm.expertiseDoc?.name?.toLowerCase().endsWith(".pdf") ? (
+                              expertForm.expertiseDoc?.name?.toLowerCase().endsWith(".pdf") ? (
                               <div className="flex items-center justify-center gap-2 text-xs text-gray-700 font-medium py-3">
                                 <BsFileEarmarkTextFill className="w-8 h-8 text-orange-500 shrink-0" />
                                 <span className="truncate max-w-[200px]">
