@@ -157,6 +157,30 @@ export default function KnowledgePageDetail() {
       console.error("Knowledge page subscription failed:", error);
       // Revert on failure
       setIsSubscribed(false);
+      ErrorToast(error?.message || "Failed to subscribe");
+    }
+  };
+
+  // Unsubscribe from knowledge page
+  const handleUnsubscribeClick = async () => {
+    if (!knowledgePageDetail?._id || !isSubscribed) return;
+
+    try {
+      setIsSubscribed(false);
+      setShowPageOptionsDropdown(false);
+      setMoreOpenId(null);
+
+      const res = await dispatch(
+        toggleKnowledgePageSubscription({ pageId: knowledgePageDetail._id }),
+      ).unwrap();
+
+      SuccessToast(
+        res?.message || "Unsubscribed from knowledge page successfully",
+      );
+    } catch (error) {
+      console.error("Knowledge page unsubscribe failed:", error);
+      setIsSubscribed(true);
+      ErrorToast(error?.message || "Failed to unsubscribe");
     }
   };
 
@@ -609,16 +633,27 @@ export default function KnowledgePageDetail() {
                             </button>
                           </>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowPageOptionsDropdown(false);
-                              setReportmodal(true);
-                            }}
-                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                          >
-                            Report
-                          </button>
+                          <>
+                            {isSubscribed && (
+                              <button
+                                type="button"
+                                onClick={handleUnsubscribeClick}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                              >
+                                Unsubscribe
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowPageOptionsDropdown(false);
+                                setReportmodal(true);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                            >
+                              Report
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
@@ -738,16 +773,29 @@ export default function KnowledgePageDetail() {
                             </button>
                           </>
                         ) : (
-                          <button
-                            onClick={() => {
-                              setMoreOpenId(null);
-                              setSelectedPostId(post._id);
-                              setReportmodal(true);
-                            }}
-                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors"
-                          >
-                            Report
-                          </button>
+                          <>
+                            {isSubscribed && (
+                              <button
+                                onClick={() => {
+                                  setMoreOpenId(null);
+                                  handleUnsubscribeClick();
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors cursor-pointer"
+                              >
+                                Unsubscribe
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                setMoreOpenId(null);
+                                setSelectedPostId(post._id);
+                                setReportmodal(true);
+                              }}
+                              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors cursor-pointer"
+                            >
+                              Report
+                            </button>
+                          </>
                         )}
                       </div>
                     )}

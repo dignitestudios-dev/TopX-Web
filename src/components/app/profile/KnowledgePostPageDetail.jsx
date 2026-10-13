@@ -24,6 +24,7 @@ import {
   deleteKnowledgePage,
   fetchMyKnowledgePages,
   updateKnowledgePage,
+  toggleKnowledgePageSubscription,
 } from "../../../redux/slices/knowledgepost.slice";
 import { SuccessToast, ErrorToast } from "../../global/Toaster";
 import ReportModal from "../../global/ReportModal";
@@ -66,6 +67,8 @@ export default function KnowledgePostPageDetail({
   const [showPageOptionsDropdown, setShowPageOptionsDropdown] = useState(false);
   const [showManagePostsModal, setShowManagePostsModal] = useState(false);
   const [isDeletingPage, setIsDeletingPage] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
   const pageOptionsRef = useRef(null);
   const presetBackgrounds = [
     { id: 1, name: "bg_blue", imagePath: "/bg_blue.jpg" },
@@ -95,6 +98,63 @@ export default function KnowledgePostPageDetail({
   const { reportSuccess, reportLoading } = useSelector(
     (state) => state.reports,
   );
+
+  const isPageOwner = Boolean(
+    user?._id &&
+    knowledgePageDetail &&
+    (user._id === knowledgePageDetail?.user?._id ||
+      user._id === knowledgePageDetail?.user ||
+      user._id === knowledgePageDetail?.creator?._id ||
+      user._id === knowledgePageDetail?.creator ||
+      user._id === knowledgePageDetail?.author?._id ||
+      user._id === knowledgePageDetail?.author ||
+      knowledgePageDetail?.isOwner)
+  );
+
+  useEffect(() => {
+    if (knowledgePageDetail) {
+      setIsSubscribed(Boolean(knowledgePageDetail.isSubscribed));
+    }
+  }, [knowledgePageDetail]);
+
+  const handleSubscribeClick = async () => {
+    if (!knowledgePageDetail?._id || isSubscribed || subscribing) return;
+    try {
+      setSubscribing(true);
+      setIsSubscribed(true);
+      const res = await dispatch(
+        toggleKnowledgePageSubscription({ pageId: knowledgePageDetail._id }),
+      ).unwrap();
+      SuccessToast(res?.message || "Subscribed to knowledge page successfully");
+    } catch (error) {
+      console.error("Knowledge page subscription failed:", error);
+      setIsSubscribed(false);
+      ErrorToast(error?.message || "Failed to subscribe");
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleUnsubscribeClick = async () => {
+    if (!knowledgePageDetail?._id || !isSubscribed || subscribing) return;
+    try {
+      setSubscribing(true);
+      setIsSubscribed(false);
+      setShowPageOptionsDropdown(false);
+      setShowDeleteMenu(null);
+      const res = await dispatch(
+        toggleKnowledgePageSubscription({ pageId: knowledgePageDetail._id }),
+      ).unwrap();
+      SuccessToast(res?.message || "Unsubscribed from knowledge page successfully");
+    } catch (error) {
+      console.error("Knowledge page unsubscribe failed:", error);
+      setIsSubscribed(true);
+      ErrorToast(error?.message || "Failed to unsubscribe");
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
   useEffect(() => {
     if (pageId) {
       dispatch(getKnowledgePostDetail({ pageId, page: 1, limit: 10 }));
@@ -211,19 +271,6 @@ export default function KnowledgePostPageDetail({
       }),
     );
   };
-
-  const isPageOwner = Boolean(
-    user?._id &&
-    knowledgePageDetail &&
-    (user._id === knowledgePageDetail?.user?._id ||
-      user._id === knowledgePageDetail?.user ||
-      user._id === knowledgePageDetail?.creator?._id ||
-      user._id === knowledgePageDetail?.creator ||
-      user._id === knowledgePageDetail?.author?._id ||
-      user._id === knowledgePageDetail?.author ||
-      knowledgePageDetail?.isOwner ||
-      !knowledgePageDetail?.user)
-  );
 
   const handleDeleteKnowledgePage = async () => {
     if (!pageId || isDeletingPage) return;
@@ -518,6 +565,30 @@ export default function KnowledgePostPageDetail({
 
             {/* Right: Action Buttons */}
             <div className="flex items-center gap-2 mt-4 sm:mt-14 flex-shrink-0 flex-wrap">
+              {/* Non-owner Subscribe / Subscribed */}
+              {!isPageOwner && (
+                <>
+                  {!isSubscribed ? (
+                    <button
+                      type="button"
+                      onClick={handleSubscribeClick}
+                      disabled={subscribing}
+                      className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-white text-orange-500 hover:bg-orange-50 border-2 border-orange-500 cursor-pointer disabled:opacity-60"
+                    >
+                      {subscribing ? "Subscribing..." : "Subscribe"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="p-2 px-8 rounded-2xl font-semibold transition-all duration-300 bg-gray-200 text-gray-700 cursor-not-allowed border-2 border-gray-300"
+                    >
+                      Subscribed
+                    </button>
+                  )}
+                </>
+              )}
+
               {/* Owner Controls: Manage Posts, Plus Button, 3-dots */}
               {isPageOwner && (
                 <>
@@ -602,16 +673,27 @@ export default function KnowledgePostPageDetail({
                         </button>
                       </>
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowPageOptionsDropdown(false);
-                          setReportmodal(true);
-                        }}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
-                      >
-                        Report
-                      </button>
+                      <>
+                        {isSubscribed && (
+                          <button
+                            type="button"
+                            onClick={handleUnsubscribeClick}
+                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                          >
+                            Unsubscribe
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPageOptionsDropdown(false);
+                            setReportmodal(true);
+                          }}
+                          className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                        >
+                          Report
+                        </button>
+                      </>
                     )}
                   </div>
                 )}
@@ -737,13 +819,24 @@ export default function KnowledgePostPageDetail({
                       </div>
                     ) : (
                       <div className="absolute right-0 top-8 bg-white rounded-xl shadow-lg border border-gray-200 z-10 w-36 overflow-hidden py-1">
+                        {isSubscribed && (
+                          <button
+                            onClick={() => {
+                              setShowDeleteMenu(null);
+                              handleUnsubscribeClick();
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors cursor-pointer"
+                          >
+                            Unsubscribe
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setSelectedPostForShare(post);
                             setReportmodal(!reportmodal);
                             setShowDeleteMenu(null);
                           }}
-                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors"
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 font-medium text-gray-700 transition-colors cursor-pointer"
                         >
                           Report
                         </button>
