@@ -403,63 +403,6 @@ export default function Home() {
 
       {/* Middle Feed */}
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
-        {/* Create Knowledge Post & Page Bar */}
-        <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden bg-gray-200">
-              {user?.profilePicture ? (
-                <img
-                  src={user.profilePicture}
-                  alt={user?.name || "User"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm select-none">
-                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                </div>
-              )}
-            </div>
-            <div
-              onClick={() => setShowKpSelectTypeModal(true)}
-              className="flex-1 bg-[#F5F5F5] hover:bg-[#EBEBEB] text-gray-500 text-sm px-4 py-2.5 rounded-full cursor-pointer transition flex items-center justify-between select-none"
-            >
-              <span>Create Knowledge Post or Page...</span>
-              <Plus className="w-4 h-4 text-orange-500" />
-            </div>
-          </div>
-          <div className="flex items-center justify-around mt-3 pt-3 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={() => {
-                if (knowledgePages?.length > 0) {
-                  setShowKpCategorySelector(true);
-                } else {
-                  setShowKnowledgePageCreateModal(true);
-                }
-              }}
-              className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-orange-600 font-medium transition cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
-                <Lightbulb size={16} />
-              </div>
-              <span>Knowledge Post</span>
-            </button>
-            <div className="h-4 w-[1px] bg-gray-200" />
-            <button
-              type="button"
-              onClick={() => {
-                dispatch(resetKnowledge());
-                setShowKnowledgePageCreateModal(true);
-              }}
-              className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-orange-600 font-medium transition cursor-pointer"
-            >
-              <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
-                <Plus size={16} />
-              </div>
-              <span>Knowledge Page</span>
-            </button>
-          </div>
-        </div>
 
         {postsLoading ? (
           // Show skeleton loaders while loading
