@@ -404,6 +404,16 @@ export default function EditKnowledgePageModal({
         );
       }
 
+      if (
+        previewImage &&
+        previewImage !== pageData.image &&
+        !(binaryFile instanceof File)
+      ) {
+        ErrorToast("Failed to process the selected emoji image. Please try again.");
+        setIsSubmitting(false);
+        return;
+      }
+
       const fd = new FormData();
       fd.append("name", formData.name.trim());
       fd.append("about", formData.about.trim());

@@ -746,7 +746,7 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId, postRequest 
     if (
       !(binaryFile instanceof File) &&
       editImagePreview &&
-      isEmoji(editImagePreview)
+      editImagePreview !== pageDetail?.image
     ) {
       try {
         binaryFile = await emojiUrlToFile(
@@ -758,12 +758,24 @@ export default function ProfilePost({ setIsProfilePostOpen, pageId, postRequest 
       }
     }
 
+    if (
+      editImagePreview &&
+      editImagePreview !== pageDetail?.image &&
+      !(binaryFile instanceof File)
+    ) {
+      ErrorToast("Failed to process the selected emoji image. Please try again.");
+      return;
+    }
+
     if (binaryFile instanceof File) {
       formData.append("image", binaryFile, binaryFile.name || "topic_page.png");
     }
 
     if (pageId) {
-      dispatch(updatePage({ pageId, formData }));
+      const res = await dispatch(updatePage({ pageId, formData }));
+      if (updatePage.rejected.match(res)) {
+        ErrorToast(res.payload || "Failed to update page");
+      }
     }
   };
 

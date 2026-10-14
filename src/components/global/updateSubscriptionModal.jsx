@@ -93,6 +93,15 @@ const UpdateSubscriptionModal = ({ isOpen, onClose, collection }) => {
       binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
     }
 
+    if (
+      imagePreview &&
+      imagePreview !== collection?.image &&
+      !(binaryFile instanceof File)
+    ) {
+      ErrorToast("Failed to process the selected emoji image. Please try again.");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("name", trimmedName);
     if (binaryFile instanceof File) {

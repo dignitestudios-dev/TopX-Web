@@ -192,6 +192,14 @@ const CreateSubscriptionModal = ({ isOpen, onClose, onSave, page }) => {
         binaryFile = await emojiUrlToFile(imagePreview, "collection_emoji.png");
       }
 
+      if (imagePreview && !(binaryFile instanceof File)) {
+        setErrors((prev) => ({
+          ...prev,
+          image: "Failed to process the selected emoji image. Please try again.",
+        }));
+        return;
+      }
+
       const formData = new FormData();
       formData.append("name", collectionName.trim());
 

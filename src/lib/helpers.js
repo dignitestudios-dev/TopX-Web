@@ -194,42 +194,68 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
     } catch {}
   }
 
-  // Extract clean filename from URL if available
+  // Extract clean filename and codepoints from URL if available
   let cleanFilename = filename;
   let pathname = "";
+  let codepoints = "";
   try {
-    const urlObj = new URL(trimmed);
+    const urlObj = new URL(trimmed, typeof window !== "undefined" ? window.location.origin : undefined);
     pathname = urlObj.pathname;
     const extractedName = pathname.split("/").pop();
     if (extractedName && extractedName.includes(".")) {
       cleanFilename = extractedName;
+      codepoints = extractedName.replace(/\.[^/.]+$/, "");
     }
   } catch {
-    // Keep fallback filename
+    const match = trimmed.match(/\/([^\/?#]+\.png)/i);
+    if (match) {
+      cleanFilename = match[1];
+      codepoints = match[1].replace(/\.[^/.]+$/, "");
+    }
   }
 
-  // Candidate URLs to try fetching from
+  // Candidate URLs to fetch from (Flutter approach: fetch URL -> Blob -> File)
   const candidateUrls = [];
 
-  // In Vite dev mode, use local proxy to bypass S3 CORS completely
-  if (import.meta.env.DEV && trimmed.includes("topx-uploads.s3.us-east-1.amazonaws.com")) {
+  // A. Same-origin S3 proxy (bypasses browser S3 CORS in local Vite dev & Vercel production)
+  if (
+    trimmed.includes("topx-uploads.s3.us-east-1.amazonaws.com") &&
+    pathname
+  ) {
     candidateUrls.push(`/s3-proxy${pathname}`);
   }
 
-  // Direct URL
+  // B. Direct URL (standard Flutter approach; works when CORS is enabled on S3)
   candidateUrls.push(trimmed);
 
-  // CORS proxies for production or fallback
-  candidateUrls.push(`https://corsproxy.io/?url=${encodeURIComponent(trimmed)}`);
-  candidateUrls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(trimmed)}`);
+  // C. High-speed Twemoji CDN mirrors with permanent Access-Control-Allow-Origin: *
+  if (codepoints && /^[0-9a-fA-F-]+$/.test(codepoints)) {
+    const lowerCode = codepoints.toLowerCase();
+    candidateUrls.push(
+      `https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/72x72/${lowerCode}.png`
+    );
+    candidateUrls.push(
+      `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${lowerCode}.png`
+    );
+  }
 
-  // Try fetching binary from candidate URLs
+  // Fetch binary using the Flutter approach with a 2-second timeout per attempt to prevent hanging
   for (const url of candidateUrls) {
     try {
+      let timeoutId;
+      const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+      if (controller) {
+        timeoutId = setTimeout(() => controller.abort(), 2000);
+      }
+
       const response = await fetch(url, {
         method: "GET",
+        signal: controller ? controller.signal : undefined,
       });
-      if (response.ok) {
+
+      if (timeoutId) clearTimeout(timeoutId);
+
+      if (response && response.ok) {
         const blob = await response.blob();
         if (blob && blob.size > 0) {
           const mimeType = blob.type || "image/png";
@@ -241,62 +267,40 @@ export async function emojiUrlToFile(emojiUrl, filename = "emoji_profile.png") {
     }
   }
 
-  // Fallback: XMLHttpRequest with responseType = blob
-  try {
-    const blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("GET", trimmed, true);
-      xhr.responseType = "blob";
-      xhr.onload = () => {
-        if (xhr.status === 200 || xhr.status === 0) {
-          resolve(xhr.response);
-        } else {
-          reject(new Error(`XHR failed status: ${xhr.status}`));
+  // Fallback: Decode Unicode emoji from codepoint and render to Canvas instantly (0ms network)
+  if (codepoints && /^[0-9a-fA-F-]+$/.test(codepoints)) {
+    try {
+      const parsedChars = codepoints
+        .split("-")
+        .map((hex) => parseInt(hex, 16))
+        .filter((cp) => !isNaN(cp));
+      if (parsedChars.length > 0) {
+        const unicodeStr = String.fromCodePoint(...parsedChars);
+        const canvas = document.createElement("canvas");
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.clearRect(0, 0, 128, 128);
+          ctx.font =
+            "96px 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(unicodeStr, 64, 70);
+          const blob = await new Promise((resolve) =>
+            canvas.toBlob(resolve, "image/png")
+          );
+          if (blob && blob.size > 0) {
+            return new File([blob], cleanFilename, { type: "image/png" });
+          }
         }
-      };
-      xhr.onerror = () => reject(new Error("XHR network error"));
-      xhr.send();
-    });
-
-    if (blob && blob.size > 0) {
-      const mimeType = blob.type || "image/png";
-      return new File([blob], cleanFilename, { type: mimeType });
+      }
+    } catch (e) {
+      console.error("Emoji codepoint fallback error:", e);
     }
-  } catch {
-    // Continue to canvas fallback
   }
 
-  // Fallback: HTML Image + Canvas drawing
-  try {
-    return await new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth || 128;
-          canvas.height = img.naturalHeight || 128;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          canvas.toBlob((blob) => {
-            if (blob && blob.size > 0) {
-              resolve(new File([blob], cleanFilename, { type: "image/png" }));
-            } else {
-              resolve(null);
-            }
-          }, "image/png");
-        } catch {
-          resolve(null);
-        }
-      };
-      img.onerror = () => {
-        resolve(null);
-      };
-      img.src = trimmed;
-    });
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 /**

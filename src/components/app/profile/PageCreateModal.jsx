@@ -217,6 +217,11 @@ export default function PageCreateModal({
         );
       }
 
+      if (previewImage && !(binaryFile instanceof File)) {
+        ErrorToast("Failed to process the selected emoji image. Please try again.");
+        return;
+      }
+
       const fd = new FormData();
 
       if (binaryFile instanceof File) {

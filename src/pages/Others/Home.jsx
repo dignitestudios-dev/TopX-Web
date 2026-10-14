@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight, TrendingUp, Plus } from "lucide-react";
+import { ChevronRight, TrendingUp, Plus, Lightbulb, X } from "lucide-react";
 import { nofound, notes, topics } from "../../assets/export";
 import Profilecard from "../../components/homepage/Profilecard";
 import MySubscription from "../../components/homepage/MySubscription";
@@ -15,11 +15,22 @@ import SuggestionsPagesGlobal from "../../components/global/SuggestionsPagesGlob
 import { fetchMyPages } from "../../redux/slices/pages.slice";
 import PageCreateModal from "../../components/app/profile/PageCreateModal";
 import useViewerLocation from "../../hooks/useViewerLocation";
+import { fetchMyKnowledgePages, resetKnowledge } from "../../redux/slices/knowledgepost.slice";
+import CreateKnowledgePageModal from "../../components/global/CreateKnowledgePageModal";
+import CreateKnowledgePostModal from "../../components/global/CreateKnowledgePostModal";
+import PageCategorySelector from "../../components/app/profile/PageCategorySelector";
 
 export default function Home() {
   useViewerLocation();
   const [liked, setLiked] = useState({});
   const [showPageCreateModal, setShowPageCreateModal] = useState(false);
+  const [showKnowledgePageCreateModal, setShowKnowledgePageCreateModal] =
+    useState(false);
+  const [showKpSelectTypeModal, setShowKpSelectTypeModal] = useState(false);
+  const [showKpCategorySelector, setShowKpCategorySelector] = useState(false);
+  const [showKpCreatePostModal, setShowKpCreatePostModal] = useState(false);
+  const [selectedKpPageId, setSelectedKpPageId] = useState(null);
+  const [selectedKpSubTopics, setSelectedKpSubTopics] = useState([]);
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -27,9 +38,15 @@ export default function Home() {
     (state) => state.postsfeed,
   );
   const { myPages, pagesLoading } = useSelector((state) => state.pages);
+  const { knowledgePages, loading: knowledgePagesLoading } = useSelector(
+    (state) => state.knowledgepost,
+  );
   const { user } = useSelector((state) => state.auth);
   useEffect(() => {
     dispatch(fetchMyPages({ page: 1, limit: 10 }));
+  }, [dispatch]);
+  useEffect(() => {
+    dispatch(fetchMyKnowledgePages({ page: 1, limit: 10 }));
   }, [dispatch]);
   useEffect(() => {
     dispatch(fetchpostfeed({ page: 1, limit: 10 }));
@@ -261,10 +278,189 @@ export default function Home() {
             </div>
           </Link>
         </div>
+
+        {/* Knowledge Pages */}
+        <div className="px-4 py-4 bg-white rounded-xl mt-4 border border-gray-200 mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-[500] text-lg flex items-center gap-2">
+              <Lightbulb className="w-5 h-5 text-orange-500" />
+              Knowledge Pages
+            </h3>
+            <button
+              onClick={() => setShowKpSelectTypeModal(true)}
+              className="bg-orange-500 text-white p-1.5 rounded-md hover:bg-orange-600 transition-colors cursor-pointer"
+              title="Create Knowledge Page or Post"
+            >
+              <Plus size={18} />
+            </button>
+          </div>
+          <div className="space-y-4">
+            {knowledgePagesLoading ? (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="pb-4 border-b border-gray-200 last:border-0 animate-pulse"
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gray-300" />
+                    <div className="flex-1 space-y-1">
+                      <div className="h-3 w-32 bg-gray-300 rounded" />
+                      <div className="h-3 w-20 bg-gray-200 rounded" />
+                    </div>
+                  </div>
+
+                  {/* About */}
+                  <div className="space-y-2">
+                    <div className="h-3 w-full bg-gray-200 rounded" />
+                    <div className="h-3 w-4/5 bg-gray-200 rounded" />
+                  </div>
+
+                  {/* Followers */}
+                  <div className="h-3 w-24 bg-gray-300 rounded mt-3" />
+                </div>
+              ))
+            ) : knowledgePages?.length > 0 ? (
+              knowledgePages.slice(0, 3).map((item, idx) => (
+                <div
+                  key={item?._id || idx}
+                  className="pb-4 border-b border-gray-200 last:border-0"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-10 h-10 flex-shrink-0">
+                      {item?.image ? (
+                        <img
+                          src={item?.image}
+                          className="w-full h-full object-cover rounded-full"
+                          alt={item?.name || "Knowledge"}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            if (e.target.nextSibling) {
+                              e.target.nextSibling.style.display = "flex";
+                            }
+                          }}
+                        />
+                      ) : null}
+                      <div
+                        style={{ display: item?.image ? "none" : "flex" }}
+                        className="w-full h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-600 items-center justify-center text-white font-bold text-sm select-none"
+                      >
+                        {item?.name?.charAt(0)?.toUpperCase() || "K"}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 items-center min-w-0 flex-1">
+                      <p
+                        onClick={() =>
+                          navigate(`/knowledge-page-detail/${item._id}`)
+                        }
+                        className="cursor-pointer font-[400] text-[14px] truncate"
+                        title={
+                          user?.name || user?.username
+                            ? `${user?.name || user?.username}'s ${item?.name}`
+                            : item?.name
+                        }
+                      >
+                        {user?.name || user?.username
+                          ? `${user?.name || user?.username}'s ${item?.name}`
+                          : item?.name}
+                      </p>
+                      <img src={notes} alt="" className="shrink-0" />
+                    </div>
+                  </div>
+
+                  <p className="text-[14px] text-gray-600 leading-snug break-words">
+                    {item?.about}
+                  </p>
+
+                  <p className="text-[14px] text-gray-700 mt-1">
+                    <span className="text-black font-[600]">
+                      {item?.followersCount || item?.subscribersCount || 0}+
+                    </span>{" "}
+                    Follows
+                  </p>
+                </div>
+              ))
+            ) : (
+              /* 🔴 NOT FOUND STATE */
+              <div className="text-center py-6 text-gray-500">
+                <p className="text-sm font-medium">No knowledge pages found</p>
+                <p className="text-xs mt-1">
+                  Try searching or create a new page
+                </p>
+              </div>
+            )}
+          </div>
+
+          <Link to="/knowledge">
+            <div className="flex items-center gap-2 mt-4 text-black cursor-pointer font-semibold text-sm">
+              View All
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </Link>
+        </div>
       </div>
 
       {/* Middle Feed */}
       <div className="w-1/2 bg-[#F2F2F2] overflow-y-auto px-3 py-4 scrollbar-hide">
+        {/* Create Knowledge Post & Page Bar */}
+        <div className="bg-white rounded-2xl p-4 mb-4 border border-gray-200 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden bg-gray-200">
+              {user?.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={user?.name || "User"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-sm select-none">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
+                </div>
+              )}
+            </div>
+            <div
+              onClick={() => setShowKpSelectTypeModal(true)}
+              className="flex-1 bg-[#F5F5F5] hover:bg-[#EBEBEB] text-gray-500 text-sm px-4 py-2.5 rounded-full cursor-pointer transition flex items-center justify-between select-none"
+            >
+              <span>Create Knowledge Post or Page...</span>
+              <Plus className="w-4 h-4 text-orange-500" />
+            </div>
+          </div>
+          <div className="flex items-center justify-around mt-3 pt-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => {
+                if (knowledgePages?.length > 0) {
+                  setShowKpCategorySelector(true);
+                } else {
+                  setShowKnowledgePageCreateModal(true);
+                }
+              }}
+              className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-orange-600 font-medium transition cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
+                <Lightbulb size={16} />
+              </div>
+              <span>Knowledge Post</span>
+            </button>
+            <div className="h-4 w-[1px] bg-gray-200" />
+            <button
+              type="button"
+              onClick={() => {
+                dispatch(resetKnowledge());
+                setShowKnowledgePageCreateModal(true);
+              }}
+              className="flex items-center gap-2 text-xs sm:text-sm text-gray-700 hover:text-orange-600 font-medium transition cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
+                <Plus size={16} />
+              </div>
+              <span>Knowledge Page</span>
+            </button>
+          </div>
+        </div>
+
         {postsLoading ? (
           // Show skeleton loaders while loading
           <div>
@@ -311,6 +507,126 @@ export default function Home() {
         isOpen={showPageCreateModal}
         setIsOpen={setShowPageCreateModal}
       />
+
+      {/* Select Type Modal (Knowledge Post vs Page) */}
+      {showKpSelectTypeModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-[90%] max-w-md p-6 relative shadow-xl">
+            <button
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+              onClick={() => setShowKpSelectTypeModal(false)}
+            >
+              <X size={22} />
+            </button>
+
+            <h2 className="text-[20px] font-bold text-black mb-1">
+              Select Type
+            </h2>
+            <p className="text-gray-500 text-sm mb-5">
+              Choose what you want to create
+            </p>
+
+            <div className="space-y-3">
+              {/* Create Knowledge Post */}
+              <div
+                className="flex items-center justify-between bg-[#f8f8f8] hover:bg-orange-50 border border-gray-100 hover:border-orange-200 rounded-xl p-4 cursor-pointer transition group"
+                onClick={() => {
+                  setShowKpSelectTypeModal(false);
+                  if (knowledgePages?.length > 0) {
+                    setShowKpCategorySelector(true);
+                  } else {
+                    setShowKnowledgePageCreateModal(true);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition">
+                    <Lightbulb size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-semibold text-black group-hover:text-orange-600 transition">
+                      Create Knowledge Post
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Publish a post to your Knowledge Page
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="text-orange-500" size={18} />
+              </div>
+
+              {/* Create Knowledge Page */}
+              <div
+                className="flex items-center justify-between bg-[#f8f8f8] hover:bg-orange-50 border border-gray-100 hover:border-orange-200 rounded-xl p-4 cursor-pointer transition group"
+                onClick={() => {
+                  dispatch(resetKnowledge());
+                  setShowKpSelectTypeModal(false);
+                  setShowKnowledgePageCreateModal(true);
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 group-hover:bg-orange-500 group-hover:text-white transition">
+                    <Plus size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-semibold text-black group-hover:text-orange-600 transition">
+                      Create Knowledge Page
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Start a new page for your expertise
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="text-orange-500" size={18} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Page Category Selector Modal */}
+      {showKpCategorySelector && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-[30em] rounded-2xl shadow-xl p-6 relative">
+            <button
+              className="absolute top-4 right-4 text-orange-500 hover:text-orange-700 cursor-pointer"
+              onClick={() => setShowKpCategorySelector(false)}
+            >
+              <X size={24} />
+            </button>
+            <PageCategorySelector
+              heading="Select Knowledge Page"
+              onClose={() => setShowKpCategorySelector(false)}
+              onNext={({ pageId, subTopics }) => {
+                setSelectedKpPageId(pageId);
+                setSelectedKpSubTopics(subTopics);
+                setShowKpCategorySelector(false);
+                setShowKpCreatePostModal(true);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Create Knowledge Post Modal */}
+      {showKpCreatePostModal && (
+        <CreateKnowledgePostModal
+          selectedPageId={selectedKpPageId}
+          selectedSubTopics={selectedKpSubTopics}
+          onClose={() => {
+            setShowKpCreatePostModal(false);
+            setSelectedKpPageId(null);
+            setSelectedKpSubTopics([]);
+          }}
+        />
+      )}
+
+      {/* Create Knowledge Page Modal */}
+      {showKnowledgePageCreateModal && (
+        <CreateKnowledgePageModal
+          onClose={() => setShowKnowledgePageCreateModal(false)}
+        />
+      )}
     </div>
   );
 }

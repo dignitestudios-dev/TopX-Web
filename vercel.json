@@ -1,3 +1,12 @@
 {
-    "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
-  }
+  "rewrites": [
+    {
+      "source": "/s3-proxy/:path*",
+      "destination": "https://topx-uploads.s3.us-east-1.amazonaws.com/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
